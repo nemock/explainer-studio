@@ -26,6 +26,16 @@ Write 4–6 queries that triangulate the topic. Use these slots:
 Avoid: queries that are just synonyms of each other; queries broader than the
 topic ("marketing tips"); queries with fewer than 3 words.
 
+**Generic-pattern leakage (learned 2026-06-11):** bare pattern queries like
+"5 signs nobody wants X" surface mega-outliers from unrelated niches
+(relationships, psychology, decluttering) that crowd the finalist list. Anchor
+every pattern query with domain words ("…your startup product"). After the
+sweep, VET the finalists for topicality: if more than ~2 are strays, hand-pick
+the on-topic top candidates by editing `intel/outliers.json → finalist_ids`
+and re-run `intel` (sweep and prior deep pulls stay cached; only the new
+finalists fetch). Strays' comments may still hold crossover demand signals —
+skim before discarding.
+
 ## 2. Reading intel.json — build the finalist table FIRST
 
 Make a table of all finalists: title · channel · outlier score · views ·
