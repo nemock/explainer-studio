@@ -29,7 +29,11 @@ def _mux_one(proj, aspect, fps):
         gain = float(proj.data.get("music_gain", 0.16))  # low bed under narration
         cmd += ["-i", music, "-filter_complex",
                 f"[2:a]aloop=loop=-1:size=2000000000,volume={gain}[bed];"
-                f"[1:a][bed]amix=inputs=2:duration=first:dropout_transition=0[a]",
+                # normalize=0 is load-bearing: amix's default rescales inputs by 1/n,
+                # which silently dropped the -14 LUFS narration to -20 when a bed was added
+                f"[1:a][bed]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[mix];"
+                # summed peaks can exceed 0 dBTP — limit to ~-1.5 dB (0.84 linear) for platform encoders
+                f"[mix]alimiter=limit=0.84:level=false[a]",
                 "-map", "0:v", "-map", "[a]"]
     else:
         cmd += ["-map", "0:v", "-map", "1:a"]

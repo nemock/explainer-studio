@@ -5,6 +5,8 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+# local media library (music/SFX/brand kits — licensed for use, not redistribution)
+library/
 # local env / tooling
 .DS_Store
 *.log
