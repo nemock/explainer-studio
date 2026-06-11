@@ -1,0 +1,39 @@
+# CLAUDE.md — Explainer2
+
+## Operating rules (read first, every session)
+
+1. **Ask, don't assume.** If something is unclear, ask before writing a single line.
+2. **Simplest solution first.** No abstractions or flexibility that weren't requested.
+3. **Don't touch unrelated code.** Files outside the current task stay untouched.
+4. **Flag uncertainty explicitly.** Say so before proceeding.
+
+---
+
+## What this project is
+
+A local-first **explainer-video studio**: YouTube competitive intelligence → retention-engineered script → operator voice → layered visuals → deep dive + Shorts → monetization-ready package. **`PRD.md` is the source of truth.** If this file and the PRD disagree, the PRD wins — and flag it.
+
+**This is NOT v1.** The production v1 lives at `/Volumes/Casima/claudeCode/explainer-system` and is **frozen from this project's perspective: never import from it, never write into it.** Its proven media core was vendored once into `src/explainer2/` (headers say `VENDORED_FROM` + the v1 commit); divergence here is expected and fine.
+
+## Hard constraints (from the PRD — do not violate without asking)
+
+- **Target machine:** Apple **M3, 16 GB unified memory, Metal — no CUDA**. Budget against unified memory; **serialize** memory-heavy stages (never Kokoro + Chrome capture + ffmpeg concurrently).
+- **No SaaS subscriptions in the pipeline.** One declared exception: the operator's **stock.adobe.com** membership, human-in-the-loop only (guided searches + watched inbox folder), never an API dependency.
+- **LLM = the operator's Claude subscription** (Claude Code / Agent SDK subscription auth). **Never an API key, never per-token billing.**
+- **Generation/media split:** Claude touches only generation stages (intel synthesis, research, blueprint, script, packaging copy, QA judgments). The media path (narrate → align → compose → render → mux) is **pure Python, zero LLM calls**, runs unattended.
+- **Aligner:** torchaudio forced alignment (Apple-Silicon-native). WhisperX is not viable here.
+- **Render correctness:** all motion driven by the JS animation driver under CDP virtual time + seeded RNG. **Raw CSS animations/transitions forbidden on captured elements.**
+- **Boundary:** generation only — labeled output dir + versioned `manifest.json` (schema 2.0), then stop. **This tool never posts to social platforms.**
+- **YouTube intelligence:** `yt-dlp` metadata/transcript analysis for editorial judgment only; competitor media is never republished.
+
+## How to run
+
+- CLI: **`bin/explainer2`** (wraps `PYTHONPATH=src ~/myenv/bin/python3.12 -m explainer2.cli`). The shared `~/myenv` venv holds the verified torch/Kokoro/Playwright stack — do not create a new venv without asking.
+- Projects land in `projects/<date>_<slug>/` (gitignored). Per-project layout: PRD §10.
+- The `media` command is **synchronous — run it in the foreground and let it finish.** No polling, no backgrounding (global CLAUDE.md shell rules apply: no loops, no brace expansion, absolute paths).
+
+## Decisions already made (don't relitigate without asking)
+
+- GUI = local FastAPI + plain HTML/JS at localhost ("Mission Control"), opened in Chrome. No Electron/Tauri in v2.0. Every GUI action has a CLI twin.
+- v1's deck engine, themes, brand/CTA, talk-time reader, recorder, and deepdive orchestrator are carried forward as the foundation; v2 features layer on top per the PRD's phases.
+- Phase order: 0 skeleton → 1 Intelligence → 2 retention scripting + booth → 3 compositor + Adobe Stock assist → 4 Mission Control → 5 dual-format + packaging + Learn.

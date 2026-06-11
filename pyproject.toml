@@ -1,0 +1,30 @@
+[project]
+name = "explainer2"
+version = "2.0.0-dev"
+description = "Local-first explainer-video studio: YouTube intelligence, retention-engineered scripts, operator voice, layered visuals, deep dives + Shorts"
+license = "MIT"
+requires-python = ">=3.12"
+# Media-stack pins inherited from the verified v1 stack on the M3 iMac (16 GB).
+# Like v1, the media pipeline runs via the shared `~/myenv` interpreter, which
+# already holds the multi-GB torch/Kokoro stack; `bin/explainer2` wraps that.
+dependencies = [
+    "kokoro==0.9.4",
+    "torch==2.7.1",
+    "torchaudio==2.7.1",
+    "soundfile==0.13.1",
+    "numpy==2.1.3",
+    "playwright==1.60.0",
+    "pymupdf==1.27.2.2",
+    "yt-dlp>=2026.5.0",      # Phase 1: YouTube intelligence (no API key)
+]
+
+[project.scripts]
+explainer2 = "explainer2.cli:main"
+explainer2-deepdive = "explainer2.deepdive.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/explainer2"]

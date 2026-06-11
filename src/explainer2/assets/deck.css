@@ -1,0 +1,322 @@
+/* Explainer System — fixed-theme deck styles (Phase 1).
+   No CSS animations/transitions on captured elements: all motion is computed in
+   JS by renderAt(t). See PRD §8.6. Theme tokens are injected as :root vars. */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; background: var(--bg); color: var(--fg);
+  font-family: var(--font-body, -apple-system, "Helvetica Neue", Arial, sans-serif); overflow: hidden; }
+#stage { position: relative; overflow: hidden; z-index: 1; }
+
+/* Display (serif) face — used only when a theme declares `fonts` (e.g. founder = Fraunces);
+   otherwise --font-display is unset and these inherit the body font, i.e. unchanged. */
+.headline, .statnum, .progresspct, .quotetext, .cmpval, .steptitle,
+.delta-val, .ring-pct, .trend-end, .def-term, .punch, .slidetitle { font-family: var(--font-display, inherit); }
+
+/* ambient: a faint, slowly drifting glow so the frame is never fully static
+   (continuous motion -> better perceived liveliness + no QA dead air). */
+#ambient { position: fixed; inset: -30%; z-index: 0; pointer-events: none;
+  /* soft glow via a wide gradient falloff — NO filter:blur (blur re-rasterizes every
+     frame and ~5x'd render time); a translated gradient is GPU-cheap and deterministic. */
+  background: radial-gradient(circle at 50% 40%, var(--accent) 0%, transparent 58%);
+  opacity: .12; will-change: opacity; }
+
+.slide { position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; padding: 120px 90px; text-align: center;
+  will-change: opacity, transform; opacity: 0; }
+.kicker { font-size: 34px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--accent); font-weight: 700; margin-bottom: 36px; line-height: 1.2; }
+.subkicker { font-size: 38px; color: var(--fg); opacity: .82; margin-top: 40px; line-height: 1.3; }
+.headline { font-size: 100px; line-height: 1.06; font-weight: 800; }
+.headline.sm { font-size: 76px; }
+.accent { color: var(--accent); }
+.accent2 { color: var(--accent2); }
+
+/* diagram: animated bars */
+.bars { display: flex; gap: 40px; align-items: flex-end; height: 34vh; margin-top: 60px; }
+.barcol { display: flex; flex-direction: column; align-items: center; }
+.bar { width: 130px; background: var(--accent); border-radius: 18px 18px 0 0; height: 0; }
+.bar.bad { background: var(--accent2); }
+.barlabel { margin-top: 20px; font-size: 36px; opacity: .82; max-width: 220px; }
+
+/* stat: one big count-up number that breathes (McKinsey "let the number breathe") */
+.statnum { font-size: 220px; font-weight: 900; line-height: 1; letter-spacing: -.02em; color: var(--accent); }
+.statlabel { margin-top: 28px; font-size: 44px; line-height: 1.25; opacity: .9; max-width: 86%; }
+
+/* statgrid: 2–4 KPIs, staggered reveal */
+.statgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 44px 70px; margin-top: 12px; }
+.statgrid .statcell { opacity: 0; display: flex; flex-direction: column; align-items: center;
+  will-change: opacity; }
+.statgrid .statnum { font-size: 132px; }
+.statgrid .statlabel { font-size: 34px; margin-top: 12px; }
+
+/* progress: a single proportion, big % + filling track */
+.progresspct { font-size: 150px; font-weight: 900; color: var(--accent); line-height: 1; }
+.progresstrack { margin-top: 44px; width: 78%; height: 46px; border-radius: 999px;
+  background: var(--hair); overflow: hidden; }
+.progressfill { height: 100%; width: 0; border-radius: 999px; background: var(--accent); will-change: width; }
+
+/* compare: A vs B cards */
+.compare { display: flex; align-items: stretch; gap: 32px; margin-top: 24px; width: 90%; }
+.cmpcard { flex: 1; background: color-mix(in srgb, var(--fg) 6%, transparent); border: 3px solid var(--hair);
+  border-radius: 28px; padding: 48px 32px; display: flex; flex-direction: column; justify-content: center; }
+.cmpcard.good { border-color: var(--accent); }
+.cmpcard.bad { border-color: var(--accent2); }
+.cmptitle { font-size: 38px; opacity: .85; margin-bottom: 22px; line-height: 1.2; }
+.cmpval { font-size: 72px; font-weight: 800; line-height: 1.08; }
+.cmpvs { display: flex; align-items: center; font-size: 42px; font-weight: 800; opacity: .55;
+  text-transform: uppercase; }
+
+/* steps: numbered process flow, sequential reveal */
+.steps { display: flex; flex-direction: column; gap: 32px; margin-top: 12px; width: 86%; }
+.step { display: flex; align-items: center; gap: 34px; text-align: left; opacity: 0;
+  will-change: opacity, transform; }
+.stepnum { flex: none; width: 96px; height: 96px; border-radius: 50%; background: var(--accent);
+  color: var(--bg); font-size: 52px; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+.steptitle { font-size: 50px; font-weight: 800; line-height: 1.1; }
+.steptext { font-size: 34px; opacity: .8; margin-top: 8px; line-height: 1.25; }
+
+/* quote: pull-quote (great for verbatim talk-time quotes) */
+.quoteblock { max-width: 88%; }
+.quotemark { font-size: 200px; line-height: .55; height: 96px; color: var(--accent); opacity: .5; }
+.quotetext { font-size: 84px; font-weight: 800; line-height: 1.12; }
+.quoteattr { margin-top: 34px; font-size: 40px; opacity: .8; }
+
+/* figure: framed source screenshot / paper figure (not pasted raw).
+   Top-anchored so the figure + its caption clear the kinetic-caption band. */
+.slide[data-type="figure"] { justify-content: flex-start; padding-top: 96px; }
+.figframe { background: #fff; border-radius: 26px; padding: 24px;
+  box-shadow: 0 30px 90px rgba(0,0,0,.5); max-width: 80%; max-height: 48%;
+  display: flex; align-items: center; justify-content: center; }
+.figframe img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; border-radius: 8px; }
+.figcaption { margin-top: 28px; font-size: 30px; line-height: 1.3; opacity: .8; max-width: 80%; }
+
+/* brand watermark — small persistent mark in a bottom corner (position set in JS) */
+#watermark { position: fixed; z-index: 3; object-fit: contain; opacity: .92; pointer-events: none; }
+
+/* call-to-action end slide */
+.cta-product { max-height: 36%; margin-bottom: 26px; }
+.cta-logo { width: 12vh; height: 12vh; object-fit: contain; margin-bottom: 18px; }
+.cta-head { margin-top: 4px; }
+.cta-url { margin-top: 26px; font-size: 38px; font-weight: 700; color: var(--accent); letter-spacing: .01em; }
+
+/* kinetic captions: anchored above the 9:16 bottom safe area */
+#caption { position: absolute; left: 60px; right: 60px;
+  display: flex; flex-wrap: wrap; gap: 14px 22px; justify-content: center; }
+#caption .w { font-weight: 800; color: var(--fg); text-shadow: 0 4px 18px rgba(0,0,0,.55);
+  will-change: transform, color; }
+#caption .w.active { color: var(--accent); }
+
+/* ============================================================
+   Expanded device set (Phase 2). No CSS animation/transition on
+   captured elements — every motion below is driven by renderAt(t).
+   ============================================================ */
+
+/* Theme-aware neutral hairlines/tracks: derived from --fg so they invert with the background
+   (a hardcoded rgba(255,255,255,…) track is invisible on the light themes — paper/medtech). */
+:root { --hair: color-mix(in srgb, var(--fg) 15%, transparent);
+        --hair-strong: color-mix(in srgb, var(--fg) 30%, transparent); }
+
+/* pictograph: icon/dot array (waffle) — N-of-M cells light up */
+.pictograph { display: grid; grid-template-columns: repeat(5, 1fr); gap: 24px;
+  width: 58%; margin: 16px auto 0; }
+.picto-cell { width: 100%; aspect-ratio: 1 / 1; border-radius: 24%;
+  background: var(--hair); will-change: opacity; }
+.picto-cell.on.good { background: var(--accent); }
+.picto-cell.on.bad { background: var(--accent2); }
+
+/* trend: a single sparkline that draws on, with a travelling end dot + value */
+.trendwrap { position: relative; width: 78%; margin: 36px auto 0; }
+.trend { width: 100%; height: 34vh; overflow: visible; display: block; }
+.trend-line { fill: none; stroke: var(--accent); stroke-width: 4;
+  stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.trend.bad .trend-line { stroke: var(--accent2); }
+.trend-dot { position: absolute; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent); transform: translate(-50%, -50%); will-change: left, top; }
+.trend.bad ~ .trend-dot { background: var(--accent2); }
+.trend-end { position: absolute; right: 0; top: -64px; font-size: 56px; font-weight: 900;
+  color: var(--accent); opacity: 0; }
+.trend.bad ~ .trend-end { color: var(--accent2); }
+
+/* ring: single proportion as a sweeping arc (a gauge, not a pie comparison) */
+.ringwrap { position: relative; width: 38vh; height: 38vh; max-width: 70%; margin: 8px auto 0; }
+.ring { width: 100%; height: 100%; transform: rotate(-90deg); transform-origin: 50% 50%; }
+.ring-track { fill: none; stroke: var(--hair); stroke-width: 9; }
+.ring-fill { fill: none; stroke: var(--accent); stroke-width: 9; stroke-linecap: round; will-change: stroke-dashoffset; }
+.ring.bad .ring-fill { stroke: var(--accent2); }
+.ring-pct { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 92px; font-weight: 900; color: var(--accent); }
+.ring.bad ~ .ring-pct { color: var(--accent2); }
+
+/* ranked: horizontal top-N bars (long labels OK), grow + reveal in order */
+.ranked { display: flex; flex-direction: column; gap: 30px; width: 84%; margin-top: 18px; }
+.rankrow { opacity: 0; will-change: opacity; }
+.ranktop { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; margin-bottom: 12px; }
+.ranklabel { font-size: 44px; font-weight: 700; text-align: left; line-height: 1.15; }
+.rankval { font-size: 40px; font-weight: 800; color: var(--accent); flex: none; }
+.ranktrack { height: 34px; border-radius: 999px; background: var(--hair); overflow: hidden; }
+.rankbar { height: 100%; width: 0; border-radius: 999px; background: var(--accent); will-change: width; }
+.rankbar.bad { background: var(--accent2); }
+
+/* delta: before -> after, both count up, change badge pops in last */
+.delta { display: flex; align-items: center; justify-content: center; gap: 44px; margin-top: 8px; }
+.delta-cell { display: flex; flex-direction: column; align-items: center; }
+.delta-val { font-size: 132px; font-weight: 900; line-height: 1; letter-spacing: -.02em; }
+.delta-val.good { color: var(--accent); }
+.delta-val.bad { color: var(--accent2); }
+.delta-lab { font-size: 40px; opacity: .82; margin-top: 18px; }
+.delta-arrow { font-size: 96px; font-weight: 700; opacity: .55; }
+.delta-badge { margin-top: 46px; font-size: 50px; font-weight: 900; padding: 12px 36px;
+  border-radius: 999px; opacity: 0; will-change: opacity; }
+.delta-badge.good { color: var(--accent); border: 3px solid var(--accent); }
+.delta-badge.bad { color: var(--accent2); border: 3px solid var(--accent2); }
+
+/* timeline: dated milestones on an axis, connector draws + dots reveal L->R */
+.timeline { width: 86%; margin-top: 36px; }
+.tl-track { position: relative; height: 4px; background: var(--hair); }
+.tl-line { position: absolute; left: 0; top: 0; height: 100%; width: 0; background: var(--accent); will-change: width; }
+.tl-event { position: absolute; top: 0; transform: translateX(-50%); opacity: 0;
+  display: flex; flex-direction: column; align-items: center; width: 200px; will-change: opacity; }
+.tl-dot { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); margin-top: -13px; }
+.tl-date { margin-top: 18px; font-size: 40px; font-weight: 800; color: var(--accent); }
+.tl-evlabel { margin-top: 6px; font-size: 36px; opacity: .82; line-height: 1.2; }
+
+/* waterfall: start -> +/- contributors -> end; floating bars grow in sequence */
+.waterfall { display: flex; align-items: flex-end; justify-content: center; gap: 24px;
+  height: 28vh; margin-top: 28px; }
+.wf-col { display: flex; flex-direction: column; align-items: center; }
+.wf-barwrap { position: relative; width: 92px; height: 26vh; }
+.wf-bar { position: absolute; left: 0; width: 100%; bottom: 0; height: 0; border-radius: 8px;
+  background: var(--accent); will-change: height; }
+.wf-bar.tot { background: var(--accent); }
+.wf-bar.good { background: var(--accent); opacity: .82; }
+.wf-bar.bad { background: var(--accent2); opacity: .9; }
+.wf-label { margin-top: 18px; font-size: 26px; opacity: .82; max-width: 116px; line-height: 1.2; }
+
+/* matrix: 2x2 positioning quadrant; points pop in at (x,y), staggered */
+.matrix { position: relative; width: 58vh; max-width: 78%; aspect-ratio: 1 / 1; margin: 16px auto 0; }
+.mx-plot { position: absolute; inset: 0; border-left: 3px solid var(--hair-strong);
+  border-bottom: 3px solid var(--hair-strong); }
+.mx-axisx { position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: var(--hair); }
+.mx-axisy { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: var(--hair); }
+.mx-pt { position: absolute; transform: translate(-50%, 50%); opacity: 0; will-change: opacity, transform;
+  display: flex; flex-direction: column; align-items: center; }
+.mx-pt::before { content: ''; width: 34px; height: 34px; border-radius: 50%; background: var(--accent); }
+.mx-pt.bad::before { background: var(--accent2); }
+.mx-ptlab { font-size: 34px; margin-top: 8px; white-space: nowrap; font-weight: 700; }
+.mx-xlo { position: absolute; left: 0; bottom: -54px; font-size: 34px; opacity: .8; }
+.mx-xhi { position: absolute; right: 0; bottom: -54px; font-size: 34px; opacity: .8; }
+/* y-axis labels live in the gutter left of the plot — wrap + cap width + right-align so the
+   larger mobile font never clips off the screen edge on narrow aspects (9:16 / 4:5). */
+.mx-ylo { position: absolute; left: -18px; bottom: 0; transform: translateX(-100%); font-size: 34px; opacity: .8;
+  white-space: normal; max-width: 150px; text-align: right; line-height: 1.1; }
+.mx-yhi { position: absolute; left: -18px; top: 0; transform: translateX(-100%); font-size: 34px; opacity: .8;
+  white-space: normal; max-width: 150px; text-align: right; line-height: 1.1; }
+
+/* reframe: strike the wrong word, swap in the right one */
+.reframe { line-height: 1.18; }
+.rf-strike { position: relative; opacity: .58; }
+.rf-line { position: absolute; left: -.02em; top: 52%; height: 7px; width: 0; background: var(--accent2);
+  border-radius: 4px; will-change: width; }
+.rf-arrow { opacity: 0; }
+.rf-after { display: inline-block; opacity: 0; will-change: opacity, transform; }
+
+/* highlight: a marker sweep wipes across the key phrase */
+.hl { position: relative; display: inline; }
+/* marker pops (accent at .62) but stays translucent so the word reads over it AND before the
+   sweep arrives (the text is --fg the whole time, never hidden behind an opaque block). */
+.hl-bg { position: absolute; left: -.06em; right: auto; top: .02em; bottom: .0em; width: 0;
+  background: var(--accent); opacity: .62; border-radius: 6px; z-index: -1; will-change: width; }
+
+/* build: headline assembles word-by-word */
+.buildline .bw { display: inline-block; opacity: 0; will-change: opacity, transform; }
+
+/* punch: a single-word slam (size tiers by word length so long words don't clip) */
+.punch { font-size: 260px; font-weight: 900; line-height: .92; letter-spacing: -.02em; }
+.punch.md { font-size: 196px; }
+.punch.sm { font-size: 150px; }
+.punch.accent { color: var(--accent); }
+.punch.accent2 { color: var(--accent2); }
+.reframe.xs { font-size: 58px; }
+
+/* list: a plain numbered list, revealed one per beat (lighter than steps) */
+.list { display: flex; flex-direction: column; gap: 30px; width: 82%; margin-top: 14px; text-align: left; }
+.li-row { display: flex; align-items: baseline; gap: 28px; opacity: 0; will-change: opacity, transform; }
+.li-num { font-size: 52px; font-weight: 900; color: var(--accent); flex: none; min-width: 60px; }
+.li-text { font-size: 54px; font-weight: 700; line-height: 1.15; }
+
+/* define: a term and its definition */
+.define { max-width: 88%; }
+.def-term { font-size: 112px; font-weight: 900; color: var(--accent); line-height: 1.04; }
+.def-term.sm { font-size: 78px; }
+.def-body { font-size: 48px; line-height: 1.3; opacity: 0; margin-top: 30px; will-change: opacity, transform; }
+
+/* ============================================================
+   McKinsey-grade chrome (theme-agnostic, ARCHITECTURE §8.6):
+   an action/"so-what" TITLE pinned top, a SOURCE line pinned
+   bottom, and a `muted` data-viz state so the one insight bar
+   reads in accent while the rest recede. The chart/stat stays
+   centered (these are absolutely positioned, out of flow).
+   ============================================================ */
+.slidetitle { position: absolute; top: 84px; left: 90px; right: 90px; z-index: 2;
+  font-size: 60px; font-weight: 800; line-height: 1.12; text-align: center; }
+.slidetitle.sm { font-size: 46px; }
+.srcline { position: absolute; bottom: 38px; left: 90px; right: 90px; z-index: 2;
+  font-size: 26px; line-height: 1.25; opacity: .5; text-align: left; }
+/* data-viz pre-highlight: non-insight bars recede to a neutral track tone, their
+   label/value dim, so the single accent (insight) bar carries the eye. */
+.bar.muted { background: var(--hair-strong); }
+.rankbar.muted { background: var(--hair-strong); }
+.rankrow.muted .ranklabel { opacity: .55; }
+.rankrow.muted .rankval { opacity: .55; color: var(--fg); }
+
+/* ============================================================
+   FWF theme treatment (Founders Who Finish). Scoped to
+   [data-theme="fwf"] so no other theme is affected. Three jobs:
+   (1) condensed Archivo (real wdth axis) at FWF weights,
+   (2) flat-purple texture: static grain + radial vignette (no
+       drifting accent glow — ambient is off for fwf), and
+   (3) 16:9 long-form casing: ALL-CAPS titles/labels, sentence
+       case for dense body/quotes/captions. Still NO CSS
+       animation on captured elements (textures are static).
+   ============================================================ */
+/* condensed cut: font-stretch selects the Archivo width axis (62–125 advertised in @font-face).
+   Body/captions lightly condensed; big display lines tighter + a hair of negative tracking. */
+body[data-theme="fwf"] { font-stretch: 84%; }
+[data-theme="fwf"] .headline, [data-theme="fwf"] .punch, [data-theme="fwf"] .statnum,
+[data-theme="fwf"] .def-term, [data-theme="fwf"] .progresspct, [data-theme="fwf"] .quotetext,
+[data-theme="fwf"] .cmpval, [data-theme="fwf"] .delta-val, [data-theme="fwf"] .ring-pct,
+[data-theme="fwf"] .trend-end, [data-theme="fwf"] .slidetitle { font-stretch: 74%; letter-spacing: -.01em; }
+
+/* balance multi-line display text so line lengths even out (avoids a near-full first line
+   followed by a 2-word orphan; easier to read, no long eye-scan). Chrome 114+ (render + stills
+   both use modern headless Chrome); degrades to normal wrapping if unsupported. */
+[data-theme="fwf"] .headline, [data-theme="fwf"] .slidetitle, [data-theme="fwf"] .quotetext,
+[data-theme="fwf"] .reframe, [data-theme="fwf"] .buildline { text-wrap: balance; }
+
+/* texture layers sit above the flat #36185B bg, below #stage content (z-index 1).
+   vignette = a cheap radial gradient (darker toward edges); grain = a tileable, fixed-seed
+   feTurbulence noise (deterministic, no per-frame re-raster). */
+body[data-theme="fwf"]::before, body[data-theme="fwf"]::after {
+  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+body[data-theme="fwf"]::before {
+  background: radial-gradient(120% 95% at 50% 42%, transparent 52%, rgba(0,0,0,.42) 100%); }
+body[data-theme="fwf"]::after {
+  opacity: .07; mix-blend-mode: overlay; background-size: 160px 160px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+/* casing — ALL-CAPS for titles, labels, badges, short punch lines */
+[data-theme="fwf"] .kicker, [data-theme="fwf"] .headline, [data-theme="fwf"] .punch,
+[data-theme="fwf"] .reframe, [data-theme="fwf"] .buildline, [data-theme="fwf"] .subkicker,
+[data-theme="fwf"] .def-term, [data-theme="fwf"] .statlabel, [data-theme="fwf"] .barlabel,
+[data-theme="fwf"] .cmptitle, [data-theme="fwf"] .cmpval, [data-theme="fwf"] .steptitle,
+[data-theme="fwf"] .ranklabel, [data-theme="fwf"] .rankval, [data-theme="fwf"] .tl-date,
+[data-theme="fwf"] .tl-evlabel, [data-theme="fwf"] .delta-lab, [data-theme="fwf"] .delta-badge,
+[data-theme="fwf"] .mx-ptlab, [data-theme="fwf"] .mx-xlo, [data-theme="fwf"] .mx-xhi,
+[data-theme="fwf"] .mx-ylo, [data-theme="fwf"] .mx-yhi, [data-theme="fwf"] .li-text,
+[data-theme="fwf"] .wf-label, [data-theme="fwf"] .quoteattr, [data-theme="fwf"] .slidetitle {
+  text-transform: uppercase; }
+/* sentence case for dense body / data / long quotes / running captions (16:9 legibility) */
+[data-theme="fwf"] .def-body, [data-theme="fwf"] .steptext, [data-theme="fwf"] .figcaption,
+[data-theme="fwf"] .quotetext, [data-theme="fwf"] #caption .w { text-transform: none; }
+/* secondary text (subtitles / footer feel) leans to the #CCCCCC tone via opacity on white */
+[data-theme="fwf"] #caption .w { color: #CCCCCC; }
+[data-theme="fwf"] #caption .w.active { color: var(--accent); }

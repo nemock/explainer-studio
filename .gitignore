@@ -1,0 +1,13 @@
+# project outputs (videos, frames, audio) — never committed
+projects/
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+# local env / tooling
+.DS_Store
+*.log
+node_modules/
+# intel caches (Phase 1)
+.cache/

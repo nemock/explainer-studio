@@ -1,0 +1,6 @@
+#!/bin/zsh
+# explainer2 CLI wrapper — runs the vendored pipeline with the shared media venv
+# (~/myenv holds the verified torch/Kokoro/Playwright stack; see pyproject.toml).
+# No install into the venv needed, and zero risk to the production v1 console script.
+export PYTHONPATH="/Volumes/Casima/claudeCode/explainer2/src${PYTHONPATH:+:$PYTHONPATH}"
+exec /Users/davesaunders/myenv/bin/python3.12 -m explainer2.cli "$@"
