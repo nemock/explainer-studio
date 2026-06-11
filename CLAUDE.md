@@ -26,6 +26,20 @@ A local-first **explainer-video studio**: YouTube competitive intelligence → r
 - **Boundary:** generation only — labeled output dir + versioned `manifest.json` (schema 2.0), then stop. **This tool never posts to social platforms.**
 - **YouTube intelligence:** `yt-dlp` metadata/transcript analysis for editorial judgment only; competitor media is never republished.
 
+## The playbooks are the brain — read them, follow them
+
+This project is built to be run by ANY Claude model, including ones less
+capable than the one that designed it. The analytical methodology is therefore
+written down, not assumed:
+
+- **[skills/explainer2/SKILL.md](skills/explainer2/SKILL.md)** — the pipeline procedure, gates, and hard rules.
+- **[skills/explainer2/references/blueprint-playbook.md](skills/explainer2/references/blueprint-playbook.md)** — how to turn an intel sweep into a Blueprint (convention extraction, comment mining, the four gap questions, title rules). Read IN FULL before any Blueprint.
+- **[skills/explainer2/references/script-playbook.md](skills/explainer2/references/script-playbook.md)** — retention engineering, voice rules, talk-time integration, self-QA checklist. Read IN FULL before any script.
+
+If your judgment conflicts with a playbook, follow the playbook and flag the
+conflict. When you discover a better technique mid-run, propose adding it to
+the playbook — the repo, not the session, is where insight accumulates.
+
 ## How to run
 
 - CLI: **`bin/explainer2`** (wraps `PYTHONPATH=src ~/myenv/bin/python3.12 -m explainer2.cli`). The shared `~/myenv` venv holds the verified torch/Kokoro/Playwright stack — do not create a new venv without asking.

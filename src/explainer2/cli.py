@@ -134,6 +134,11 @@ def cmd_record(args):
     print(json.dumps(recorder.run(Project.load(args.project_dir), open_browser=not args.no_open), indent=2))
 
 
+def cmd_adlib(args):
+    from .media import adlib
+    print(json.dumps(adlib.run(Project.load(args.project_dir), apply=args.apply), indent=2))
+
+
 def cmd_stills(args):
     proj = Project.load(args.project_dir)
     print(json.dumps(stills.run(proj, aspect=args.aspect), indent=2))
@@ -225,6 +230,12 @@ def main(argv=None):
     rc.add_argument("project_dir")
     rc.add_argument("--no-open", action="store_true", help="don't auto-open the browser")
     rc.set_defaults(func=cmd_record)
+
+    ad = sub.add_parser("adlib", help="ASR-check operator recordings against the script (local whisper); "
+                                      "--apply rewrites drifted segment text so captions follow what was said")
+    ad.add_argument("project_dir")
+    ad.add_argument("--apply", action="store_true")
+    ad.set_defaults(func=cmd_adlib)
 
     va = sub.add_parser("validate", help="check the manifest is a complete handoff contract")
     va.add_argument("project_dir")

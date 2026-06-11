@@ -35,11 +35,10 @@ def _cleanup(raw, out, sr):
                            check=True, capture_output=True)
             tmp.unlink(missing_ok=True)
             return "audio-cleanup:streaming"
-    # fallback if the VocalEnhancer skill isn't present: plain loudnorm to the same target
-    subprocess.run(["ffmpeg", "-hide_banner", "-y", "-i", str(raw),
-                    "-af", "loudnorm=I=-14:TP=-1.5:LRA=11", "-ar", "48000", "-ac", "1", str(out)],
-                   check=True, capture_output=True)
-    return "loudnorm:fallback"
+    # fallback if the VocalEnhancer skill isn't present: the vendored native chain
+    # (denoise/de-ess/EQ/compress + measured two-pass loudnorm to the same target)
+    from . import cleanup
+    return cleanup.clean(raw, out, sr=48000)
 
 
 def run(proj):

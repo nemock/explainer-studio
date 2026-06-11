@@ -5,28 +5,35 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{TITLE}} — record voiceover</title>
 <style>
-  :root { --bg:#0b1020; --fg:#f5f7ff; --accent:#5b8cff; --good:#3ddc84; --bad:#ff7a59; }
+  :root { --bg:#0b1020; --fg:#f5f7ff; --accent:#5b8cff; --good:#3ddc84; --bad:#ff7a59;
+          --warn:#ffd166; }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--fg);
     font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }
-  header { position:sticky; top:0; background:rgba(11,16,32,.95); backdrop-filter:blur(8px);
-    padding:18px 24px; border-bottom:1px solid #20284a; display:flex; align-items:center; gap:16px; }
-  header h1 { font-size:20px; margin:0; font-weight:800; }
-  #progress { font-size:14px; opacity:.8; }
-  main { max-width:820px; margin:0 auto; padding:24px; }
-  .card { background:#121a33; border:1px solid #20284a; border-radius:16px; padding:24px;
+  header { position:sticky; top:0; z-index:5; background:rgba(11,16,32,.95);
+    backdrop-filter:blur(8px); padding:14px 24px; border-bottom:1px solid #20284a;
+    display:flex; align-items:center; gap:16px; }
+  header h1 { font-size:18px; margin:0; font-weight:800; flex:1; min-width:0;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #progress { font-size:14px; opacity:.85; white-space:nowrap; }
+  #meter { width:160px; height:34px; background:#0d1430; border:1px solid #20284a;
+    border-radius:8px; }
+  main { max-width:860px; margin:0 auto; padding:24px; }
+  .card { background:#121a33; border:1px solid #20284a; border-radius:16px; padding:22px;
     margin-bottom:18px; }
   .card.recorded { border-color:var(--good); }
-  .meta { font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:var(--accent);
-    font-weight:700; margin-bottom:10px; display:flex; justify-content:space-between; }
+  .card.active { border-color:var(--bad); box-shadow:0 0 0 2px var(--bad); }
+  .meta { font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent);
+    font-weight:700; margin-bottom:6px; display:flex; justify-content:space-between; gap:10px; }
   .status.ok { color:var(--good); } .status.none { color:#7a85ad; }
-  .script { font-size:30px; line-height:1.4; font-weight:600; margin-bottom:18px; }
+  .device { font-size:13px; color:var(--warn); font-weight:700; margin-bottom:8px; }
+  .script { font-size:28px; line-height:1.45; font-weight:600; margin-bottom:14px; }
+  .sub { font-size:13px; opacity:.65; margin-bottom:14px; }
   button { font:inherit; font-weight:700; border:0; border-radius:999px; padding:12px 22px;
     cursor:pointer; background:var(--accent); color:#fff; }
   button.rec { background:var(--bad); }
-  button.ghost { background:#1b2banner; background:#1b2547; color:var(--fg); }
   button:disabled { opacity:.45; cursor:default; }
-  .row { display:flex; gap:12px; align-items:center; }
+  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
   audio { height:34px; }
   #finish { position:sticky; bottom:0; background:linear-gradient(transparent,#0b1020 40%);
     padding:24px; text-align:center; }
@@ -38,24 +45,60 @@
 <body>
 <header>
   <h1>🎙️ {{TITLE}}</h1>
-  <div id="progress">0 / 0 recorded</div>
+  <canvas id="meter" width="160" height="34"></canvas>
+  <div id="progress">0 / 0</div>
 </header>
 <main id="list"></main>
-<div id="finish"><button id="finishBtn">Finish &amp; render →</button>
-  <div class="hint">Record every segment, then click Finish. You can re-record any segment.</div></div>
-<div id="doneMsg">✅ All set — you can close this tab. The tool is rendering your video.</div>
+<div id="finish"><button id="finishBtn">Finish session ✓</button>
+  <div class="hint">Record every segment (re-record any time — earlier takes are kept).
+    Press <b>Esc</b> to stop a recording.</div></div>
+<div id="doneMsg">✅ Session saved — you can close this tab.</div>
 
 <script>
 let segs = [], stream = null, rec = null, chunks = [], activeId = null;
+let audioCtx = null, analyser = null, meterRAF = 0;
+const WPM = 150;
+
+function readTime(text) {
+  const w = (text.trim().match(/\S+/g) || []).length;
+  return Math.max(1, Math.round(w / WPM * 60));
+}
 
 async function ensureMic() {
-  if (!stream) stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  if (!stream) {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioCtx = new AudioContext();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    audioCtx.createMediaStreamSource(stream).connect(analyser);
+  }
   return stream;
+}
+
+function drawMeter() {
+  const c = document.getElementById('meter'), g = c.getContext('2d');
+  g.clearRect(0, 0, c.width, c.height);
+  if (analyser && activeId !== null) {
+    const buf = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteTimeDomainData(buf);
+    g.strokeStyle = '#ff7a59'; g.lineWidth = 2; g.beginPath();
+    for (let i = 0; i < buf.length; i++) {
+      const x = i / buf.length * c.width, y = (buf[i] / 255) * c.height;
+      i ? g.lineTo(x, y) : g.moveTo(x, y);
+    }
+    g.stroke();
+  } else {
+    g.strokeStyle = '#20284a'; g.beginPath();
+    g.moveTo(0, c.height / 2); g.lineTo(c.width, c.height / 2); g.stroke();
+  }
+  meterRAF = requestAnimationFrame(drawMeter);
 }
 
 function progress() {
   const n = segs.filter(s => s.recorded).length;
-  document.getElementById('progress').textContent = `${n} / ${segs.length} recorded`;
+  const total = segs.reduce((a, s) => a + readTime(s.text), 0);
+  document.getElementById('progress').textContent =
+    `${n} / ${segs.length} · ~${Math.floor(total / 60)}m${String(total % 60).padStart(2, '0')}s read`;
   document.getElementById('finishBtn').disabled = n < segs.length;
 }
 
@@ -64,14 +107,19 @@ function render() {
   list.innerHTML = '';
   segs.forEach(s => {
     const card = document.createElement('div');
-    card.className = 'card' + (s.recorded ? ' recorded' : '');
+    card.className = 'card' + (s.recorded ? ' recorded' : '') + (activeId === s.id ? ' active' : '');
+    card.id = 'seg' + s.id;
+    const beat = s.beat ? ` · ${s.beat}` : '';
+    const takes = s.takes > 1 ? ` · take ${s.takes}` : '';
     card.innerHTML =
-      `<div class="meta"><span>Segment ${s.id + 1} · ${s.slide}</span>
-        <span class="status ${s.recorded ? 'ok' : 'none'}">${s.recorded ? '✓ recorded' : 'not recorded'}</span></div>
+      `<div class="meta"><span>Segment ${s.id + 1}${beat}</span>
+        <span class="status ${s.recorded ? 'ok' : 'none'}">${s.recorded ? '✓ recorded' + takes : '~' + readTime(s.text) + 's'}</span></div>
+       ${s.device ? `<div class="device">⚡ ${s.device}</div>` : ''}
        <div class="script">${s.text}</div>
+       ${s.note ? `<div class="sub">${s.note}</div>` : ''}
        <div class="row">
-         <button data-rec="${s.id}">${s.recorded ? 'Re-record' : 'Record'}</button>
-         ${s.recorded ? `<audio controls src="/clip?seg=${s.id}&t=${Date.now()}"></audio>` : ''}
+         <button data-rec="${s.id}">${activeId === s.id ? '■ Stop' : (s.recorded ? 'Re-record' : 'Record')}</button>
+         ${s.recorded && activeId !== s.id ? `<audio controls src="/clip?seg=${s.id}&t=${Date.now()}"></audio>` : ''}
        </div>`;
     list.appendChild(card);
   });
@@ -81,24 +129,32 @@ function render() {
 }
 
 async function toggle(id, btn) {
-  if (activeId === id) { rec.stop(); return; }            // stop current
-  if (rec && rec.state === 'recording') return;            // one at a time
+  if (activeId === id) { rec.stop(); return; }
+  if (rec && rec.state === 'recording') return;
   await ensureMic();
   chunks = []; activeId = id;
   rec = new MediaRecorder(stream, { mimeType: 'audio/webm' });
   rec.ondataavailable = e => chunks.push(e.data);
   rec.onstop = async () => {
     const blob = new Blob(chunks, { type: 'audio/webm' });
-    btn.textContent = 'Saving…'; btn.disabled = true;
+    if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
     const r = await fetch('/save?seg=' + id, { method: 'POST', body: blob });
     const j = await r.json();
     activeId = null;
-    if (j.ok) { segs.find(s => s.id === id).recorded = true; }
+    if (j.ok) {
+      const s = segs.find(s => s.id === id);
+      s.recorded = true; s.takes = j.takes || 1;
+    }
     render();
   };
   rec.start();
-  btn.textContent = '■ Stop'; btn.classList.add('rec');
+  render();
+  document.getElementById('seg' + id).scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && rec && rec.state === 'recording') rec.stop();
+});
 
 document.getElementById('finishBtn').addEventListener('click', async () => {
   await fetch('/done', { method: 'POST' });
@@ -107,7 +163,7 @@ document.getElementById('finishBtn').addEventListener('click', async () => {
   document.getElementById('doneMsg').style.display = 'block';
 });
 
-fetch('/segments').then(r => r.json()).then(d => { segs = d; render(); });
+fetch('/segments').then(r => r.json()).then(d => { segs = d; render(); drawMeter(); });
 </script>
 </body>
 </html>

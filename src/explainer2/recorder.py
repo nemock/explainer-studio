@@ -15,7 +15,9 @@ ASSETS = Path(__file__).parent / "assets"
 def run(proj, open_browser=True):
     from .media.common import effective_segments
     script = json.loads(proj.script_json.read_text())
-    seg_list = [{"id": s["id"], "slide": s["slide"], "text": s["text"]}
+    seg_list = [{"id": s["id"], "slide": s["slide"], "text": s["text"],
+                 # optional v2 script fields — teleprompter context cues
+                 "beat": s.get("beat"), "device": s.get("device"), "note": s.get("note")}
                 for s in effective_segments(proj, script)]
     vdir = proj.voiceover_dir
     html = (ASSETS / "recorder.html").read_text().replace("{{TITLE}}", str(proj.data.get("title", "Voiceover")))
@@ -23,6 +25,15 @@ def run(proj, open_browser=True):
 
     def wav(sid): return vdir / f"seg_{sid:03d}.wav"
     def recorded(sid): return wav(sid).exists()
+
+    def takes(sid):
+        return len(list(vdir.glob(f"seg_{sid:03d}.take*.wav"))) + (1 if recorded(sid) else 0)
+
+    def archive_take(sid):
+        """Keep the previous take before overwriting (retake history, PRD §5.3)."""
+        if recorded(sid):
+            n = len(list(vdir.glob(f"seg_{sid:03d}.take*.wav"))) + 1
+            wav(sid).rename(vdir / f"seg_{sid:03d}.take{n}.wav")
 
     class H(BaseHTTPRequestHandler):
         def log_message(self, *a): pass
@@ -40,7 +51,8 @@ def run(proj, open_browser=True):
             if p.path == "/":
                 self._send(200, html, "text/html; charset=utf-8")
             elif p.path == "/segments":
-                self._send(200, json.dumps([{**s, "recorded": recorded(s["id"])} for s in seg_list]))
+                self._send(200, json.dumps([{**s, "recorded": recorded(s["id"]),
+                                             "takes": takes(s["id"])} for s in seg_list]))
             elif p.path == "/clip":
                 sid = int(parse_qs(p.query).get("seg", ["-1"])[0])
                 f = wav(sid)
@@ -55,11 +67,12 @@ def run(proj, open_browser=True):
                 blob = self.rfile.read(int(self.headers.get("Content-Length", 0)))
                 webm = vdir / f"seg_{sid:03d}.webm"
                 webm.write_bytes(blob)
+                archive_take(sid)
                 r = subprocess.run(["ffmpeg", "-hide_banner", "-y", "-i", str(webm),
                                     "-ar", "48000", "-ac", "1", str(wav(sid))], capture_output=True)
                 webm.unlink(missing_ok=True)
                 ok = r.returncode == 0 and wav(sid).exists()
-                self._send(200 if ok else 500, json.dumps({"ok": ok, "seg": sid}))
+                self._send(200 if ok else 500, json.dumps({"ok": ok, "seg": sid, "takes": takes(sid)}))
             elif p.path == "/done":
                 state["done"] = True
                 self._send(200, json.dumps({"ok": True}))

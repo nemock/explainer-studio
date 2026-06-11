@@ -1,0 +1,121 @@
+---
+name: explainer2
+description: >
+  Produce a YouTube-intelligence-driven, retention-engineered explainer video
+  (deep dive and/or Shorts) end-to-end on this Mac: intel sweep → Blueprint →
+  script → operator recording (or Kokoro) → align → render → package. Use when
+  the user says "/explainer2 <topic>", "make a video about", "run the studio
+  pipeline", or asks for a Blueprint on a topic. Local/free only; the single
+  allowed subscription is the operator's stock.adobe.com membership,
+  human-in-the-loop. This skill NEVER posts to social platforms.
+---
+
+# /explainer2 — Explainer Studio pipeline
+
+You are the **generation plane** of this system. The CLI (`bin/explainer2`) is the
+**media plane** — pure Python, no LLM. You do research, judgment, and writing;
+the CLI does fetching, audio, rendering. Never hand-do what a CLI verb does.
+
+**You are expected to follow the playbooks, not improvise.** The analytical
+method lives in two reference files you MUST read at the step that needs them:
+
+- `references/blueprint-playbook.md` — read BEFORE synthesizing any Blueprint.
+- `references/script-playbook.md` — read BEFORE writing any script.
+
+These files encode the methodology that makes the videos good. If your own
+judgment conflicts with a playbook rule, follow the playbook and note the
+conflict for the operator. Do not skip steps because they seem obvious.
+
+## Hard rules (violating any of these is a failed run)
+
+1. **No paid services.** No API keys, no SaaS. Adobe Stock only via the
+   human-in-the-loop flow (you suggest searches; the operator downloads).
+2. **Operator gates are real.** STOP and wait for approval at: Blueprint,
+   Script, and Package. Never auto-proceed past a gate.
+3. **Never post anywhere.** Output ends at the project dir + manifest.json.
+4. **Talk-time rules:** quote `quotes.md` verbatim; adapt positions/anecdotes;
+   NEVER fabricate a take, story, or statistic not in the library or the wiki.
+5. **Sourced facts only.** Every factual claim in a script traces to the intel
+   pull, the research wiki, or the talk-time library. No invented numbers.
+6. **Numbers are spelled out in scripts** ("five hundred", not "500") — TTS
+   and captions both need words.
+7. The media pipeline is **synchronous — run it in the foreground** and let it
+   finish. No polling, no backgrounding loops (global CLAUDE.md shell rules).
+
+## Environment
+
+- CLI: `/Volumes/Casima/claudeCode/explainer2/bin/explainer2` (wraps the
+  shared `~/myenv` interpreter; never install into that venv).
+- Projects: `projects/<date>_<slug>/` under the repo root.
+- Talk-time library (operator's voice): pass
+  `--library /Volumes/Casima/claudeCode/make_money/talk_time` to `talktime`.
+
+## Pipeline (follow in order)
+
+### 1. Scaffold
+```
+bin/explainer2 scaffold "<slug>" --title "<topic>" --aspect 16:9 \
+  --outdir <repo>/projects [--brand <SLUG>]
+```
+Default 16:9 for deep dives, 9:16 for Shorts-only runs. Ask the operator for
+angle/length/aspect ONLY if not given — one cheap confirmation, then proceed.
+
+### 2. Intel sweep (media plane)
+Write 4–6 search queries per the **query-expansion rules** in
+`references/blueprint-playbook.md` §1, then:
+```
+bin/explainer2 intel <project_dir> --queries "<q1>; <q2>; <q3>; <q4>; <q5>"
+```
+Takes 1–3 minutes. Output: `intel/intel.json` + per-finalist transcripts and
+thumbnails. If the sweep errors, check yt-dlp/network, retry once, then report.
+
+### 3. Blueprint (generation plane — YOUR main analytical job)
+Read `references/blueprint-playbook.md` IN FULL, then execute its procedure
+against `intel/intel.json` (read finalist thumbnails with vision; read at least
+the top-3 finalists' full transcripts). Write `intel/blueprint.md` and
+`intel/blueprint.json` using the playbook's templates.
+**GATE: present the Blueprint summary to the operator. Wait for approval.**
+
+### 4. Research wiki (only if the script needs facts beyond the intel)
+`bin/explainer2 wiki fact <name> --body "..." --source "<url>"` for each
+sourced claim you intend to use.
+
+### 5. Script (generation plane)
+Read `references/script-playbook.md` IN FULL. Pull operator takes:
+```
+bin/explainer2 talktime --library /Volumes/Casima/claudeCode/make_money/talk_time \
+  --topics <comma-list from the blueprint>
+```
+Read the candidate files it lists. Write `script.json` (schema `script/2`, see
+playbook §2) with the retention map filled in. Set
+`project.json: voice_source` to `operator` for flagship videos.
+**GATE: show the operator the script + retention map + read-time. Wait.**
+
+### 6. Record (operator voice) or narrate (Kokoro)
+- Operator: `bin/explainer2 record <project_dir>` — opens the booth in Chrome.
+  The operator records; the command returns when they click Finish.
+  Then: `bin/explainer2 adlib <project_dir>` — if any segment is flagged
+  `rerecord`, tell the operator which and relaunch the booth; if `adlib`
+  segments exist, run with `--apply` so captions follow what was said.
+- Kokoro tier: skip record/adlib entirely.
+
+### 7. Media pipeline
+```
+bin/explainer2 media <project_dir>
+```
+Runs narrate → align → deck → render → mux → manifest → qa. Foreground; a
+short takes ~1–2 min, a deep dive substantially longer. Then read the QA
+warnings in the results JSON and fix what is fixable (deck pacing, dead air)
+— at most ONE re-render cycle.
+
+### 8. Package
+Write titles/description/chapters per blueprint §8 into `meta.json` (the
+manifest merges it). Thumbnails and Shorts cutting: Phase 3+/5 features — if
+the modules are present, follow their docs; if not, note as manual steps.
+**GATE: present the package. Wait. Then STOP — never post.**
+
+## Failure behavior
+
+Any stage fails → report the failed stage, its error, and what you tried. Do
+not silently fall back to a different toolchain. Do not switch voices, models,
+or services to route around a failure without asking.
