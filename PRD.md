@@ -2,7 +2,7 @@
 
 ### A local-first explainer-video *studio*: YouTube competitive intelligence → retention-engineered script → your voice → layered visuals → deep dive + Shorts → monetization-ready package. All on one Mac, no SaaS subscriptions in the pipeline.
 
-- **Status:** v0 — greenfield design. Brand-new project; the v1 [`video-explainer-system`](https://github.com/nemock/video-explainer-system) stays untouched and in production.
+- **Status:** **Phase 0 shipped** (2026-06-10: vendored v1 core, manifest 2.0, parity render passed). **Phase 1 shipped** (2026-06-10: intel engine — yt-dlp sweep, RSS-based outlier scoring, deep pull; first Blueprint generated, see [docs/examples/blueprint-first-saas-customers.md](docs/examples/blueprint-first-saas-customers.md)). The v1 [`video-explainer-system`](https://github.com/nemock/video-explainer-system) stays untouched and in production.
 - **Author:** Dave Saunders (with Claude Code)
 - **Date:** 2026-06-10
 - **Working directory:** `/Volumes/Casima/claudeCode/explainer2`

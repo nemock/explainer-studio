@@ -93,6 +93,23 @@ def cmd_stage(args):
     print(json.dumps(fn(proj), indent=2))
 
 
+def cmd_intel(args):
+    from .intel import run as intel_run
+    proj_dir = Path(args.project_dir).resolve()
+    topic = args.topic
+    if not topic:
+        pj = proj_dir / "project.json"
+        if pj.exists():
+            topic = json.loads(pj.read_text()).get("title")
+    if not topic:
+        print("no topic: pass --topic or scaffold the project with a --title")
+        return 1
+    queries = [q.strip() for q in args.queries.split(";")] if args.queries else None
+    print(json.dumps(intel_run.run(proj_dir, topic, queries=queries,
+                                   max_finalists=args.max_finalists,
+                                   per_query=args.per_query), indent=2))
+
+
 def cmd_ingest(args):
     proj = Project.load(args.project_dir)
     if args.pdf:
@@ -185,6 +202,16 @@ def main(argv=None):
         sp = sub.add_parser(st, help=f"run only the {st} stage")
         sp.add_argument("project_dir")
         sp.set_defaults(func=cmd_stage, stage=st)
+
+    it = sub.add_parser("intel", help="YouTube competitive intelligence sweep → intel/intel.json (no API key; yt-dlp)")
+    it.add_argument("project_dir")
+    it.add_argument("--topic", default=None, help="topic to research (default: project.json title)")
+    it.add_argument("--queries", default=None,
+                    help="semicolon-separated search queries (default: auto-derived from topic; "
+                         "the /explainer2 skill usually supplies richer ones)")
+    it.add_argument("--max-finalists", type=int, default=12, dest="max_finalists")
+    it.add_argument("--per-query", type=int, default=15, dest="per_query")
+    it.set_defaults(func=cmd_intel)
 
     ing = sub.add_parser("ingest", help="ingest source material (PDF/URL) into sources/")
     ing.add_argument("project_dir")
