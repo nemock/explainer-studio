@@ -25,7 +25,7 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--fg);
 .kicker { font-size: 34px; letter-spacing: .16em; text-transform: uppercase;
   color: var(--accent); font-weight: 700; margin-bottom: 36px; line-height: 1.2; }
 .subkicker { font-size: 38px; color: var(--fg); opacity: .82; margin-top: 40px; line-height: 1.3; }
-.headline { font-size: 100px; line-height: 1.06; font-weight: 800; }
+.headline { font-size: 100px; line-height: 1.06; font-weight: 800; text-wrap: balance; }
 .headline.sm { font-size: 76px; }
 .accent { color: var(--accent); }
 .accent2 { color: var(--accent2); }
@@ -91,6 +91,11 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--fg);
 /* wide aspects (16:9): the 48% cap was tuned for vertical — let artifacts read.
    padding-top clears the absolute .slidetitle so titled figures never collide. */
 @media (min-aspect-ratio: 3/2) {
+  /* wide aspects have vertical room to spare — don't let headlines run edge
+     to edge (long eye travel, wasted height). Balanced two-liners pull focus
+     in: "Words alone never / greenlight a build" (operator style call). */
+  .headline { max-width: 76%; }
+  .slidetitle { text-wrap: balance; }
   .slide[data-type="figure"] { padding-top: 165px; }
   /* vh, not % : percentage heights silently fail to resolve in the capture
      flex context, so figures rendered ~half-size through video 1 (operator
