@@ -91,10 +91,11 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--fg);
 /* wide aspects (16:9): the 48% cap was tuned for vertical — let artifacts read.
    padding-top clears the absolute .slidetitle so titled figures never collide. */
 @media (min-aspect-ratio: 3/2) {
-  .slide[data-type="figure"] { padding-top: 175px; }
-  /* definite box (not max-*): with only max constraints an indefinite-height
-     flex frame never lets the % -sized img expand — artifacts rendered tiny */
-  .figframe { height: 62%; width: fit-content; max-width: 88%; max-height: none; padding: 14px; }
+  .slide[data-type="figure"] { padding-top: 165px; }
+  /* vh, not % : percentage heights silently fail to resolve in the capture
+     flex context, so figures rendered ~half-size through video 1 (operator
+     caught it on a 23" screen). vh is always definite. */
+  .figframe { height: 66vh; width: fit-content; max-width: 92%; max-height: none; padding: 14px; }
   .figframe img { height: 100%; width: auto; }
 }
 
