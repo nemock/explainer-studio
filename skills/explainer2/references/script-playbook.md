@@ -68,8 +68,17 @@ words ⇒ 4–6 segments.
 
 ## 5. Voice rules (conversational, spoken, the operator's)
 
-- Contractions always. Direct address ("you") throughout. Short sentences;
-  one idea per sentence. No hype words (game-changer, insane, secret weapon).
+- **Operator-voice scripts are spoken essays, not caption decks** (operator
+  directive, 2026-06-11). The operator is voice-only — no camera, no
+  teleprompter-to-lens juggling — and is at his best in flowing, emotive,
+  over-coffee delivery. So: let thoughts run. Mix long connective sentences
+  with short punch lines instead of defaulting to staccato one-liners.
+  Asides, self-interruptions ("and look—"), and direct second-person warmth
+  are encouraged. Segments may run 60–90 words when the thought is genuinely
+  continuous; the 30–60 guidance applies to TTS-tier scripts. Conversational
+  is not rambling: every sentence still earns its place.
+- Contractions always. Direct address ("you") throughout. No hype words
+  (game-changer, insane, secret weapon).
 - **Spell out ALL numbers as words** ("five hundred", "fifteen percent") —
   TTS, captions, and the adlib checker all want words.
 - No stage directions inside `text` (it is read aloud verbatim). Delivery
