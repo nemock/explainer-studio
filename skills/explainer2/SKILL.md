@@ -76,6 +76,13 @@ the top-3 finalists' full transcripts). Write `intel/blueprint.md` and
 `intel/blueprint.json` using the playbook's templates.
 **GATE: present the Blueprint summary to the operator. Wait for approval.**
 
+### 3b. PLAYBOOK.md (required, same gate)
+Every project carries a `PLAYBOOK.md` — the human- and AI-readable record of
+why this video is the way it is (learning, reference, modeling). Create it at
+Blueprint approval from `references/project-playbook-template.md`; APPEND at
+every later gate (script, recording, render, publish). The Learn loop reads
+§7. A project without a current PLAYBOOK.md fails review.
+
 ### 4. Research wiki (only if the script needs facts beyond the intel)
 `bin/explainer2 wiki fact <name> --body "..." --source "<url>"` for each
 sourced claim you intend to use.
@@ -98,6 +105,16 @@ playbook §2) with the retention map filled in. Set
   `rerecord`, tell the operator which and relaunch the booth; if `adlib`
   segments exist, run with `--apply` so captions follow what was said.
 - Kokoro tier: skip record/adlib entirely.
+
+### 6b. Assets (Adobe Stock assist — optional, never blocking)
+For scenes the blueprint marked `visual: footage`, author `assets/queue.json`
+(fields: slide, beat, queries[2], orientation, note, status:"pending") with
+2 concrete searches per scene — name the *feeling* in the note, warn off
+clichés. Then `bin/explainer2 assets <dir> open` opens the searches; the
+operator downloads into `assets/inbox/` (filename prefixed with the slide id);
+`bin/explainer2 assets <dir> ingest` conforms + records license provenance.
+Every footage scene keeps its deck slide as fallback — render proceeds either
+way.
 
 ### 7. Media pipeline
 ```

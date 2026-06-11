@@ -139,6 +139,12 @@ def cmd_adlib(args):
     print(json.dumps(adlib.run(Project.load(args.project_dir), apply=args.apply), indent=2))
 
 
+def cmd_assets(args):
+    from . import stockassist
+    print(json.dumps(stockassist.run(Project.load(args.project_dir), args.action,
+                                     slide=args.slide), indent=2))
+
+
 def cmd_stills(args):
     proj = Project.load(args.project_dir)
     print(json.dumps(stills.run(proj, aspect=args.aspect), indent=2))
@@ -236,6 +242,12 @@ def main(argv=None):
     ad.add_argument("project_dir")
     ad.add_argument("--apply", action="store_true")
     ad.set_defaults(func=cmd_adlib)
+
+    ass = sub.add_parser("assets", help="Adobe Stock assist: open suggested searches / ingest the inbox / status")
+    ass.add_argument("project_dir")
+    ass.add_argument("action", choices=["open", "ingest", "status"])
+    ass.add_argument("--slide", default=None, help="limit `open` to one slide id (e.g. s21)")
+    ass.set_defaults(func=cmd_assets)
 
     va = sub.add_parser("validate", help="check the manifest is a complete handoff contract")
     va.add_argument("project_dir")
