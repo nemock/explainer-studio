@@ -139,6 +139,11 @@ def cmd_adlib(args):
     print(json.dumps(adlib.run(Project.load(args.project_dir), apply=args.apply), indent=2))
 
 
+def cmd_shorts(args):
+    from . import shorts
+    print(json.dumps(shorts.run(args.project_dir, plan_path=args.plan, only=args.only_slug), indent=2))
+
+
 def cmd_assets(args):
     from . import stockassist
     print(json.dumps(stockassist.run(Project.load(args.project_dir), args.action,
@@ -242,6 +247,12 @@ def main(argv=None):
     ad.add_argument("project_dir")
     ad.add_argument("--apply", action="store_true")
     ad.set_defaults(func=cmd_adlib)
+
+    sh = sub.add_parser("shorts", help="cut 9:16 Shorts from a finished deep dive per shorts/plan.json (reuses operator narration)")
+    sh.add_argument("project_dir")
+    sh.add_argument("--plan", default=None, help="path to plan.json (default <project>/shorts/plan.json)")
+    sh.add_argument("--only", default=None, dest="only_slug", help="render just one cut by slug")
+    sh.set_defaults(func=cmd_shorts)
 
     ass = sub.add_parser("assets", help="Adobe Stock assist: open suggested searches / ingest the inbox / status")
     ass.add_argument("project_dir")
