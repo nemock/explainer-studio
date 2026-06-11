@@ -16,6 +16,7 @@ dependencies = [
     "playwright==1.60.0",
     "pymupdf==1.27.2.2",
     "yt-dlp>=2026.5.0",      # Phase 1: YouTube intelligence (no API key)
+    "rembg>=2.0.76",         # thumbnail headshot cutouts, local U2-Net (tools/cutout.py)
 ]
 
 [project.scripts]

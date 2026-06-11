@@ -7,6 +7,8 @@ __pycache__/
 venv/
 # local media library (music/SFX/brand kits — licensed for use, not redistribution)
 library/
+# operator photos (personal, never committed)
+dave_selfies/
 # local env / tooling
 .DS_Store
 *.log
