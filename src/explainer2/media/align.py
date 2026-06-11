@@ -17,22 +17,9 @@ def _ts(t, sep=","):
 def run(proj):
     import torch, torchaudio
     from .. import lexicon
-    segs = json.loads((proj.work / "segments.json").read_text())["segments"]
-    duration = json.loads((proj.work / "segments.json").read_text())["duration"]
+    data = json.loads((proj.work / "segments.json").read_text())
+    segs, duration = data["segments"], data["duration"]
     lex = lexicon.load(proj.dir, (proj.brand or {}).get("lexicon"))
-
-    # align the SPOKEN tokens (acronyms expanded to letters), but remember which
-    # original DISPLAY token each group of spoken tokens belongs to, so captions
-    # show "MCP" while the audio said "M C P".
-    descriptors = []  # (display_token, slide, n_spoken_tokens)
-    transcript = []
-    for seg in segs:
-        for disp, stoks in lexicon.expand(seg["text"], lex):
-            norm_stoks = [s for s in (_norm(x) for x in stoks) if s]
-            if not norm_stoks:
-                continue
-            descriptors.append((disp, seg["slide"], len(norm_stoks)))
-            transcript.extend(norm_stoks)
 
     device = "cpu"  # reliable + fast for short clips; MPS is a later optimization
     bundle = torchaudio.pipelines.MMS_FA
@@ -47,23 +34,47 @@ def run(proj):
         wav = torchaudio.functional.resample(wav, sr, bundle.sample_rate)
     sr = bundle.sample_rate
 
-    t0 = time.time()
-    with torch.inference_mode():
-        emission, _ = model(wav.to(device))
-        token_spans = aligner(emission[0], tokenizer(transcript))
-    align_s = time.time() - t0
-
-    ratio = wav.size(1) / emission.size(1)
-    def t_of(f): return float(f) * ratio / sr
-
+    # PER-SEGMENT alignment (16 GB rule). wav2vec2 self-attention is quadratic
+    # in sequence length: one forward pass over a 9-minute narration peaked at
+    # ~26 GB and got the process killed (2026-06-11). Segment boundaries are
+    # exact (assembly wrote them), so align each 10–25 s slice independently
+    # and offset the timestamps — flat memory, same output contract.
     words = []
-    idx = 0
-    for disp, slide, n in descriptors:
-        group = token_spans[idx:idx + n]
-        idx += n
-        words.append({"word": disp, "slide": slide,
-                      "start": round(t_of(group[0][0].start), 3),
-                      "end": round(t_of(group[-1][-1].end), 3)})
+    t0 = time.time()
+    pad = int(0.05 * sr)  # tolerate boundary rounding at the slice tail
+    for seg in segs:
+        # spoken tokens (acronyms expanded to letters), but remember which
+        # display token each group belongs to, so captions show "MCP" while
+        # the audio said "M C P".
+        descriptors, transcript = [], []
+        for disp, stoks in lexicon.expand(seg["text"], lex):
+            norm_stoks = [s for s in (_norm(x) for x in stoks) if s]
+            if not norm_stoks:
+                continue
+            descriptors.append((disp, seg["slide"], len(norm_stoks)))
+            transcript.extend(norm_stoks)
+        if not transcript:
+            continue
+        s0 = max(0, int(seg["start"] * sr))
+        s1 = min(wav.size(1), int(seg["end"] * sr) + pad)
+        chunk = wav[:, s0:s1]
+        with torch.inference_mode():
+            emission, _ = model(chunk.to(device))
+            token_spans = aligner(emission[0], tokenizer(transcript))
+        ratio = chunk.size(1) / emission.size(1)
+
+        def t_of(f):
+            return float(f) * ratio / sr + seg["start"]
+
+        idx = 0
+        for disp, slide, n in descriptors:
+            group = token_spans[idx:idx + n]
+            idx += n
+            words.append({"word": disp, "slide": slide,
+                          "start": round(t_of(group[0][0].start), 3),
+                          "end": round(t_of(group[-1][-1].end), 3)})
+        del emission, token_spans, chunk
+    align_s = time.time() - t0
     proj.write_json(proj.work / "alignment.json", {"sample_rate": sr, "words": words})
 
     # contiguous slide windows (a slide is always on screen)
