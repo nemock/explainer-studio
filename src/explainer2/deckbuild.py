@@ -64,7 +64,7 @@ def run(proj):
     # the deck lives one level down in deck/, so resolve to "../sources/x.png".
     for s in deck.get("slides", []):
         img = s.get("image")
-        if s.get("type") == "figure" and img and not img.startswith(("/", "../", "http")):
+        if s.get("type") in ("figure", "footage") and img and not img.startswith(("/", "../", "http")):
             s["image"] = "../" + img
     theme = proj.theme
     # theme name drives a `data-theme` attr so a theme can carry CSS-scoped treatments

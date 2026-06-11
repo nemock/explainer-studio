@@ -238,6 +238,13 @@
     } else if (s.type === 'figure') {
       html += '<div class="figframe"><img src="' + s.image + '" alt=""></div>';
       if (s.caption) html += '<div class="figcaption">' + s.caption + '</div>';
+    } else if (s.type === 'footage') {
+      // full-bleed licensed still with deterministic Ken Burns drift (renderAt);
+      // scrim keeps the overlaid headline + kinetic captions readable
+      html += '<div class="brollwrap"><img class="broll" src="' + s.image + '" alt=""></div>' +
+        '<div class="brollscrim"></div>';
+      if (s.headline) html += '<div class="headline brollhead">' +
+        headlineHTML(s.headline, s.accent, s.accent2) + '</div>';
     } else if (s.type === 'cta') {
       var b = DECK.brand || {}, c = b.cta || {};
       if (b.product) html += '<div class="figframe cta-product"><img src="' + b.product + '" alt=""></div>';
@@ -333,6 +340,12 @@
         Array.prototype.forEach.call(el.querySelectorAll('.bar'), function (bar) {
           bar.style.height = (g * parseFloat(bar.dataset.val) * barMax) + 'px';
         });
+      } else if (rt === 'footage') {
+        // slow push-in across the whole slide window — pure function of t (deterministic)
+        var kb = (t - win.start) / Math.max(span, 0.001);
+        var bimg = el.querySelector('.broll');
+        if (bimg) bimg.style.transform = 'scale(' + (1.08 + 0.10 * kb).toFixed(4) + ') translate('
+          + (-2.4 * kb).toFixed(3) + '%,' + (-1.6 * kb).toFixed(3) + '%)';
       } else if (rt === 'stat') {
         countUp(el.querySelector('.statnum'), easeOut((t - win.start) / Math.min(1.0, span)));
       } else if (rt === 'progress') {

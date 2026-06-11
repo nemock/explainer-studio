@@ -104,6 +104,18 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--fg);
   .figframe img { height: 100%; width: auto; }
 }
 
+/* footage: full-bleed licensed still, Ken Burns drift via the JS driver only
+   (no CSS animation — determinism contract). Scrim grades the image down so
+   the headline + kinetic captions read. */
+.slide[data-type="footage"] { padding: 0; justify-content: flex-end; align-items: flex-start; overflow: hidden; }
+.brollwrap { position: absolute; inset: 0; overflow: hidden; }
+.broll { width: 100%; height: 100%; object-fit: cover; transform-origin: 60% 40%; will-change: transform; }
+.brollscrim { position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(8,12,26,.90) 0%, rgba(8,12,26,.40) 45%, rgba(8,12,26,.22) 100%); }
+.slide[data-type="footage"] .kicker { position: relative; z-index: 2; margin: 0 90px 14px; }
+.slide[data-type="footage"] .headline.brollhead { position: relative; z-index: 2; text-align: left;
+  font-size: 80px; max-width: 72%; margin: 0 90px 185px; text-shadow: 0 4px 30px rgba(0,0,0,.85); }
+
 /* brand watermark — small persistent mark in a bottom corner (position set in JS) */
 #watermark { position: fixed; z-index: 3; object-fit: contain; opacity: .92; pointer-events: none; }
 

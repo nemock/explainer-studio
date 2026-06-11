@@ -90,6 +90,22 @@ def _conform_video(src, dst, w, h):
                     str(dst)], check=True, capture_output=True)
 
 
+def _extract_hero(src, dst, w, h):
+    """Cover-cropped mid-clip still from the ORIGINAL (mezzanine is letterboxed —
+    bars would bake into the frame). Feeds the deterministic Ken Burns 'footage'
+    slide type until full motion playback lands (Phase 3b)."""
+    probe = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                            "-of", "csv=p=0", str(src)], capture_output=True, text=True)
+    try:
+        mid = max(0.0, float(probe.stdout.strip()) / 2)
+    except ValueError:
+        mid = 1.0
+    vf = (f"scale={w}:{h}:force_original_aspect_ratio=increase,"
+          f"crop={w}:{h}")
+    subprocess.run(["ffmpeg", "-hide_banner", "-y", "-ss", str(mid), "-i", str(src),
+                    "-vf", vf, "-frames:v", "1", str(dst)], check=True, capture_output=True)
+
+
 def _conform_image(src, dst, w, h):
     vf = (f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
           f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2")
@@ -124,6 +140,7 @@ def cmd_ingest(proj):
             if ext in VIDEO_EXT:
                 out = mezz / f"{out_name}.mp4"
                 _conform_video(f, out, w, h)
+                _extract_hero(f, mezz / f"{out_name}_hero.png", w, h)
             else:
                 out = mezz / f"{out_name}.png"
                 _conform_image(f, out, w, h)
