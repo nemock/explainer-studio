@@ -112,7 +112,7 @@ function render() {
     const beat = s.beat ? ` · ${s.beat}` : '';
     const takes = s.takes > 1 ? ` · take ${s.takes}` : '';
     card.innerHTML =
-      `<div class="meta"><span>Segment ${s.id + 1}${beat}</span>
+      `<div class="meta"><span>Card ${s.id + 1} · ${s.slide}${beat}</span>
         <span class="status ${s.recorded ? 'ok' : 'none'}">${s.recorded ? '✓ recorded' + takes : '~' + readTime(s.text) + 's'}</span></div>
        ${s.device ? `<div class="device">⚡ ${s.device}</div>` : ''}
        <div class="script">${s.text}</div>

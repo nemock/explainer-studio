@@ -56,6 +56,15 @@ def _norm_words(text):
     return out
 
 
+def _spell_numbers(text):
+    """ASR writes digits ('100', '30-day', '5%'); the pipeline invariant is
+    spelled-out numbers (the aligner drops non-letter tokens, which would erase
+    numbers from the kinetic captions). Convert before applying ASR text."""
+    text = re.sub(r"(\d),(\d)", r"\1\2", text)
+    text = re.sub(r"(\d+)\s*%", r"\1 percent", text)
+    return re.sub(r"\d+", lambda m: _num_words(int(m.group())), text)
+
+
 def _drift(script_text, asr_text):
     a, b = _norm_words(script_text), _norm_words(asr_text)
     if not a and not b:
@@ -85,7 +94,7 @@ def run(proj, apply=False, model=MODEL):
         rows.append({"id": seg["id"], "status": status, "drift": d,
                      "script_text": seg["text"], "asr_text": asr})
         if apply and status == "adlib" and seg["id"] in by_id:
-            by_id[seg["id"]]["text"] = asr
+            by_id[seg["id"]]["text"] = _spell_numbers(asr)
             by_id[seg["id"]]["adlib_applied"] = True
 
     flagged = [r["id"] for r in rows if r.get("status") == "rerecord"]
