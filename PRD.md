@@ -1,4 +1,4 @@
-# Product Requirements Document — **Explainer2** ("Explainer Studio")
+# Product Requirements Document — **Explainer Studio** (`explainer-studio`; working name "explainer2")
 
 ### A local-first explainer-video *studio*: YouTube competitive intelligence → retention-engineered script → your voice → layered visuals → deep dive + Shorts → monetization-ready package. All on one Mac, no SaaS subscriptions in the pipeline.
 
@@ -276,7 +276,7 @@ projects/2026-06-10_topic-slug/
 2. Whisper flavor for ad-lib ASR: `mlx-whisper` (Metal-native) vs. `openai-whisper` small — pick by speed/accuracy on Dave's recorded voice.
 3. Local image-gen for thumbnail backgrounds (Draw Things / MLX Flux-schnell on 16 GB): worth the memory pressure, or HTML-composed thumbnails are enough? Default: HTML-only until proven otherwise.
 4. Music: vetted local library only, or experiment with local MusicGen-small for bespoke beds? Default: library only.
-5. Repo name on GitHub: `explainer2` vs. something brandable (`explainer-studio`). Local dir stays `explainer2` either way.
+5. ~~Repo name on GitHub~~ — **decided 2026-06-10: `explainer-studio`** (https://github.com/nemock/explainer-studio, public). Product name "Explainer Studio"; local dir and CLI/package stay `explainer2`.
 
 ---
 

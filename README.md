@@ -1,4 +1,4 @@
-# Explainer2 — a local-first explainer-video studio
+# Explainer Studio — a local-first explainer-video studio
 
 > Topic in → YouTube competitive intelligence → retention-engineered script → **your** voice → layered visuals → a packaged deep dive **and** Shorts — entirely on one Mac, with **no SaaS subscriptions in the pipeline**.
 
@@ -48,7 +48,7 @@ Target machine: Apple Silicon (developed on an M3 / 16 GB). No CUDA, no cloud re
 
 ```bash
 # TODO once Phase 0 lands
-git clone https://github.com/nemock/explainer2 && cd explainer2
+git clone https://github.com/nemock/explainer-studio && cd explainer-studio
 ./setup.sh                     # checks deps: python, ffmpeg, playwright, yt-dlp, kokoro, claude
 explainer2 studio              # launches Mission Control at localhost, opens Chrome
 # — or headless —
