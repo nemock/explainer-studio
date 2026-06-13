@@ -131,6 +131,15 @@ manifest merges it). Thumbnails and Shorts cutting: Phase 3+/5 features — if
 the modules are present, follow their docs; if not, note as manual steps.
 **GATE: present the package. Wait. Then STOP — never post.**
 
+Upload-flow checklist (operator-approved Chrome tag-team; the tool itself
+never posts): when driving YouTube Studio with the operator, every deep dive
+gets (1) title/description/tags from meta.json, with channel default tags
+pruned under the 500 cap; (2) AI-disclosure answered honestly (operator voice
++ licensed stock + motion graphics = No); (3) an end screen (subscribe +
+video) over the payoff slide; (4) **added to the "Deep Dives" playlist —
+standing operator rule, 2026-06-12**; (5) thumbnail A/B via Test & compare
+when two comps exist.
+
 ## Failure behavior
 
 Any stage fails → report the failed stage, its error, and what you tried. Do

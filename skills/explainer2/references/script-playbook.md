@@ -36,10 +36,14 @@ teleprompter and review UIs. Extra fields are safe.
 
 ## 3. Word budget (do this math first)
 
-Spoken pace ≈ 150 wpm. `words ≈ target_minutes × 150`. A 13-min deep dive ≈
-1,950 words. Segment size: 30–60 words (one breath-paragraph; recordable in
+Spoken pace ≈ 150 wpm (the operator's measured effective rate is ~154 wpm
+including gaps — use it). `words ≈ target_minutes × 150`. A 13-min deep dive
+≈ 1,950 words. Segment size: 30–60 words (one breath-paragraph; recordable in
 one take). A 13-min script ⇒ roughly 32–40 segments. Shorts: 45 s ⇒ ~110
-words ⇒ 4–6 segments.
+words ⇒ 4–6 segments. Storyteller register (§5) pushes deep dives toward the
+TOP of the operator's stated range — confirm target minutes at the blueprint
+gate, set the budget, and COUNT WORDS BEFORE PRESENTING THE GATE (both videos
+to date missed length on the first draft; the rule exists because it bites).
 
 ## 4. Retention rules (each is checkable — check them)
 
@@ -77,6 +81,19 @@ words ⇒ 4–6 segments.
   are encouraged. Segments may run 60–90 words when the thought is genuinely
   continuous; the 30–60 guidance applies to TTS-tier scripts. Conversational
   is not rambling: every sentence still earns its place.
+- **Storyteller register (operator directive, 2026-06-12): these are stories
+  that help, not video-form sales letters.** The videos being modeled are
+  often cut-and-dry funnel pieces; the operator's edge is narrative. When the
+  script cites a company or founder, give them real context — two to four
+  sentences of who they were, what they'd tried before, what corner they were
+  in — instead of compressing a history into one clause. ("Drew Houston got
+  the Dropbox idea on a bus with a forgotten USB stick" beats "Dropbox
+  validated with a video.") HARD RULE: every piece of backstory color must be
+  verifiable from intel, the wiki, or talk-time. If the operator (or you)
+  reaches for a plausible-sounding detail, that is a RESEARCH PROMPT, not an
+  airable fact — verify or cut. The CTA stack stays (book, site, mailing
+  list, subscribe), but it rides on generosity of narrative; the goal is
+  videos that endure for years, not funnels that convert this week.
 - Contractions always. Direct address ("you") throughout. No hype words
   (game-changer, insane, secret weapon).
 - **Spell out ALL numbers as words** ("five hundred", "fifteen percent") —
@@ -99,6 +116,13 @@ words ⇒ 4–6 segments.
 - [ ] All numbers spelled out; no unsourced stats; talk-time rules honored
 - [ ] Title promise(s) each map to a specific segment
 - [ ] Read every segment aloud mentally — no tongue-twisters, no 70-word runs
+- [ ] **Speakability pass (mandatory since 2026-06-12):** run the full draft
+      through the operator's `humanizer` skill (plus a grammar read) before
+      the gate. Booth incidents have come from sentences the operator
+      literally could not parse mid-read ("the company Square acquired"-style
+      compressions, stacked clauses, awkward word choices). Fix anything a
+      first-time reader would stumble on — accessible and conversational
+      beats clever.
 
 Present to the operator: title, read-time estimate, the retention map table,
 and the full script. Wait for approval before recording/narrating.
