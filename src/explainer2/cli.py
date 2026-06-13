@@ -15,6 +15,15 @@ STAGES = [("narrate", synth.run), ("align", align.run), ("deck", deckbuild.run),
           ("qa", qa.run)]
 STAGE_MAP = dict(STAGES)
 
+# Standing channel music bed (operator decision 2026-06-13): the café track is
+# the default for every scaffold so it's never forgotten. Pixabay-licensed
+# (cert in library/music); the benign Content ID claim is accepted. Override
+# with --music <path>/--music-gain, or --no-music. Path resolves relative to the
+# repo root so it survives a move off /Volumes.
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_MUSIC = _REPO_ROOT / "library/music/alex-morgan-cafe-warm-background-music-541034.mp3"
+DEFAULT_MUSIC_GAIN = 0.12
+
 
 def _log(proj, msg):
     line = f"{time.strftime('%H:%M:%S')} {msg}"
@@ -46,6 +55,10 @@ def cmd_scaffold(args):
             "language": "en", "theme": args.theme, "safe_bottom": safe_bottom}
     if min_length:
         proj["min_length"] = min_length
+    if not args.no_music:
+        music_path = Path(args.music).resolve() if args.music else DEFAULT_MUSIC
+        proj["music"] = str(music_path)
+        proj["music_gain"] = args.music_gain
     if args.no_cta:
         proj["auto_cta"] = False  # branded but no CTA tail (deep-dive act sub-segments)
     brand_note = None
@@ -200,6 +213,12 @@ def main(argv=None):
     s.add_argument("--aspects", default=None, help="comma list to render simultaneously, e.g. '9:16,1:1'")
     s.add_argument("--min-length", type=int, default=None, dest="min_length",
                    help="minimum playback seconds (sets manifest length_warning if unmet)")
+    s.add_argument("--music", default=None,
+                   help="background music path (default: the channel café bed in library/music)")
+    s.add_argument("--music-gain", type=float, default=DEFAULT_MUSIC_GAIN, dest="music_gain",
+                   help=f"music bed gain (default {DEFAULT_MUSIC_GAIN})")
+    s.add_argument("--no-music", action="store_true", dest="no_music",
+                   help="scaffold without a music bed")
     s.add_argument("--brand", default=None,
                    help="brand slug (e.g. ACME); adds watermark + auto CTA end slide from the brand library")
     s.add_argument("--cta", default=None,
