@@ -115,6 +115,13 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--fg);
 .slide[data-type="footage"] .kicker { position: relative; z-index: 2; margin: 0 90px 14px; }
 .slide[data-type="footage"] .headline.brollhead { position: relative; z-index: 2; text-align: left;
   font-size: 80px; max-width: 72%; margin: 0 90px 185px; text-shadow: 0 4px 30px rgba(0,0,0,.85); }
+/* footage subkicker: must share the headline's 90px inset (default .subkicker has no
+   horizontal margin and clips off the left edge over full-bleed footage). When a
+   subkicker follows the headline, the subkicker carries the bottom clearance and the
+   headline tucks up to it; no-subkicker footage slides keep the headline's 185px. */
+.slide[data-type="footage"] .subkicker { position: relative; z-index: 2; text-align: left;
+  max-width: 72%; margin: 0 90px 185px; text-shadow: 0 4px 30px rgba(0,0,0,.85); }
+.slide[data-type="footage"] .headline.brollhead:has(+ .subkicker) { margin-bottom: 22px; }
 
 /* brand watermark — small persistent mark in a bottom corner (position set in JS) */
 #watermark { position: fixed; z-index: 3; object-fit: contain; opacity: .92; pointer-events: none; }
