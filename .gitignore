@@ -1,5 +1,7 @@
-# project outputs (videos, frames, audio) — never committed
-projects/
+# operator content — lives in the private `explainer-content` repo, symlinked in here
+/projects
+/channel
+/research
 # python
 __pycache__/
 *.pyc
