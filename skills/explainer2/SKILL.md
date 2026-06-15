@@ -17,10 +17,11 @@ You are the **generation plane** of this system. The CLI (`bin/explainer2`) is t
 the CLI does fetching, audio, rendering. Never hand-do what a CLI verb does.
 
 **You are expected to follow the playbooks, not improvise.** The analytical
-method lives in two reference files you MUST read at the step that needs them:
+method lives in three reference files you MUST read at the step that needs them:
 
 - `references/blueprint-playbook.md` — read BEFORE synthesizing any Blueprint.
 - `references/script-playbook.md` — read BEFORE writing any script.
+- `references/deck-playbook.md` — read BEFORE authoring any `deck.json`.
 
 These files encode the methodology that makes the videos good. If your own
 judgment conflicts with a playbook rule, follow the playbook and note the
@@ -98,6 +99,14 @@ playbook §2) with the retention map filled in. Set
 `project.json: voice_source` to `operator` for flagship videos.
 **GATE: show the operator the script + retention map + read-time. Wait.**
 
+### 5b. Deck (generation plane — REQUIRED before media)
+Read `references/deck-playbook.md` IN FULL, then author `deck.json` — one slide
+per script segment, ids matching the script. The `media` pipeline's `deck` stage
+**fails without `deck.json`**; it is never auto-generated. Validate with
+`bin/explainer2 deck <project_dir>` (fast; catches bad fields / missing `figure`
+or `footage` images) before the full render. No separate operator gate — the
+deck is seen in the rendered video at the Package gate.
+
 ### 6. Record (operator voice) or narrate (Kokoro)
 - Operator: `bin/explainer2 record <project_dir>` — opens the booth in Chrome.
   The operator records; the command returns when they click Finish.
@@ -121,7 +130,8 @@ way.
 bin/explainer2 media <project_dir>
 ```
 Runs narrate → align → deck → render → mux → manifest → qa. Foreground; a
-short takes ~1–2 min, a deep dive substantially longer. Then read the QA
+short takes ~1–2 min, a deep dive substantially longer. **Requires `deck.json`
+(step 5b).** Then read the QA
 warnings in the results JSON and fix what is fixable (deck pacing, dead air)
 — at most ONE re-render cycle.
 
