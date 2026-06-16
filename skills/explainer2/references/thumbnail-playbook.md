@@ -137,10 +137,14 @@ series stays consistent.
 python tools/html2png.py <project>/package/thumbnails/thumb_a.html \
   <project>/package/thumbnails/thumb_a.png --width 1280 --height 720
 ```
-(2× device scale is built in for crisp text.) Produce **A and B variants** —
-e.g. A = one cutout/headline, B = a different cutout or a different keyword angle
-— for YouTube Test & Compare. Keep the cutout files as `headshot-a.png` /
-`headshot-b.png` beside the HTML.
+(2× device scale is built in for crisp text.) Produce **A and B variants for
+YouTube Test & Compare — and they MUST differ in a way a viewer notices.** The
+high-leverage variable is the **hook**: give B a different headline *angle*
+(claim vs. curiosity vs. negation — e.g. A "MEASURE ANYTHING" / B "NO DATA?
+DECIDE ANYWAY"), paired with a different pose/expression. **Two near-identical
+poses under the SAME headline is NOT a valid test** — at sidebar size it reads
+as one thumbnail, which defeats the experiment. Keep the cutout files as
+`headshot-a.png` / `headshot-b.png` beside the HTML.
 
 ## 7. Self-QA checklist
 
