@@ -36,6 +36,7 @@ written down, not assumed:
 - **[skills/explainer2/references/blueprint-playbook.md](skills/explainer2/references/blueprint-playbook.md)** — how to turn an intel sweep into a Blueprint (convention extraction, comment mining, the four gap questions, title rules). Read IN FULL before any Blueprint.
 - **[skills/explainer2/references/script-playbook.md](skills/explainer2/references/script-playbook.md)** — retention engineering, voice rules, talk-time integration, self-QA checklist. Read IN FULL before any script.
 - **[skills/explainer2/references/deck-playbook.md](skills/explainer2/references/deck-playbook.md)** — the visual layer: the slide-type catalog + fields (from the deck engine), the 1:1 script-segment mapping, the `figure`/`footage` image rule, self-QA. Read IN FULL before authoring any `deck.json`. **Required before `media`.**
+- **[skills/explainer2/references/thumbnail-playbook.md](skills/explainer2/references/thumbnail-playbook.md)** — the YouTube thumbnail: the brand template (navy radial gradient, red bands, green accent), the cutout pipeline (`cutout.py` / `clean_matte.py`), and the outfit-vs-background separation rule. Read before building thumbnails at Package.
 
 If your judgment conflicts with a playbook, follow the playbook and flag the
 conflict. When you discover a better technique mid-run, propose adding it to

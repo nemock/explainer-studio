@@ -17,11 +17,12 @@ You are the **generation plane** of this system. The CLI (`bin/explainer2`) is t
 the CLI does fetching, audio, rendering. Never hand-do what a CLI verb does.
 
 **You are expected to follow the playbooks, not improvise.** The analytical
-method lives in three reference files you MUST read at the step that needs them:
+method lives in four reference files you MUST read at the step that needs them:
 
 - `references/blueprint-playbook.md` — read BEFORE synthesizing any Blueprint.
 - `references/script-playbook.md` — read BEFORE writing any script.
 - `references/deck-playbook.md` — read BEFORE authoring any `deck.json`.
+- `references/thumbnail-playbook.md` — read BEFORE building thumbnails (Package).
 
 These files encode the methodology that makes the videos good. If your own
 judgment conflicts with a playbook rule, follow the playbook and note the
@@ -137,8 +138,9 @@ warnings in the results JSON and fix what is fixable (deck pacing, dead air)
 
 ### 8. Package
 Write titles/description/chapters per blueprint §8 into `meta.json` (the
-manifest merges it). Thumbnails and Shorts cutting: Phase 3+/5 features — if
-the modules are present, follow their docs; if not, note as manual steps.
+manifest merges it). **Thumbnails: read `references/thumbnail-playbook.md`, then
+build A/B 1280×720 cards (cutout → brand template → `tools/html2png.py`) into
+`package/thumbnails/`.** Shorts cutting: Phase 5 feature — follow its docs if present.
 **GATE: present the package. Wait. Then STOP — never post.**
 
 Upload-flow checklist (operator-approved Chrome tag-team; the tool itself

@@ -1,0 +1,155 @@
+# Thumbnail Playbook — the on-brand YouTube thumbnail (1280×720)
+
+Follow as a procedure. Thumbnails are built at the **Package** step (SKILL §8).
+A thumbnail is an HTML card rendered headlessly to PNG — **author the HTML/CSS,
+never hand-paint a PNG** — so the look is deterministic and reproducible. This
+file freezes the quality bar so any model reproduces it without guessing.
+
+The output goes in `<project>/package/thumbnails/`: `thumb_a.{html,png}` and
+`thumb_b.{html,png}` (two variants for YouTube's Test & Compare), each pointing
+at a cutout `headshot-a.png` / `headshot-b.png`.
+
+---
+
+## 0. What "good" looks like (the contract)
+
+The proven look (this is the reference — match it): a **dark, cool navy radial
+gradient** that is lighter right behind the operator and falls to near-black at
+the frame edges; the operator **cut out, large, anchored bottom-right**, with a
+soft drop-shadow separating him and the bottom edge **faded out**; a **2-line
+keyword headline in red bands** top-left; a **white sub-line with the payoff
+words accented in green**. Readable at 120 px wide. No clutter, ≤ ~6 words in the
+headline, one idea.
+
+## 1. The cutout (selfie → transparent PNG)
+
+The operator appears as a transparent-PNG cutout. Two valid sources:
+
+- **Operator supplies a transparent PNG** (preferred when they've already keyed
+  it). Verify it's RGBA with real alpha. Phone tools (Photoshop Express) leave a
+  faint light **fringe** at hair/shoulder edges — clean it (below).
+- **Operator supplies a light-background selfie (jpg).** Run the local segmenter:
+  `python tools/cutout.py <in.jpg> <out.png>` (rembg / U2-Net, on-device, no
+  cloud). It keys the *person* out regardless of background colour — a clean,
+  uniform backdrop (even a flat fill) gives the cleanest mask.
+
+Then **de-fringe + soften** for compositing:
+`python tools/clean_matte.py <in.png> <out.png> --threshold 110 --erode 2 --feather 2`
+- `threshold` drops low-confidence (background-contaminated) edge pixels.
+- `erode` shaves the contaminated rim. **For thin props (calipers, a pen, a phone
+  held up) use `--erode 0` (or 1) at full resolution** so the prop isn't thinned.
+- `feather` softens the edge so it reads soft at thumbnail scale, not knife-cut.
+Keep the cutout **full-resolution**; the template scales it down crisply at 2×.
+
+## 2. The brand template (canonical — copy this, change only the copy + cutout)
+
+```html
+<!doctype html><html><head><meta charset="utf-8"><style>
+  * { margin:0; box-sizing:border-box; }
+  body { width:1280px; height:720px; overflow:hidden; position:relative;
+    background:radial-gradient(135% 120% at 74% 42%, #1a2750 0%, #0d1428 58%, #090d1c 100%);
+    font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }
+  .facewrap { position:absolute; right:-90px; bottom:0; height:660px;
+    -webkit-mask-image:linear-gradient(to top, transparent 0%, black 16%);
+    mask-image:linear-gradient(to top, transparent 0%, black 16%); }
+  .face { height:100%; filter:drop-shadow(0 0 44px rgba(0,0,0,.5)); }
+  .text { position:absolute; left:56px; top:104px; z-index:2; width:760px; }
+  .band { display:inline-block; background:#ff4d4d; color:#fff; font-size:104px; font-weight:900;
+    letter-spacing:-.02em; padding:8px 26px; border-radius:14px; line-height:1.04;
+    box-shadow:0 16px 60px rgba(255,77,77,.4); }
+  .band.b2 { margin-top:14px; }
+  .sub { margin-top:42px; font-size:50px; font-weight:900; color:#f5f7ff; line-height:1.2;
+    text-shadow:0 3px 18px rgba(0,0,0,.7); }
+  .sub span { color:#3ddc84; }
+</style></head><body>
+  <div class="facewrap"><img class="face" src="headshot-a.png"></div>
+  <div class="text">
+    <div class="band">KEYWORD</div><br>
+    <div class="band b2">SECOND LINE</div>
+    <div class="sub">supporting line, <span>payoff words green</span></div>
+  </div>
+</body></html>
+```
+
+**Brand constants — do NOT change** (these are the channel signature): the red
+band `#ff4d4d`, the green accent `#3ddc84`, white sub, 900-weight, the radial-
+gradient *structure* (lighter hotspot behind the subject at ~`74% 42%`, falling
+to near-black edges), the face `drop-shadow`, the bottom mask-fade, and the
+left/top text block. **Adjustable per video:** the copy, which cutout, the
+headline size if a word overflows, and — only under the rule in §5 — the
+gradient's *inner hue*.
+
+## 3. Copy rules
+
+- Headline = the blueprint's **§7 thumbnail direction** distilled to a **2–4 word
+  keyword line, ≤ 2 lines** in red bands. It restates the title's promise, it
+  does not repeat the full title. Spell punchy: "MEASURE / ANYTHING", "FIRST /
+  10 CUSTOMERS".
+- Sub-line = one short clause; accent the **payoff words in green** (`<span>`).
+- Headline and the title must promise the same thing.
+- If a word is too long for one band, drop `font-size` to 92–96 px; never wrap a
+  word.
+
+## 4. Cutout placement
+
+Right side, `bottom:0`, ~`660px` tall, `right:-90px` (bleeds off the right edge),
+bottom 16 % faded. The face/expression and any held prop should sit in the upper
+two-thirds (the bottom fades). Pick the cutout whose gesture reads at small size.
+
+## 5. Outfit-vs-background rule (when the operator blends in)
+
+The template already separates the subject three ways — the **drop-shadow glow**,
+the **lighter navy hotspot behind him**, and the **bottom fade** — so most outfits
+read fine (a mid/cool navy shirt still separates). But when the operator's
+**dominant garment is dark navy/black/charcoal** it can merge with the navy bg.
+Diagnose by rendering once and looking; if the torso dissolves, separate it —
+**in this order, stopping at the first that works**:
+
+1. **Strengthen the existing separation** (cheapest, fully on-brand): raise the
+   drop-shadow to `drop-shadow(0 0 60px rgba(0,0,0,.65))`, and/or lift the inner
+   gradient stop slightly brighter (e.g. `#22305f`) so the hotspot behind him
+   reads more.
+2. **Shift the inner gradient HUE within the brand range** (still on-brand): keep
+   the gradient structure, the outer stops (`#0d1428` → `#090d1c`), and the red/
+   green copy colours fixed — change only the **inner hotspot colour** to another
+   **dark, cool, jewel tone** that contrasts the outfit:
+
+   | Outfit problem | Inner-hotspot swap (replace `#1a2750`) | Reads as |
+   |---|---|---|
+   | navy / blue shirt | deep teal `#123a4a` | same family, cooler |
+   | black / charcoal | indigo `#28204f` | same family, richer |
+   | dark green | slate-plum `#2a1f46` | same family, warmer-cool |
+
+   **Hard limits:** the inner hotspot must stay **dark** (luminance ≲ 30 %) and
+   **cool** (blue/teal/indigo/plum). NEVER go light, and NEVER go warm
+   (orange/tan/red) — warm clashes with the red bands and the skin tone and
+   breaks brand continuity.
+3. **Last resort — a subtle rim light:** add a thin bright edge behind the
+   subject (`drop-shadow(0 0 0 ...)` stacked, or a blurred light ellipse div
+   behind `.facewrap`). Use sparingly; it's the least "brand-default" option.
+
+Record which adjustment (if any) was used in the project's PLAYBOOK §5 so the
+series stays consistent.
+
+## 6. Render
+
+```
+python tools/html2png.py <project>/package/thumbnails/thumb_a.html \
+  <project>/package/thumbnails/thumb_a.png --width 1280 --height 720
+```
+(2× device scale is built in for crisp text.) Produce **A and B variants** —
+e.g. A = one cutout/headline, B = a different cutout or a different keyword angle
+— for YouTube Test & Compare. Keep the cutout files as `headshot-a.png` /
+`headshot-b.png` beside the HTML.
+
+## 7. Self-QA checklist
+
+- [ ] 1280×720; reads at 120 px wide (squint test: headline + face legible).
+- [ ] ≤ 6 headline words, ≤ 2 bands; headline promise == title promise.
+- [ ] Payoff words accented green; brand red/green/navy intact.
+- [ ] Cutout edge clean (no light fringe, no tan/background halo); thin props not
+      thinned by erosion.
+- [ ] Subject separates from the bg — if not, applied §5 (and noted it in PLAYBOOK).
+- [ ] Two variants (A/B) rendered.
+- [ ] For a multi-video series: same cutout treatment + layout across the set;
+      only copy (and, if needed, the §5 hue) varies.
