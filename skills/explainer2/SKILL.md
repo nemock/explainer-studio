@@ -23,6 +23,8 @@ method lives in four reference files you MUST read at the step that needs them:
 - `references/script-playbook.md` — read BEFORE writing any script.
 - `references/deck-playbook.md` — read BEFORE authoring any `deck.json`.
 - `references/thumbnail-playbook.md` — read BEFORE building thumbnails (Package).
+- `references/article-playbook.md` — read BEFORE writing the written companion
+  essay (`package/article.md`, after Package).
 
 These files encode the methodology that makes the videos good. If your own
 judgment conflicts with a playbook rule, follow the playbook and note the
@@ -142,6 +144,16 @@ manifest merges it). **Thumbnails: read `references/thumbnail-playbook.md`, then
 build A/B 1280×720 cards (cutout → brand template → `tools/html2png.py`) into
 `package/thumbnails/`.** Shorts cutting: Phase 5 feature — follow its docs if present.
 **GATE: present the package. Wait. Then STOP — never post.**
+
+### 8b. Article (generation plane — written companion)
+Read `references/article-playbook.md` IN FULL, then write the read-not-heard
+companion essay to `package/article.md`: the SAME content and arc as the script,
+transformed into real written prose (de-spoken, numbers in written style,
+subheads, the Reliance Policy as a boxed list). **No new facts** beyond what the
+video earned. **Mandatory: run the full draft through the operator's `humanizer`
+skill — the actual skill, not a from-memory self-check — and apply its edits;
+it is ground truth for human-readable output.** Set `humanized: true` in the
+front matter once done. No render gate — the article is text, reviewed in place.
 
 Upload-flow checklist (operator-approved Chrome tag-team; the tool itself
 never posts): when driving YouTube Studio with the operator, every deep dive
