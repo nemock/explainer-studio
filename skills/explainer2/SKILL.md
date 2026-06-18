@@ -138,6 +138,33 @@ short takes ~1–2 min, a deep dive substantially longer. **Requires `deck.json`
 warnings in the results JSON and fix what is fixable (deck pacing, dead air)
 — at most ONE re-render cycle.
 
+### 7b. Ad-lib drift check (REQUIRED before Package — operator-recorded videos)
+The operator records with flexibility: they cut, add, and rephrase live, and that
+freedom is intentional. But captions are generated from the recorded script
+**snapshot**, so any live deviation leaves captions showing words that weren't
+said (or missing words that were). Before packaging, ALWAYS run:
+```
+bin/explainer2 adlib <project_dir>
+```
+Read `work/adlib_report.json` per segment (`drift`, `script_text`, `asr_text`) and
+separate **recognizer noise** from **real drift**:
+- **Noise — IGNORE.** Spelled-out numbers transcribed as digits ("seventy-five
+  billion" → "$75 billion"), "A.I."/"I.P.O." losing their dots, contractions,
+  and proper-noun mishears ("Anthropic" → "And Tropic"). The script is correct;
+  do not touch it. (Whole-segment drift of even ~10% is usually all noise.)
+- **Real drift — FIX.** A contiguous phrase in the script the operator plainly
+  didn't say (a cut), or a genuine rephrase. To find these past the noise, diff
+  *content words* (drop numbers/proper nouns/short function words) script-vs-asr.
+
+**Do NOT use `--apply`.** It rewrites every flagged segment to the raw ASR text,
+which would replace your correct spelled-out numbers and proper nouns with digits
+and mishears. Fix real drift **by hand**: edit that segment's `text` in
+`script.json`, then **re-run `narrate` + `align`** — editing `script.json` alone
+is not enough, because captions/align read the snapshot in `work/segments.json`,
+which only `narrate` regenerates. Captions are a sidecar file; the deck video does
+NOT need re-rendering for a caption-only fix — **unless the fixed segment is used
+in a Short, in which case re-cut that Short.**
+
 ### 8. Package
 Write titles/description/chapters per blueprint §8 into `meta.json` (the
 manifest merges it). **Thumbnails: read `references/thumbnail-playbook.md`, then
