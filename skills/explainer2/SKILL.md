@@ -182,6 +182,29 @@ skill — the actual skill, not a from-memory self-check — and apply its edits
 it is ground truth for human-readable output.** Set `humanized: true` in the
 front matter once done. No render gate — the article is text, reviewed in place.
 
+### 8c. Social share copy (generation plane — `package/linkedin.md`)
+Every produced video gets a `package/linkedin.md`: ready-to-paste intros the
+operator pastes by hand when sharing the video on LinkedIn (or anywhere). The
+tool never posts — this is copy for a human to use.
+
+Write **three** distinct hook-first options, each a different angle on the same
+video (e.g. the core idea / a contrarian hook / "the proof, not the pep talk").
+Rules:
+- **Hook-first.** The first line is all that shows before "see more," so lead
+  with the sharpest line, not setup.
+- **Short.** A few short paragraphs per option, then the video URL on its own
+  line, then ~3 hashtags (LinkedIn ~3 is plenty; trim for other platforms).
+- **The live URL goes in inline.** If the video isn't public yet, leave a clear
+  `<URL>` placeholder and note it; backfill the real link once it's live.
+- **Operator voice, not hustle-bro.** Measured, honest, the adult-in-the-room
+  take (see the talk-time library + the article). No fabricated claims, no
+  numbers the video didn't earn.
+- **Run the draft through the `humanizer` skill** (no em dashes, no clichés,
+  no AI tells) — same ground-truth pass the article gets.
+End with a one-line *Voice note* describing the register, for the operator's
+reference. No render gate — it's text, reviewed in place. (Mirror the format of
+an existing `package/linkedin.md`, e.g. video #07's.)
+
 Upload-flow checklist (operator-approved Chrome tag-team; the tool itself
 never posts): when driving YouTube Studio with the operator, every deep dive
 gets (1) title/description/tags from meta.json, with channel default tags
