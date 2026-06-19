@@ -50,6 +50,33 @@ to date missed length on the first draft; the rule exists because it bites).
 1. **Cold open (seg 0):** the gap-derived claim or question, ≤ 3 sentences.
    FORBIDDEN: greetings, "welcome back", channel branding, "in this video I".
    The thesis lands in the first 10 seconds.
+
+   **Hook craft — compelling WITHOUT clichés (the paradox, operator directive
+   2026-06-19).** We need an opening that compels people to keep watching, but
+   the lazy way to compel (the §5 spoken-cliché ban: "here's the thing", "what
+   if you could", "the one thing nobody talks about") makes us sound like every
+   other AI-scripted video. The cliché is a shortcut to the *feeling* of a hook
+   without the substance. Earn the same pull with substance instead:
+   - **Specificity beats generality.** If the opening line could be pasted onto
+     a different video, it's too generic — rewrite it with a detail only THIS
+     video has: a real number, a named company, a concrete scene, a dated event.
+     ("Claude Code reportedly crossed a billion dollars a year" pulls; "AI is
+     changing everything" repels.)
+   - **Name the stakes.** Give a concrete reason to stay — what the viewer gains
+     or loses — not vague mystery. Curiosity + stakes, not curiosity alone.
+   - **Open a real loop.** Pose a genuine tension the body resolves (a paradox,
+     a contradiction, a "both of these are true — how?"). The loop must close at
+     a real segment (rule 2). A fake loop ("the answer will shock you") is a
+     cliché; a real one ("I use AI daily and it's the best money I spend — so why
+     is most AI spending wasted?") is a hook.
+   - **Open in media res / on the concrete.** Drop into the surprising fact,
+     scene, or claim. No runway, no slow build, no setup of the setup.
+   Two tests every cold open must pass before the gate:
+   - **Specificity test:** could this exact opening front another video on a
+     different topic? If yes, it's too generic — add the detail only this one has.
+   - **Substance test:** delete any opener/transition phrase. Does a concrete
+     claim, number, or scene remain? If removing the throat-clearing leaves
+     nothing, the hook was hollow — rebuild it on a fact, not a phrase.
 2. **Promise stack (by seg 2):** open 2–3 loops explicitly ("here's what
    you're getting…"). Record each in `retention_map.open_loops` with its
    closing segment. EVERY loop opened MUST close; verify ids exist.
