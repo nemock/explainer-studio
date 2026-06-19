@@ -21,6 +21,9 @@ method lives in four reference files you MUST read at the step that needs them:
 
 - `references/blueprint-playbook.md` — read BEFORE synthesizing any Blueprint.
 - `references/script-playbook.md` — read BEFORE writing any script.
+- `references/spoken-humanizer.md` — read BEFORE drafting any operator-voiced
+  script, and RUN as a mandatory pass before the booth (CUT clichés + COMPEL the
+  speech). The spoken counterpart to the written `humanizer` skill.
 - `references/deck-playbook.md` — read BEFORE authoring any `deck.json`.
 - `references/thumbnail-playbook.md` — read BEFORE building thumbnails (Package).
 - `references/article-playbook.md` — read BEFORE writing the written companion
@@ -92,7 +95,9 @@ every later gate (script, recording, render, publish). The Learn loop reads
 sourced claim you intend to use.
 
 ### 5. Script (generation plane)
-Read `references/script-playbook.md` IN FULL. Pull operator takes:
+Read `references/script-playbook.md` AND `references/spoken-humanizer.md` IN FULL
+(the latter shapes the hook + cadence as you write, and is the mandatory CUT +
+COMPEL pass before the booth). Pull operator takes:
 ```
 bin/explainer2 talktime --library /Volumes/Casima/claudeCode/make_money/talk_time \
   --topics <comma-list from the blueprint>

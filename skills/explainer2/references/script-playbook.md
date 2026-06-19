@@ -51,32 +51,13 @@ to date missed length on the first draft; the rule exists because it bites).
    FORBIDDEN: greetings, "welcome back", channel branding, "in this video I".
    The thesis lands in the first 10 seconds.
 
-   **Hook craft — compelling WITHOUT clichés (the paradox, operator directive
-   2026-06-19).** We need an opening that compels people to keep watching, but
-   the lazy way to compel (the §5 spoken-cliché ban: "here's the thing", "what
-   if you could", "the one thing nobody talks about") makes us sound like every
-   other AI-scripted video. The cliché is a shortcut to the *feeling* of a hook
-   without the substance. Earn the same pull with substance instead:
-   - **Specificity beats generality.** If the opening line could be pasted onto
-     a different video, it's too generic — rewrite it with a detail only THIS
-     video has: a real number, a named company, a concrete scene, a dated event.
-     ("Claude Code reportedly crossed a billion dollars a year" pulls; "AI is
-     changing everything" repels.)
-   - **Name the stakes.** Give a concrete reason to stay — what the viewer gains
-     or loses — not vague mystery. Curiosity + stakes, not curiosity alone.
-   - **Open a real loop.** Pose a genuine tension the body resolves (a paradox,
-     a contradiction, a "both of these are true — how?"). The loop must close at
-     a real segment (rule 2). A fake loop ("the answer will shock you") is a
-     cliché; a real one ("I use AI daily and it's the best money I spend — so why
-     is most AI spending wasted?") is a hook.
-   - **Open in media res / on the concrete.** Drop into the surprising fact,
-     scene, or claim. No runway, no slow build, no setup of the setup.
-   Two tests every cold open must pass before the gate:
-   - **Specificity test:** could this exact opening front another video on a
-     different topic? If yes, it's too generic — add the detail only this one has.
-   - **Substance test:** delete any opener/transition phrase. Does a concrete
-     claim, number, or scene remain? If removing the throat-clearing leaves
-     nothing, the hook was hollow — rebuild it on a fact, not a phrase.
+   **Hook craft — compel WITHOUT clichés.** The opening must pull the viewer, but
+   the lazy way to pull (the cliché openers) makes us sound like every AI-scripted
+   video. Earn the pull with substance: specificity over generality, name the
+   stakes, open a *real* loop (a true paradox the body resolves, not "you won't
+   believe…"), and start in media res. Full craft + the two gate tests
+   (specificity test, substance test) live in **`references/spoken-humanizer.md`
+   §B1** — read it before drafting the cold open.
 2. **Promise stack (by seg 2):** open 2–3 loops explicitly ("here's what
    you're getting…"). Record each in `retention_map.open_loops` with its
    closing segment. EVERY loop opened MUST close; verify ids exist.
@@ -132,31 +113,13 @@ to date missed length on the first draft; the rule exists because it bites).
   borrowed authority by name in the text ("Y Combinator's Startup School puts
   real numbers on this") — it's both honest and a proven performance pattern.
 - If comment mining found density-praise: cut 10% of words after drafting.
-- **Spoken-cliché ban (operator directive, 2026-06-19).** The `humanizer` skill is
-  tuned for *written* tells (em dashes, AI vocab) and lets **spoken** clichés
-  through; the operator caught several on the teleprompter mid-record on #34.
-  Before the booth, hunt and kill these and their close cousins — when spoken they
-  read as AI throat-clearing:
-  - **Fake-suspense openers:** "here's the thing", "here's the kicker", "and here's
-    the kicker", "the truth is", "make no mistake", "let me be clear", "real talk",
-    "buckle up".
-  - **"Nobody-talks-about" framing:** "the one X nobody argues about / talks about",
-    "the part nobody mentions", "what they don't tell you", "the part the
-    cheerleaders skip", "the dirty little secret".
-  - **Manufactured drama beats:** "let that sink in", "sit with that", "and that,
-    right there, is…", "plot twist", "but here's the twist", "and the twist?".
-  - **Stock closers:** "at the end of the day", "the bottom line is", "so there you
-    have it".
-  - **Ad-copy / hype:** "game changer", "in a world where", "imagine a world where",
-    "unlock the potential", "say goodbye to X and hello to Y", "the future of X is
-    here", "this isn't just X, it's Y", "we're not just X, we're Y", "what if you
-    could", "seamless, intuitive, powerful", "supercharge", "elevate", "revolutionize".
-  - **Reflexive praise/transition tics:** "put it perfectly", "nailed it", "couldn't
-    have said it better".
-  Rule of thumb: if a sentence's first clause only exists to tee up the second
-  ("Here's the kicker:", "And the twist?"), delete the throat-clearing and just say
-  the thing. A real person usually just says it. One genuinely-in-voice "Look," or
-  "Here's the thing" across a whole script can survive; a pattern of them cannot.
+- **Spoken-cliché ban + compelling-speech craft → `references/spoken-humanizer.md`
+  (operator directive, 2026-06-19).** The `humanizer` skill is tuned for *written*
+  tells and lets **spoken** clichés through (the operator caught several on the
+  teleprompter mid-record on #34). The spoken-humanizer playbook is the single
+  source of truth for BOTH halves: **CUT** (the spoken-cliché blocklist) and
+  **COMPEL** (hooks, rhythm, concreteness, momentum, register). Read it alongside
+  this playbook before drafting; run it as a pass before the booth (see §6).
 
 ## 6. Self-QA checklist (run before presenting the gate)
 
@@ -168,19 +131,16 @@ to date missed length on the first draft; the rule exists because it bites).
 - [ ] All numbers spelled out; no unsourced stats; talk-time rules honored
 - [ ] Title promise(s) each map to a specific segment
 - [ ] Read every segment aloud mentally — no tongue-twisters, no 70-word runs
-- [ ] **Speakability pass (mandatory since 2026-06-12):** run the full draft
-      through the operator's `humanizer` skill (plus a grammar read) before
-      the gate. Booth incidents have come from sentences the operator
-      literally could not parse mid-read ("the company Square acquired"-style
-      compressions, stacked clauses, awkward word choices). Fix anything a
-      first-time reader would stumble on — accessible and conversational
-      beats clever.
-- [ ] **Spoken-cliché hunt (mandatory since 2026-06-19):** the `humanizer` skill
-      does NOT reliably catch spoken clichés, so run the §5 spoken-cliché ban list
-      over the draft BY HAND before the gate. A single grep for the blocklist
-      phrases is cheap insurance; every hit gets rewritten. This must pass before
-      the operator is given the booth — the operator should never be the one
-      catching "the one place nobody argues about" on the teleprompter.
+- [ ] **Spoken-humanizer pass (mandatory since 2026-06-19, supersedes the old
+      speakability pass):** run `references/spoken-humanizer.md` end to end before
+      the gate — **CUT** (grep the spoken-cliché blocklist; every hit rewritten)
+      and **COMPEL** (hook tests, cadence variety, concreteness, momentum) — then
+      read every segment aloud and fix anything the operator would stumble on
+      ("the company Square acquired"-style compressions, stacked clauses). This
+      MUST pass before the operator is given the booth — the operator should never
+      be the one catching a cliché or a flat line on the teleprompter. (The
+      written `humanizer` skill is still ground truth for the article; it does NOT
+      catch spoken tells, which is why this pass exists.)
 
 Present to the operator: title, read-time estimate, the retention map table,
 and the full script. Wait for approval before recording/narrating.
