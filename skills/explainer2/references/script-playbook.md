@@ -105,6 +105,31 @@ to date missed length on the first draft; the rule exists because it bites).
   borrowed authority by name in the text ("Y Combinator's Startup School puts
   real numbers on this") — it's both honest and a proven performance pattern.
 - If comment mining found density-praise: cut 10% of words after drafting.
+- **Spoken-cliché ban (operator directive, 2026-06-19).** The `humanizer` skill is
+  tuned for *written* tells (em dashes, AI vocab) and lets **spoken** clichés
+  through; the operator caught several on the teleprompter mid-record on #34.
+  Before the booth, hunt and kill these and their close cousins — when spoken they
+  read as AI throat-clearing:
+  - **Fake-suspense openers:** "here's the thing", "here's the kicker", "and here's
+    the kicker", "the truth is", "make no mistake", "let me be clear", "real talk",
+    "buckle up".
+  - **"Nobody-talks-about" framing:** "the one X nobody argues about / talks about",
+    "the part nobody mentions", "what they don't tell you", "the part the
+    cheerleaders skip", "the dirty little secret".
+  - **Manufactured drama beats:** "let that sink in", "sit with that", "and that,
+    right there, is…", "plot twist", "but here's the twist", "and the twist?".
+  - **Stock closers:** "at the end of the day", "the bottom line is", "so there you
+    have it".
+  - **Ad-copy / hype:** "game changer", "in a world where", "imagine a world where",
+    "unlock the potential", "say goodbye to X and hello to Y", "the future of X is
+    here", "this isn't just X, it's Y", "we're not just X, we're Y", "what if you
+    could", "seamless, intuitive, powerful", "supercharge", "elevate", "revolutionize".
+  - **Reflexive praise/transition tics:** "put it perfectly", "nailed it", "couldn't
+    have said it better".
+  Rule of thumb: if a sentence's first clause only exists to tee up the second
+  ("Here's the kicker:", "And the twist?"), delete the throat-clearing and just say
+  the thing. A real person usually just says it. One genuinely-in-voice "Look," or
+  "Here's the thing" across a whole script can survive; a pattern of them cannot.
 
 ## 6. Self-QA checklist (run before presenting the gate)
 
@@ -123,6 +148,12 @@ to date missed length on the first draft; the rule exists because it bites).
       compressions, stacked clauses, awkward word choices). Fix anything a
       first-time reader would stumble on — accessible and conversational
       beats clever.
+- [ ] **Spoken-cliché hunt (mandatory since 2026-06-19):** the `humanizer` skill
+      does NOT reliably catch spoken clichés, so run the §5 spoken-cliché ban list
+      over the draft BY HAND before the gate. A single grep for the blocklist
+      phrases is cheap insurance; every hit gets rewritten. This must pass before
+      the operator is given the booth — the operator should never be the one
+      catching "the one place nobody argues about" on the teleprompter.
 
 Present to the operator: title, read-time estimate, the retention map table,
 and the full script. Wait for approval before recording/narrating.
