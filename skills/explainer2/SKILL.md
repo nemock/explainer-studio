@@ -137,11 +137,27 @@ way.
 ```
 bin/explainer2 media <project_dir>
 ```
-Runs narrate → align → deck → render → mux → manifest → qa. Foreground; a
-short takes ~1–2 min, a deep dive substantially longer. **Requires `deck.json`
-(step 5b).** Then read the QA
-warnings in the results JSON and fix what is fixable (deck pacing, dead air)
-— at most ONE re-render cycle.
+Runs narrate → align → deck → render → mux → manifest → qa. A short takes
+~1–2 min; a **deep-dive render runs ~18–25 min**. **Requires `deck.json`
+(step 5b).** Then read the QA warnings in the results JSON and fix what is
+fixable (deck pacing, dead air) — at most ONE re-render cycle.
+
+**Render robustness (learned the hard way on #34).** A deep-dive render exceeds
+the Bash 10-min cap, so it must run as a tracked background job, and a render
+that is interrupted mid-encode leaves a **corrupt `work/video_16x9.mp4`
+("moov atom not found")**. To survive:
+- Wrap it in `caffeinate -i` so the Mac can't idle-sleep mid-encode:
+  `caffeinate -i bin/explainer2 media <project_dir>` (run as a tracked
+  background job; the harness notifies on completion — do NOT write a polling
+  loop, global CLAUDE.md rules still apply).
+- **Keep the Claude Code session active until it finishes.** The render is a
+  child of the session; switching the desktop app away (e.g. into CoWork) can
+  suspend the session and kill the render. `caffeinate` covers OS sleep, not
+  session suspension — tell the operator to stay in Claude Code.
+- If a render died: delete the corrupt `work/video_16x9.mp4`, then re-run
+  `media` (narrate/align/deck are cheap and idempotent; the render redoes).
+  Verify the final file with `ffprobe` (duration present, no moov error) before
+  Package, and after any deck fix re-cut affected Shorts.
 
 ### 7b. Ad-lib drift check (REQUIRED before Package — operator-recorded videos)
 The operator records with flexibility: they cut, add, and rephrase live, and that
@@ -210,14 +226,25 @@ End with a one-line *Voice note* describing the register, for the operator's
 reference. No render gate — it's text, reviewed in place. (Mirror the format of
 an existing `package/linkedin.md`, e.g. video #07's.)
 
-Upload-flow checklist (operator-approved Chrome tag-team; the tool itself
-never posts): when driving YouTube Studio with the operator, every deep dive
-gets (1) title/description/tags from meta.json, with channel default tags
-pruned under the 500 cap; (2) AI-disclosure answered honestly (operator voice
-+ licensed stock + motion graphics = No); (3) an end screen (subscribe +
-video) over the payoff slide; (4) **added to the "Deep Dives" playlist —
-standing operator rule, 2026-06-12**; (5) thumbnail A/B via Test & compare
-when two comps exist.
+Upload-flow checklist (operator-approved Chrome tag-team on the iMac Chrome;
+the operator drags the video + both thumbnail PNGs, you drive the form; the
+tool itself never posts): every deep dive gets (1) title/description/tags from
+meta.json, with channel default tags kept under the 500 cap (prune only if
+over); (2) AI-disclosure answered honestly (operator voice + licensed stock +
+motion graphics = No); (3) an end screen (subscribe + video) over the payoff
+slide — "Import from latest video" is the fast, series-consistent path;
+(4) **added to the "Deep Dives" playlist — standing operator rule, 2026-06-12**;
+(5) **both thumbnails into Test & Compare, always** (standing rule, 2026-06-19;
+never ask whether to A/B); (6) visibility is the operator's call — never set
+Public / schedule-Public without an explicit go.
+- **Title/description gotcha:** YouTube REJECTS angle brackets (`<` / `>`) in
+  the title and description (error "Angled brackets aren't allowed"). Write
+  "over $2B" / "40 percent-plus", not ">$2B" / "40%+", in `meta.json` and when
+  typing the form.
+- **After it's live:** backfill the real `youtu.be/...` URL into
+  `package/meta.json` (`youtube_url`) and `package/linkedin.md`, record it in
+  PLAYBOOK §7, and commit. Social distribution of the Shorts is a SEPARATE
+  human-in-the-loop step (the blotato-crosspost skill) — not part of this skill.
 
 ## Failure behavior
 
