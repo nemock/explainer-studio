@@ -168,6 +168,13 @@ def cmd_stills(args):
     print(json.dumps(stills.run(proj, aspect=args.aspect), indent=2))
 
 
+def cmd_promote(args):
+    from . import promote
+    print(json.dumps(promote.run(args.projects_dir, args.action, video=args.video,
+                                 short=args.short, record=args.record,
+                                 plan=args.plan, fire=args.fire), indent=2))
+
+
 def cmd_talktime(args):
     tag, library = args.tag, args.library
     if args.brand and not (tag and library):
@@ -278,6 +285,20 @@ def main(argv=None):
     ass.add_argument("action", choices=["open", "ingest", "status"])
     ass.add_argument("--slide", default=None, help="limit `open` to one slide id (e.g. s21)")
     ass.set_defaults(func=cmd_assets)
+
+    pr = sub.add_parser("promote", help="pick the next produced video + Short to re-share "
+                                        "(rotation: never-promoted first, then least-recent) and "
+                                        "track promotions in the global ledger")
+    pr.add_argument("action", choices=["select", "status", "log", "report", "post"])
+    pr.add_argument("--projects-dir", default="projects", dest="projects_dir",
+                    help="projects root (default: projects); the ledger sits beside it")
+    pr.add_argument("--video", default=None, help="override video selection by folder slug")
+    pr.add_argument("--short", default=None, help="override short selection by slug")
+    pr.add_argument("--record", default=None, help="path to a JSON promotion record (for `log`)")
+    pr.add_argument("--plan", default=None, help="path to a promotion plan JSON (for `post`)")
+    pr.add_argument("--fire", action="store_true",
+                    help="actually publish (default is a dry-run preview of the Blotato payloads)")
+    pr.set_defaults(func=cmd_promote)
 
     va = sub.add_parser("validate", help="check the manifest is a complete handoff contract")
     va.add_argument("project_dir")

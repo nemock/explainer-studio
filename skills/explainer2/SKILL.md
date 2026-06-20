@@ -243,8 +243,52 @@ Public / schedule-Public without an explicit go.
   typing the form.
 - **After it's live:** backfill the real `youtu.be/...` URL into
   `package/meta.json` (`youtube_url`) and `package/linkedin.md`, record it in
-  PLAYBOOK §7, and commit. Social distribution of the Shorts is a SEPARATE
-  human-in-the-loop step (the blotato-crosspost skill) — not part of this skill.
+  PLAYBOOK §7, and commit. Launch distribution of a NEW video's Shorts is a
+  SEPARATE human-in-the-loop step (the blotato-crosspost skill). Re-sharing the
+  back catalogue later is §9 below.
+
+### 9. Promote (re-share already-published Shorts — `bin/explainer2 promote`)
+
+Keep the back catalogue circulating: on demand, pick a produced+published video
+and re-share ONE of its Shorts with fresh wording, tracked in a global ledger so
+nothing is over- or under-promoted. It is fine — the point — to re-share a Short
+more than once as the library grows; each re-share gets reworded so it never
+reads as a duplicate.
+
+This is the ONE place the tool posts to social directly (PRD N1 declared
+exception, 2026-06-20). **Operator-invoked only; never schedule it unattended**
+(the caption rewrite is a Claude step, so a human/Claude is always in the loop).
+
+Flow:
+1. `bin/explainer2 promote select` → picks the next video + Short. Rotation:
+   never-promoted videos first, then least-recently-promoted; within the video,
+   the least-recently-posted Short. Override with `--video <slug>` / `--short`.
+   Returns the mp4 path, resolved video URL, target platforms, and
+   `prior_captions` (the do-not-repeat list).
+2. YOU (generation plane) write FRESH captions — hook-first, operator voice,
+   per-platform, genuinely distinct from `prior_captions` (reword, don't shuffle;
+   Reddit/X punish near-dupes). Keep the clickable video URL as the reply-comment
+   on X/Bluesky/Threads (`url_comment`), in the YT description, and in the IG
+   caption (IG can't auto-comment). Write a plan JSON:
+   `{video_slug, short_slug, video_url, short_mp4, scheduled:"next_free_slot",
+   posts:[{platform, caption, url_comment?, extra?}]}` (`extra` carries
+   platform-specific fields — `mediaType:"reel"` for IG, `title`/`privacyStatus`/
+   `shouldNotifySubscribers`/`isMadeForKids` for YouTube).
+3. `bin/explainer2 promote post --plan plan.json` → **dry-run by default**: prints
+   the exact Blotato payloads. Review them (this is the confirm step).
+4. `... promote post --plan plan.json --fire` → publishes (uploads the mp4 once,
+   reuses the URL across platforms) and logs each platform to the ledger so the
+   rotation advances.
+5. `bin/explainer2 promote status` / `report` → library promotion state and
+   regenerates `PROMOTIONS.md`. Ledger of record: `<projects>/../promotions.json`.
+
+Notes: Blotato key from `BLOTATO_API_KEY` env, else the blotato MCP config —
+never hardcode it. Account IDs default to the operator's channels
+(`promote.py` `DEFAULT_ACCOUNTS`); a plan may override per platform; if a post
+401s, re-verify via the blotato MCP `list_accounts`. A video must have a
+resolvable URL (meta `youtube_url`, else a youtu.be link in meta/PLAYBOOK) AND
+cut Shorts to be promotable — `status` flags what isn't (e.g. backfill a missing
+`youtube_url`).
 
 ## Failure behavior
 

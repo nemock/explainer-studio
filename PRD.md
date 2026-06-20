@@ -45,7 +45,7 @@ Explainer2 is the studio built around the proven v1 media core. **Separate repo,
 
 ### Non-goals
 
-- **N1 — No posting/scheduling.** Same boundary as v1: the system stops at a packaged, labeled output directory + manifest. A downstream poster (e.g. blotato-crosspost) is a separate tool.
+- **N1 — No posting/scheduling *from the generation pipeline*.** The media/generation path stops at a packaged, labeled output directory + manifest, and never auto-posts a freshly produced video (first-publish stays human-in-the-loop — the YouTube upload tag-team, and a downstream poster like blotato-crosspost for the launch Shorts). **Declared exception (operator decision 2026-06-20): the `promote` command may post directly.** It re-shares the Shorts of *already-published* videos to social via Blotato to keep the back catalogue circulating — operator-invoked, one auto-rotated Short per run (never-promoted videos first, then least-recently-promoted), dry-run by default with `--fire` to publish, every send tracked in a global promotions ledger (`promotions.json` / `PROMOTIONS.md`). Caption wording for each re-share is a Claude generation step (so re-shares don't read as duplicates); the Blotato call itself is plain network I/O in the CLI, authenticated by the operator's existing Blotato key (read from env or the MCP config, never stored in the repo). This does not change the generation boundary for *producing* a video — only the back-catalogue re-share is allowed to post.
 - **N2 — No talking-head avatars, no voice cloning, no photoreal generative video.** Dave's real recorded voice is the premium tier; the visual language is designed motion graphics + licensed footage.
 - **N3 — No modification of v1.** v1 stays in production. v2 may *copy* proven v1 code (Kokoro wrapper, aligner, capture/mux) into its own tree, but never imports from or writes into the v1 project.
 - **N4 — No cloud rendering, hosting, or multi-user anything.** One operator, one Mac.
@@ -280,4 +280,4 @@ projects/2026-06-10_topic-slug/
 
 ---
 
-*Generation-only at the boundary (this tool never posts). One declared subscription exception: stock.adobe.com, human-in-the-loop. LLM access exclusively via the operator's Claude subscription. v1 remains untouched and in production.*
+*Generation-only at the boundary for producing a video (the pipeline never auto-posts a new video). Declared exception (2026-06-20): the operator-invoked `promote` command re-shares already-published Shorts directly via Blotato, tracked in a promotions ledger. One declared subscription exception for assets: stock.adobe.com, human-in-the-loop. LLM access exclusively via the operator's Claude subscription. v1 remains untouched and in production.*

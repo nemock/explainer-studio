@@ -23,7 +23,7 @@ A local-first **explainer-video studio**: YouTube competitive intelligence → r
 - **Generation/media split:** Claude touches only generation stages (intel synthesis, research, blueprint, script, packaging copy, QA judgments). The media path (narrate → align → compose → render → mux) is **pure Python, zero LLM calls**, runs unattended.
 - **Aligner:** torchaudio forced alignment (Apple-Silicon-native). WhisperX is not viable here.
 - **Render correctness:** all motion driven by the JS animation driver under CDP virtual time + seeded RNG. **Raw CSS animations/transitions forbidden on captured elements.**
-- **Boundary:** generation only — labeled output dir + versioned `manifest.json` (schema 2.0), then stop. **This tool never posts to social platforms.**
+- **Boundary:** generation only — labeled output dir + versioned `manifest.json` (schema 2.0), then stop. **The generation pipeline never posts to social platforms.** *One declared exception (2026-06-20, PRD N1): the operator-invoked `promote` command re-shares already-published Shorts directly via Blotato (dry-run by default, `--fire` to publish), tracked in `promotions.json`. Producing a video still stops at the package.*
 - **YouTube intelligence:** `yt-dlp` metadata/transcript analysis for editorial judgment only; competitor media is never republished.
 
 ## The playbooks are the brain — read them, follow them
