@@ -28,8 +28,12 @@ When spoken, these read as AI throat-clearing. Hunt them and their cousins:
   the kicker", "the truth is", "make no mistake", "let me be clear", "real talk",
   "buckle up".
 - **"Nobody-talks-about" framing:** "the one X nobody argues about / talks about",
-  "the part nobody mentions", "what they don't tell you", "the part the
-  cheerleaders skip", "the dirty little secret".
+  "the part nobody mentions", "what they don't tell you", "what nobody tells you",
+  "here's what nobody tells you", "this is what nobody tells you", "the part the
+  cheerleaders skip", "the dirty little secret". *(Operator note, #35: if a thing
+  is genuinely overlooked, misunderstood, or misattributed, just SAY that plainly
+  and factually — "this is widely misattributed to Barnum" — and teach it. That's
+  honest and earns more trust than the clickbait "nobody tells you" wrapper.)*
 - **Manufactured drama beats:** "let that sink in", "sit with that", "and that,
   right there, is…", "plot twist", "but here's the twist", "and the twist?".
 - **Stock closers:** "at the end of the day", "the bottom line is", "so there you
@@ -143,7 +147,7 @@ d = json.load(open(sys.argv[1]))
 blocklist = [
     "here's the thing", "here's the kicker", "the truth is", "make no mistake",
     "let me be clear", "real talk", "buckle up", "nobody argues about",
-    "nobody talks about", "they don't tell you", "cheerleaders skip",
+    "nobody talks about", "they don't tell you", "nobody tells you", "cheerleaders skip",
     "dirty little secret", "let that sink in", "sit with that", "right there, is",
     "plot twist", "here's the twist", "the twist?", "at the end of the day",
     "bottom line is", "so there you have it", "game changer", "in a world where",
