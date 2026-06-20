@@ -72,10 +72,21 @@ to date missed length on the first draft; the rule exists because it bites).
    seam.
 6. **Midroll seam (8 min+ videos):** one clean chapter boundary near the
    middle where the strongest re-hook lands; set `midroll_seam_seg`.
-7. **Ending (last 1–2 segments):** recap in ONE segment max, then pivot
+7. **Ending (last 2–3 segments):** recap in ONE segment max, then pivot
    directly into the CTA stack (operator's book/site → next video) while the
    payoff is still landing. FORBIDDEN: "thanks for watching", "don't forget to
    like and subscribe", any wind-down. Final sentence = an action imperative.
+   - **Comment-CTA (next-to-last slide, standard since 2026-06-19, video #08):**
+     leave the viewer with one genuine open question on the second-from-last
+     slide, then close on the CTA. The point is to compel comments, so make it
+     an *honest opinion-splitter* — invite disagreement ("if you think X is
+     naive, say so") and/or a personal-story prompt ("what was the moment
+     you…"). Disagreement is the strongest comment driver. GUARDRAIL: never
+     manufactured engagement-bait ("smash the comments", "comment YES if…") —
+     it reads as exactly the manipulation the brand is the antidote to. A small
+     "I might be wrong about some of this" is good: it lowers the barrier to
+     reply AND models the operator's voice. Annotate the segment
+     `device: comment_prompt`; the CTA stays the final slide.
 8. **Chapters** = the `beat` labels; every beat boundary is a chapter.
 
 ## 5. Voice rules (conversational, spoken, the operator's)
