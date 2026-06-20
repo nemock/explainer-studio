@@ -229,8 +229,14 @@ an existing `package/linkedin.md`, e.g. video #07's.)
 Upload-flow checklist (operator-approved Chrome tag-team on the iMac Chrome;
 the operator drags the video + both thumbnail PNGs, you drive the form; the
 tool itself never posts): every deep dive gets (1) title/description/tags from
-meta.json, with channel default tags kept under the 500 cap (prune only if
-over); (2) AI-disclosure answered honestly (operator voice + licensed stock +
+meta.json. The upload form PRE-FILLS channel-default tags that include
+cross-channel contamination from the operator's OTHER ventures (climate /
+energy / medtech: "methane reduction", "climate tech", "waste to energy",
+"robotics for good", "surgical robotics", "AI in clean tech", and the like).
+**This channel has nothing to do with climate or medtech — ALWAYS strip those
+off-topic defaults, every upload** (operator directive 2026-06-20). Keep only
+on-topic founder/business tags, add the video's meta.json tags, and stay under
+the 500-char cap; (2) AI-disclosure answered honestly (operator voice + licensed stock +
 motion graphics = No); (3) an end screen (subscribe + video) over the payoff
 slide — "Import from latest video" is the fast, series-consistent path;
 (4) **added to the "Deep Dives" playlist — standing operator rule, 2026-06-12**;
