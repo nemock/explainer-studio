@@ -137,8 +137,12 @@ series stays consistent.
 python tools/html2png.py <project>/package/thumbnails/thumb_a.html \
   <project>/package/thumbnails/thumb_a.png --width 1280 --height 720
 ```
-(2× device scale is built in for crisp text.) Produce **A and B variants for
-YouTube Test & Compare — and they MUST differ in a way a viewer notices.** The
+(2× device scale is built in for crisp text.) **A/B Test & Compare is the
+standing default (operator directive, 2026-06-19): ALWAYS produce two variants
+and upload both to Test & Compare. Never ask the operator whether to A/B or
+which to lead with — both go up, every time, and YouTube picks the winner.**
+Produce **A and B variants for YouTube Test & Compare — and they MUST differ in
+a way a viewer notices.** The
 high-leverage variable is the **hook**: give B a different headline *angle*
 (claim vs. curiosity vs. negation — e.g. A "MEASURE ANYTHING" / B "NO DATA?
 DECIDE ANYWAY"), paired with a different pose/expression. **Two near-identical

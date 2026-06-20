@@ -66,9 +66,13 @@ substrings of the text they accent or nothing highlights.
 - **`quote`** → `quote` (falls back to `headline`) + `attribution`. For verbatim
   lines (e.g. a book quote). Put the attribution as the source.
 - **`define`** → `term` + `definition`.
-- **`list`** → `items` (array of strings; auto-numbered). Promise stacks,
-  recaps, "screenshot this" checklists.
+- **`list`** → `items` (array of strings; **auto-numbered by the engine**).
+  Promise stacks, recaps, "screenshot this" checklists. **Do NOT prefix items
+  with "1." / "2." / "3." — the engine adds the numbers, so a manual prefix
+  double-numbers them on screen ("1   1. Is the output checkable?"). Write the
+  bare item text.** (Caught on #34.)
 - **`steps`** → `steps` (array of strings, or `{title, text}`); numbered process.
+  Same rule: no manual number prefixes — `steps` are auto-numbered too.
 
 ### Data-viz slides (only with a real, sourced number)
 - **`stat`** → `value` + `label`. One hero number.
