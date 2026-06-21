@@ -67,10 +67,14 @@ substrings of the text they accent or nothing highlights.
   lines (e.g. a book quote). Put the attribution as the source.
 - **`define`** → `term` + `definition`.
 - **`list`** → `items` (array of strings; **auto-numbered by the engine**).
-  Promise stacks, recaps, "screenshot this" checklists. **Do NOT prefix items
-  with "1." / "2." / "3." — the engine adds the numbers, so a manual prefix
-  double-numbers them on screen ("1   1. Is the output checkable?"). Write the
-  bare item text.** (Caught on #34.)
+  Promise stacks and "screenshot this" framework checklists. **Place a saveable
+  checklist at the TEACHING beat (mid-video, where the framework is introduced) —
+  NEVER as an end recap** (an end "here's the whole thing on one screen" card
+  signals the video is over; see §6 + script-playbook §4.7). The viewer still
+  gets the screenshot-worthy artifact, just not at the finish line. **Do NOT
+  prefix items with "1." / "2." / "3." — the engine adds the numbers, so a manual
+  prefix double-numbers them on screen ("1   1. Is the output checkable?"). Write
+  the bare item text.** (Caught on #34.)
 - **`steps`** → `steps` (array of strings, or `{title, text}`); numbered process.
   Same rule: no manual number prefixes — `steps` are auto-numbered too.
 
@@ -148,6 +152,10 @@ every `accent`/`accent2`/`mark` token is a substring of its headline/title; no
       script-playbook §4.7, 2026-06-21). Ending sequence = `comment_prompt` (a
       real open question) → a single closing `payoff`/`cta`, then stop. No
       "let's recap" card, no trailing "now go do X this week" homework slide.
+- [ ] **Saveable framework checklist → mid-video, at the teaching beat** (not the
+      end). If the video has a "screenshot this" rubric/checklist, render it as a
+      `list` slide on the segment where the framework is first laid out, so the
+      viewer gets the artifact without an end recap.
 - [ ] On-screen text is terse — no slide dumps the full spoken sentence.
 - [ ] Every `accent`/`accent2`/`mark` word actually appears in its headline/title.
 - [ ] Numbers on slides trace to the script/wiki; none invented; illustrative

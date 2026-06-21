@@ -155,6 +155,16 @@ teardown; high-leverage, takes precedence when ranking):
 These are tests, not new patterns — apply them on top of §3b. A title can be a
 "number promise" AND acute AND problem-aware; that's the strongest kind.
 
+**Avoid algorithm-triggering words in the title** (operator directive 2026-06-21).
+Even as harmless metaphor, words the recommendation/ads systems may read literally
+as violent or unsafe — **kill, die, dead, destroy, attack, weapon, etc.** — can
+suppress reach or limit monetization, and they read as edgy out of context. Swap
+for a clean verb that says the same thing: *cut, drop, shelve, retire, eliminate,
+end.* (Caught on #10: "…You Need to Kill Four" → "Why Five Startup Ideas Is Worse
+Than One.") This is a TITLE/metadata rule; the spoken script can still use a
+metaphor where it reads naturally — but soften it there too if the operator wants
+to never say it on the mic.
+
 ## 8. Assemble blueprint.md + blueprint.json
 
 `blueprint.md` sections (in order): 1 Competitive picture (the §2 table +
