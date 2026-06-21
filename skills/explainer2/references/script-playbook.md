@@ -99,6 +99,14 @@ to date missed length on the first draft; the rule exists because it bites).
      click away, so it earns nothing and just signals the end. End on the CTA,
      not on homework. (Operator call, #35 review: keep the comment ask — it can
      buy dwell — but drop the trailing homework imperative.)
+   - **Medium note — this is a VIDEO rule, not a universal one.** "Don't recap,
+     don't signal the end" exists because a *watcher* who hears "let's recap"
+     leaves, costing watch-time and the suggested-video click. The written
+     [[article-playbook]] deliberately KEEPS a short recap — an article has no
+     dwell algorithm, a recap is a useful skim artifact, and it signals the essay
+     isn't just a transcript of the video. Each format follows its own best
+     practices (operator directive 2026-06-21); don't flatten one ruleset across
+     video, article, and short.
 8. **Chapters** = the `beat` labels; every beat boundary is a chapter.
 
 ## 5. Voice rules (conversational, spoken, the operator's)

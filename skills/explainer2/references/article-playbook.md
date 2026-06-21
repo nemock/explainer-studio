@@ -97,6 +97,12 @@ not writing.
   it — default is faithful companion.)
 - Headline · dek · lede (the hook, rewritten for a reader) · the acts as
   subheaded sections · the boxed artifact(s) · a short recap · CTA outro.
+  - **The recap stays (intentional, 2026-06-21).** The video script-playbook
+    forbids an end recap because it signals a *watcher* to leave; an article is
+    different — no dwell algorithm, the recap is a useful skim artifact, and it
+    signals the essay is its own thing, not a transcript of the video. Don't
+    carry the video's "no recap" rule over to the article. Each medium gets its
+    own best practices.
 - Front-matter block at the top of `article.md`:
   ```
   ---
