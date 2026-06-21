@@ -247,11 +247,25 @@ Public / schedule-Public without an explicit go.
   the title and description (error "Angled brackets aren't allowed"). Write
   "over $2B" / "40 percent-plus", not ">$2B" / "40%+", in `meta.json` and when
   typing the form.
-- **After it's live:** backfill the real `youtu.be/...` URL into
-  `package/meta.json` (`youtube_url`) and `package/linkedin.md`, record it in
-  PLAYBOOK §7, and commit. Launch distribution of a NEW video's Shorts is a
-  SEPARATE human-in-the-loop step (the blotato-crosspost skill). Re-sharing the
-  back catalogue later is §9 below.
+- **Close-out checklist — do ALL of it the moment the video goes live, in the
+  same sitting (operator directive 2026-06-21: "when a project is closed out, all
+  of that information is updated, so we never have to backfill again"). Skipping
+  any of these is what causes drift and painful reconstruction later:**
+  1. `package/meta.json` → set `youtube_url` to the real `youtu.be/...` link.
+  2. `package/linkedin.md` → replace the `<URL>` placeholder with the live link.
+  3. **`channel/CATALOG.md` — the master local record. MOVE the row out of the
+     queue into Published / Made and fill ALL four columns:** the **final
+     published title** (it usually differs from the blueprint working title — use
+     exactly what's on YouTube), the project dir, the **`youtu.be/...` URL**, and
+     the **posted date** (read it off the Studio content page; don't guess).
+     Never leave `(fill)` once you have the value.
+  4. Record in PLAYBOOK §7, then commit all of the above together.
+  Rule of thumb: a folder with both `package/` and `video/` is *produced*; once
+  it's uploaded it is *published* and MUST live in Published / Made, never the
+  queue. If CATALOG and `projects/` ever disagree, `projects/` is ground truth —
+  reconcile. Launch distribution of a NEW video's Shorts is a SEPARATE
+  human-in-the-loop step (the blotato-crosspost skill / `bin/explainer2 shorts`
+  then Blotato). Re-sharing the back catalogue later is §9 below.
 
 ### 9. Promote (re-share already-published Shorts — `bin/explainer2 promote`)
 
