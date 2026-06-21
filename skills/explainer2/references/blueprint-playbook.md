@@ -136,6 +136,25 @@ conventional" play; the #1 pick should weaponize the gap. 8–14 words. No
 clickbait the video doesn't cash: every promise in the title must map to a
 script beat.
 
+**Two tests every candidate must pass** (adopted 2026-06-21 from a YouTube-growth
+teardown; high-leverage, takes precedence when ranking):
+
+- **Acute, not chronic.** A chronic title names an always-present, important-but-
+  not-urgent struggle ("How to make sure your video gets views") — the viewer
+  files it under *someday*. An acute title names something that *just happened*,
+  creating "I need this now" ("Stop wasting 20 hours on videos that get 300
+  views. Do this first"). Ask of every candidate: **what just happened to this
+  person that makes them need this right now?** Prefer the acute framing.
+- **Problem-aware, not solution-aware.** Most viewers know their *problem*, not
+  your *solution*. A solution-aware title names the fix they don't yet know to
+  want ("How to validate your idea before you build") and gets scrolled past. A
+  problem-aware title names the pain they already feel ("You built the wrong
+  thing — here's how to tell before you waste six months"). Lead with the problem
+  they recognize; the video can then deliver the solution they didn't.
+
+These are tests, not new patterns — apply them on top of §3b. A title can be a
+"number promise" AND acute AND problem-aware; that's the strongest kind.
+
 ## 8. Assemble blueprint.md + blueprint.json
 
 `blueprint.md` sections (in order): 1 Competitive picture (the §2 table +

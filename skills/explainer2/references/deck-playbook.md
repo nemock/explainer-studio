@@ -144,6 +144,10 @@ every `accent`/`accent2`/`mark` token is a substring of its headline/title; no
       script in order.
 - [ ] Slide 0 = `hook` (the cold open); closing card = `payoff` (or `cta` only
       if brand is wired).
+- [ ] **No recap `list` slide in the final 2–3** (don't signal the end — see
+      script-playbook §4.7, 2026-06-21). Ending sequence = `comment_prompt` (a
+      real open question) → a single closing `payoff`/`cta`, then stop. No
+      "let's recap" card, no trailing "now go do X this week" homework slide.
 - [ ] On-screen text is terse — no slide dumps the full spoken sentence.
 - [ ] Every `accent`/`accent2`/`mark` word actually appears in its headline/title.
 - [ ] Numbers on slides trace to the script/wiki; none invented; illustrative

@@ -38,6 +38,12 @@ When spoken, these read as AI throat-clearing. Hunt them and their cousins:
   right there, is…", "plot twist", "but here's the twist", "and the twist?".
 - **Stock closers:** "at the end of the day", "the bottom line is", "so there you
   have it".
+- **End-signalers (NEW 2026-06-21 — they tank end-retention; see script-playbook
+  §4.7):** "in conclusion", "to conclude", "let's recap", "to recap", "a quick
+  recap", "to wrap up", "wrapping up", "before you go", "before you click away",
+  "to sum up", "lastly". Any phrase that announces the video is ending tells the
+  viewer to leave. Don't recap and don't sign off — end on the comment question
+  and a single CTA.
 - **Ad-copy / hype:** "game changer", "in a world where", "imagine a world where",
   "unlock the potential", "say goodbye to X and hello to Y", "the future of X is
   here", "this isn't just X, it's Y", "we're not just X, we're Y", "what if you
@@ -153,6 +159,8 @@ blocklist = [
     "bottom line is", "so there you have it", "game changer", "in a world where",
     "imagine a world", "unlock the potential", "say goodbye to", "the future of",
     "seamless", "supercharge", "revoluti", "put it perfectly", "nailed it",
+    "in conclusion", "to conclude", "let's recap", "to recap", "to wrap up",
+    "wrapping up", "before you go", "before you click away", "to sum up",
 ]
 for s in d["segments"]:
     hits = [p for p in blocklist if p in s["text"].lower()]

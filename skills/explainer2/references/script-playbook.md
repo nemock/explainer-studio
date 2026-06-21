@@ -72,21 +72,33 @@ to date missed length on the first draft; the rule exists because it bites).
    seam.
 6. **Midroll seam (8 min+ videos):** one clean chapter boundary near the
    middle where the strongest re-hook lands; set `midroll_seam_seg`.
-7. **Ending (last 2–3 segments):** recap in ONE segment max, then pivot
-   directly into the CTA stack (operator's book/site → next video) while the
-   payoff is still landing. FORBIDDEN: "thanks for watching", "don't forget to
-   like and subscribe", any wind-down. Final sentence = an action imperative.
-   - **Comment-CTA (next-to-last slide, standard since 2026-06-19, video #08):**
-     leave the viewer with one genuine open question on the second-from-last
-     slide, then close on the CTA. The point is to compel comments, so make it
-     an *honest opinion-splitter* — invite disagreement ("if you think X is
-     naive, say so") and/or a personal-story prompt ("what was the moment
-     you…"). Disagreement is the strongest comment driver. GUARDRAIL: never
-     manufactured engagement-bait ("smash the comments", "comment YES if…") —
-     it reads as exactly the manipulation the brand is the antidote to. A small
-     "I might be wrong about some of this" is good: it lowers the barrier to
-     reply AND models the operator's voice. Annotate the segment
-     `device: comment_prompt`; the CTA stays the final slide.
+7. **Ending (last 2–3 segments) — do NOT signal the end.** Updated 2026-06-21
+   (from a YouTube-retention teardown, confirmed by the operator). **No recap
+   slide. No wind-down** — kill "thanks for watching", "in conclusion", "let's
+   recap", "to wrap up", "before you go / before you click away". Any "let's
+   recap"/"we're at the end" beat tells the viewer they're free to leave: it
+   bleeds end-retention AND halves the end-screen suggested-video click. You've
+   already taught the lesson and shown the payoff — trust it. Go straight from
+   the last substantive beat into the comment-CTA, then ONE clean CTA, and stop.
+   - **Comment-CTA (next-to-last slide, standard since 2026-06-19, video #08).**
+     This beat EARNS its end placement: a genuine open question makes an engaged
+     viewer linger to reply — the dwell + engagement we actually want. Make it an
+     *honest opinion-splitter* — invite disagreement ("if you think X is naive,
+     say so") and/or a personal-story prompt ("what was the moment you…").
+     Disagreement is the strongest comment driver. GUARDRAIL: never manufactured
+     engagement-bait ("smash the comments", "comment YES if…") — it reads as
+     exactly the manipulation the brand is the antidote to. A small "I might be
+     wrong about some of this" is good: it lowers the barrier to reply AND models
+     the operator's voice. Annotate the segment `device: comment_prompt`.
+   - **Final CTA = ONE ask, then stop.** Close on a single `cta`/`payoff` slide
+     naming the operator's book/site/newsletter and a single "subscribe". That's
+     the end of the video. **CUT the old "final sentence = an action imperative"
+     homework line.** Stacking asks (subscribe AND comment AND "now go do X this
+     week") triggers decision fatigue and converts none of them; worse, a "go do
+     your homework" close lands exactly when the viewer is already reaching to
+     click away, so it earns nothing and just signals the end. End on the CTA,
+     not on homework. (Operator call, #35 review: keep the comment ask — it can
+     buy dwell — but drop the trailing homework imperative.)
 8. **Chapters** = the `beat` labels; every beat boundary is a chapter.
 
 ## 5. Voice rules (conversational, spoken, the operator's)
