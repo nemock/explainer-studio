@@ -269,7 +269,15 @@ Public / schedule-Public without an explicit go.
      exactly what's on YouTube), the project dir, the **`youtu.be/...` URL**, and
      the **posted date** (read it off the Studio content page; don't guess).
      Never leave `(fill)` once you have the value.
-  4. Record in PLAYBOOK §7, then commit all of the above together.
+  4. **Regenerate the promotions ledger:** `bin/explainer2 promote report
+     --projects-dir <projects>`. This rewrites `promotions.json` + `PROMOTIONS.md`
+     so the just-produced video flips from *(not promotable)* to promotable — it
+     now has cut Shorts AND a resolvable URL (the two promotability conditions,
+     §9). Skip this and the ledger stays stale and the back-catalogue promoter
+     (§9) silently skips the video. (The *(not promotable)* tag is correct only
+     for scaffolded-but-unproduced dirs.)
+  5. Record in PLAYBOOK §7, then commit all of the above together (including the
+     regenerated `promotions.json` + `PROMOTIONS.md`).
   Rule of thumb: a folder with both `package/` and `video/` is *produced*; once
   it's uploaded it is *published* and MUST live in Published / Made, never the
   queue. If CATALOG and `projects/` ever disagree, `projects/` is ground truth —
