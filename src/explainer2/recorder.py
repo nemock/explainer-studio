@@ -19,21 +19,54 @@ def run(proj, open_browser=True):
                  # optional v2 script fields — teleprompter context cues
                  "beat": s.get("beat"), "device": s.get("device"), "note": s.get("note")}
                 for s in effective_segments(proj, script)]
+    # Append the per-Short hook/outro lines from shorts/plan.json so the operator records
+    # them in the SAME booth session (short-form best practices: a native 3–8s hook + a
+    # short outro, recorded separately — NEVER lifted from the long-form). These save to
+    # their own clip files (short_<slug>_{hook,outro}.wav), not seg_NNN.wav, so the shorts
+    # cutter can find them. Additive: a cut with no hook/outro adds no cards.
+    _next = (max(s["id"] for s in seg_list) + 1) if seg_list else 0
+    _plan_path = proj.dir / "shorts" / "plan.json"
+    if _plan_path.exists():
+        try:
+            _plan = json.loads(_plan_path.read_text())
+        except Exception:
+            _plan = []
+        for _i, _cut in enumerate(_plan, 1):
+            _slug = _cut.get("slug", f"cut{_i}")
+            for _role in ("hook", "outro"):
+                _line = _cut.get(_role)
+                if not _line:
+                    continue
+                seg_list.append({
+                    "id": _next, "slide": f"SHORT {_i} · {_role.upper()}", "text": _line,
+                    "beat": None,
+                    "device": f"⏩ SHORT {_i}/{len(_plan)} · {_role.upper()} — {_slug}",
+                    "note": ("Punchy 3–8s. The very first words ARE the hook; no runway. "
+                             "This is short-form only — do NOT reuse it in the long-form."
+                             if _role == "hook" else
+                             "Short outro (loops back into this Short's hook). Keep it tight; no sign-off."),
+                    "clip": f"short_{_slug}_{_role}",
+                })
+                _next += 1
     vdir = proj.voiceover_dir
     html = (ASSETS / "recorder.html").read_text().replace("{{TITLE}}", str(proj.data.get("title", "Voiceover")))
     state = {"done": False}
 
-    def wav(sid): return vdir / f"seg_{sid:03d}.wav"
+    # filename stem per card id: short hook/outro cards save to their own clip, everything
+    # else to seg_NNN (the parent narrate/align path keys off seg_NNN).
+    stem = {s["id"]: (s.get("clip") or f"seg_{s['id']:03d}") for s in seg_list}
+
+    def wav(sid): return vdir / f"{stem[sid]}.wav"
     def recorded(sid): return wav(sid).exists()
 
     def takes(sid):
-        return len(list(vdir.glob(f"seg_{sid:03d}.take*.wav"))) + (1 if recorded(sid) else 0)
+        return len(list(vdir.glob(f"{stem[sid]}.take*.wav"))) + (1 if recorded(sid) else 0)
 
     def archive_take(sid):
         """Keep the previous take before overwriting (retake history, PRD §5.3)."""
         if recorded(sid):
-            n = len(list(vdir.glob(f"seg_{sid:03d}.take*.wav"))) + 1
-            wav(sid).rename(vdir / f"seg_{sid:03d}.take{n}.wav")
+            n = len(list(vdir.glob(f"{stem[sid]}.take*.wav"))) + 1
+            wav(sid).rename(vdir / f"{stem[sid]}.take{n}.wav")
 
     class H(BaseHTTPRequestHandler):
         def log_message(self, *a): pass
@@ -58,8 +91,8 @@ def run(proj, open_browser=True):
                                              "takes": takes(s["id"])} for s in seg_list]))
             elif p.path == "/clip":
                 sid = int(parse_qs(p.query).get("seg", ["-1"])[0])
-                f = wav(sid)
-                self._send(200, f.read_bytes(), "audio/wav") if f.exists() else self._send(404, b"")
+                f = wav(sid) if sid in stem else None
+                self._send(200, f.read_bytes(), "audio/wav") if (f and f.exists()) else self._send(404, b"")
             else:
                 self._send(404, b"{}")
 
@@ -67,8 +100,10 @@ def run(proj, open_browser=True):
             p = urlparse(self.path)
             if p.path == "/save":
                 sid = int(parse_qs(p.query).get("seg", ["-1"])[0])
+                if sid not in stem:
+                    return self._send(404, json.dumps({"ok": False}))
                 blob = self.rfile.read(int(self.headers.get("Content-Length", 0)))
-                webm = vdir / f"seg_{sid:03d}.webm"
+                webm = vdir / f"{stem[sid]}.webm"
                 webm.write_bytes(blob)
                 archive_take(sid)
                 r = subprocess.run(["ffmpeg", "-hide_banner", "-y", "-i", str(webm),

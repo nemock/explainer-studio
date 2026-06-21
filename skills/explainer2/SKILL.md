@@ -190,8 +190,18 @@ in a Short, in which case re-cut that Short.**
 Write titles/description/chapters per blueprint §8 into `meta.json` (the
 manifest merges it). **Thumbnails: read `references/thumbnail-playbook.md`, then
 build A/B 1280×720 cards (cutout → brand template → `tools/html2png.py`) into
-`package/thumbnails/`.** Shorts cutting: Phase 5 feature — follow its docs if present.
+`package/thumbnails/`.**
 **GATE: present the package. Wait. Then STOP — never post.**
+
+**Shorts (their own medium — read `references/shorts-playbook.md`).** Shorts are
+NOT clips of the long-form: each cut reuses the long-form body audio but gets a
+**separately-recorded native hook + outro** (short-form best practices). So the
+`shorts/plan.json` (3 cuts, each with `segments` + a `hook`/`hook_headline` + an
+`outro`, `ending: "loop"` by default) is authored **at the Script stage**, so the
+booth records the hooks in the SAME session: `bin/explainer2 record` surfaces them
+as extra cards (saved to `voiceover/short_<slug>_{hook,outro}.wav`), then
+`bin/explainer2 shorts` assembles hook → body → spoken outro per cut. A cut with no
+hook/outro falls back to the legacy lift + silent end-card.
 
 ### 8b. Article (generation plane — written companion)
 Read `references/article-playbook.md` IN FULL, then write the read-not-heard
