@@ -316,8 +316,13 @@ more than once as the library grows; each re-share gets reworded so it never
 reads as a duplicate.
 
 This is the ONE place the tool posts to social directly (PRD N1 declared
-exception, 2026-06-20). **Operator-invoked only; never schedule it unattended**
-(the caption rewrite is a Claude step, so a human/Claude is always in the loop).
+exception, 2026-06-20). The caption rewrite (step 2) is a Claude step, so a
+human/Claude must always be in the loop — never wire `promote post --fire` into
+a dumb cron that reposts without fresh captions. A **scheduled Claude routine is
+sanctioned** (decision 2026-06-22): the `explainer2-promote-daily` task fires
+8:00 AM ET, and because a scheduled run *is* a Claude instance, it writes fresh
+per-platform captions each morning — honoring the in-the-loop rule while keeping
+the back catalogue circulating hands-off. Run by hand any time too.
 
 Flow:
 1. `bin/explainer2 promote select` → picks the next video + Short. Rotation:
