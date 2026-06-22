@@ -142,22 +142,30 @@ Runs narrate → align → deck → render → mux → manifest → qa. A short 
 (step 5b).** Then read the QA warnings in the results JSON and fix what is
 fixable (deck pacing, dead air) — at most ONE re-render cycle.
 
-**Render robustness (learned the hard way on #34).** A deep-dive render exceeds
-the Bash 10-min cap, so it must run as a tracked background job, and a render
-that is interrupted mid-encode leaves a **corrupt `work/video_16x9.mp4`
-("moov atom not found")**. To survive:
-- Wrap it in `caffeinate -i` so the Mac can't idle-sleep mid-encode:
-  `caffeinate -i bin/explainer2 media <project_dir>` (run as a tracked
-  background job; the harness notifies on completion — do NOT write a polling
-  loop, global CLAUDE.md rules still apply).
-- **Keep the Claude Code session active until it finishes.** The render is a
-  child of the session; switching the desktop app away (e.g. into CoWork) can
-  suspend the session and kill the render. `caffeinate` covers OS sleep, not
-  session suspension — tell the operator to stay in Claude Code.
+**Render robustness (learned the hard way on #34, then #10).** A deep-dive
+render exceeds the Bash 10-min cap, and a render interrupted mid-encode leaves a
+**corrupt `work/video_16x9.mp4` ("moov atom not found")**. The hard lesson (#10,
+2026-06-22): a render launched as a child of the Claude session **dies the moment
+the desktop app is switched away** — the harness kills the background task
+mid-encode. `caffeinate` blocks OS idle-sleep but NOT task termination. So:
+- **Launch renders DETACHED — this is the standard path:**
+  `bin/explainer2 render <project_dir>`. It runs render→mux→manifest→qa in its
+  OWN session (`start_new_session`, the portable macOS `setsid`) under
+  `caffeinate`, so suspending/closing Claude Code leaves it running. It returns
+  immediately (the render is detached — no completion notification), and is
+  idempotent (won't double-encode a project already rendering).
+- **Check progress with `bin/explainer2 render-status`** (lock holder + every
+  live render + each one's last `run.log` line) or tail `work/run.log`. Do NOT
+  write a polling loop — check on re-invocation; global CLAUDE.md rules apply.
+- A `render-status` showing `render-lock: engine busy … queued, waiting` is the
+  lock **working** (another render is in flight; this one auto-starts after) —
+  not a hang. The lockfile *content* is just a note; if its named holder pid is
+  dead, the flock is already free.
 - If a render died: delete the corrupt `work/video_16x9.mp4`, then re-run
-  `media` (narrate/align/deck are cheap and idempotent; the render redoes).
-  Verify the final file with `ffprobe` (duration present, no moov error) before
-  Package, and after any deck fix re-cut affected Shorts.
+  `bin/explainer2 render <project_dir>` (narrate/align/deck are cheap, cached,
+  and idempotent; the render redoes). Verify the final file with `ffprobe`
+  (duration present, no moov error) before Package; after any deck fix re-cut
+  affected Shorts.
 
 **Concurrent renders are serialized — the render-lock (2026-06-21).** Both this
 studio AND v1 `explainer-system` (which the CVG routine uses) acquire a
