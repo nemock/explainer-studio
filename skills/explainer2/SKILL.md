@@ -333,12 +333,14 @@ Flow:
 2. YOU (generation plane) write FRESH captions — hook-first, operator voice,
    per-platform, genuinely distinct from `prior_captions` (reword, don't shuffle;
    Reddit/X punish near-dupes). Keep the clickable video URL as the reply-comment
-   on X/Bluesky/Threads (`url_comment`), in the YT description, and in the IG
-   caption (IG can't auto-comment). Write a plan JSON:
+   on X/Bluesky/Threads (`url_comment`), in the YT description, and inline in the
+   IG and Facebook captions (neither can auto-comment). Write a plan JSON:
    `{video_slug, short_slug, video_url, short_mp4, scheduled:"next_free_slot",
    posts:[{platform, caption, url_comment?, extra?}]}` (`extra` carries
-   platform-specific fields — `mediaType:"reel"` for IG, `title`/`privacyStatus`/
-   `shouldNotifySubscribers`/`isMadeForKids` for YouTube).
+   platform-specific fields — `mediaType:"reel"` for IG and Facebook;
+   `title`/`privacyStatus`/`shouldNotifySubscribers`/`isMadeForKids` for YouTube.
+   Facebook posts to the FWF Page; its `pageId` defaults in `promote.py`, so you
+   don't set it in the plan).
 3. `bin/explainer2 promote post --plan plan.json` → **dry-run by default**: prints
    the exact Blotato payloads. Review them (this is the confirm step).
 4. `... promote post --plan plan.json --fire` → publishes (uploads the mp4 once,

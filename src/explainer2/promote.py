@@ -26,7 +26,7 @@ import time
 from pathlib import Path
 
 # The Shorts platforms we promote across (Blotato account set, per memory).
-DEFAULT_PLATFORMS = ["twitter", "bluesky", "threads", "youtube", "instagram"]
+DEFAULT_PLATFORMS = ["twitter", "bluesky", "threads", "youtube", "instagram", "facebook"]
 
 _YT = re.compile(r"https?://(?:youtu\.be/|www\.youtube\.com/(?:watch\?v=|shorts/))[\w\-]+")
 _DATE = re.compile(r"^(\d{4}-\d{2}-\d{2})")
@@ -263,8 +263,12 @@ API_BASE = "https://backend.blotato.com/v2"
 # override any of these per platform via {"account_id": "..."}.
 DEFAULT_ACCOUNTS = {
     "twitter": "16563", "bluesky": "46447", "threads": "6021",
-    "instagram": "41992", "youtube": "34001",
+    "instagram": "41992", "youtube": "34001", "facebook": "37963",
 }
+# Facebook posts to a Page, not the profile: Blotato requires the Page's id
+# (a subaccount of account 37963) on the post target. "Founders Who Finish" Page,
+# connected 2026-06-22. Verify with the Blotato MCP `list_accounts` if posts 400.
+DEFAULT_FACEBOOK_PAGE_ID = "1216556091535160"
 # Platforms that support a threaded reply (used to attach the clickable URL).
 THREAD_REPLY = {"twitter", "bluesky", "threads"}
 
@@ -323,12 +327,17 @@ def _build_post_body(entry, media_urls, scheduled):
     if entry.get("url_comment") and platform in THREAD_REPLY:
         content["additionalPosts"] = [{"text": entry["url_comment"], "mediaUrls": []}]
     target = {"targetType": platform}
-    # platform-specific fields. Blotato wants YouTube's metadata (title,
-    # privacyStatus, shouldNotifySubscribers, isMadeForKids, …) on target;
-    # everything else (e.g. IG mediaType=reel) goes on content.
+    # platform-specific fields. Blotato wants routing/required metadata on target
+    # (YouTube's title/privacyStatus/…; Facebook's pageId) and content attributes
+    # on content (e.g. mediaType=reel for IG and FB).
     extra = dict(entry.get("extra", {}))
     if platform == "youtube":
         target.update(extra)
+    elif platform == "facebook":
+        page = extra.pop("pageId", None) or DEFAULT_FACEBOOK_PAGE_ID
+        if page:
+            target["pageId"] = page
+        content.update(extra)  # e.g. mediaType=reel
     else:
         content.update(extra)
     body = {"post": {"accountId": entry.get("account_id") or DEFAULT_ACCOUNTS.get(platform),
