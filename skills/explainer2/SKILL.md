@@ -167,10 +167,11 @@ capture+encode at once (that collision SIGTERM'd #10 mid-render). You can launch
 a render any time — if another is in flight you'll see `render-lock: engine busy
 … queued, waiting` in `work/run.log`, and it **auto-starts when the other
 finishes** (no manual coordination). flock auto-releases when the holder dies
-(even SIGKILL), so a crashed render never deadlocks the queue; a process-guard
-also waits out a foreign render that predates the lock. Code: `renderlock.py` in
-each codebase — the LOCKFILE path MUST stay identical across both, or they won't
-see each other.
+(even SIGKILL), so a crashed render never deadlocks the queue. Code:
+`renderlock.py` in each codebase — the LOCKFILE path MUST stay identical across
+both, or they won't see each other. (It's flock-only by design: an earlier
+process-sniffing guard false-positived on persistent MCP headless browsers and
+deadlocked the queue — never reintroduce that.)
 
 ### 7b. Ad-lib drift check (REQUIRED before Package — operator-recorded videos)
 The operator records with flexibility: they cut, add, and rephrase live, and that
