@@ -159,6 +159,19 @@ that is interrupted mid-encode leaves a **corrupt `work/video_16x9.mp4`
   Verify the final file with `ffprobe` (duration present, no moov error) before
   Package, and after any deck fix re-cut affected Shorts.
 
+**Concurrent renders are serialized — the render-lock (2026-06-21).** Both this
+studio AND v1 `explainer-system` (which the CVG routine uses) acquire a
+machine-global `fcntl.flock` on `/tmp/explainer-render.lock` before `render` and
+hold it through `mux`, so two projects/routines never run the memory-heavy
+capture+encode at once (that collision SIGTERM'd #10 mid-render). You can launch
+a render any time — if another is in flight you'll see `render-lock: engine busy
+… queued, waiting` in `work/run.log`, and it **auto-starts when the other
+finishes** (no manual coordination). flock auto-releases when the holder dies
+(even SIGKILL), so a crashed render never deadlocks the queue; a process-guard
+also waits out a foreign render that predates the lock. Code: `renderlock.py` in
+each codebase — the LOCKFILE path MUST stay identical across both, or they won't
+see each other.
+
 ### 7b. Ad-lib drift check (REQUIRED before Package — operator-recorded videos)
 The operator records with flexibility: they cut, add, and rephrase live, and that
 freedom is intentional. But captions are generated from the recorded script
