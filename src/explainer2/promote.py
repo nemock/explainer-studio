@@ -322,10 +322,17 @@ def _build_post_body(entry, media_urls, scheduled):
     content = {"text": entry["caption"], "mediaUrls": media_urls, "platform": platform}
     if entry.get("url_comment") and platform in THREAD_REPLY:
         content["additionalPosts"] = [{"text": entry["url_comment"], "mediaUrls": []}]
-    # platform-specific fields (mediaType=reel for IG, title/privacyStatus for YT, …)
-    content.update(entry.get("extra", {}))
+    target = {"targetType": platform}
+    # platform-specific fields. Blotato wants YouTube's metadata (title,
+    # privacyStatus, shouldNotifySubscribers, isMadeForKids, …) on target;
+    # everything else (e.g. IG mediaType=reel) goes on content.
+    extra = dict(entry.get("extra", {}))
+    if platform == "youtube":
+        target.update(extra)
+    else:
+        content.update(extra)
     body = {"post": {"accountId": entry.get("account_id") or DEFAULT_ACCOUNTS.get(platform),
-                     "content": content, "target": {"targetType": platform}}}
+                     "content": content, "target": target}}
     if scheduled == "next_free_slot":
         body["post"]["useNextFreeSlot"] = True
     elif scheduled:
