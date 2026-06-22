@@ -34,7 +34,7 @@ import numpy as np
 import soundfile as sf
 
 from .project import Project, ASPECTS
-from . import deckbuild, manifest
+from . import deckbuild, manifest, renderlock
 from .media import align, render, mux
 
 GAP = 0.18        # inter-segment silence, matches the narrate stages
@@ -196,11 +196,23 @@ def run(parent_dir, plan_path=None, only=None):
         for w in warnings:
             _log(f"{cut['slug']}: WARNING — {w}")
         _log(f"{cut['slug']}: {duration:.1f}s, {len(cut['segments'])} segments — rendering")
-        for name, fn in (("align", align.run), ("deck", deckbuild.run),
-                         ("render", render.run), ("mux", mux.run),
-                         ("manifest", manifest.run)):
-            r = fn(sp)
-            _log(f"{cut['slug']}: {name} ok {json.dumps(r)[:100]}")
+        lock = None
+        try:
+            for name, fn in (("align", align.run), ("deck", deckbuild.run),
+                             ("render", render.run), ("mux", mux.run),
+                             ("manifest", manifest.run)):
+                # Serialize the memory-heavy capture+encode (16 GB rule) against
+                # every other render on this Mac — same flock as cmd_media. Held
+                # per-cut (acquire before render, release after mux) so a long
+                # deep-dive render can interleave between cuts.
+                if name == "render" and lock is None:
+                    lock = renderlock.acquire(sp, log=_log)
+                r = fn(sp)
+                _log(f"{cut['slug']}: {name} ok {json.dumps(r)[:100]}")
+                if name == "mux" and lock is not None:
+                    renderlock.release(lock); lock = None
+        finally:
+            renderlock.release(lock)
         results[cut["slug"]] = {
             "dir": str(sp.dir), "duration_s": round(duration, 1),
             "video": str(sp.dir / "video" / "explainer_9x16.mp4"),
