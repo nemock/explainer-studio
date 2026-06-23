@@ -67,6 +67,14 @@ bin/explainer2 scaffold "<slug>" --title "<topic>" --aspect 16:9 \
 Default 16:9 for deep dives, 9:16 for Shorts-only runs. Ask the operator for
 angle/length/aspect ONLY if not given — one cheap confirmation, then proceed.
 
+**The canonical number is auto-assigned** from the `projects/` folder (highest
+`_NN_` + 1, zero-padded) and written into the dir name + `project.json`; the
+scaffold also refreshes the counter line in `channel/CATALOG.md`. So pass a slug
+**without** a number (a leading number is stripped if you include one). `--number`
+forces a specific number; `--force` allows a duplicate. Run `bin/explainer2 catalog`
+anytime to see the derived count, next number, and per-project state — the folder
+is the source of truth, never a hand-typed counter.
+
 ### 2. Intel sweep (media plane)
 Write 4–6 search queries per the **query-expansion rules** in
 `references/blueprint-playbook.md` §1, then:
@@ -180,6 +188,19 @@ finishes** (no manual coordination). flock auto-releases when the holder dies
 both, or they won't see each other. (It's flock-only by design: an earlier
 process-sniffing guard false-positived on persistent MCP headless browsers and
 deadlocked the queue — never reintroduce that.)
+
+**HARD RULE — never run a raw heavy ffmpeg (2026-06-23).** The lock protects the
+render *engine*, but a hand-rolled `ffmpeg` you run yourself (a B-roll motion
+splice, the SV-clip splice, any post-mux re-encode) bypasses it unless you make
+it take the lock. A bare-ffmpeg B-roll splice on 2026-06-23 overlapped Founder
+Tip Tuesday's scheduled render, blew the 16 GB budget, and got OOM-killed
+mid-write — the exact collision the lock exists to prevent. So: **route every
+heavy encode through `renderlock.run_locked(cmd, label=…)`** (in
+`src/explainer2/renderlock.py`) — it acquires the flock, runs the subprocess,
+releases on success or failure. Write the splice as a `.py` that calls it
+(`sys.path.insert(0, '…/explainer2/src'); from explainer2 import renderlock`) and
+run it **backgrounded** so the lock-wait can't trip a foreground timeout. No raw
+`ffmpeg` for an encode, ever, now that the helper exists.
 
 ### 7b. Ad-lib drift check (REQUIRED before Package — operator-recorded videos)
 The operator records with flexibility: they cut, add, and rephrase live, and that

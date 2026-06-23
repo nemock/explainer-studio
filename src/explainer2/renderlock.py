@@ -84,6 +84,27 @@ def release(fd):
         pass
 
 
+def run_locked(cmd, label="ffmpeg", log=print, **run_kwargs):
+    """Run a heavy encode subprocess (ffmpeg splice, post-mux re-encode, B-roll
+    or SV-clip compositing) UNDER the machine-global render lock, so it
+    serializes against scheduled explainer/explainer2 renders instead of
+    fighting them for the 16 GB budget.
+
+    HARD RULE: never invoke ffmpeg raw for an encode/render now that this exists.
+    Route every hand-rolled heavy ffmpeg through here. (On 2026-06-23 a raw
+    B-roll splice overlapped Founder Tip Tuesday's render and got OOM-killed
+    mid-write — exactly what the lock exists to prevent.)
+
+    Blocks until the lock frees (logs 'queued, waiting'), runs `cmd`, and
+    releases on success OR failure. Returns the CompletedProcess. Run the CALLER
+    backgrounded so the lock wait can't trip a foreground timeout."""
+    fd = acquire(label=label, log=log)
+    try:
+        return subprocess.run(cmd, **run_kwargs)
+    finally:
+        release(fd)
+
+
 # ---- detached launch + status -------------------------------------------------
 
 def _media_pid_for(project_dir):
