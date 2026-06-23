@@ -56,6 +56,15 @@ the kicker:", "And the twist?"), delete it and just say the thing. A real person
 usually just says it. One genuinely in-voice "Look," or "Here's the thing" across
 a whole script can survive; a *pattern* of them cannot.
 
+### A1b. Honesty overclaims (false-modesty about having nothing to sell)
+The operator HAS a book, a site, and a newsletter (with masterclasses), named in
+the CTA. So any "nothing to sell" / "no course, no affiliate link" / "I've got
+nothing to sell you" claim is false and torches the credibility beat the instant
+the CTA arrives. Grep and rewrite every hit to the *paywall* framing (the answer
+isn't gated; given freely so you benefit) per script-playbook §4.3. Phrases to
+hunt: "nothing to sell", "nothing to sell you", "no course", "no affiliate",
+"not here to sell you", "i'm not selling".
+
 ### A2. Written-tell carryover (these also hurt the captions)
 - Curly quotes → straight quotes; em/en dashes → period/comma/colon (captions show them).
 - AI vocabulary: delve, leverage (v.), tapestry, underscore, intricate, pivotal,
@@ -161,6 +170,8 @@ blocklist = [
     "seamless", "supercharge", "revoluti", "put it perfectly", "nailed it",
     "in conclusion", "to conclude", "let's recap", "to recap", "to wrap up",
     "wrapping up", "before you go", "before you click away", "to sum up",
+    # honesty overclaims (A1b) — operator HAS a book/newsletter; never claim otherwise
+    "nothing to sell", "no course", "no affiliate", "not here to sell you",
 ]
 for s in d["segments"]:
     hits = [p for p in blocklist if p in s["text"].lower()]

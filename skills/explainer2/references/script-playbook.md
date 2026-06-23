@@ -63,6 +63,22 @@ to date missed length on the first draft; the rule exists because it bites).
    closing segment. EVERY loop opened MUST close; verify ids exist.
 3. **Credibility is a toll booth** (≤ 1 segment, ≤ 30 words, before the first
    payoff — never before the hook).
+   - **Honesty rule — never claim "nothing to sell" (operator directive
+     2026-06-22).** The operator DOES have things to sell: the book, the site,
+     and *The Build* newsletter (which bundles masterclasses), named once in the
+     CTA. So "I've got nothing to sell you / no course, no affiliate link" is
+     literally false and corrodes the exact trust the credibility beat exists to
+     build — the moment the viewer reaches the CTA, the claim is exposed. Frame
+     the *real, defensible* thing instead: **the answer isn't paywalled.** The
+     honest, warmer version — *"I'm not burying the actual answer inside a
+     membership site or a course you have to buy your way into. I'm giving it to
+     you right here, because I genuinely want you to benefit — to level up your
+     own game. I've got a book and a newsletter; I'll name them once at the very
+     end, but you don't need either one to walk away with the whole answer."*
+     This is the standard credibility-beat framing now. It applies anywhere the
+     script contrasts itself with the affiliate-funnel niche, and a blueprint's
+     "differentiation" should be written as *ungated / not-paywalled + genuine
+     generosity*, never as *nothing-to-sell*.
 4. **Re-hooks:** a curiosity reset every 25–40 s of script time (≈ every 4–6
    segments): a named trap, a counterintuitive rule, "here's where it gets
    interesting". List their segment ids in `retention_map.re_hooks`.
