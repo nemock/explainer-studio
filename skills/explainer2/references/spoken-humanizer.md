@@ -65,6 +65,18 @@ isn't gated; given freely so you benefit) per script-playbook §4.3. Phrases to
 hunt: "nothing to sell", "nothing to sell you", "no course", "no affiliate",
 "not here to sell you", "i'm not selling".
 
+### A1c. Honesty presuppositions (the "let me be honest now" trap)
+Operator directive 2026-06-22 (from NLP): announcing that you're *about to* be
+honest presupposes you WEREN'T honest before it — it quietly indicts the rest of
+the script. Never use it. Grep and rewrite every hit; just say the thing, or open
+the caveat directly ("Now, one caveat I don't want you to miss…"). Phrases to
+hunt: "to be honest", "to be honest with you", "i have to be honest", "i'll be
+honest", "let me be honest", "i'm going to be honest", "i owe you a piece of
+honesty", "owe you some honesty", "truth be told", "in all honesty", "honestly
+speaking", "to be real with you". (Bare "honestly," addressed to the VIEWER as a
+candor invitation — "Honestly, what's the one task you won't hand off?" — is fine;
+the ban is on the SPEAKER claiming new honesty about themselves.)
+
 ### A2. Written-tell carryover (these also hurt the captions)
 - Curly quotes → straight quotes; em/en dashes → period/comma/colon (captions show them).
 - AI vocabulary: delve, leverage (v.), tapestry, underscore, intricate, pivotal,
@@ -172,6 +184,10 @@ blocklist = [
     "wrapping up", "before you go", "before you click away", "to sum up",
     # honesty overclaims (A1b) — operator HAS a book/newsletter; never claim otherwise
     "nothing to sell", "no course", "no affiliate", "not here to sell you",
+    # honesty presuppositions (A1c) — "be honest now" implies prior dishonesty
+    "to be honest", "i have to be honest", "i'll be honest", "let me be honest",
+    "i owe you a piece of honesty", "owe you some honesty", "truth be told",
+    "in all honesty", "to be real with you",
 ]
 for s in d["segments"]:
     hits = [p for p in blocklist if p in s["text"].lower()]
