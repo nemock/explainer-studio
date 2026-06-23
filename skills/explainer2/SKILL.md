@@ -198,9 +198,19 @@ mid-write — the exact collision the lock exists to prevent. So: **route every
 heavy encode through `renderlock.run_locked(cmd, label=…)`** (in
 `src/explainer2/renderlock.py`) — it acquires the flock, runs the subprocess,
 releases on success or failure. Write the splice as a `.py` that calls it
-(`sys.path.insert(0, '…/explainer2/src'); from explainer2 import renderlock`) and
-run it **backgrounded** so the lock-wait can't trip a foreground timeout. No raw
-`ffmpeg` for an encode, ever, now that the helper exists.
+(`sys.path.insert(0, '…/explainer2/src'); from explainer2 import renderlock`).
+Two independent requirements, both mandatory (2026-06-23, learned the hard way —
+the splice died twice in one afternoon, once per cause):
+1. **SERIALIZE** — go through `run_locked` so it never encodes alongside a
+   scheduled render (the OOM kill).
+2. **SURVIVE** — launch it **DETACHED** (its own session + `caffeinate`, the way
+   `launch_detached` starts renders), NOT merely backgrounded via the harness.
+   A harness-backgrounded child is killed when the desktop app is suspended; that
+   killed the splice, released the lock, and let the scheduled render jump in.
+   Launcher pattern: `subprocess.Popen(["/usr/bin/caffeinate","-ims", py, splice],
+   start_new_session=True, stdout=open(log,'a'), stderr=STDOUT)`, then check the
+   log / output file on re-invocation (don't poll).
+No raw `ffmpeg` for an encode, ever, now that the helper exists.
 
 ### 7b. Ad-lib drift check (REQUIRED before Package — operator-recorded videos)
 The operator records with flexibility: they cut, add, and rephrase live, and that
