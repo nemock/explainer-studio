@@ -123,6 +123,23 @@ per script segment, ids matching the script. The `media` pipeline's `deck` stage
 or `footage` images) before the full render. No separate operator gate — the
 deck is seen in the rendered video at the Package gate.
 
+### 5c. Shorts plan (generation plane — author at the Script stage, BEFORE the booth)
+Read `references/shorts-playbook.md`, then author `shorts/plan.json` (3 cuts, each
+with a native `hook` + `outro`). This MUST happen before recording, because the
+booth surfaces the hook/outro lines as extra cards and the operator records them
+in the SAME session as the long-form — a separate retrofit booth pass later is
+the failure mode (#11, 2026-06-23). Validate: hooks/outros blocklist-clean
+(spoken-humanizer), `hook_accent` ⊂ `hook_headline`, segments in range, and the
+hook/outro lines appear NOWHERE in the long-form script (and not the cut's own
+body line).
+- **Picking up a scaffolded / queued project = the FULL new-video pass, not a
+  script-only fix (operator directive 2026-06-22/06-23).** A `record-ready` tag in
+  CATALOG is NOT trustworthy — re-evaluate from the gate down: refresh the
+  blueprint to current rules, rewrite/restructure the script (new ending rules),
+  re-author the deck, AND author the shorts plan — all before the booth, exactly
+  as a brand-new video would. The booth pass then records the long-form AND the
+  shorts hooks together.
+
 ### 6. Record (operator voice) or narrate (Kokoro)
 - Operator: `bin/explainer2 record <project_dir>` — opens the booth in Chrome.
   The operator records; the command returns when they click Finish.
