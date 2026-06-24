@@ -44,7 +44,8 @@ def _scene_for(slide):
         return "Hero3D", {"kicker": kicker, "headline": headline, "accent": accent,
                           "shape": slide.get("shape", "ico")}
     if t in ("payoff", "cta"):
-        return "KineticHook", {"kicker": kicker, "headline": headline, "accent": accent}
+        return "CTA", {"kicker": kicker, "headline": headline, "accent": accent,
+                       "subkicker": slide.get("subkicker", "")}
     if t == "punch":
         return "PunchWord", {"word": slide.get("word") or headline, "kicker": kicker,
                              "kind": slide.get("kind", "")}
@@ -138,6 +139,15 @@ def render(sp, log=print, frames=None, out=None):
     public.mkdir(parents=True, exist_ok=True)
     shutil.copy(sp.work / "narration.wav", public / "narration.wav")
     _stage_images(sp, spec, public)
+    # CTA scenes show the brand book cover (a fixed asset, reused every video)
+    if any(s["component"] == "CTA" for s in spec["scenes"]):
+        bc_dir = REMOTION_DIR.parent / "book_cover"
+        bc = next(iter(sorted(bc_dir.glob("*.png"))), None) if bc_dir.exists() else None
+        if bc:
+            shutil.copy(bc, public / "book_cover.png")
+            for s in spec["scenes"]:
+                if s["component"] == "CTA":
+                    s["fields"]["image"] = "book_cover.png"
     props = stage / "props.json"
     props.write_text(json.dumps(spec))
 

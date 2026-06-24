@@ -9,6 +9,7 @@ import {TalkingScene} from './components/TalkingScene';
 import {Hero3D} from './components/Hero3D';
 import {KineticHeadline, Quote, PunchWord, Reframe, BuildList, SideBySide} from './components/TextScenes';
 import {Figure, Footage} from './components/Media';
+import {CTA} from './components/CTA';
 
 // the component catalog (motion-playbook §2). Unknown -> TalkingScene (captions-led).
 const REGISTRY: Record<string, React.FC<any>> = {
@@ -23,6 +24,7 @@ const REGISTRY: Record<string, React.FC<any>> = {
   SideBySide,
   Figure,
   Footage,
+  CTA,
   TalkingScene,
 };
 

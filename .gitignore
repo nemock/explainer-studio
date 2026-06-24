@@ -18,3 +18,5 @@ coffee_mugs/
 node_modules/
 # intel caches (Phase 1)
 .cache/
+# operator/brand assets (personal media, not redistributed)
+book_cover/
