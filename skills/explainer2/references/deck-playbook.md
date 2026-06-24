@@ -130,6 +130,36 @@ the render captures a broken image.** So:
   per SKILL §6b the scene keeps a deck-slide fallback so render proceeds either
   way.
 
+## 4b. Document-excerpt figures (for document-critique videos)
+
+When the video pressure-tests, fact-checks, or reads a real document (a PDF
+report, a playbook, a filing, a primary source), **the document itself is the
+best B-roll** — showing the actual text IS the proof, and it beats paraphrasing
+it on a text card. Operator directive (2026-06-23, the Anthropic-playbook video
+#38: "the appropriate media to be referencing... be thoughtful about where that
+stuff goes; follow good design principles, not blocky text or screenshots
+dropped on the slide"). Do it as framed `figure` slides, not raw dumps:
+
+- **Crop tight, never full pages.** Extract just the relevant lines (a heading +
+  a sentence or two). A full page at 1080p is unreadable and reads as a lazy
+  screenshot. Use PyMuPDF (`fitz`, in `~/myenv`): `page.search_for(phrase)` to
+  locate the quote, **snap the horizontal crop to the text COLUMN** (min/max x of
+  same-side blocks near the phrase) so a two-column page never bleeds across the
+  gutter, end the crop **just past the last quoted line** (small bottom pad) so it
+  doesn't clip mid-line, and render the clip at **3× zoom** for crisp text. (A
+  reusable extractor pattern lives in a project's `work/extract_pdf_shots.py`;
+  copy and adapt the TARGETS list.)
+- **Frame, don't overlay.** Use `type: figure` — the engine puts the crop on a
+  white rounded card (`.figframe`) over the brand background, with a `kicker`
+  header and a `caption`. Cite the page in the caption ("The Founder's Playbook,
+  page 30"). Optionally a `title` (with `accent`) as the editorial punch line
+  above it. Never composite text on top of the screenshot.
+- **Punctuation, not wallpaper.** A handful (≈4–6) at the load-bearing beats —
+  the reveal, the claim on trial, a fine-print line, the gotcha — NOT every
+  quote. The motion-graphic cards stay dominant; the document lands the proof.
+- **Copyright:** short fair-use excerpts with on-slide attribution only (same
+  posture as the script). Never reproduce the whole document.
+
 ## 5. Validate before the full render
 
 Run the deck stage alone — it's fast and catches bad fields / missing images
