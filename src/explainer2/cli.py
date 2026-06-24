@@ -171,26 +171,34 @@ def cmd_scaffold(args):
 def cmd_media(args):
     proj = Project.load(args.project_dir)
     only = set(args.only.split(",")) if args.only else None
+    engine = getattr(args, "engine", "deck")
     results, t0 = {}, time.time()
     lock = None  # machine-global render lock, held across render→mux (renderlock.py)
     try:
         for name, fn in STAGES:
             if only and name not in only:
                 continue
+            # the Remotion engine outputs the final muxed mp4 itself — no deck/mux stages
+            if engine == "remotion" and name in ("deck", "mux"):
+                continue
             # Serialize the memory-heavy capture+encode across every project and
             # background routine on this Mac (the #10-vs-CVG collision, 2026-06-21).
             if name in ("render", "mux") and lock is None:
                 lock = renderlock.acquire(proj, log=lambda m: _log(proj, m))
             ts = time.time()
-            _log(proj, f"START {name}")
+            _log(proj, f"START {name}{' (remotion)' if engine == 'remotion' and name == 'render' else ''}")
             try:
-                results[name] = fn(proj)
+                if engine == "remotion" and name == "render":
+                    from . import remotion_engine
+                    results[name] = remotion_engine.render(proj, log=lambda m: _log(proj, m))
+                else:
+                    results[name] = fn(proj)
             except Exception as e:
                 _log(proj, f"FAIL  {name}: {type(e).__name__}: {e}")
                 print(json.dumps({"failed_stage": name, "error": str(e)}))
                 return 1
             _log(proj, f"OK    {name} ({time.time()-ts:.1f}s) {json.dumps(results[name])}")
-            if name == "mux" and lock is not None:
+            if lock is not None and (name == "mux" or (engine == "remotion" and name == "render")):
                 renderlock.release(lock); lock = None
     finally:
         renderlock.release(lock)
@@ -211,7 +219,7 @@ def cmd_render(args):
     """Launch render→mux→manifest→qa DETACHED (survives Claude-session
     suspension) and serialized via the machine-global render lock."""
     Project.load(args.project_dir)  # validate the project exists before detaching
-    res = renderlock.launch_detached(args.project_dir, only=args.only, log=print)
+    res = renderlock.launch_detached(args.project_dir, only=args.only, engine=args.engine, log=print)
     print(json.dumps(res, indent=2))
     return 0
 
@@ -362,6 +370,8 @@ def main(argv=None):
     m = sub.add_parser("media", help="run the pure-Python media pipeline on a project dir")
     m.add_argument("project_dir")
     m.add_argument("--only", default=None, help="comma list: narrate,align,deck,render,mux,manifest")
+    m.add_argument("--engine", default="deck", choices=["deck", "remotion"],
+                   help="deck = JS deck engine (default); remotion = motion-graphics engine (skips deck/mux)")
     m.set_defaults(func=cmd_media)
 
     rn = sub.add_parser("render", help="launch render→mux→manifest→qa DETACHED (survives session "
@@ -369,6 +379,8 @@ def main(argv=None):
     rn.add_argument("project_dir")
     rn.add_argument("--only", default=None,
                     help=f"stage list to run detached (default: {renderlock.DEFAULT_STAGES})")
+    rn.add_argument("--engine", default="deck", choices=["deck", "remotion"],
+                    help="deck = JS deck engine (default); remotion = motion-graphics engine (motion-playbook.md)")
     rn.set_defaults(func=cmd_render)
 
     rs = sub.add_parser("render-status", help="show the render-lock holder + every live render on this Mac")

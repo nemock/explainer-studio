@@ -127,10 +127,11 @@ def _media_pid_for(project_dir):
     return None
 
 
-def launch_detached(project_dir, only=None, log=print):
+def launch_detached(project_dir, only=None, engine="deck", log=print):
     """Start `media --only <stages>` in its own session under caffeinate, so it
     outlives the calling Claude session. Returns a small status dict. The flock
-    in cmd_media still serializes it against any other render."""
+    in cmd_media still serializes it against any other render. `engine` selects the
+    deck (default) or remotion render path (motion-playbook.md)."""
     only = only or DEFAULT_STAGES
     project_dir = os.path.abspath(project_dir)
     base = os.path.basename(project_dir)
@@ -143,11 +144,11 @@ def launch_detached(project_dir, only=None, log=print):
     # structured progress lands in run.log (cmd_media writes it); raw child
     # stdout/stderr go to render.out so the two don't interleave/duplicate.
     with open(os.path.join(work, "run.log"), "a") as rl:
-        rl.write(f"{time.strftime('%H:%M:%S')} render: detached launch (--only {only})\n")
+        rl.write(f"{time.strftime('%H:%M:%S')} render: detached launch (--only {only}, engine {engine})\n")
     outf = open(os.path.join(work, "render.out"), "a")
     pkg = __name__.rsplit(".", 1)[0]          # "explainer2" or "explainer"
     cmd = ["caffeinate", "-i", sys.executable, "-m", f"{pkg}.cli",
-           "media", project_dir, "--only", only]
+           "media", project_dir, "--only", only, "--engine", engine]
     p = subprocess.Popen(cmd, stdout=outf, stderr=subprocess.STDOUT,
                          stdin=subprocess.DEVNULL, start_new_session=True,
                          env=os.environ.copy())

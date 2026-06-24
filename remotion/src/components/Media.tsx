@@ -20,8 +20,8 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
           {fields.kicker}
         </div>
       ) : null}
-      <div style={{position: 'relative', maxWidth: '82%', background: '#fff', borderRadius: 26, padding: height * 0.022, boxShadow: '0 40px 120px rgba(0,0,0,.55)', transform: `scale(${scale})`}}>
-        <Img src={staticFile(fields.image)} style={{width: '100%', display: 'block', borderRadius: 8}} />
+      <div style={{position: 'relative', maxWidth: '76%', background: '#fff', borderRadius: 26, padding: height * 0.022, boxShadow: '0 40px 120px rgba(0,0,0,.55)', transform: `scale(${scale})`}}>
+        <Img src={staticFile(fields.image)} style={{maxWidth: '100%', maxHeight: Math.round(height * 0.56), objectFit: 'contain', display: 'block', borderRadius: 8}} />
         {hl ? (
           <div style={{position: 'absolute', top: `${hl.top ?? 30}%`, left: `${hl.left ?? 6}%`, height: `${hl.height ?? 12}%`, width: `${hlW}%`, background: 'rgba(61,220,132,.42)', borderRadius: 8}} />
         ) : null}

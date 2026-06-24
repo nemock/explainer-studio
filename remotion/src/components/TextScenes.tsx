@@ -136,3 +136,31 @@ export const SideBySide: React.FC<{fields: any}> = ({fields}) => {
     </AbsoluteFill>
   );
 };
+
+// timeline -> events appearing along a line in time. fields: {kicker, events:[{date,label}]}
+export const Timeline: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
+  const frame = useCurrentFrame();
+  const {fps, height} = useVideoConfig();
+  const events: any[] = fields.events || [];
+  const per = durationInFrames / Math.max(1, events.length + 1);
+  const lineGrow = interpolate(frame, [0, durationInFrames * 0.85], [0, 100], {extrapolateRight: 'clamp'});
+  return (
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 9%'}}>
+      <div style={{width: '100%', maxWidth: '90%'}}>
+        <Kicker text={fields.kicker} o={spring({frame, fps, config: {damping: 18}})} height={height} />
+        <div style={{position: 'relative', paddingLeft: height * 0.03}}>
+          <div style={{position: 'absolute', left: 0, top: 0, width: 4, height: `${lineGrow}%`, background: BRAND.green, borderRadius: 4}} />
+          {events.map((e, i) => {
+            const o = spring({frame: frame - (i + 0.5) * per, fps, config: {damping: 18}});
+            return (
+              <div key={i} style={{display: 'flex', alignItems: 'baseline', gap: height * 0.02, opacity: o, transform: `translateX(${interpolate(o, [0, 1], [-24, 0])}px)`, marginBottom: height * 0.03}}>
+                <span style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.03, color: BRAND.green, minWidth: height * 0.14}}>{e.date}</span>
+                <span style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.038, color: BRAND.white, lineHeight: 1.12}}>{e.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </AbsoluteFill>
+  );
+};

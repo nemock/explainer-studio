@@ -58,6 +58,8 @@ def _scene_for(slide):
         return "BuildList", {"kicker": kicker, "items": _items(slide)}
     if t == "compare":
         return "SideBySide", {"left": slide.get("left", {}), "right": slide.get("right", {})}
+    if t == "timeline":
+        return "Timeline", {"kicker": kicker, "events": slide.get("events", [])}
     if t == "delta":
         return "SideBySide", {
             "left": {"title": slide.get("from_label", ""), "value": slide.get("from", "")},

@@ -7,7 +7,7 @@ import {KineticHook} from './components/KineticHook';
 import {StatCounter} from './components/StatCounter';
 import {TalkingScene} from './components/TalkingScene';
 import {Hero3D} from './components/Hero3D';
-import {KineticHeadline, Quote, PunchWord, Reframe, BuildList, SideBySide} from './components/TextScenes';
+import {KineticHeadline, Quote, PunchWord, Reframe, BuildList, SideBySide, Timeline} from './components/TextScenes';
 import {Figure, Footage} from './components/Media';
 import {CTA} from './components/CTA';
 
@@ -22,6 +22,7 @@ const REGISTRY: Record<string, React.FC<any>> = {
   Reframe,
   BuildList,
   SideBySide,
+  Timeline,
   Figure,
   Footage,
   CTA,
