@@ -64,6 +64,8 @@ def _scene_for(slide):
         return "SideBySide", {"left": slide.get("left", {}), "right": slide.get("right", {})}
     if t == "timeline":
         return "Timeline", {"kicker": kicker, "events": slide.get("events", [])}
+    if t == "waveform":
+        return "Waveform", {"kicker": kicker, "headline": headline, "audio": "narration.wav"}
     if t == "delta":
         return "SideBySide", {
             "left": {"title": slide.get("from_label", ""), "value": slide.get("from", "")},

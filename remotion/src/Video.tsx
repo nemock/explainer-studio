@@ -12,6 +12,7 @@ import {Figure, Footage} from './components/Media';
 import {CTA} from './components/CTA';
 import {BrandSting, StepFlow} from './components/Extras';
 import {DrawLine, Waterfall, Pictograph, Ring, Funnel} from './components/DataViz2';
+import {ReactiveStrip, Waveform} from './components/Audio';
 
 // the component catalog (motion-playbook §2). Unknown -> TalkingScene (captions-led).
 const REGISTRY: Record<string, React.FC<any>> = {
@@ -23,6 +24,7 @@ const REGISTRY: Record<string, React.FC<any>> = {
   Pictograph,
   Ring,
   Funnel,
+  Waveform,
   KineticHook,
   KineticHeadline,
   StatCounter,
@@ -69,11 +71,12 @@ export const Video: React.FC<VideoProps> = (props) => {
         return (
           <Sequence key={i} from={scene.from} durationInFrames={scene.durationInFrames} layout="none">
             <SceneWrap durationInFrames={scene.durationInFrames}>
-              <Comp fields={scene.fields || {}} durationInFrames={scene.durationInFrames} />
+              <Comp fields={scene.fields || {}} durationInFrames={scene.durationInFrames} sceneFrom={scene.from} audioFrom={audioFrom} />
             </SceneWrap>
           </Sequence>
         );
       })}
+      {audio ? <ReactiveStrip audio={audio} audioFrom={audioFrom || 0} /> : null}
       <Captions words={words} bottomPx={captionBottomPx} fontSize={captionFontSize} />
       {audio ? (
         <Sequence from={audioFrom || 0} layout="none">
