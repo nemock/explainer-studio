@@ -141,8 +141,26 @@ body line).
   shorts hooks together.
 
 ### 6. Record (operator voice) or narrate (Kokoro)
-- Operator: `bin/explainer2 record <project_dir>` — opens the booth in Chrome.
-  The operator records; the command returns when they click Finish.
+- Operator: launch the booth with **`python3 tools/launch_booth.py <project_dir>`**,
+  NOT a bare `bin/explainer2 record` run in a harness background task.
+  **HARD RULE (operator directive 2026-06-23, said more than once): the booth is a
+  long-lived server and MUST launch DETACHED + caffeinated** — its own session
+  (`start_new_session`) under `caffeinate -ims`, exactly like renders (§7). A
+  harness-tracked background task DIES when the machine/app suspends while the
+  operator is AFK, which silently freezes the booth UI mid-record (the Stop button
+  stops responding because its backend is gone). `launch_booth.py` does the detached
+  launch, waits for the server to answer, and prints READY; `--stop` takes it down.
+  The operator records in the browser; takes save to `voiceover/` as they go (a
+  restart never loses recorded takes). When done, `python3 tools/launch_booth.py --stop`.
+  - **Finish signal (operator directive 2026-06-23): right after READY, start the
+    waiter as a harness BACKGROUND task** — `python3 tools/launch_booth.py --wait
+    <project_dir>` via `run_in_background`. The booth writes `work/record_done.json`
+    when the operator clicks the green "Finish & render" button, and the waiter
+    returns the instant that file appears — so the harness notifies you that
+    recording is done, no polling and no asking. The sentinel is durable: if the
+    waiter dies on suspension, re-run `--wait` or just check for the file.
+  - Editing `script.json` after launch requires a booth **restart** (`--stop` then
+    relaunch); a page refresh does NOT reload cached cards.
   Then: `bin/explainer2 adlib <project_dir>` — if any segment is flagged
   `rerecord`, tell the operator which and relaunch the booth; if `adlib`
   segments exist, run with `--apply` so captions follow what was said.

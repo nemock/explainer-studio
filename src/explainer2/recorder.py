@@ -49,6 +49,14 @@ def run(proj, open_browser=True):
                 })
                 _next += 1
     vdir = proj.voiceover_dir
+    # Finish signal (operator directive 2026-06-23): the booth runs DETACHED so it survives
+    # the operator going AFK, which hides the old "process returns on Finish" signal from the
+    # harness. So drop a durable sentinel file when the green button is clicked — a waiter
+    # (tools/launch_booth.py --wait) watches for it and notifies. Clear any stale one now so
+    # the waiter only fires for THIS session.
+    work_dir = proj.dir / "work"; work_dir.mkdir(exist_ok=True)
+    done_marker = work_dir / "record_done.json"
+    done_marker.unlink(missing_ok=True)
     html = (ASSETS / "recorder.html").read_text().replace("{{TITLE}}", str(proj.data.get("title", "Voiceover")))
     state = {"done": False}
 
@@ -145,5 +153,6 @@ def run(proj, open_browser=True):
     rec = [s["id"] for s in seg_list if recorded(s["id"])]
     miss = [s["id"] for s in seg_list if not recorded(s["id"])]
     result = {"recorded": rec, "missing": miss, "segments": len(seg_list)}
+    done_marker.write_text(json.dumps({**result, "done": True}))  # durable Finish signal
     print("RECORD DONE:", json.dumps(result))
     return result
