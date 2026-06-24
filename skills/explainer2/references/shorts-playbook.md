@@ -104,8 +104,9 @@ fine (cut the promise stack out, jump to the payoff).
 
 ## 5. How it renders (so you know what you're building)
 
-`bin/explainer2 record <deep-dive>` surfaces each cut's hook/outro as extra booth
-cards (saved to `voiceover/short_<slug>_{hook,outro}.wav`). Then
+The booth (launched detached via `tools/launch_booth.py <deep-dive>`, see SKILL §6)
+surfaces each cut's hook/outro as extra cards (saved to
+`voiceover/short_<slug>_{hook,outro}.wav`). Then
 `bin/explainer2 shorts <deep-dive>` assembles each cut as **[hook + hook slide] →
 [lifted body segments] → [spoken outro]** (the old *silent* end-card becomes the
 recorded outro), 9:16, parent music bed, then align → deck → render → mux.

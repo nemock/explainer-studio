@@ -46,8 +46,13 @@ conflict for the operator. Do not skip steps because they seem obvious.
    pull, the research wiki, or the talk-time library. No invented numbers.
 6. **Numbers are spelled out in scripts** ("five hundred", not "500") — TTS
    and captions both need words.
-7. The media pipeline is **synchronous — run it in the foreground** and let it
-   finish. No polling, no backgrounding loops (global CLAUDE.md shell rules).
+7. **The heavy render launches DETACHED; everything else runs foreground.** The
+   light media stages (narrate/align/deck) and all other CLI verbs run
+   synchronously in the foreground. The one exception is the deep-dive render: it
+   exceeds the Bash 10-min cap and a harness-backgrounded encode dies on
+   app-suspend, so launch it detached via `bin/explainer2 render` (§7) and check
+   progress on re-invocation. Never write a polling loop (global CLAUDE.md shell
+   rules).
 
 ## Environment
 
@@ -161,9 +166,11 @@ body line).
     waiter dies on suspension, re-run `--wait` or just check for the file.
   - Editing `script.json` after launch requires a booth **restart** (`--stop` then
     relaunch); a page refresh does NOT reload cached cards.
-  Then: `bin/explainer2 adlib <project_dir>` — if any segment is flagged
-  `rerecord`, tell the operator which and relaunch the booth; if `adlib`
-  segments exist, run with `--apply` so captions follow what was said.
+  Then run the ad-lib drift check (full procedure in §7b): `bin/explainer2 adlib
+  <project_dir>`. If a segment is flagged `rerecord`, tell the operator which and
+  relaunch the booth (`launch_booth.py`). Fix any real drift BY HAND (edit the
+  segment, re-run narrate+align) — **do NOT use `--apply`** (it overwrites your
+  spelled-out numbers and proper nouns with raw ASR; see §7b).
 - Kokoro tier: skip record/adlib entirely.
 
 ### 6b. Assets (Adobe Stock assist — optional, never blocking)
@@ -177,13 +184,19 @@ Every footage scene keeps its deck slide as fallback — render proceeds either
 way.
 
 ### 7. Media pipeline
+Run the light stages inline, then launch the heavy render **detached**:
 ```
-bin/explainer2 media <project_dir>
+bin/explainer2 media --only narrate,align,deck <project_dir>   # quick, foreground
+bin/explainer2 render <project_dir>                            # detached: render,mux,manifest,qa
 ```
-Runs narrate → align → deck → render → mux → manifest → qa. A short takes
-~1–2 min; a **deep-dive render runs ~18–25 min**. **Requires `deck.json`
-(step 5b).** Then read the QA warnings in the results JSON and fix what is
-fixable (deck pacing, dead air) — at most ONE re-render cycle.
+(`bin/explainer2 media <project_dir>` runs ALL of narrate → align → deck →
+render → mux → manifest → qa in the foreground. That's fine for a Short
+(~1–2 min), but a **deep-dive render runs ~18–25 min**, exceeds the Bash 10-min
+cap, and dies if the app suspends — so for deep dives always split it: light
+stages inline, then the detached `render` per the robustness note below.)
+**Requires `deck.json` (step 5b).** Then read the QA warnings in the results
+JSON and fix what is fixable (deck pacing, dead air) — at most ONE re-render
+cycle.
 
 **Render robustness (learned the hard way on #34, then #10).** A deep-dive
 render exceeds the Bash 10-min cap, and a render interrupted mid-encode leaves a
@@ -286,8 +299,9 @@ NOT clips of the long-form: each cut reuses the long-form body audio but gets a
 **separately-recorded native hook + outro** (short-form best practices). So the
 `shorts/plan.json` (3 cuts, each with `segments` + a `hook`/`hook_headline` + an
 `outro`, `ending: "loop"` by default) is authored **at the Script stage**, so the
-booth records the hooks in the SAME session: `bin/explainer2 record` surfaces them
-as extra cards (saved to `voiceover/short_<slug>_{hook,outro}.wav`), then
+booth records the hooks in the SAME session: the booth (launched via
+`launch_booth.py`, §6) surfaces them as extra cards (saved to
+`voiceover/short_<slug>_{hook,outro}.wav`), then
 `bin/explainer2 shorts` assembles hook → body → spoken outro per cut. A cut with no
 hook/outro falls back to the legacy lift + silent end-card.
 
