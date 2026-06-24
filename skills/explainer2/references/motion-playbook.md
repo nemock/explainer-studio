@@ -189,10 +189,11 @@ Reach for these freely; they are a big part of "dynamic is the norm" (§0).
 
 ## 6. Pipeline integration
 
-- **Two engines, one philosophy.** The deck engine (current) and the Remotion engine
-  (new) both consume a 1:1 data spec. Phase in: **shorts first** (`shorts --engine
-  remotion`), then **long-form per slide-type opt-in**, then default once the library covers
-  the catalog.
+- **Remotion is the DEFAULT engine (2026-06-24).** `shorts`, `media`, and `render` all
+  default to `--engine remotion`; the deck engine is the `--engine deck` fallback (and the
+  reference for slide-type semantics). Both consume the same 1:1 data spec, so a project
+  renders either way. Remotion needs the Node toolchain (`npm install` in `remotion/`); the
+  engine raises a clear error if it's missing.
 - **Render discipline unchanged.** The heavy encode still goes through the render-lock and
   launches **detached + caffeinated** (SKILL §7) — Remotion's headless-Chrome+ffmpeg render
   is exactly the kind of heavy job those rules exist for. Modest concurrency on the M3/16GB;

@@ -1,7 +1,7 @@
 import React from 'react';
 import {Composition} from 'remotion';
 import {Video} from './Video';
-import {videoSchema} from './schema';
+import {videoSchema, type VideoProps} from './schema';
 
 // Single parametric composition. The Python engine passes the whole motion spec as
 // props (--props=spec.json) and dimensions/duration come from those props.
@@ -28,7 +28,7 @@ export const RemotionRoot: React.FC = () => {
         captionBottomPx: 230,
         captionFontSize: 62,
       }}
-      calculateMetadata={({props}) => ({
+      calculateMetadata={({props}: {props: VideoProps}) => ({
         durationInFrames: props.durationInFrames,
         width: props.width,
         height: props.height,

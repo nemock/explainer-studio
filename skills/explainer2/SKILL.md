@@ -189,15 +189,17 @@ way.
 ### 7. Media pipeline
 Run the light stages inline, then launch the heavy render **detached**:
 ```
-bin/explainer2 media --only narrate,align,deck <project_dir>   # quick, foreground
-bin/explainer2 render <project_dir>                            # detached: render,mux,manifest,qa
+bin/explainer2 media --only narrate,align <project_dir>   # quick, foreground
+bin/explainer2 render <project_dir>                       # detached: remotion render→manifest→qa
 ```
-(`bin/explainer2 media <project_dir>` runs ALL of narrate → align → deck →
-render → mux → manifest → qa in the foreground. That's fine for a Short
-(~1–2 min), but a **deep-dive render runs ~18–25 min**, exceeds the Bash 10-min
-cap, and dies if the app suspends — so for deep dives always split it: light
-stages inline, then the detached `render` per the robustness note below.)
-**Requires `deck.json` (step 5b).** Then read the QA warnings in the results
+**Remotion is the default engine** (motion-playbook.md) — `media`/`render`/`shorts`
+default to `--engine remotion`, which outputs the final muxed mp4 directly (no
+deck/mux stages) and needs the Node toolchain (`npm install` in `remotion/`). Pass
+**`--engine deck`** to use the legacy JS deck engine instead (and add `deck` to the
+`--only` list, since the deck engine needs `deck.json`/step 5b). Either way the
+**deep-dive render runs ~15–25 min**, exceeds the Bash 10-min cap, and dies if the app
+suspends — so always split it: light stages inline, then the detached `render`.
+Then read the QA warnings in the results
 JSON and fix what is fixable (deck pacing, dead air) — at most ONE re-render
 cycle.
 
@@ -305,7 +307,9 @@ NOT clips of the long-form: each cut reuses the long-form body audio but gets a
 booth records the hooks in the SAME session: the booth (launched via
 `launch_booth.py`, §6) surfaces them as extra cards (saved to
 `voiceover/short_<slug>_{hook,outro}.wav`), then
-`bin/explainer2 shorts` assembles hook → body → spoken outro per cut. A cut with no
+`bin/explainer2 shorts` assembles hook → body → spoken outro per cut — rendered through
+the **Remotion motion engine by default** (kinetic hook, synced captions, animated beats;
+motion-playbook.md), with `--engine deck` for the legacy deck look. A cut with no
 hook/outro falls back to the legacy lift + silent end-card.
 
 ### 8b. Article (generation plane — written companion)

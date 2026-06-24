@@ -54,8 +54,12 @@ def _scene_for(slide):
     if t == "quote":
         return "Quote", {"quote": slide.get("quote") or headline,
                          "attribution": slide.get("attribution") or slide.get("source", "")}
-    if t in ("list", "steps"):
+    if t == "list":
         return "BuildList", {"kicker": kicker, "items": _items(slide)}
+    if t in ("steps", "flow"):
+        return "StepFlow", {"kicker": kicker, "steps": _items(slide)}
+    if t == "sting":
+        return "BrandSting", {"title": slide.get("title") or headline, "subtitle": slide.get("subtitle", "")}
     if t == "compare":
         return "SideBySide", {"left": slide.get("left", {}), "right": slide.get("right", {})}
     if t == "timeline":
@@ -135,6 +139,10 @@ def _stage_images(sp, spec, public):
 def render(sp, log=print, frames=None, out=None):
     """Render `sp` via Remotion -> the final muxed mp4. `frames` (e.g. '0-2400') renders a
     range for fast preview. The heavy headless render should be wrapped by the render-lock."""
+    if not (REMOTION_DIR / "node_modules").exists():
+        raise RuntimeError(
+            f"Remotion engine not installed: run `npm install` in {REMOTION_DIR} "
+            f"(or use --engine deck). The motion engine needs the Node toolchain.")
     spec = build_spec(sp)
     stage = sp.work / "remotion"
     public = stage / "public"

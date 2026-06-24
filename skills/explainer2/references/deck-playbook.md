@@ -12,10 +12,11 @@ raw CSS animation, breaks the determinism contract (see CLAUDE.md hard rules).
 `FileNotFoundError`. So the deck is authored as a normal build step, right after
 the Script gate. It is NOT auto-generated.
 
-> **Successor in progress:** `references/motion-playbook.md` is the animated
-> (Remotion) successor to this catalog — every static slide type here maps to a
-> motion component there (see its §6 migration table). Until the Remotion engine
-> ships (phased: shorts first), THIS deck-playbook governs long-form deep dives.
+> **Remotion is now the DEFAULT engine (2026-06-24).** `references/motion-playbook.md`
+> is the animated successor; `shorts`/`media`/`render` default to `--engine remotion`.
+> This deck-playbook remains the `--engine deck` fallback AND the source of truth for
+> slide-type SEMANTICS — the motion engine maps every type here to a component (motion-
+> playbook §6), so authoring `deck.json` correctly still drives both engines.
 
 ---
 

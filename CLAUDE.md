@@ -49,7 +49,7 @@ the playbook — the repo, not the session, is where insight accumulates.
 
 - CLI: **`bin/explainer2`** (wraps `PYTHONPATH=src ~/myenv/bin/python3.12 -m explainer2.cli`). The shared `~/myenv` venv holds the verified torch/Kokoro/Playwright stack — do not create a new venv without asking.
 - Projects land in `projects/<date>_<slug>/` (gitignored). Per-project layout: PRD §10.
-- **Media stages run in the foreground EXCEPT the heavy render.** Run the light stages synchronously (`bin/explainer2 media --only narrate,align,deck <dir>`), then launch the deep-dive render **detached** with `bin/explainer2 render <dir>` — it exceeds the Bash 10-min cap and a harness-backgrounded encode dies on app-suspend, and detaching keeps the machine usable instead of locking it up mid-encode. No polling loops (global CLAUDE.md shell rules apply: no loops, no brace expansion, absolute paths). See SKILL §7 for the full render-robustness + render-lock detail.
+- **Media stages run in the foreground EXCEPT the heavy render.** Run the light stages synchronously (`bin/explainer2 media --only narrate,align <dir>`), then launch the deep-dive render **detached** with `bin/explainer2 render <dir>` — it exceeds the Bash 10-min cap and a harness-backgrounded encode dies on app-suspend, and detaching keeps the machine usable instead of locking it up mid-encode. No polling loops (global CLAUDE.md shell rules apply: no loops, no brace expansion, absolute paths). See SKILL §7 for the full render-robustness + render-lock detail. **Rendering defaults to the Remotion motion engine** (motion-playbook.md; needs `npm install` in `remotion/`); pass `--engine deck` for the legacy JS deck engine (then also run the `deck` stage).
 
 ## Decisions already made (don't relitigate without asking)
 

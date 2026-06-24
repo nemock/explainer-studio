@@ -370,7 +370,7 @@ def main(argv=None):
     m = sub.add_parser("media", help="run the pure-Python media pipeline on a project dir")
     m.add_argument("project_dir")
     m.add_argument("--only", default=None, help="comma list: narrate,align,deck,render,mux,manifest")
-    m.add_argument("--engine", default="deck", choices=["deck", "remotion"],
+    m.add_argument("--engine", default="remotion", choices=["deck", "remotion"],
                    help="deck = JS deck engine (default); remotion = motion-graphics engine (skips deck/mux)")
     m.set_defaults(func=cmd_media)
 
@@ -379,7 +379,7 @@ def main(argv=None):
     rn.add_argument("project_dir")
     rn.add_argument("--only", default=None,
                     help=f"stage list to run detached (default: {renderlock.DEFAULT_STAGES})")
-    rn.add_argument("--engine", default="deck", choices=["deck", "remotion"],
+    rn.add_argument("--engine", default="remotion", choices=["deck", "remotion"],
                     help="deck = JS deck engine (default); remotion = motion-graphics engine (motion-playbook.md)")
     rn.set_defaults(func=cmd_render)
 
@@ -426,7 +426,7 @@ def main(argv=None):
     sh.add_argument("project_dir")
     sh.add_argument("--plan", default=None, help="path to plan.json (default <project>/shorts/plan.json)")
     sh.add_argument("--only", default=None, dest="only_slug", help="render just one cut by slug")
-    sh.add_argument("--engine", default="deck", choices=["deck", "remotion"],
+    sh.add_argument("--engine", default="remotion", choices=["deck", "remotion"],
                     help="deck = the JS deck engine (default); remotion = the motion-graphics engine (motion-playbook.md)")
     sh.set_defaults(func=cmd_shorts)
 

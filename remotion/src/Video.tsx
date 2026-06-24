@@ -10,10 +10,13 @@ import {Hero3D} from './components/Hero3D';
 import {KineticHeadline, Quote, PunchWord, Reframe, BuildList, SideBySide, Timeline} from './components/TextScenes';
 import {Figure, Footage} from './components/Media';
 import {CTA} from './components/CTA';
+import {BrandSting, StepFlow} from './components/Extras';
 
 // the component catalog (motion-playbook §2). Unknown -> TalkingScene (captions-led).
 const REGISTRY: Record<string, React.FC<any>> = {
   Hero3D,
+  BrandSting,
+  StepFlow,
   KineticHook,
   KineticHeadline,
   StatCounter,
@@ -40,7 +43,14 @@ const SceneWrap: React.FC<{durationInFrames: number; children: React.ReactNode}>
     [0, 1, 1, 0],
     {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}
   );
-  return <AbsoluteFill style={{opacity}}>{children}</AbsoluteFill>;
+  // warm light-leak flash on entrance (motion-playbook §2G) — a touch of produced polish
+  const leak = interpolate(frame, [0, 5, 16], [0, 0.4, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  return (
+    <AbsoluteFill style={{opacity}}>
+      {children}
+      <AbsoluteFill style={{background: 'radial-gradient(60% 50% at 68% 28%, rgba(255,205,130,.5) 0%, rgba(255,205,130,0) 70%)', mixBlendMode: 'screen', opacity: leak, pointerEvents: 'none'}} />
+    </AbsoluteFill>
+  );
 };
 
 export const Video: React.FC<VideoProps> = (props) => {
