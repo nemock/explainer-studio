@@ -68,6 +68,21 @@ def _scene_for(slide):
         return "SideBySide", {
             "left": {"title": slide.get("from_label", ""), "value": slide.get("from", "")},
             "right": {"title": slide.get("to_label", ""), "value": slide.get("to", "")}}
+    if t in ("trend", "ranked", "diagram"):
+        pts = [p.get("value") if isinstance(p, dict) else p for p in (slide.get("points") or slide.get("bars") or [])]
+        return "DrawLine", {"kicker": kicker, "points": pts,
+                            "endLabel": slide.get("end_label", ""), "kind": slide.get("kind", "")}
+    if t == "waterfall":
+        return "Waterfall", {"kicker": kicker, "start": slide.get("start", {}),
+                             "steps": slide.get("steps", []), "end": slide.get("end", {})}
+    if t == "pictograph":
+        return "Pictograph", {"kicker": kicker, "filled": slide.get("filled", 0),
+                              "total": slide.get("total", 100), "label": slide.get("label", ""),
+                              "kind": slide.get("kind", "")}
+    if t in ("ring", "progress"):
+        return "Ring", {"kicker": kicker, "value": slide.get("value", 0), "label": slide.get("label", "")}
+    if t == "funnel":
+        return "Funnel", {"kicker": kicker, "stages": slide.get("stages", [])}
     if t in ("stat", "statgrid"):
         parsed = _parse_stat(slide.get("value"))
         if parsed:
@@ -109,13 +124,35 @@ def build_spec(sp):
         for w in json.loads(al.read_text()).get("words", []):
             words.append({"word": w["word"], "start": w["start"], "end": w["end"]})
 
+    # Bookend long-form with the brand sting (motion-playbook §2F). On by default for
+    # landscape (deep dives), off for portrait shorts (the hook must open instantly).
+    # project.json `sting` overrides. The narration is shifted to start after the intro.
+    audio_from = 0
+    total = duration
+    if sp.data.get("sting", width >= height):
+        INTRO, OUTRO = 2.5, 2.0
+        off = int(round(INTRO * fps))
+        for sc in scenes:
+            sc["from"] += off
+        for w in words:
+            w["start"] += INTRO
+            w["end"] += INTRO
+        scenes.insert(0, {"component": "BrandSting", "from": 0, "durationInFrames": off,
+                          "fields": {"title": "FOUNDERS WHO FINISH"}})
+        scenes.append({"component": "BrandSting", "from": off + int(round(duration * fps)),
+                       "durationInFrames": int(round(OUTRO * fps)),
+                       "fields": {"title": "FOUNDERS WHO FINISH", "subtitle": "davesaunders.net"}})
+        audio_from = off
+        total = INTRO + duration + OUTRO
+
     safe_bottom = float(sp.data.get("safe_bottom", 0.12)) + 0.04
     return {
         "width": width, "height": height, "fps": fps,
-        "durationInFrames": int(round(duration * fps)),
+        "durationInFrames": int(round(total * fps)),
         "audio": "narration.wav", "words": words, "scenes": scenes,
         "captionBottomPx": int(round(height * safe_bottom)),
         "captionFontSize": int(round(height * (0.032 if height >= 1600 else 0.026))),
+        "audioFrom": audio_from,
     }
 
 

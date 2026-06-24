@@ -27,6 +27,7 @@ export const videoSchema = z.object({
   scenes: z.array(sceneSchema).default([]),
   captionBottomPx: z.number().default(160),
   captionFontSize: z.number().default(56),
+  audioFrom: z.number().default(0), // narration starts here (frames) — leaves room for an intro sting
 });
 
 export type VideoProps = z.infer<typeof videoSchema>;

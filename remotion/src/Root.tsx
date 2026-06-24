@@ -27,6 +27,7 @@ export const RemotionRoot: React.FC = () => {
         ],
         captionBottomPx: 230,
         captionFontSize: 62,
+        audioFrom: 0,
       }}
       calculateMetadata={({props}: {props: VideoProps}) => ({
         durationInFrames: props.durationInFrames,

@@ -15,6 +15,8 @@ export const Captions: React.FC<{
   const t = frame / fps;
 
   if (!words || words.length === 0) return null;
+  // stay hidden before narration starts (intro sting) and after it ends (outro sting)
+  if (t < words[0].start - 0.05 || t > words[words.length - 1].end + 0.4) return null;
 
   let active = words.findIndex((w) => t >= w.start && t < w.end);
   if (active === -1) {

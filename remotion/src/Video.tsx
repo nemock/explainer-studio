@@ -11,12 +11,18 @@ import {KineticHeadline, Quote, PunchWord, Reframe, BuildList, SideBySide, Timel
 import {Figure, Footage} from './components/Media';
 import {CTA} from './components/CTA';
 import {BrandSting, StepFlow} from './components/Extras';
+import {DrawLine, Waterfall, Pictograph, Ring, Funnel} from './components/DataViz2';
 
 // the component catalog (motion-playbook §2). Unknown -> TalkingScene (captions-led).
 const REGISTRY: Record<string, React.FC<any>> = {
   Hero3D,
   BrandSting,
   StepFlow,
+  DrawLine,
+  Waterfall,
+  Pictograph,
+  Ring,
+  Funnel,
   KineticHook,
   KineticHeadline,
   StatCounter,
@@ -54,7 +60,7 @@ const SceneWrap: React.FC<{durationInFrames: number; children: React.ReactNode}>
 };
 
 export const Video: React.FC<VideoProps> = (props) => {
-  const {audio, words, scenes, captionBottomPx, captionFontSize} = props;
+  const {audio, words, scenes, captionBottomPx, captionFontSize, audioFrom} = props;
   return (
     <AbsoluteFill style={{backgroundColor: '#090d1c'}}>
       <Background />
@@ -69,7 +75,11 @@ export const Video: React.FC<VideoProps> = (props) => {
         );
       })}
       <Captions words={words} bottomPx={captionBottomPx} fontSize={captionFontSize} />
-      {audio ? <Audio src={staticFile(audio)} /> : null}
+      {audio ? (
+        <Sequence from={audioFrom || 0} layout="none">
+          <Audio src={staticFile(audio)} />
+        </Sequence>
+      ) : null}
     </AbsoluteFill>
   );
 };
