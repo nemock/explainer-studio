@@ -25,6 +25,9 @@ method lives in four reference files you MUST read at the step that needs them:
   script, and RUN as a mandatory pass before the booth (CUT clichés + COMPEL the
   speech). The spoken counterpart to the written `humanizer` skill.
 - `references/deck-playbook.md` — read BEFORE authoring any `deck.json`.
+- `references/motion-playbook.md` — the Remotion motion-graphics vocabulary (animated
+  successor to the deck-playbook); read BEFORE authoring a motion spec. Engine is a
+  phased build (shorts first); until it ships, the deck-playbook governs.
 - `references/thumbnail-playbook.md` — read BEFORE building thumbnails (Package).
 - `references/article-playbook.md` — read BEFORE writing the written companion
   essay (`package/article.md`, after Package).

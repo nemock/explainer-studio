@@ -1,0 +1,6 @@
+# pilot — commit the source + spec, never the toolchain, renders, or copied media
+node_modules/
+out/
+qa/
+public/
+.DS_Store

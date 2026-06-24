@@ -12,6 +12,11 @@ raw CSS animation, breaks the determinism contract (see CLAUDE.md hard rules).
 `FileNotFoundError`. So the deck is authored as a normal build step, right after
 the Script gate. It is NOT auto-generated.
 
+> **Successor in progress:** `references/motion-playbook.md` is the animated
+> (Remotion) successor to this catalog — every static slide type here maps to a
+> motion component there (see its §6 migration table). Until the Remotion engine
+> ships (phased: shorts first), THIS deck-playbook governs long-form deep dives.
+
 ---
 
 ## 0. The contract (read once)
