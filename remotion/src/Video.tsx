@@ -62,7 +62,11 @@ const SceneWrap: React.FC<{durationInFrames: number; children: React.ReactNode}>
 };
 
 export const Video: React.FC<VideoProps> = (props) => {
-  const {audio, words, scenes, captionBottomPx, captionFontSize, audioFrom} = props;
+  const {audio, words, scenes, captionBottomPx, captionFontSize, audioFrom, width, height} = props;
+  // In portrait (Shorts), centered scene content collides with the burned-in captions
+  // in the lower third while the top sits empty. Reserve the caption zone so content
+  // centers in the upper area. Landscape (deep dives) is unaffected (inset = 0).
+  const contentBottom = height > width ? Math.round(height * 0.24) : 0;
   return (
     <AbsoluteFill style={{backgroundColor: '#090d1c'}}>
       <Background />
@@ -71,7 +75,9 @@ export const Video: React.FC<VideoProps> = (props) => {
         return (
           <Sequence key={i} from={scene.from} durationInFrames={scene.durationInFrames} layout="none">
             <SceneWrap durationInFrames={scene.durationInFrames}>
-              <Comp fields={scene.fields || {}} durationInFrames={scene.durationInFrames} sceneFrom={scene.from} audioFrom={audioFrom} />
+              <AbsoluteFill style={{bottom: contentBottom}}>
+                <Comp fields={scene.fields || {}} durationInFrames={scene.durationInFrames} sceneFrom={scene.from} audioFrom={audioFrom} />
+              </AbsoluteFill>
             </SceneWrap>
           </Sequence>
         );

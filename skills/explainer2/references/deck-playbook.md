@@ -135,6 +135,10 @@ the render captures a broken image.** So:
 - Every `footage` scene must still read with its headline as a fallback, and
   per SKILL §6b the scene keeps a deck-slide fallback so render proceeds either
   way.
+- **Where to get B-roll:** the operator's paid **Adobe Stock** (via the `assets`
+  assist flow) is primary; for free clips/stills to augment it, see
+  [stock-footage-sources.md](stock-footage-sources.md) — **verify each clip's
+  license on its own page and record provenance** (manifest `assets.licensed`).
 
 ## 4b. Document-excerpt figures (for document-critique videos)
 

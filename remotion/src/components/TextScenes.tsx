@@ -65,7 +65,7 @@ export const PunchWord: React.FC<{fields: any}> = ({fields}) => {
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 6%'}}>
       <Kicker text={fields.kicker} o={interpolate(p, [0, 1], [0, 1])} height={height} />
-      <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.2, lineHeight: 1, color, textTransform: 'uppercase', transform: `scale(${p})`, textShadow: '0 16px 70px rgba(0,0,0,.6)'}}>
+      <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.2, lineHeight: 1.02, color, textTransform: 'uppercase', transform: `scale(${p})`, textShadow: '0 16px 70px rgba(0,0,0,.6)', textAlign: 'center', maxWidth: '92%', whiteSpace: 'pre-line', textWrap: 'balance' as any}}>
         {fields.word || fields.headline}
       </div>
     </AbsoluteFill>

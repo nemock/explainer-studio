@@ -175,6 +175,41 @@ def _stage_images(sp, spec, public):
         scene["fields"]["image"] = dst
 
 
+def _apply_music(sp, out, log):
+    """Mix the channel music bed UNDER the rendered mp4's existing narration audio.
+    Remotion bakes its own audio (narration only), so unlike the deck engine there is
+    no separate mux stage to add music — without this the render ships music-less
+    (caught 2026-06-24: #12 rendered with a dead-silent intro sting). Mirrors the
+    media/mux.py recipe: looped bed at music_gain, amix normalize=0, limiter, video
+    copied through (no re-encode). Runs inside the already-held render lock."""
+    music = sp.data.get("music")
+    if not music:
+        return None
+    mp = Path(music)
+    if not mp.is_absolute():
+        mp = sp.dir / music
+    if not mp.exists():
+        log(f"remotion: music not found, shipping without bed: {music}")
+        return None
+    gain = float(sp.data.get("music_gain", 0.12))
+    tmp = out.with_suffix(".music.mp4")
+    fc = (f"[1:a]aloop=loop=-1:size=2000000000,volume={gain},"
+          f"aformat=sample_rates=48000:channel_layouts=stereo[bed];"
+          f"[0:a][bed]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[mix];"
+          f"[mix]alimiter=limit=0.84:level=false[a]")
+    ff = shutil.which("ffmpeg") or "ffmpeg"
+    cmd = [ff, "-hide_banner", "-y", "-i", str(out), "-i", str(mp),
+           "-filter_complex", fc, "-map", "0:v", "-map", "[a]",
+           "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
+           "-movflags", "+faststart", "-shortest", str(tmp)]
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    if r.returncode != 0:
+        raise RuntimeError(f"remotion music mux failed:\n{r.stderr[-1500:]}")
+    tmp.replace(out)
+    log(f"remotion: music bed mixed ({mp.name} @ gain {gain})")
+    return {"music": mp.name, "gain": gain}
+
+
 def render(sp, log=print, frames=None, out=None):
     """Render `sp` via Remotion -> the final muxed mp4. `frames` (e.g. '0-2400') renders a
     range for fast preview. The heavy headless render should be wrapped by the render-lock."""
@@ -215,5 +250,8 @@ def render(sp, log=print, frames=None, out=None):
     r = subprocess.run(cmd, cwd=str(REMOTION_DIR), capture_output=True, text=True)
     if r.returncode != 0:
         raise RuntimeError(f"remotion render failed:\n{r.stdout[-1800:]}\n{r.stderr[-1800:]}")
+    # Remotion bakes narration-only audio; mix the channel music bed under it (no
+    # separate mux stage on this path). Skipped for slice previews (frames set).
+    music = None if frames else _apply_music(sp, out, log)
     return {"engine": "remotion", "video": str(out), "scenes": len(spec["scenes"]),
-            "duration_s": round(spec["durationInFrames"] / spec["fps"], 2)}
+            "duration_s": round(spec["durationInFrames"] / spec["fps"], 2), "music": music}

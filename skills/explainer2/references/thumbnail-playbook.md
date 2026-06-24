@@ -161,3 +161,27 @@ as one thumbnail, which defeats the experiment. Keep the cutout files as
 - [ ] Two variants (A/B) rendered.
 - [ ] For a multi-video series: same cutout treatment + layout across the set;
       only copy (and, if needed, the §5 hue) varies.
+
+## 8. Generating with Remotion (preferred path, 2026-06-24)
+
+The brand template above is now also a Remotion **`<Still>`** — `remotion/src/Thumbnail.tsx`,
+registered in `Root.tsx` as id `Thumbnail` (1280×720). It replicates this exact look
+(navy radial + cool inner hotspot, bottom-right cutout with drop-shadow + bottom fade,
+red keyword bands, white sub with green accent) but is **prop-driven**, so it reuses the
+same `brand.ts` as the video and the thumbnail is a visual sibling of the render.
+
+- Props: `{bands[], sub, accent[], cutout, mirror, innerHot, bandSize}`.
+- Render A/B: `cd remotion && npx remotion still src/index.ts Thumbnail <out.png> --props=<variant.json> --public-dir=<thumbnails dir>` (the cutout PNG lives in that public dir, referenced by `staticFile`).
+- The matting preprocess is unchanged: `cutout.py` (only if the selfie isn't already keyed — **check the alpha first; an operator-supplied transparent PNG is preferred, don't re-segment it**) then `clean_matte.py`.
+- **Always trim the cutout to its alpha bbox** — `clean_matte.py --trim` is now the default. A wide transparent PNG with the subject mid-canvas otherwise renders dead-centre under the headline (caught on #12); trimming lets the template anchor the subject to the right.
+- The HTML + `html2png.py` path (§2/§6) remains a valid fallback.
+
+## 9. Best-practice guidelines (researched 2026-06-24 — useful, NOT hard rules)
+
+Operator steer: treat these as guidelines for improving our work, not laws.
+- **One clear focal point.** Subject anchored to one side; headline owns the opposite zone (don't let text cover the subject).
+- **Bigger subject / face** reads better at sidebar size — lean larger. A strong story-prop (the hard hat + saw on #12) can carry the frame when a face alone won't.
+- **High contrast** subject-vs-bg and text-vs-bg; the §5 teal/indigo hotspots earn their keep.
+- **Fewer words win.** Our two-band + green-sub is the channel signature; keep each line tight and legible.
+- **A/B must differ at a glance** — different hook *angle* (claim vs curiosity vs negation) plus a pose change (mirror works); near-identical pairs aren't a real test.
+- **Squint test at ~120 px** before shipping.
