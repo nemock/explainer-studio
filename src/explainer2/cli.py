@@ -2,7 +2,7 @@
 """explainer CLI — scaffolds a project and runs the pure-Python media pipeline.
 The LLM generation stages (research/script/deck authoring) are done by the
 /explainer skill, NOT here. This CLI never calls an LLM (PRD §5)."""
-import argparse, json, sys, time
+import argparse, json, re, sys, time
 from datetime import date
 from pathlib import Path
 
@@ -32,6 +32,73 @@ def _log(proj, msg):
     print(line)
 
 
+# --- canonical project numbering (folder is the source of truth, never a hand-typed counter) ---
+_PROJ_RE = re.compile(r"^\d{4}-\d{2}-\d{2}_(\d+)_")
+
+
+def _scan_projects(outdir):
+    """Numbered channel projects in outdir as sorted (number:int, Path). Non-numbered
+    dirs (e.g. phase0-parity, or another routine's week-based outputs) are ignored."""
+    d = Path(outdir).resolve()
+    rows = []
+    if d.exists():
+        for p in sorted(d.iterdir()):
+            if p.is_dir():
+                m = _PROJ_RE.match(p.name)
+                if m:
+                    rows.append((int(m.group(1)), p))
+    return rows
+
+
+def _project_state(p):
+    if (p / "package").is_dir():
+        return "packaged"
+    if (p / "video").is_dir() or any(p.glob("video*/*.mp4")):
+        return "rendered"
+    if (p / "script.json").exists():
+        return "scripted"
+    if (p / "intel" / "intel.json").exists():
+        return "intel"
+    return "scaffolded"
+
+
+def _catalog_path(outdir):
+    return Path(outdir).resolve().parent / "channel" / "CATALOG.md"
+
+
+def _refresh_catalog_counter(outdir):
+    """Regenerate the single counter line in channel/CATALOG.md from the folder scan.
+    Returns True if the file existed and was updated. No-op (False) when there's no
+    channel/CATALOG.md next to outdir (e.g. a non-channel scaffold). Best-effort."""
+    cat = _catalog_path(outdir)
+    if not cat.exists():
+        return False
+    rows = _scan_projects(outdir)
+    count = len(rows)
+    nxt = (max(n for n, _ in rows) + 1) if rows else 1
+    line = (f"**Projects to date: {count}**  ·  next canonical number: **{nxt}**  "
+            f"_(auto-derived from `projects/` by `explainer2 catalog` — do not hand-edit)_")
+    txt = cat.read_text(encoding="utf-8")
+    new = re.sub(r"(?m)^\*\*(?:Lifetime videos generated|Projects to date):.*$", line, txt, count=1)
+    if new == txt:
+        return False
+    cat.write_text(new, encoding="utf-8")
+    return True
+
+
+def cmd_catalog(args):
+    """Derive the canonical project count/next number + per-project state from the
+    projects/ folder. The folder is the source of truth; this never trusts a stored counter."""
+    rows = _scan_projects(args.outdir)
+    highest = max((n for n, _ in rows), default=0)
+    print(f"Projects to date: {len(rows)}   |   highest #: {highest}   |   next #: {highest + 1}\n")
+    for n, p in rows:
+        print(f"  #{n:02d}  {_project_state(p):<10}  {p.name}")
+    if args.write:
+        ok = _refresh_catalog_counter(args.outdir)
+        print(f"\nCATALOG.md counter {'refreshed' if ok else 'NOT updated (counter line / channel/CATALOG.md not found)'}.")
+
+
 def cmd_scaffold(args):
     aspect, safe_bottom, min_length = args.aspect, 0.14, args.min_length
     aspects = [a.strip() for a in args.aspects.split(",")] if args.aspects else None
@@ -46,13 +113,32 @@ def cmd_scaffold(args):
         aspects = [aspect]
     primary = aspects[0]
     w, h = ASPECTS[primary]
-    slug = wiki.slugify(args.slug)
-    out = Path(args.outdir).resolve() / f"{date.today().isoformat()}_{slug}"
+    # Auto-number ONLY for the numbered channel `projects/` collection. Other routines
+    # (Monday MedTech, Founder Tip Tuesday) scaffold into their own non-numbered outdirs;
+    # leave those exactly as before. Trigger auto-numbering when the outdir already holds
+    # numbered projects, OR is literally named "projects", OR --number was passed.
+    existing = _scan_projects(args.outdir)
+    autonum = (args.number is not None) or bool(existing) or Path(args.outdir).resolve().name == "projects"
+    if autonum:
+        raw_slug = re.sub(r"^\d+[-_]+", "", args.slug)  # drop a number if the caller baked one in
+        slug = wiki.slugify(raw_slug)
+        nums = {n for n, _ in existing}
+        num = args.number if args.number is not None else (max(nums) + 1 if nums else 1)
+        if num in nums and not args.force:
+            sys.exit(f"project #{num} already exists in {args.outdir}; auto-number gives "
+                     f"#{(max(nums) + 1) if nums else 1}. Pass --number to override or --force to duplicate.")
+        out = Path(args.outdir).resolve() / f"{date.today().isoformat()}_{num:02d}_{slug}"
+    else:
+        slug = wiki.slugify(args.slug)
+        num = None
+        out = Path(args.outdir).resolve() / f"{date.today().isoformat()}_{slug}"
     out.mkdir(parents=True, exist_ok=True)
     proj = {"title": args.title or args.slug, "slug": slug, "aspect": primary,
             "aspects": aspects, "width": w, "height": h, "fps": args.fps,
             "voice": args.voice, "voice_source": args.voice_source,
             "language": "en", "theme": args.theme, "safe_bottom": safe_bottom}
+    if num is not None:
+        proj["number"] = num
     if min_length:
         proj["min_length"] = min_length
     if not args.no_music:
@@ -73,7 +159,12 @@ def cmd_scaffold(args):
         else:
             brand_note = f"brand '{args.brand}' NOT FOUND in ./brand/ or ~/.claude/explainer-brands/ — skipped"
     (out / "project.json").write_text(json.dumps(proj, indent=2))
-    print(json.dumps({"project_dir": str(out), "aspects": aspects, "brand": brand_note,
+    try:
+        catalog_updated = _refresh_catalog_counter(args.outdir)
+    except Exception:
+        catalog_updated = False
+    print(json.dumps({"project_dir": str(out), "number": num, "aspects": aspects, "brand": brand_note,
+                      "catalog_counter_updated": catalog_updated,
                       "next": "author script.json + deck.json, then `explainer media <dir>`"}, indent=2))
 
 
@@ -230,7 +321,11 @@ def main(argv=None):
     sub = p.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("scaffold", help="create a project dir + project.json")
-    s.add_argument("slug")
+    s.add_argument("slug", help="slug WITHOUT a number; the canonical number is auto-assigned "
+                               "from projects/ (highest + 1). A leading number is stripped if present.")
+    s.add_argument("--number", type=int, default=None,
+                   help="force a specific canonical number (default: auto = highest in projects/ + 1)")
+    s.add_argument("--force", action="store_true", help="allow a duplicate canonical number")
     s.add_argument("--title", default=None)
     s.add_argument("--outdir", default="projects")
     s.add_argument("--aspect", default="9:16", choices=list(ASPECTS))
@@ -258,6 +353,11 @@ def main(argv=None):
                    help="keep the brand watermark but DON'T auto-append a CTA slide/narration "
                         "(for deep-dive act sub-segments — the CTA is the film's closing segment)")
     s.set_defaults(func=cmd_scaffold)
+
+    c = sub.add_parser("catalog", help="derive the canonical project count + next number from projects/ (source of truth)")
+    c.add_argument("--outdir", default="projects")
+    c.add_argument("--write", action="store_true", help="refresh the counter line in channel/CATALOG.md")
+    c.set_defaults(func=cmd_catalog)
 
     m = sub.add_parser("media", help="run the pure-Python media pipeline on a project dir")
     m.add_argument("project_dir")
