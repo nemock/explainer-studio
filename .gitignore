@@ -11,6 +11,7 @@ venv/
 library/
 # operator photos (personal, never committed)
 dave_selfies/
+coffee_mugs/
 # local env / tooling
 .DS_Store
 *.log
