@@ -1,29 +1,57 @@
 import React from 'react';
-import {AbsoluteFill, Audio, Sequence, staticFile} from 'remotion';
+import {AbsoluteFill, Audio, interpolate, Sequence, staticFile, useCurrentFrame} from 'remotion';
 import type {VideoProps} from './schema';
 import {Background} from './components/Background';
 import {Captions} from './components/Captions';
 import {KineticHook} from './components/KineticHook';
 import {StatCounter} from './components/StatCounter';
 import {TalkingScene} from './components/TalkingScene';
+import {Hero3D} from './components/Hero3D';
+import {KineticHeadline, Quote, PunchWord, Reframe, BuildList, SideBySide} from './components/TextScenes';
+import {Figure, Footage} from './components/Media';
 
-// scene component registry (motion-playbook §2). Unknown component -> TalkingScene.
+// the component catalog (motion-playbook §2). Unknown -> TalkingScene (captions-led).
 const REGISTRY: Record<string, React.FC<any>> = {
+  Hero3D,
   KineticHook,
+  KineticHeadline,
   StatCounter,
+  Quote,
+  PunchWord,
+  Reframe,
+  BuildList,
+  SideBySide,
+  Figure,
+  Footage,
   TalkingScene,
+};
+
+// motivated cross-fade so beats connect instead of hard-cutting (timing stays exact:
+// scenes keep their absolute from/duration; only opacity ramps).
+const SceneWrap: React.FC<{durationInFrames: number; children: React.ReactNode}> = ({durationInFrames, children}) => {
+  const frame = useCurrentFrame();
+  const f = 7;
+  const opacity = interpolate(
+    frame,
+    [0, f, durationInFrames - f, durationInFrames],
+    [0, 1, 1, 0],
+    {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}
+  );
+  return <AbsoluteFill style={{opacity}}>{children}</AbsoluteFill>;
 };
 
 export const Video: React.FC<VideoProps> = (props) => {
   const {audio, words, scenes, captionBottomPx, captionFontSize} = props;
   return (
-    <AbsoluteFill>
+    <AbsoluteFill style={{backgroundColor: '#090d1c'}}>
       <Background />
       {scenes.map((scene, i) => {
         const Comp = REGISTRY[scene.component] || TalkingScene;
         return (
           <Sequence key={i} from={scene.from} durationInFrames={scene.durationInFrames} layout="none">
-            <Comp fields={scene.fields || {}} durationInFrames={scene.durationInFrames} />
+            <SceneWrap durationInFrames={scene.durationInFrames}>
+              <Comp fields={scene.fields || {}} durationInFrames={scene.durationInFrames} />
+            </SceneWrap>
           </Sequence>
         );
       })}
