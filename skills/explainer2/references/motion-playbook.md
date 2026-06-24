@@ -31,8 +31,16 @@ Read this file before authoring any video's motion spec.
   existing determinism hard rule; Remotion enforces it for us.
 - **Brand-locked.** The motion system (palette, type, background, spring feel) is fixed.
   Per-video you choose components and feed data — you do not restyle.
-- **Motion serves retention.** Energy is a means to comprehension and watch-time, not an
-  end. Restraint reads as professional; over-animation reads as amateur.
+- **Dynamic is the NORM, not the exception** (operator directive, 2026-06-24). This is a
+  headless, fully-produced channel; viewers expect motion-design energy, and we now have
+  the tools to deliver it. Use the **full breadth** of the library — synced data-viz,
+  build-on diagrams, compositing, transitions, **3D**, light leaks, the lot — to make
+  every video *pop*. There is **no rule against being visually dynamic**; lean in.
+  - The only standing guardrails (these are not a cap on energy): (1) **determinism**
+    (frame-driven, no CSS animation), (2) **brand cohesion**, (3) **legibility** (text
+    always readable; motion never fights the words), (4) **no jank** (smooth springs/
+    easing, not stutter), and (5) motion still **serves the story** — spectacle is welcome,
+    but it should ride on the explanation, not bury it. Within those, more is the default.
 
 ## 1. The brand motion system (the constants)
 
@@ -113,13 +121,19 @@ a deterministic Remotion layer, not a fragile hand-rolled pass.
 - **BrandSting** — a short FWF intro/outro animation, built once, reused every video.
 - **Background drift / parallax** — ambient life under everything.
 
-### G. Accents & ecosystem (sparingly — seasoning, not the meal)
+### G. Accents & ecosystem (use them — this is where videos *pop*)
+Reach for these freely; they are a big part of "dynamic is the norm" (§0).
+- **3D** (`@remotion/three` / React Three Fiber) — **a hero tool, not a rarity.** Rotating
+  objects, depth, a 3D chart or globe, a title in space, parallax camera moves. Use it for
+  cold opens, the midroll seam, and any "wow" beat. (Watch the M3/16GB budget — keep scenes
+  reasonable; see §6.)
 - **Lottie** (`@remotion/lottie`) — designer-made icon/motion assets.
-- **AudioWaveform** (`visualizeAudio`) — voice-reactive bars on hooks/transitions.
-- **MotionBlur** (`@remotion/motion-blur`) — on fast moves, for polish.
-- **LightLeaks** (`@remotion/light-leaks`) — subtle warmth across a transition.
-- **3D** (`@remotion/three`) — rare; only when depth genuinely earns it.
-- **Confetti / particles** — almost never; reserve for a true payoff.
+- **AudioWaveform** (`visualizeAudio`) — voice-reactive bars/rings on hooks & transitions.
+- **MotionBlur** (`@remotion/motion-blur`) — on fast moves, for that produced feel.
+- **LightLeaks** (`@remotion/light-leaks`) — warmth/flares across transitions.
+- **HTML-in-canvas / shaders, GIFs, MapLibre flyovers, text-animation kits** — all fair game
+  (load the matching sub-rule from the `remotion` skill on demand).
+- **Confetti / particles** — fine for genuine payoffs; just keep them legible and on-brand.
 
 ## 3. Choosing the expression — content → vocabulary
 
@@ -149,8 +163,13 @@ a deterministic Remotion layer, not a fragile hand-rolled pass.
   counters land on the number, highlights wipe on the phrase, nodes light on the name.
 - **One focal motion at a time.** Lead the eye; don't animate everything at once.
 - **Spring/easing discipline.** No linear, robotic moves — use the house spring/bezier.
-- **Motion must be motivated.** If it doesn't carry the explanation, it's noise. Cut it.
-- **Restraint = professionalism.** The bar is "energy that serves comprehension," not "more."
+- **Motion should carry the explanation** — but on this channel the default is MORE, not
+  less. A scene that's just static text + captions is the floor, not the goal; give it a
+  build, a 3D element, a transition, a reactive accent. "Could this beat be more alive?" is
+  the question to keep asking.
+- **The bar is "make it pop"** (operator directive 2026-06-24). Push the dynamism; the only
+  brakes are the five guardrails in §0 (determinism, brand, legibility, no jank, serves the
+  story). Don't self-censor energy for fear of "too much" — fear flat.
 
 ## 5. The spec contract (data in, motion out)
 
