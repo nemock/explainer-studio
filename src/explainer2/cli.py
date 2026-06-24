@@ -269,7 +269,7 @@ def cmd_adlib(args):
 
 def cmd_shorts(args):
     from . import shorts
-    print(json.dumps(shorts.run(args.project_dir, plan_path=args.plan, only=args.only_slug), indent=2))
+    print(json.dumps(shorts.run(args.project_dir, plan_path=args.plan, only=args.only_slug, engine=args.engine), indent=2))
 
 
 def cmd_assets(args):
@@ -414,6 +414,8 @@ def main(argv=None):
     sh.add_argument("project_dir")
     sh.add_argument("--plan", default=None, help="path to plan.json (default <project>/shorts/plan.json)")
     sh.add_argument("--only", default=None, dest="only_slug", help="render just one cut by slug")
+    sh.add_argument("--engine", default="deck", choices=["deck", "remotion"],
+                    help="deck = the JS deck engine (default); remotion = the motion-graphics engine (motion-playbook.md)")
     sh.set_defaults(func=cmd_shorts)
 
     ass = sub.add_parser("assets", help="Adobe Stock assist: open suggested searches / ingest the inbox / status")

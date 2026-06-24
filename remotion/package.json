@@ -1,0 +1,21 @@
+{
+  "name": "explainer2-remotion",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Explainer Studio motion engine — branded Remotion component library rendered from a data spec (motion-playbook.md). Fed by the Python CLI; Claude authors specs, not React.",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.401",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.401",
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "typescript": "5.6.3"
+  }
+}

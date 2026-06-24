@@ -1,0 +1,5 @@
+# commit the component library + config only; never the toolchain, renders, or staged assets
+node_modules/
+out/
+public/
+.DS_Store

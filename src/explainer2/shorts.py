@@ -34,7 +34,7 @@ import numpy as np
 import soundfile as sf
 
 from .project import Project, ASPECTS
-from . import deckbuild, manifest, renderlock
+from . import deckbuild, manifest, renderlock, remotion_engine
 from .media import align, render, mux
 
 GAP = 0.18        # inter-segment silence, matches the narrate stages
@@ -183,7 +183,7 @@ def build_derived(parent: Project, cut):
     return sp, duration, warnings
 
 
-def run(parent_dir, plan_path=None, only=None):
+def run(parent_dir, plan_path=None, only=None, engine="deck"):
     parent = Project.load(parent_dir)
     plan_path = plan_path or (parent.dir / "shorts" / "plan.json")
     plan = json.loads(open(plan_path).read())
@@ -195,22 +195,35 @@ def run(parent_dir, plan_path=None, only=None):
         sp, duration, warnings = build_derived(parent, cut)
         for w in warnings:
             _log(f"{cut['slug']}: WARNING — {w}")
-        _log(f"{cut['slug']}: {duration:.1f}s, {len(cut['segments'])} segments — rendering")
+        _log(f"{cut['slug']}: {duration:.1f}s, {len(cut['segments'])} segments — rendering ({engine})")
         lock = None
         try:
-            for name, fn in (("align", align.run), ("deck", deckbuild.run),
-                             ("render", render.run), ("mux", mux.run),
-                             ("manifest", manifest.run)):
-                # Serialize the memory-heavy capture+encode (16 GB rule) against
-                # every other render on this Mac — same flock as cmd_media. Held
-                # per-cut (acquire before render, release after mux) so a long
-                # deep-dive render can interleave between cuts.
-                if name == "render" and lock is None:
-                    lock = renderlock.acquire(sp, log=_log)
-                r = fn(sp)
-                _log(f"{cut['slug']}: {name} ok {json.dumps(r)[:100]}")
-                if name == "mux" and lock is not None:
-                    renderlock.release(lock); lock = None
+            if engine == "remotion":
+                # align (cheap) -> Remotion render (heavy, render-locked) -> manifest.
+                # Remotion outputs the final muxed mp4 directly (no deck/render/mux).
+                _log(f"{cut['slug']}: align ok " + json.dumps(align.run(sp))[:100])
+                lock = renderlock.acquire(sp, log=_log)
+                rr = remotion_engine.render(sp, log=_log)
+                _log(f"{cut['slug']}: remotion ok {json.dumps(rr)[:140]}")
+                renderlock.release(lock); lock = None
+                try:
+                    manifest.run(sp)
+                except Exception as e:  # manifest is a convenience here; the mp4 is the deliverable
+                    _log(f"{cut['slug']}: WARNING — manifest skipped ({e})")
+            else:
+                for name, fn in (("align", align.run), ("deck", deckbuild.run),
+                                 ("render", render.run), ("mux", mux.run),
+                                 ("manifest", manifest.run)):
+                    # Serialize the memory-heavy capture+encode (16 GB rule) against
+                    # every other render on this Mac — same flock as cmd_media. Held
+                    # per-cut (acquire before render, release after mux) so a long
+                    # deep-dive render can interleave between cuts.
+                    if name == "render" and lock is None:
+                        lock = renderlock.acquire(sp, log=_log)
+                    r = fn(sp)
+                    _log(f"{cut['slug']}: {name} ok {json.dumps(r)[:100]}")
+                    if name == "mux" and lock is not None:
+                        renderlock.release(lock); lock = None
         finally:
             renderlock.release(lock)
         results[cut["slug"]] = {
