@@ -27,13 +27,27 @@ When spoken, these read as AI throat-clearing. Hunt them and their cousins:
 - **Fake-suspense openers:** "here's the thing", "here's the kicker", "and here's
   the kicker", "the truth is", "make no mistake", "let me be clear", "real talk",
   "buckle up".
-- **"Nobody-talks-about" framing:** "the one X nobody argues about / talks about",
-  "the part nobody mentions", "what they don't tell you", "what nobody tells you",
-  "here's what nobody tells you", "this is what nobody tells you", "the part the
-  cheerleaders skip", "the dirty little secret". *(Operator note, #35: if a thing
-  is genuinely overlooked, misunderstood, or misattributed, just SAY that plainly
-  and factually — "this is widely misattributed to Barnum" — and teach it. That's
-  honest and earns more trust than the clickbait "nobody tells you" wrapper.)*
+- **"Nobody-talks-about" / secret-knowledge framing:** "the one X nobody argues
+  about / talks about", "the part nobody mentions", "what they don't tell you",
+  "what nobody tells you", "here's what nobody tells you", "this is what nobody
+  tells you", "the part the cheerleaders skip", "the dirty little secret", **and
+  its cousins that dodge the literal phrases above: "the part (almost) nobody says
+  out loud", "what nobody will just say to you", "the thing nobody else will tell
+  you", "the test/step (almost) everyone skips", "the part everyone misses", "the
+  secret nobody…".** All of it is the same move — claiming privileged/secret
+  knowledge — and it reads as *desperate*, which corrodes trust from the first
+  slide. *(Operator note, #35: if a thing is genuinely overlooked, misunderstood,
+  or misattributed, just SAY that plainly and factually — "this is widely
+  misattributed to Barnum" — and teach it.)* **Operator directive, #13 (2026-06-24):
+  never claim secret knowledge to manufacture a hook. The differentiator is the
+  operator's OWN voice, perspective, experience, humor, and the entertaining way
+  the video is made — "the seasoning on the meat that is me" — not a pretense that
+  no one else has ever said this. The same claim sourced to lived experience ("after
+  thirty years of building things, here's where I've landed…") is honest, warmer,
+  AND a stronger hook than "the part nobody says out loud." A real open loop still
+  works ("one thing I always check first") — just ground it in the operator's
+  practice, not in everyone-else-is-blind. Reaching for secret-knowledge framing is
+  the flat-earther register; we are the opposite of that.
 - **Manufactured drama beats:** "let that sink in", "sit with that", "and that,
   right there, is…", "plot twist", "but here's the twist", "and the twist?".
 - **Stock closers:** "at the end of the day", "the bottom line is", "so there you
@@ -175,6 +189,9 @@ blocklist = [
     "here's the thing", "here's the kicker", "the truth is", "make no mistake",
     "let me be clear", "real talk", "buckle up", "nobody argues about",
     "nobody talks about", "they don't tell you", "nobody tells you", "cheerleaders skip",
+    # secret-knowledge cousins (#13, 2026-06-24) — same desperate move, dodges the phrases above
+    "says out loud", "nobody will just say", "nobody else will tell", "everyone skips",
+    "everybody skips", "everyone misses", "the secret nobody",
     "dirty little secret", "let that sink in", "sit with that", "right there, is",
     "plot twist", "here's the twist", "the twist?", "at the end of the day",
     "bottom line is", "so there you have it", "game changer", "in a world where",

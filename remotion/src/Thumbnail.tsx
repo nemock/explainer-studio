@@ -45,7 +45,7 @@ export const Thumbnail: React.FC<ThumbnailProps> = ({
       {/* subject cutout, bottom-right, bleeding off the edge, bottom 16% faded */}
       <div
         style={{
-          position: 'absolute', right: -40, bottom: 0, height: 690,
+          position: 'absolute', right: -180, bottom: 0, height: 700,
           WebkitMaskImage: 'linear-gradient(to top, transparent 0%, black 16%)',
           maskImage: 'linear-gradient(to top, transparent 0%, black 16%)',
           transform: mirror ? 'scaleX(-1)' : 'none',

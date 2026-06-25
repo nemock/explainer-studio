@@ -94,7 +94,9 @@ def _scene_for(slide):
         return "KineticHeadline", {"kicker": kicker, "headline": slide.get("value") or headline, "accent": accent}
     if t == "figure":
         return "Figure", {"kicker": kicker, "image": slide.get("image"),
-                          "caption": slide.get("caption", ""), "highlight": slide.get("highlight")}
+                          "caption": slide.get("caption", ""), "highlight": slide.get("highlight"),
+                          "title": slide.get("title", ""), "accent": slide.get("accent", []),
+                          "imageFromFrac": slide.get("imageFromFrac", 0)}
     if t == "footage":
         return "Footage", {"image": slide.get("image"), "headline": headline, "accent": accent}
     if t == "highlight":
@@ -125,6 +127,41 @@ def build_spec(sp):
     if al.exists():
         for w in json.loads(al.read_text()).get("words", []):
             words.append({"word": w["word"], "start": w["start"], "end": w["end"]})
+
+    # Sync BuildList items to the spoken word-times so each item appears AS it's said,
+    # then holds — otherwise items stagger evenly across the whole scene and lag the
+    # narration badly (e.g. "Reddit" spoken while only item 2 has appeared). #13.
+    import re as _re
+    _STOP = {"the", "a", "an", "of", "in", "on", "by", "and", "is", "are", "to", "for",
+             "your", "you", "it", "its", "that", "this", "with", "but", "so", "i", "my",
+             "we", "he", "she", "why", "can", "be", "as", "at", "or", "if"}
+    def _norm(x):
+        return _re.sub(r"[^a-z]", "", x.lower())
+    def _key(item):
+        for tok in item.split():
+            n = _norm(tok)
+            if n and n not in _STOP:
+                return n[:4]
+        toks = item.split()
+        return _norm(toks[0])[:4] if toks else ""
+    for idx, sc in enumerate(scenes):
+        if sc.get("component") != "BuildList" or idx >= len(segs):
+            continue
+        items = (sc.get("fields") or {}).get("items") or []
+        if not items:
+            continue
+        s0 = segs[idx]["start"]
+        s1 = segs[idx + 1]["start"] if idx + 1 < len(segs) else duration
+        segw = [w for w in words if s0 <= w["start"] < s1]
+        times, wp = [], 0
+        for it in items:
+            key, t = _key(it), None
+            while wp < len(segw):
+                if key and _norm(segw[wp]["word"]).startswith(key):
+                    t = segw[wp]["start"]; wp += 1; break
+                wp += 1
+            times.append(None if t is None else max(0, int(round((t - s0) * fps))))
+        sc["fields"]["itemTimes"] = times
 
     # Bookend long-form with the brand sting (motion-playbook §2F). On by default for
     # landscape (deep dives), off for portrait shorts (the hook must open instantly).

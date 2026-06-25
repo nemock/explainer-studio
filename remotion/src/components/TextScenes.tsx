@@ -96,13 +96,16 @@ export const BuildList: React.FC<{fields: any; durationInFrames: number}> = ({fi
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
   const items: string[] = fields.items || [];
+  const itemTimes: (number | null)[] | undefined = fields.itemTimes;
   const per = durationInFrames / Math.max(1, items.length + 1);
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 10%'}}>
       <div style={{maxWidth: '100%'}}>
         <Kicker text={fields.kicker} o={spring({frame, fps, config: {damping: 18}})} height={height} />
         {items.map((it, i) => {
-          const e = spring({frame: frame - i * per, fps, config: {damping: 18}});
+          // appear AS the item is spoken (itemTimes from alignment), else even stagger
+          const appear = itemTimes && itemTimes[i] != null ? (itemTimes[i] as number) : i * per;
+          const e = spring({frame: frame - appear, fps, config: {damping: 18}});
           return (
             <div key={i} style={{display: 'flex', alignItems: 'baseline', gap: height * 0.02, opacity: e, transform: `translateX(${interpolate(e, [0, 1], [-30, 0])}px)`, marginBottom: height * 0.022}}>
               <span style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.05, color: BRAND.green}}>{i + 1}</span>
