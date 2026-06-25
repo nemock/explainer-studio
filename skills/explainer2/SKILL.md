@@ -1,16 +1,16 @@
 ---
-name: explainer2
+name: explainer-studio
 description: >
   Produce a YouTube-intelligence-driven, retention-engineered explainer video
   (deep dive and/or Shorts) end-to-end on this Mac: intel sweep → Blueprint →
   script → operator recording (or Kokoro) → align → render → package. Use when
-  the user says "/explainer2 <topic>", "make a video about", "run the studio
+  the user says "/explainer-studio <topic>", "make a video about", "run the studio
   pipeline", or asks for a Blueprint on a topic. Local/free only; the single
   allowed subscription is the operator's stock.adobe.com membership,
   human-in-the-loop. This skill NEVER posts to social platforms.
 ---
 
-# /explainer2 — Explainer Studio pipeline
+# /explainer-studio — Explainer Studio pipeline
 
 You are the **generation plane** of this system. The CLI (`bin/explainer2`) is the
 **media plane** — pure Python, no LLM. You do research, judgment, and writing;
