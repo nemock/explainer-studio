@@ -113,6 +113,13 @@ Each entry: **what · when · spec fields · motion · don't.**
 *Note:* use `@remotion/media` `<Video>` / `<OffthreadVideo>`. **This retires the raw
 `ffmpeg` motion-splice** that OOM-killed renders twice (2026-06-23) — compositing becomes
 a deterministic Remotion layer, not a fragile hand-rolled pass.
+*Looping:* the **Footage** component uses `<Video muted loop>` (not `<OffthreadVideo>`) so a
+B-roll clip shorter than its segment loops instead of freezing on the last frame.
+`OffthreadVideo` has no `loop` prop (Remotion 4.0.401) — looping it would need a
+`<Loop durationInFrames>` wrapper fed by async `getVideoMetadata` + `delayRender`, a render-
+stall risk for unattended encodes. Don't "correct" footage back to `OffthreadVideo` (fixed
+2026-06-26). The Self-QA "`OffthreadVideo` for clips" guidance still holds for the rare
+full-bleed shot.
 
 ### F. Transitions & connective tissue
 - **Motivated transitions** (`@remotion/transitions`): fade / slide / wipe / clockWipe /
@@ -221,7 +228,8 @@ Reach for these freely; they are a big part of "dynamic is the norm" (§0).
 - [ ] Determinism: `useCurrentFrame`/`interpolate`/`spring` only; NO CSS animation/Tailwind
       animation; no unseeded random/time.
 - [ ] Figures trace to wiki/intel; no invented numbers; fair-use docs cited.
-- [ ] Performance within M3/16GB (`OffthreadVideo` for clips; modest concurrency).
+- [ ] Performance within M3/16GB (`OffthreadVideo` for clips; modest concurrency). *Footage
+      is the exception — it uses `<Video loop>` so short B-roll loops; see §E.*
 - [ ] One-frame `npx remotion still` check on the key frames before the full render.
 
 ## 8. Authoring procedure
