@@ -115,6 +115,15 @@ to date missed length on the first draft; the rule exists because it bites).
      click away, so it earns nothing and just signals the end. End on the CTA,
      not on homework. (Operator call, #35 review: keep the comment ask — it can
      buy dwell — but drop the trailing homework imperative.)
+     - **No false modesty AT the CTA (operator directive 2026-06-25, #14).** The
+       "not-paywalled / you don't need it to get the whole answer" generosity line
+       (§4.3) belongs ONLY in the EARLY credibility beat, where it builds trust
+       before the value is delivered. Do NOT repeat it at the closing CTA. The CTA
+       is the moment of the *ask*; tacking on "but you don't really need it" right
+       there talks the viewer out of the exact thing you just asked them to buy.
+       Dave: "that's the wrong time to suggest it's not important that they get it."
+       So the CTA = name the book + site + newsletter, then the single subscribe
+       line, and stop. Keep the genuine humility, just not at the moment of the ask.
    - **Medium note — this is a VIDEO rule, not a universal one.** "Don't recap,
      don't signal the end" exists because a *watcher* who hears "let's recap"
      leaves, costing watch-time and the suggested-video click. The written

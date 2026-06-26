@@ -141,6 +141,18 @@ python tools/html2png.py <project>/package/thumbnails/thumb_a.html \
 standing default (operator directive, 2026-06-19): ALWAYS produce two variants
 and upload both to Test & Compare. Never ask the operator whether to A/B or
 which to lead with — both go up, every time, and YouTube picks the winner.**
+
+**Test & Compare is a TWO-STEP, post-publish flow (operator directive,
+2026-06-26: "it's always ineligible until the video is actually set as public;
+this happens every single time").** In the upload wizard Test & Compare is listed
+**Ineligible on every video** and stays that way until the video is Public. So:
+(1) at upload, attach the SINGLE custom thumbnail (variant A) and do NOT treat
+"Ineligible" as a blocker or flag it — it is expected every time; (2) AFTER the
+video is Public, open it in Studio where the thumbnail's **Test & compare** is now
+eligible, and add variant B there (operator drags B, Claude drives). Variant B is
+deliberately held back at upload and goes up in this post-publish step. See
+[[thumbnail-ab-always]].
+
 Produce **A and B variants for YouTube Test & Compare — and they MUST differ in
 a way a viewer notices.** The
 high-leverage variable is the **hook**: give B a different headline *angle*
