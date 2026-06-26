@@ -1,32 +1,49 @@
 # Explainer Studio — a local-first explainer-video studio
 
-> Topic in → YouTube competitive intelligence → retention-engineered script → **your** voice → layered motion graphics → a packaged deep dive **and** Shorts — entirely on one Mac, with **no SaaS subscriptions in the pipeline**.
+> Type in a topic. Get back a YouTube-ready deep dive **and** a stack of Shorts — researched against the competition, scripted to keep people watching, narrated in **your** voice, and dressed in real motion graphics. All on one Mac. **Zero SaaS subscriptions in the pipeline.**
 
 <!-- badges: license · stars · (later) release -->
 
-**Status: working / in active use.** It produces finished, packaged videos end-to-end on an Apple-Silicon Mac. [PRD.md](PRD.md) is the source of truth for scope and build phases. The proven v1, [`video-explainer-system`](https://github.com/nemock/video-explainer-system), remains a separate production tool — this is a ground-up successor whose media core was vendored once from v1 and has since diverged.
+**Status: working and in daily use.** It takes a topic and produces finished, packaged videos end-to-end on an Apple-Silicon Mac — no cloud render, no per-token bill. [PRD.md](PRD.md) is the source of truth for scope and build phases. The proven v1, [`video-explainer-system`](https://github.com/nemock/video-explainer-system), is still its own production tool; this is a ground-up successor whose media core was vendored once from v1 and has since happily diverged.
 
-<!-- TODO: hero GIF of Mission Control board + a finished frame -->
+<!-- TODO: hero GIF — a finished frame + the Remotion motion library in motion -->
 
 ---
 
 ## Why this exists
 
-The "normal" way to automate explainer videos is to rent four or five cloud services — a voice subscription, a stock-footage plan, an avatar tier, a render-credit meter. [v1](https://github.com/nemock/video-explainer-system) proved you don't need any of them: local TTS (Kokoro), local forced alignment, a headless browser, and ffmpeg produce a finished, captioned, branded video on an M3 Mac, with the LLM being an existing **Claude subscription** — no API key, no per-token billing.
+The usual way to "automate" explainer videos is to rent four or five clouds: a voice subscription, a stock-footage plan, an avatar tier, a render-credit meter that ticks every time you change your mind. [v1](https://github.com/nemock/video-explainer-system) proved you don't need any of them. Local TTS (Kokoro), local forced alignment, a headless browser, and ffmpeg already make a finished, captioned, branded video on an M3 — with the "LLM bill" being an **existing Claude subscription** you already pay for. No API key. No metering.
 
-Explainer Studio keeps that conviction and asks the next question: not just *"how do I make a video?"* but *"how do I make the video that **wins** — and keeps people watching, and grows a channel?"*
+Explainer Studio keeps that conviction and asks the harder question. Not *"how do I make a video?"* — that part's solved — but *"how do I make the video that **wins**: the one people click, keep watching, and that actually grows a channel?"*
 
-## What it does
+Everything below is built to run that play, on your machine, on your terms.
 
-1. **Researches YouTube before writing a word.** Give it a topic; it finds comparable videos, scores breakout outliers against their channels' baselines, reverse-engineers their titles, hooks, structure, thumbnails, and descriptions — and identifies the gap they all leave open. You approve the resulting **Blueprint** before scripting starts.
-2. **Writes retention-engineered, conversational scripts** — cold-open hook, scheduled open loops and payoffs, re-hook beats, pattern interrupts — flavored by your own voice library, shown to you next to its retention map for editing.
-3. **Records in your actual voice.** A built-in browser teleprompter + recorder (per-segment retakes, automatic local audio cleanup, ad-lib-tolerant alignment). Local Kokoro TTS remains the fully-headless fallback.
-4. **Builds layered motion graphics** — a deterministic **Remotion** component library (stat cards, comparisons, timelines, diagrams, 3D, kinetic word-synced captions), music with auto-ducking, and licensed B-roll via a guided **Adobe Stock** workflow (the one declared subscription exception: it suggests searches, you license and drop files, it ingests and conforms them; every footage scene has a designed fallback).
-5. **Emits two formats from one project:** a chapter-marked 16:9 deep dive *and* 9:16 Shorts cut from its strongest beats, each re-hooked and CTA'd toward the long-form.
-6. **Packages for monetization:** locally rendered thumbnail candidates, intelligence-ranked titles, SEO-shaped description with chapters and book CTA, tags, pinned comment, end-screen plan — all in a versioned `manifest.json` for any downstream poster. **It never posts.**
-7. **Learns from results** (optional): drop in YouTube Studio CSV exports and it builds a local memory of which titles/hooks/structures actually perform on *your* channel, cited by the next Blueprint.
+## What it does today
 
-All of it driven from **Mission Control** — a local web GUI where projects move across a board with review gates, a recording booth, an asset queue, and a render queue. Every GUI action has a CLI equivalent (`bin/explainer2 <command>`).
+**1. It scouts YouTube before writing a single word.** 🔍
+Hand it a topic. It pulls comparable videos, scores the breakout outliers against their *own* channel's baseline (so a small channel's banger isn't drowned out by a big channel's average), and reverse-engineers what's working — titles, hooks, structure, thumbnails, descriptions. Then it names the gap every one of them left open. You read the **Blueprint** and approve the angle before anything gets scripted.
+
+**2. It writes scripts engineered to hold attention.** ✍️
+Cold-open hook, open loops that pay off later, re-hook beats at the dips, pattern interrupts — the actual retention craft, not filler. It writes in *your* voice (pulled from a talk-time library of your real takes and one-liners) and hands you the script next to its retention map so you can see *why* each beat is there before you touch it.
+
+**3. It records in your real voice.** 🎙️
+A built-in browser teleprompter + recorder: read it segment by segment, retake any line, watch the waveform, see your read-time per segment. Local ffmpeg cleans the audio; ad-lib-tolerant forced alignment means you can go off-script and it still lands the captions. Don't feel like talking today? Local **Kokoro** TTS is the fully-headless fallback — same align → render path either way.
+
+**4. It builds motion graphics that *perform* the explanation.** 🎬
+A deterministic **Remotion** (React/TS) component library where every pixel is a function of time, audio, and data: numbers that *count up* as you say them, charts that *build* on the cue, documents that *highlight* as they're read, diagrams that *assemble*, 3D scenes, kinetic word-synced captions, a music bed that auto-ducks under your voice. Need real footage? A guided **Adobe Stock** workflow suggests searches, you license and drop the files, and it ingests and conforms them — and every footage scene has a designed fallback so a render never breaks on a missing clip.
+
+**5. It ships two formats from one project.** ✂️
+A chapter-marked **16:9 deep dive** *and* **9:16 Shorts** cut from its strongest beats. The Shorts aren't lazy clips — each gets its own natively-recorded hook and outro (you record them in the same booth session) and a CTA pointing back to the long-form.
+
+**6. It packages the whole thing for upload.** 📦
+Locally rendered thumbnail candidates (both the brand-template cutout *and* illustrative composed scenes), intelligence-ranked titles, an SEO-shaped description with chapters and your book CTA, tags, a pinned comment, an end-screen plan — and a written companion **article** de-spoken from the script for your blog or newsletter. It all lands in a versioned `manifest.json` that any downstream poster can read.
+
+**7. It re-shares your greatest hits.** 🔁
+The `promote` command reaches into your back catalogue, picks an already-published Short, writes a fresh caption, and re-shares it across platforms via Blotato — **dry-run by default**, `--fire` to actually post, every promotion logged in `promotions.json`. This is the *one* place the studio touches social, and only for videos you already put out yourself.
+
+## The one rule: generation stops at the package
+
+Producing a video **ends at a labeled output directory + a versioned manifest** — it never auto-posts your fresh work. You stay in the loop for the publish. The single, deliberate exception is `promote` (#7 above), which only re-shares Shorts you've *already* published. New videos always stop at the package, every time.
 
 ## The stack (local & free)
 
@@ -42,13 +59,13 @@ All of it driven from **Mission Control** — a local web GUI where projects mov
 | Legacy visuals (`--engine deck`) | HTML/CSS/JS layer stack, captured via headless Chrome |
 | Encode | ffmpeg + VideoToolbox (hardware) |
 | Thumbnail headshot cutout | `rembg` (local U²-Net) |
-| Stock footage | **Your stock.adobe.com membership** — guided, human-in-the-loop (the one exception) |
+| Stock footage | **Your stock.adobe.com membership** — guided, human-in-the-loop (the one subscription) |
 
 Target machine: Apple Silicon (developed on an M3 / 16 GB). No CUDA, no cloud render.
 
 ## Dependencies
 
-Everything the pipeline depends on runs **locally** and is **free** (the one declared exception is the operator's existing stock.adobe.com membership, which is human-in-the-loop and never an API dependency). There is no cloud render, no per-token billing, and no SaaS in the critical path.
+Everything the pipeline depends on runs **locally** and is **free**. The one declared exception is the operator's existing stock.adobe.com membership, which is human-in-the-loop and never an API dependency. No cloud render, no per-token billing, no SaaS in the critical path.
 
 **System tools** (install once via Homebrew / nvm):
 
@@ -69,11 +86,11 @@ Everything the pipeline depends on runs **locally** and is **free** (the one dec
 
 ## Render robustness (RAM-aware, multi-project-safe)
 
-The render+mux stage — headless frame capture plus an ffmpeg encode — is the one memory-heavy part of the pipeline, and on a 16 GB machine two of them at once means an OOM kill mid-write. Two mechanisms in [`src/explainer2/renderlock.py`](src/explainer2/renderlock.py) keep it honest:
+The render+mux stage — headless frame capture plus an ffmpeg encode — is the one memory-heavy part of the pipeline, and on a 16 GB machine two of them at once means an OOM kill mid-write. Three mechanisms keep it honest (see [`src/explainer2/renderlock.py`](src/explainer2/renderlock.py)):
 
 - **RAM-aware serialization.** Memory-heavy stages are serialized by design — never Kokoro *and* headless capture *and* ffmpeg at the same time — so the encode fits the unified-memory budget instead of fighting it.
 - **A machine-global render lock.** An `fcntl.flock` on a fixed lockfile (`/tmp/explainer-render.lock`) is shared across **every** explainer project *and* across codebases (this repo **and** the production v1). Start as many renders as you like, whenever you like — they queue and auto-start one at a time, so concurrent renders never kill each other. The OS releases the lock if a holder dies (even on `SIGKILL`), so a crashed render can't deadlock the queue. `bin/explainer2 render-status` shows who holds the lock and every live render.
-- **Detached, suspend-proof launches.** Heavy renders launch in their own session under `caffeinate`, so suspending or closing the Claude app (or going AFK) leaves the encode running to completion instead of killing it mid-frame.
+- **Detached, suspend-proof launches.** Heavy renders launch in their own session under `caffeinate`, so suspending or closing the Claude app (or wandering off) leaves the encode running to completion instead of killing it mid-frame.
 
 Hard rule for contributors: never invoke a heavy ffmpeg encode raw — route it through `renderlock.run_locked(...)` so it serializes against scheduled renders.
 
@@ -91,14 +108,22 @@ cd remotion && npm install && cd ..
 # Run any pipeline stage via the wrapper:
 bin/explainer2 scaffold "why vector databases forget"   # new project dir
 bin/explainer2 intel <project-dir>                       # YouTube intelligence sweep
-#   → Claude authors the Blueprint, script, deck.json, and shorts plan (see the SKILL)
+#   → Claude authors the Blueprint, script, deck.json/motion spec, and shorts plan (see the SKILL)
 bin/explainer2 record <project-dir>                      # open the booth, record in your voice
 bin/explainer2 media --only narrate,align <project-dir>  # light media stages (foreground)
-bin/explainer2 render <project-dir>                       # heavy render — launches DETACHED
-bin/explainer2 render-status                              # render-queue view
+bin/explainer2 render <project-dir>                      # heavy render — launches DETACHED
+bin/explainer2 shorts <project-dir>                      # cut 9:16 Shorts from the finished deep dive
+bin/explainer2 render-status                             # render-queue view
 ```
 
-The end-to-end procedure, gates, and hard rules are written down in the skill (below) — the project is built to be run by any Claude model, so the methodology lives in the repo, not in any one session.
+The end-to-end procedure, gates, and hard rules are written down in the skill (below) — the project is built to be run by **any** Claude model, so the methodology lives in the repo, not in any one session.
+
+## Roadmap (what's coming next)
+
+The pipeline above all works today from the CLI. Two PRD phases are still in flight — listed here so the feature tour stays honest about what runs *now*:
+
+- **Mission Control (PRD Phase 4) — a local web GUI.** A FastAPI + HTML/JS app (served from the Mac, opened in Chrome) where every project is a card moving across a board — Intel → Blueprint → Script → Voice → Assets → Compose → Render → Package — with the review gates, the recording booth, the Adobe Stock asset queue, render progress, and the final package preview all in one place. Every action it adds will have the CLI twin it already wraps. *Not built yet — today the same gates run from the terminal.*
+- **Learn (PRD Phase 5) — a results feedback loop.** Drop in YouTube Studio CSV exports and build a local memory of which titles, hooks, and structures actually perform on *your* channel, cited by the next Blueprint. *Not built yet.*
 
 ## Documentation
 
@@ -116,7 +141,7 @@ The analytical methodology is documented as a **skill + playbooks** so the pipel
 
 ## Boundaries (choices, not gaps)
 
-- **No posting/scheduling** — output is a packaged directory + manifest; pair with your own poster.
+- **Generation stops at the package** — output is a labeled directory + manifest; pair it with your own poster. The only social touch is `promote`, which re-shares Shorts you already published.
 - **No avatars, no voice cloning, no photoreal generative video** — your real voice is the premium tier.
 - **No cloud anything** — single operator, single Mac, files on disk.
 - **v1 untouched** — this project never reads from or writes into `video-explainer-system`.
@@ -127,4 +152,4 @@ The analytical methodology is documented as a **skill + playbooks** so the pipel
 
 ---
 
-*Built as a Claude Code project. Generation-only — this tool never posts to social platforms.*
+*Built as a Claude Code project. Local-first, subscription-only, and — apart from re-sharing your own published Shorts — it stops at the package and lets you press publish.*
