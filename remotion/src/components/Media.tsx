@@ -1,5 +1,5 @@
 import React from 'react';
-import {AbsoluteFill, Img, OffthreadVideo, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AbsoluteFill, Img, Video, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
 
 // wrap accent substrings of `text` in green (for the figure's phase-1 title line)
@@ -71,7 +71,7 @@ export const Footage: React.FC<{fields: any; durationInFrames: number}> = ({fiel
   const isVideo = typeof src === 'string' && /\.(mp4|mov|webm|m4v)$/i.test(src);
   const media = src ? (
     isVideo ? (
-      <OffthreadVideo src={staticFile(src)} muted loop style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+      <Video src={staticFile(src)} muted loop style={{width: '100%', height: '100%', objectFit: 'cover'}} />
     ) : (
       <Img src={staticFile(src)} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
     )
