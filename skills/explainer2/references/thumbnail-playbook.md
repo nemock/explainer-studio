@@ -79,6 +79,38 @@ left/top text block. **Adjustable per video:** the copy, which cutout, the
 headline size if a word overflows, and — only under the rule in §5 — the
 gradient's *inner hue*.
 
+## 2c. The illustrative / composed path (Barnum-style — operator directive 2026-06-26)
+
+There are now **two thumbnail paths**, pick per video:
+
+- **(a) The cutout template** (§2 above) — the fast baseline. Use for most videos.
+- **(b) The illustrative / composed thumbnail** — a richer, scene-built image, for
+  videos that earn it (special editions, historical / real-world-story anchors,
+  anything with a strong visual concept). This is what got outsized positive
+  feedback on **#35 P.T. Barnum** (Dave in a tux, Barnum in the scene, an
+  old-timey era-appropriate font) — more illustrative, more eye-catching.
+
+**Workflow for path (b) — a tag-team:**
+1. **Propose 2-3 concepts first.** For each video, before anything is generated,
+   give the operator 2-3 thumbnail CONCEPT ideas: the scene, who/what is in it,
+   the headline words, the font feel (era/topic-appropriate where it fits), and
+   any logos/icons/pictures to graft in. The operator reacts and picks.
+2. **The operator generates the base image** in an external AI image tool —
+   Gemini "nano banana" (used for Barnum) or ChatGPT image generation. This is an
+   operator step; Claude does not generate the base scene. The operator drops the
+   result into `package/thumbnails/` (e.g. `base.png`).
+3. **Claude composes on top of the base image:** add the brand headline (red
+   bands / green accent, or an era-appropriate type treatment when the concept
+   calls for it), and **graft in logos, icons, or small pictures** to make it
+   informative and clickable. Same HTML-card → `html2png.py` mechanic as §2/§6,
+   just over the operator's base image instead of the navy gradient. Keep it
+   legible at 120px (§0 contract still holds).
+4. **A/B still applies** (§6, [[thumbnail-ab-always]]) — produce two variants;
+   Test & Compare is post-publish.
+
+When in doubt, ask the operator which path a given video should take; lean toward
+the illustrative path for story-driven / special-edition deep dives.
+
 ## 3. Copy rules
 
 - Headline = the blueprint's **§7 thumbnail direction** distilled to a **2–4 word

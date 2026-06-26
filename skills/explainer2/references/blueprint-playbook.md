@@ -12,6 +12,38 @@ and (b) find the angle none of the winners owns. Both halves are mandatory.
 
 ---
 
+## 0. Channel direction — teach through narrative (operator directive 2026-06-26)
+
+Read this before choosing an angle; it shapes §6 (the gap) and §6 of `blueprint.md`
+(structure). The channel's edge is **storytelling**, not listicles, and the recent
+narrative-arc scripts are the standard to keep raising.
+
+- **Anchor the lesson in a real, concrete STORY, not hypotheticals.** Prefer a
+  verifiable real-world narrative the lesson rides on — a historical figure, a
+  company, a documented event (the P.T. Barnum video #35 is the model: one
+  storytelling arc, meaningful context, entertaining; it drew "fantastic video,
+  you deserve far more views"). A pile of semi-hypothetical "imagine a founder
+  who…" examples is the thing to avoid. Same no-fabrication rule as talk-time:
+  every story detail must be sourced (intel, wiki, web with citation) or cut.
+- **Build ONE arc, not a tips list.** The blueprint's structure (§6) should read
+  as a narrative with stakes and a payoff, in Dave's curator voice, not 12
+  disconnected pithy beats. "Special-edition deep dive" storytelling is a target,
+  not a rarity.
+- **Anecdote economy — Dave's own stories are finite; ration them.** Dave is the
+  host and his lived stories are gold, but each can only be told so many times.
+  Already heavily used: **Lucent / Apple AirPort / the tech bubble; the Mac server
+  apps that shipped to crickets; the 1994 Magic Link; the Galen surgical robot
+  (incl. the fruit-as-tissue demo).** Do NOT default to these; never make a Dave
+  anecdote the spine of two consecutive videos. Use his voice and take as the
+  *seasoning* on a real-world story, and pull fresh personal material from the
+  talk-time library rather than recycling the same three. (See memory
+  [[narrative-teaching-and-anecdote-economy]].)
+- **Why this matters (the thesis):** the channel's value is context, sequencing,
+  and judgment a learner can't get by prompting an LLM cold — guided, contextual,
+  narrative teaching. (Talk-time position: courseware-not-dead-context-is-the-value.)
+
+---
+
 ## 1. Query expansion (before running `intel`)
 
 Write 4–6 queries that triangulate the topic. Use these slots:
