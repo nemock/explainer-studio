@@ -5,6 +5,7 @@ import {Background} from './components/Background';
 import {Captions} from './components/Captions';
 import {KineticHook} from './components/KineticHook';
 import {StatCounter} from './components/StatCounter';
+import {StatGrid} from './components/StatGrid';
 import {TalkingScene} from './components/TalkingScene';
 import {Hero3D} from './components/Hero3D';
 import {KineticHeadline, Quote, PunchWord, Reframe, BuildList, SideBySide, Timeline} from './components/TextScenes';
@@ -28,6 +29,7 @@ const REGISTRY: Record<string, React.FC<any>> = {
   KineticHook,
   KineticHeadline,
   StatCounter,
+  StatGrid,
   Quote,
   PunchWord,
   Reframe,

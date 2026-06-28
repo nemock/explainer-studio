@@ -85,7 +85,10 @@ def _scene_for(slide):
         return "Ring", {"kicker": kicker, "value": slide.get("value", 0), "label": slide.get("label", "")}
     if t == "funnel":
         return "Funnel", {"kicker": kicker, "stages": slide.get("stages", [])}
-    if t in ("stat", "statgrid"):
+    if t == "statgrid":
+        return "StatGrid", {"kicker": kicker, "stats": slide.get("stats", []),
+                            "source": slide.get("source", "")}
+    if t == "stat":
         parsed = _parse_stat(slide.get("value"))
         if parsed:
             to, prefix = parsed
@@ -260,8 +263,9 @@ def render(sp, log=print, frames=None, out=None):
     public.mkdir(parents=True, exist_ok=True)
     shutil.copy(sp.work / "narration.wav", public / "narration.wav")
     _stage_images(sp, spec, public)
-    # CTA scenes show the brand book cover (a fixed asset, reused every video)
-    if any(s["component"] == "CTA" for s in spec["scenes"]):
+    # CTA scenes show the brand book cover unless the project opts out with
+    # "cta_book": false in project.json (e.g. masterclass modules use no book cover).
+    if sp.data.get("cta_book", True) and any(s["component"] == "CTA" for s in spec["scenes"]):
         bc_dir = REMOTION_DIR.parent / "book_cover"
         bc = next(iter(sorted(bc_dir.glob("*.png"))), None) if bc_dir.exists() else None
         if bc:

@@ -29,7 +29,7 @@ export const CTA: React.FC<{fields: any}> = ({fields}) => {
   ) : null;
 
   const text = (
-    <div style={{textAlign: portrait ? 'center' : 'left', maxWidth: portrait ? '90%' : '46%', opacity: tIntro,
+    <div style={{textAlign: (portrait || !book) ? 'center' : 'left', maxWidth: portrait ? '90%' : (book ? '46%' : '72%'), opacity: tIntro,
                  transform: `translateY(${interpolate(tIntro, [0, 1], [24, 0])}px)`}}>
       {fields.kicker ? (
         <div style={{fontFamily: BRAND.font, color: BRAND.green, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 4, textTransform: 'uppercase', marginBottom: height * 0.02}}>
