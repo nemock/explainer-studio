@@ -79,16 +79,34 @@ left/top text block. **Adjustable per video:** the copy, which cutout, the
 headline size if a word overflows, and — only under the rule in §5 — the
 gradient's *inner hue*.
 
-## 2c. The illustrative / composed path (Barnum-style — operator directive 2026-06-26)
+## 2c. The illustrative / composed path — NOW THE STANDARD (operator directive, hardened 2026-06-29)
 
-There are now **two thumbnail paths**, pick per video:
+**This is the default to hit every video, not an occasional treatment.** On
+2026-06-29 the operator named the three strongest thumbnails the channel has made
+and set them as the quality bar to *maintain consistently*:
 
-- **(a) The cutout template** (§2 above) — the fast baseline. Use for most videos.
-- **(b) The illustrative / composed thumbnail** — a richer, scene-built image, for
-  videos that earn it (special editions, historical / real-world-story anchors,
-  anything with a strong visual concept). This is what got outsized positive
-  feedback on **#35 P.T. Barnum** (Dave in a tux, Barnum in the scene, an
-  old-timey era-appropriate font) — more illustrative, more eye-catching.
+- **#35 P.T. Barnum** — Dave in a tux, Barnum in the scene, old-timey center type.
+- **#15 the $1-salary myth** — composed split, hero headline.
+- **#20 Ford** — Dave-as-veteran + a robot in the cubicle, "350 HIRED BACK" + a red RECALLED stamp.
+
+His words: these "look creative… far more dynamic," and are "approaching the kind
+of thumbnail creativity" MrBeast-tier designers make. The old plain cutout
+thumbnails "weren't bad," but the results show we can do better — so **up our game
+and hold this level every time.** Do NOT quietly regress to the bare
+cutout-on-navy template to save effort.
+
+So the two paths are now ranked, not equal:
+
+- **(a) The illustrative / composed thumbnail — the DEFAULT.** A real *scene with
+  Dave in it*, era/topic-appropriate styling, a strong central brand headline, a
+  story readable in one glance (a stamp, struck words, a clear visual contrast),
+  text kept off Dave's face. Aim here first for every video.
+- **(b) The cutout template** (§2 above) — the **fallback**, when a topic genuinely
+  can't carry a scene. If you fall back to it, say why.
+
+**The recipe that worked in all three:** a scene (not a floating cutout) + Dave in
+it + topic-appropriate type + one bold headline with brand accents + a single
+glanceable story device + face kept clear of text.
 
 **Workflow for path (b) — a tag-team:**
 1. **Propose 2-3 concepts first.** For each video, before anything is generated,
