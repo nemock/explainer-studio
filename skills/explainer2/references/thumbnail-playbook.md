@@ -108,6 +108,16 @@ So the two paths are now ranked, not equal:
 it + topic-appropriate type + one bold headline with brand accents + a single
 glanceable story device + face kept clear of text.
 
+**The foil rule (operator-confirmed 2026-06-29).** The strongest two (#20 Ford,
+#35 Barnum) both put a **second character in the scene with Dave** — the robot,
+P.T. Barnum — not just Dave against a backdrop. When a topic has a natural *foil*
+(a person, a machine, an object that embodies the tension), that two-character
+scene is the richest base, and it's what to reach for first. So when proposing
+concepts, actively look for the foil: who or what is on the *other side* of this
+video's argument, and can Dave share the frame with it? Default the lead concept
+to a Dave-plus-foil scene whenever the topic offers one; a solo-Dave scene is the
+next best, and the plain cutout is the fallback.
+
 **Workflow for path (b) — a tag-team:**
 1. **Propose 2-3 concepts first.** For each video, before anything is generated,
    give the operator 2-3 thumbnail CONCEPT ideas: the scene, who/what is in it,
