@@ -15,13 +15,16 @@ STAGES = [("narrate", synth.run), ("align", align.run), ("deck", deckbuild.run),
           ("qa", qa.run)]
 STAGE_MAP = dict(STAGES)
 
-# Standing channel music bed (operator decision 2026-06-13): the café track is
-# the default for every scaffold so it's never forgotten. Pixabay-licensed
-# (cert in library/music); the benign Content ID claim is accepted. Override
-# with --music <path>/--music-gain, or --no-music. Path resolves relative to the
-# repo root so it survives a move off /Volumes.
+# Standing channel music bed: the default for every scaffold so it's never
+# forgotten. Pixabay-licensed (cert in library/music); the benign Content ID
+# claim is accepted. Override with --music <path>/--music-gain, or --no-music.
+# Path resolves relative to the repo root so it survives a move off /Volumes.
+# Operator decision 2026-06-29: switched from the café bed to the more upbeat
+# "presentation background" track (same Alex Morgan / Pixabay library). The old
+# café bed (alex-morgan-cafe-warm-background-music-541034.mp3) stays in the
+# library for back-catalogue consistency.
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_MUSIC = _REPO_ROOT / "library/music/alex-morgan-cafe-warm-background-music-541034.mp3"
+DEFAULT_MUSIC = _REPO_ROOT / "library/music/07-alex-morgan-presentation-background-music-548620.mp3"
 DEFAULT_MUSIC_GAIN = 0.12
 
 
