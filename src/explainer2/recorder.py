@@ -5,7 +5,7 @@ straight into the project's voiceover/ folder, and supports re-recording — no 
 
 Run it in the background; it returns when the operator clicks "Finish" in the browser."""
 import json, os, subprocess, threading, time, webbrowser
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
@@ -130,7 +130,7 @@ def run(proj, open_browser=True):
     # EXPLAINER_RECORDER_PORT, but keep it fixed so the grant persists.
     port = int(os.environ.get("EXPLAINER_RECORDER_PORT", "8765"))
     try:
-        srv = HTTPServer(("127.0.0.1", port), H)   # HTTPServer sets SO_REUSEADDR -> frees fast
+        srv = ThreadingHTTPServer(("127.0.0.1", port), H)   # threaded: /clip, /segments don't queue behind a /save's ffmpeg call
     except OSError as e:
         raise RuntimeError(f"recorder port {port} is unavailable ({e}). A previous recorder may "
                            f"still be open — close that tab/process, or set EXPLAINER_RECORDER_PORT "

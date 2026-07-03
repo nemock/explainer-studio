@@ -55,7 +55,7 @@
 <div id="doneMsg">✅ Session saved — you can close this tab.</div>
 
 <script>
-let segs = [], stream = null, rec = null, chunks = [], activeId = null;
+let segs = [], stream = null, rec = null, chunks = [], activeId = null, savingId = null;
 let audioCtx = null, analyser = null, meterRAF = 0;
 const WPM = 150;
 
@@ -111,6 +111,9 @@ function render() {
     card.id = 'seg' + s.id;
     const beat = s.beat ? ` · ${s.beat}` : '';
     const takes = s.takes > 1 ? ` · take ${s.takes}` : '';
+    const isSaving = savingId === s.id;
+    const label = isSaving ? 'Saving…' : (activeId === s.id ? '■ Stop' : (s.recorded ? 'Re-record' : 'Record'));
+    const locked = isSaving || (savingId !== null && activeId !== s.id);
     card.innerHTML =
       `<div class="meta"><span>Card ${s.id + 1} · ${s.slide}${beat}</span>
         <span class="status ${s.recorded ? 'ok' : 'none'}">${s.recorded ? '✓ recorded' + takes : '~' + readTime(s.text) + 's'}</span></div>
@@ -118,34 +121,41 @@ function render() {
        <div class="script">${s.text}</div>
        ${s.note ? `<div class="sub">${s.note}</div>` : ''}
        <div class="row">
-         <button data-rec="${s.id}">${activeId === s.id ? '■ Stop' : (s.recorded ? 'Re-record' : 'Record')}</button>
-         ${s.recorded && activeId !== s.id ? `<audio controls src="/clip?seg=${s.id}&t=${Date.now()}"></audio>` : ''}
+         <button data-rec="${s.id}" ${locked ? 'disabled' : ''}>${label}</button>
+         ${s.recorded && activeId !== s.id && !isSaving ? `<audio controls src="/clip?seg=${s.id}&t=${s.takes || 0}"></audio>` : ''}
        </div>`;
     list.appendChild(card);
   });
   document.querySelectorAll('[data-rec]').forEach(b =>
-    b.addEventListener('click', () => toggle(parseInt(b.dataset.rec), b)));
+    b.addEventListener('click', () => toggle(parseInt(b.dataset.rec))));
   progress();
 }
 
-async function toggle(id, btn) {
+async function toggle(id) {
   if (activeId === id) { rec.stop(); return; }
   if (rec && rec.state === 'recording') return;
+  if (savingId !== null) return;
   await ensureMic();
   chunks = []; activeId = id;
   rec = new MediaRecorder(stream, { mimeType: 'audio/webm' });
   rec.ondataavailable = e => chunks.push(e.data);
   rec.onstop = async () => {
     const blob = new Blob(chunks, { type: 'audio/webm' });
-    if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
-    const r = await fetch('/save?seg=' + id, { method: 'POST', body: blob });
-    const j = await r.json();
-    activeId = null;
-    if (j.ok) {
-      const s = segs.find(s => s.id === id);
-      s.recorded = true; s.takes = j.takes || 1;
-    }
+    activeId = null; savingId = id;
     render();
+    try {
+      const r = await fetch('/save?seg=' + id, { method: 'POST', body: blob });
+      const j = await r.json();
+      if (j.ok) {
+        const s = segs.find(s => s.id === id);
+        s.recorded = true; s.takes = j.takes || 1;
+      }
+    } catch (e) {
+      console.error('save failed', e);
+    } finally {
+      savingId = null;
+      render();
+    }
   };
   rec.start();
   render();
