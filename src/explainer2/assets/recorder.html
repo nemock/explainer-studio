@@ -178,6 +178,7 @@
     <span id="onAir">● ON AIR</span>
     <span id="recDot">REC <span id="recClock">0:00</span> <span id="pace"></span></span>
     <span id="fStatus"></span>
+    <button class="hbtn" id="fExit" title="Back to the card list (Tab)">☰ List</button>
   </div>
   <div id="fBody">
     <canvas id="bigWave"></canvas>
@@ -730,6 +731,7 @@ document.addEventListener('keydown', e => {
 });
 
 $('viewBtn').addEventListener('click', () => setView(view === 'focus' ? 'list' : 'focus'));
+$('fExit').addEventListener('click', () => setView('list'));
 $('reloadBtn').addEventListener('click', loadSegs);
 $('rtBtn').addEventListener('click', roomTone);
 $('editCancel').addEventListener('click', closeEdit);
