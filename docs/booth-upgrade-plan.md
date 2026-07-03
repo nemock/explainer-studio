@@ -27,7 +27,12 @@ mandates booth recording.
 
 ---
 
-## Batch 1 — Flow: Focus Mode + hot reload/inline edit  ✅ HIGHEST VALUE
+## Batch 1 — Flow: Focus Mode + hot reload/inline edit  ✅ LANDED 2026-07-03
+
+Built + server-side smoke-tested (segments/edit/reload/backup round-trips, JS
+parse-checked). Live acceptance: the #40 recording session. Note: in Focus Mode
+the header waveform meter is covered by the fullscreen view — the REC dot +
+elapsed clock stand in until Batch 5's big waveform.
 
 The session-changers. Files: `recorder.py`, `assets/recorder.html`.
 

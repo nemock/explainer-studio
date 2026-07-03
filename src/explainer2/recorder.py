@@ -3,8 +3,14 @@
 browser teleprompter that records the mic per segment (MediaRecorder), saves each clip
 straight into the project's voiceover/ folder, and supports re-recording — no external app.
 
+Booth 2.0 Batch 1 (2026-07-03, docs/booth-upgrade-plan.md): Focus Mode teleprompter in
+the client, plus HOT RELOAD (segments are re-read from disk on every /segments call, so
+a script edit no longer requires a booth restart) and INLINE EDIT (/edit writes the fixed
+line back to script.json — or shorts/plan.json for short hook/outro cards — with a
+one-time .pre-booth.bak backup per file per session).
+
 Run it in the background; it returns when the operator clicks "Finish" in the browser."""
-import json, os, subprocess, threading, time, webbrowser
+import json, os, shutil, subprocess, threading, time, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
@@ -12,7 +18,12 @@ from urllib.parse import urlparse, parse_qs
 ASSETS = Path(__file__).parent / "assets"
 
 
-def run(proj, open_browser=True):
+def _load_segments(proj):
+    """Build the card list fresh from disk (script.json + shorts/plan.json).
+
+    Called on every /segments request so mid-session edits — inline or external —
+    show up on a page refresh instead of requiring a server restart. Returns
+    (seg_list, stem) where stem maps card id -> clip filename stem."""
     from .media.common import effective_segments
     script = json.loads(proj.script_json.read_text())
     seg_list = [{"id": s["id"], "slide": s["slide"], "text": s["text"],
@@ -46,8 +57,15 @@ def run(proj, open_browser=True):
                              if _role == "hook" else
                              "Short outro (loops back into this Short's hook). Keep it tight; no sign-off."),
                     "clip": f"short_{_slug}_{_role}",
+                    # where an inline edit of this card writes back to:
+                    "plan_slug": _slug, "plan_role": _role,
                 })
                 _next += 1
+    stem = {s["id"]: (s.get("clip") or f"seg_{s['id']:03d}") for s in seg_list}
+    return seg_list, stem
+
+
+def run(proj, open_browser=True):
     vdir = proj.voiceover_dir
     # Finish signal (operator directive 2026-06-23): the booth runs DETACHED so it survives
     # the operator going AFK, which hides the old "process returns on Finish" signal from the
@@ -59,22 +77,73 @@ def run(proj, open_browser=True):
     done_marker.unlink(missing_ok=True)
     html = (ASSETS / "recorder.html").read_text().replace("{{TITLE}}", str(proj.data.get("title", "Voiceover")))
     state = {"done": False}
+    lock = threading.Lock()          # serialize disk load/edit against each other
+    cur = {}                         # latest {"segs": [...], "stem": {...}}
+    edited = set()                   # card ids edited this session (chip in the UI)
+    backed_up = set()                # files already snapshotted to .pre-booth.bak this session
 
-    # filename stem per card id: short hook/outro cards save to their own clip, everything
-    # else to seg_NNN (the parent narrate/align path keys off seg_NNN).
-    stem = {s["id"]: (s.get("clip") or f"seg_{s['id']:03d}") for s in seg_list}
+    def refresh():
+        with lock:
+            cur["segs"], cur["stem"] = _load_segments(proj)
+        return cur["segs"]
 
-    def wav(sid): return vdir / f"{stem[sid]}.wav"
+    refresh()
+
+    def wav(sid): return vdir / f"{cur['stem'][sid]}.wav"
     def recorded(sid): return wav(sid).exists()
 
     def takes(sid):
-        return len(list(vdir.glob(f"{stem[sid]}.take*.wav"))) + (1 if recorded(sid) else 0)
+        return len(list(vdir.glob(f"{cur['stem'][sid]}.take*.wav"))) + (1 if recorded(sid) else 0)
 
     def archive_take(sid):
         """Keep the previous take before overwriting (retake history, PRD §5.3)."""
         if recorded(sid):
-            n = len(list(vdir.glob(f"{stem[sid]}.take*.wav"))) + 1
-            wav(sid).rename(vdir / f"{stem[sid]}.take{n}.wav")
+            n = len(list(vdir.glob(f"{cur['stem'][sid]}.take*.wav"))) + 1
+            wav(sid).rename(vdir / f"{cur['stem'][sid]}.take{n}.wav")
+
+    def backup_once(path: Path):
+        """One pre-edit snapshot per file per booth session — cheap undo, no clutter."""
+        if str(path) not in backed_up and path.exists():
+            shutil.copy2(path, path.with_name(path.name + ".pre-booth.bak"))
+            backed_up.add(str(path))
+
+    def apply_edit(sid, new_text):
+        """Write an inline edit back to its source of truth. Main cards -> script.json
+        segments[].text; short hook/outro cards -> shorts/plan.json cut[role]."""
+        card = next((s for s in cur["segs"] if s["id"] == sid), None)
+        if card is None or not new_text.strip():
+            return False
+        new_text = new_text.strip()
+        with lock:
+            if card.get("plan_slug"):
+                plan_path = proj.dir / "shorts" / "plan.json"
+                plan = json.loads(plan_path.read_text())
+                hit = False
+                for cut in plan:
+                    if cut.get("slug") == card["plan_slug"] and cut.get(card["plan_role"]):
+                        backup_once(plan_path)
+                        cut[card["plan_role"]] = new_text
+                        hit = True
+                        break
+                if not hit:
+                    return False
+                plan_path.write_text(json.dumps(plan, indent=2, ensure_ascii=False) + "\n")
+            else:
+                sp = proj.script_json
+                script = json.loads(sp.read_text())
+                hit = False
+                for seg in script.get("segments", []):
+                    if seg.get("id") == sid:
+                        backup_once(sp)
+                        seg["text"] = new_text
+                        hit = True
+                        break
+                if not hit:
+                    return False
+                sp.write_text(json.dumps(script, indent=2, ensure_ascii=False) + "\n")
+        edited.add(sid)
+        refresh()
+        return True
 
     class H(BaseHTTPRequestHandler):
         def log_message(self, *a): pass
@@ -95,11 +164,13 @@ def run(proj, open_browser=True):
             if p.path == "/":
                 self._send(200, html, "text/html; charset=utf-8")
             elif p.path == "/segments":
+                segs = refresh()   # HOT RELOAD: always reflect what's on disk right now
                 self._send(200, json.dumps([{**s, "recorded": recorded(s["id"]),
-                                             "takes": takes(s["id"])} for s in seg_list]))
+                                             "takes": takes(s["id"]),
+                                             "edited": s["id"] in edited} for s in segs]))
             elif p.path == "/clip":
                 sid = int(parse_qs(p.query).get("seg", ["-1"])[0])
-                f = wav(sid) if sid in stem else None
+                f = wav(sid) if sid in cur["stem"] else None
                 self._send(200, f.read_bytes(), "audio/wav") if (f and f.exists()) else self._send(404, b"")
             else:
                 self._send(404, b"{}")
@@ -108,10 +179,10 @@ def run(proj, open_browser=True):
             p = urlparse(self.path)
             if p.path == "/save":
                 sid = int(parse_qs(p.query).get("seg", ["-1"])[0])
-                if sid not in stem:
+                if sid not in cur["stem"]:
                     return self._send(404, json.dumps({"ok": False}))
                 blob = self.rfile.read(int(self.headers.get("Content-Length", 0)))
-                webm = vdir / f"{stem[sid]}.webm"
+                webm = vdir / f"{cur['stem'][sid]}.webm"
                 webm.write_bytes(blob)
                 archive_take(sid)
                 r = subprocess.run(["ffmpeg", "-hide_banner", "-y", "-i", str(webm),
@@ -119,6 +190,13 @@ def run(proj, open_browser=True):
                 webm.unlink(missing_ok=True)
                 ok = r.returncode == 0 and wav(sid).exists()
                 self._send(200 if ok else 500, json.dumps({"ok": ok, "seg": sid, "takes": takes(sid)}))
+            elif p.path == "/edit":
+                try:
+                    body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
+                    ok = apply_edit(int(body["seg"]), str(body.get("text", "")))
+                except Exception:
+                    ok = False
+                self._send(200 if ok else 400, json.dumps({"ok": ok}))
             elif p.path == "/done":
                 state["done"] = True
                 self._send(200, json.dumps({"ok": True}))
@@ -150,6 +228,7 @@ def run(proj, open_browser=True):
         pass
     srv.shutdown()
     srv.server_close()   # release the fixed port promptly so the next segment can rebind it
+    seg_list = refresh()
     rec = [s["id"] for s in seg_list if recorded(s["id"])]
     miss = [s["id"] for s in seg_list if not recorded(s["id"])]
     result = {"recorded": rec, "missing": miss, "segments": len(seg_list)}

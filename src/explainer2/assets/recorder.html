@@ -6,32 +6,39 @@
 <title>{{TITLE}} — record voiceover</title>
 <style>
   :root { --bg:#0b1020; --fg:#f5f7ff; --accent:#5b8cff; --good:#3ddc84; --bad:#ff7a59;
-          --warn:#ffd166; }
+          --warn:#ffd166; --line:#20284a; --card:#121a33; }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--fg);
     font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }
   header { position:sticky; top:0; z-index:5; background:rgba(11,16,32,.95);
-    backdrop-filter:blur(8px); padding:14px 24px; border-bottom:1px solid #20284a;
-    display:flex; align-items:center; gap:16px; }
+    backdrop-filter:blur(8px); padding:14px 24px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; gap:14px; }
   header h1 { font-size:18px; margin:0; font-weight:800; flex:1; min-width:0;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   #progress { font-size:14px; opacity:.85; white-space:nowrap; }
-  #meter { width:160px; height:34px; background:#0d1430; border:1px solid #20284a;
+  #meter { width:160px; height:34px; background:#0d1430; border:1px solid var(--line);
     border-radius:8px; }
+  .hbtn { font:inherit; font-size:13px; font-weight:700; border:1px solid var(--line);
+    border-radius:999px; padding:8px 14px; cursor:pointer; background:#0d1430; color:var(--fg); }
+  .hbtn:hover { border-color:var(--accent); }
   main { max-width:860px; margin:0 auto; padding:24px; }
-  .card { background:#121a33; border:1px solid #20284a; border-radius:16px; padding:22px;
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:22px;
     margin-bottom:18px; }
   .card.recorded { border-color:var(--good); }
   .card.active { border-color:var(--bad); box-shadow:0 0 0 2px var(--bad); }
   .meta { font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent);
     font-weight:700; margin-bottom:6px; display:flex; justify-content:space-between; gap:10px; }
   .status.ok { color:var(--good); } .status.none { color:#7a85ad; }
+  .chip { display:inline-block; font-size:11px; font-weight:800; letter-spacing:.06em;
+    padding:2px 8px; border-radius:999px; background:#26305c; color:var(--warn); margin-left:8px; }
   .device { font-size:13px; color:var(--warn); font-weight:700; margin-bottom:8px; }
   .script { font-size:28px; line-height:1.45; font-weight:600; margin-bottom:14px; }
   .sub { font-size:13px; opacity:.65; margin-bottom:14px; }
   button { font:inherit; font-weight:700; border:0; border-radius:999px; padding:12px 22px;
     cursor:pointer; background:var(--accent); color:#fff; }
   button.rec { background:var(--bad); }
+  button.ghost { background:transparent; border:1px solid var(--line); color:var(--fg);
+    padding:10px 16px; font-size:14px; }
   button:disabled { opacity:.45; cursor:default; }
   .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
   audio { height:34px; }
@@ -40,6 +47,53 @@
   #finishBtn { background:var(--good); color:#06210f; font-size:18px; padding:16px 40px; }
   #doneMsg { display:none; text-align:center; padding:60px 24px; font-size:24px; }
   .hint { opacity:.7; font-size:14px; margin-top:6px; }
+
+  /* ---------- Focus Mode (Booth 2.0 Batch 1) ---------- */
+  #focus { position:fixed; inset:0; z-index:20; background:var(--bg); display:none;
+    flex-direction:column; }
+  #focus.on { display:flex; }
+  #fTop { display:flex; align-items:center; gap:14px; padding:16px 28px;
+    border-bottom:1px solid var(--line); font-size:14px; }
+  #fCount { font-weight:800; color:var(--accent); letter-spacing:.08em; }
+  #fSlide { opacity:.75; text-transform:uppercase; letter-spacing:.1em; font-size:12px;
+    font-weight:700; }
+  #fStatus { margin-left:auto; font-weight:700; white-space:nowrap; }
+  #fStatus.ok { color:var(--good); } #fStatus.none { color:#7a85ad; }
+  #fBody { flex:1; overflow:auto; display:flex; flex-direction:column; justify-content:center;
+    padding:24px 8vw; max-width:1100px; margin:0 auto; width:100%; }
+  #fDevice { color:var(--warn); font-weight:800; font-size:16px; margin-bottom:18px;
+    letter-spacing:.02em; }
+  #fText { font-size:clamp(30px, 3.4vw, 46px); line-height:1.5; font-weight:650; }
+  #fNote { margin-top:22px; font-size:15px; opacity:.6; max-width:70ch; }
+  #fAudio { margin-top:22px; }
+  #fBottom { display:flex; align-items:center; gap:18px; padding:14px 28px;
+    border-top:1px solid var(--line); font-size:13px; opacity:.85; flex-wrap:wrap; }
+  kbd { background:#0d1430; border:1px solid var(--line); border-bottom-width:2px;
+    border-radius:6px; padding:2px 7px; font-family:inherit; font-weight:700; font-size:12px; }
+  #focus.recording { box-shadow: inset 0 0 0 4px var(--bad); }
+  #recDot { display:none; align-items:center; gap:8px; color:var(--bad); font-weight:800; }
+  #recDot::before { content:""; width:12px; height:12px; border-radius:50%;
+    background:var(--bad); animation:blink 1s infinite; display:inline-block; }
+  #focus.recording #recDot { display:flex; }
+  @keyframes blink { 50% { opacity:.25; } }
+  #countdown { position:fixed; inset:0; z-index:30; display:none; align-items:center;
+    justify-content:center; background:rgba(11,16,32,.82); }
+  #countdown.on { display:flex; }
+  #cdNum { font-size:26vh; font-weight:900; color:var(--good); text-shadow:0 0 80px rgba(61,220,132,.35); }
+
+  /* ---------- Edit modal ---------- */
+  #editWrap { position:fixed; inset:0; z-index:40; display:none; align-items:center;
+    justify-content:center; background:rgba(6,9,20,.8); }
+  #editWrap.on { display:flex; }
+  #editBox { background:var(--card); border:1px solid var(--accent); border-radius:16px;
+    width:min(860px, 92vw); padding:22px; }
+  #editBox h3 { margin:0 0 12px; font-size:15px; letter-spacing:.06em; color:var(--accent);
+    text-transform:uppercase; }
+  #editTa { width:100%; min-height:170px; font:inherit; font-size:19px; line-height:1.5;
+    background:#0d1430; color:var(--fg); border:1px solid var(--line); border-radius:10px;
+    padding:14px; resize:vertical; }
+  #editBox .row { margin-top:14px; justify-content:flex-end; }
+  #editHint { margin-right:auto; font-size:12px; opacity:.6; }
 </style>
 </head>
 <body>
@@ -47,17 +101,62 @@
   <h1>🎙️ {{TITLE}}</h1>
   <canvas id="meter" width="160" height="34"></canvas>
   <div id="progress">0 / 0</div>
+  <button class="hbtn" id="reloadBtn" title="Re-read script.json from disk">↻ Reload script</button>
+  <button class="hbtn" id="viewBtn" title="Toggle Focus Mode (Tab)">⛶ Focus</button>
 </header>
 <main id="list"></main>
 <div id="finish"><button id="finishBtn">Finish session ✓</button>
   <div class="hint">Record every segment (re-record any time — earlier takes are kept).
-    Press <b>Esc</b> to stop a recording.</div></div>
+    <b>Tab</b> = Focus Mode teleprompter · <b>Esc</b> stops a recording.</div></div>
 <div id="doneMsg">✅ Session saved — you can close this tab.</div>
+
+<!-- Focus Mode -->
+<div id="focus">
+  <div id="fTop">
+    <span id="fCount"></span><span id="fSlide"></span><span id="fBeat" class="chip" style="display:none"></span>
+    <span id="fEdited" class="chip" style="display:none">edited</span>
+    <span id="recDot">REC <span id="recClock">0:00</span></span>
+    <span id="fStatus"></span>
+  </div>
+  <div id="fBody">
+    <div id="fDevice"></div>
+    <div id="fText"></div>
+    <div id="fNote"></div>
+    <div id="fAudio"></div>
+  </div>
+  <div id="fBottom">
+    <span><kbd>Space</kbd> record / stop</span>
+    <span><kbd>Enter</kbd> keep &amp; next</span>
+    <span><kbd>R</kbd> retake</span>
+    <span><kbd>P</kbd> play</span>
+    <span><kbd>E</kbd> edit line</span>
+    <span><kbd>←</kbd><kbd>→</kbd> cards</span>
+    <span><kbd>Tab</kbd> list view</span>
+  </div>
+</div>
+<div id="countdown"><div id="cdNum">3</div></div>
+
+<!-- Inline edit -->
+<div id="editWrap">
+  <div id="editBox">
+    <h3>Edit line — saves back to the script</h3>
+    <textarea id="editTa"></textarea>
+    <div class="row">
+      <span id="editHint"><kbd>⌘Enter</kbd> save · <kbd>Esc</kbd> cancel</span>
+      <button class="ghost" id="editCancel">Cancel</button>
+      <button id="editSave">Save to script</button>
+    </div>
+  </div>
+</div>
 
 <script>
 let segs = [], stream = null, rec = null, chunks = [], activeId = null, savingId = null;
 let audioCtx = null, analyser = null, meterRAF = 0;
+let view = 'list', fIdx = 0, cdTimer = null, editingId = null, recT0 = 0, recTick = null;
+let focusEntered = false;
 const WPM = 150;
+
+const $ = id => document.getElementById(id);
 
 function readTime(text) {
   const w = (text.trim().match(/\S+/g) || []).length;
@@ -76,7 +175,7 @@ async function ensureMic() {
 }
 
 function drawMeter() {
-  const c = document.getElementById('meter'), g = c.getContext('2d');
+  const c = $('meter'), g = c.getContext('2d');
   g.clearRect(0, 0, c.width, c.height);
   if (analyser && activeId !== null) {
     const buf = new Uint8Array(analyser.frequencyBinCount);
@@ -97,13 +196,14 @@ function drawMeter() {
 function progress() {
   const n = segs.filter(s => s.recorded).length;
   const total = segs.reduce((a, s) => a + readTime(s.text), 0);
-  document.getElementById('progress').textContent =
+  $('progress').textContent =
     `${n} / ${segs.length} · ~${Math.floor(total / 60)}m${String(total % 60).padStart(2, '0')}s read`;
-  document.getElementById('finishBtn').disabled = n < segs.length;
+  $('finishBtn').disabled = n < segs.length;
 }
 
+/* ---------------- list view ---------------- */
 function render() {
-  const list = document.getElementById('list');
+  const list = $('list');
   list.innerHTML = '';
   segs.forEach(s => {
     const card = document.createElement('div');
@@ -115,24 +215,97 @@ function render() {
     const label = isSaving ? 'Saving…' : (activeId === s.id ? '■ Stop' : (s.recorded ? 'Re-record' : 'Record'));
     const locked = isSaving || (savingId !== null && activeId !== s.id);
     card.innerHTML =
-      `<div class="meta"><span>Card ${s.id + 1} · ${s.slide}${beat}</span>
+      `<div class="meta"><span>Card ${s.id + 1} · ${s.slide}${beat}${s.edited ? '<span class="chip">edited</span>' : ''}</span>
         <span class="status ${s.recorded ? 'ok' : 'none'}">${s.recorded ? '✓ recorded' + takes : '~' + readTime(s.text) + 's'}</span></div>
        ${s.device ? `<div class="device">⚡ ${s.device}</div>` : ''}
        <div class="script">${s.text}</div>
        ${s.note ? `<div class="sub">${s.note}</div>` : ''}
        <div class="row">
          <button data-rec="${s.id}" ${locked ? 'disabled' : ''}>${label}</button>
+         <button class="ghost" data-edit="${s.id}" title="Edit this line (writes back to the script)">✎ Edit</button>
          ${s.recorded && activeId !== s.id && !isSaving ? `<audio controls src="/clip?seg=${s.id}&t=${s.takes || 0}"></audio>` : ''}
        </div>`;
     list.appendChild(card);
   });
   document.querySelectorAll('[data-rec]').forEach(b =>
     b.addEventListener('click', () => toggle(parseInt(b.dataset.rec))));
+  document.querySelectorAll('[data-edit]').forEach(b =>
+    b.addEventListener('click', () => openEdit(parseInt(b.dataset.edit))));
   progress();
 }
 
-async function toggle(id) {
-  if (activeId === id) { rec.stop(); return; }
+/* ---------------- focus mode ---------------- */
+function setView(v) {
+  if (activeId !== null || cdTimer) return;   // don't switch mid-record / mid-countdown
+  view = v;
+  $('focus').classList.toggle('on', v === 'focus');
+  $('viewBtn').textContent = v === 'focus' ? '☰ List' : '⛶ Focus';
+  if (v === 'focus') {
+    if (!focusEntered) {                     // first entry: land on the first open card
+      const firstOpen = segs.findIndex(s => !s.recorded);
+      fIdx = firstOpen >= 0 ? firstOpen : 0;
+      focusEntered = true;
+    }
+    if (fIdx >= segs.length) fIdx = Math.max(0, segs.length - 1);
+    focusRender();
+  }
+}
+
+function focusSeg() { return segs[fIdx]; }
+
+function focusRender() {
+  const s = focusSeg();
+  if (!s) return;
+  $('fCount').textContent = `CARD ${fIdx + 1} / ${segs.length}`;
+  $('fSlide').textContent = s.slide + (s.beat ? ` · ${s.beat}` : '');
+  $('fEdited').style.display = s.edited ? '' : 'none';
+  $('fBeat').style.display = 'none';
+  const st = $('fStatus');
+  if (savingId === s.id) { st.textContent = 'Saving…'; st.className = ''; }
+  else if (activeId === s.id) { st.textContent = ''; st.className = ''; }
+  else if (s.recorded) { st.textContent = '✓ recorded' + (s.takes > 1 ? ` · take ${s.takes}` : ''); st.className = 'ok'; }
+  else { st.textContent = `not recorded · ~${readTime(s.text)}s`; st.className = 'none'; }
+  $('fDevice').textContent = s.device ? `⚡ ${s.device}` : '';
+  $('fText').textContent = s.text;
+  $('fNote').textContent = s.note || '';
+  $('fAudio').innerHTML = (s.recorded && activeId !== s.id && savingId !== s.id)
+    ? `<audio controls src="/clip?seg=${s.id}&t=${s.takes || 0}"></audio>` : '';
+}
+
+function focusNav(d) {
+  if (activeId !== null || cdTimer) return;
+  fIdx = Math.min(segs.length - 1, Math.max(0, fIdx + d));
+  focusRender();
+}
+
+function countdownThen(fn) {
+  const el = $('countdown'), num = $('cdNum');
+  let n = 3;
+  el.classList.add('on'); num.textContent = n;
+  cdTimer = setInterval(() => {
+    n--;
+    if (n <= 0) {
+      clearInterval(cdTimer); cdTimer = null;
+      el.classList.remove('on');
+      fn();
+    } else num.textContent = n;
+  }, 700);
+}
+
+function cancelCountdown() {
+  if (cdTimer) { clearInterval(cdTimer); cdTimer = null; $('countdown').classList.remove('on'); }
+}
+
+function recClockStart() {
+  recT0 = Date.now();
+  recTick = setInterval(() => {
+    const t = Math.floor((Date.now() - recT0) / 1000);
+    $('recClock').textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+  }, 250);
+}
+
+/* ---------------- record core ---------------- */
+async function startRec(id) {
   if (rec && rec.state === 'recording') return;
   if (savingId !== null) return;
   await ensureMic();
@@ -142,7 +315,9 @@ async function toggle(id) {
   rec.onstop = async () => {
     const blob = new Blob(chunks, { type: 'audio/webm' });
     activeId = null; savingId = id;
-    render();
+    $('focus').classList.remove('recording');
+    if (recTick) { clearInterval(recTick); recTick = null; }
+    render(); if (view === 'focus') focusRender();
     try {
       const r = await fetch('/save?seg=' + id, { method: 'POST', body: blob });
       const j = await r.json();
@@ -154,26 +329,99 @@ async function toggle(id) {
       console.error('save failed', e);
     } finally {
       savingId = null;
-      render();
+      render(); if (view === 'focus') focusRender();
     }
   };
   rec.start();
+  if (view === 'focus') { $('focus').classList.add('recording'); recClockStart(); }
+  render(); if (view === 'focus') focusRender();
+  const el = $('seg' + id);
+  if (el && view === 'list') el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function stopRec() { if (rec && rec.state === 'recording') rec.stop(); }
+
+async function toggle(id) {          // list view: legacy immediate toggle
+  if (activeId === id) { stopRec(); return; }
+  startRec(id);
+}
+
+/* ---------------- inline edit ---------------- */
+function openEdit(id) {
+  if (activeId !== null || cdTimer) return;
+  const s = segs.find(s => s.id === id);
+  if (!s) return;
+  editingId = id;
+  $('editTa').value = s.text;
+  $('editWrap').classList.add('on');
+  $('editTa').focus();
+}
+
+function closeEdit() { editingId = null; $('editWrap').classList.remove('on'); }
+
+async function saveEdit() {
+  const text = $('editTa').value;
+  const r = await fetch('/edit', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ seg: editingId, text }) });
+  const j = await r.json();
+  if (j.ok) { closeEdit(); await loadSegs(); }
+  else alert('Edit failed — see booth log.');
+}
+
+/* ---------------- data + wiring ---------------- */
+async function loadSegs() {
+  const d = await fetch('/segments').then(r => r.json());
+  segs = d;
   render();
-  document.getElementById('seg' + id).scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (view === 'focus') focusRender();
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && rec && rec.state === 'recording') rec.stop();
+  // typing in the edit box: only handle save/cancel
+  if (editingId !== null) {
+    if (e.key === 'Escape') { e.preventDefault(); closeEdit(); }
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveEdit(); }
+    return;
+  }
+  if (e.key === 'Tab') { e.preventDefault(); setView(view === 'focus' ? 'list' : 'focus'); return; }
+  if (e.key === 'Escape') {
+    if (cdTimer) { cancelCountdown(); return; }
+    stopRec(); return;
+  }
+  if (view !== 'focus') return;
+  const s = focusSeg();
+  if (!s) return;
+  if (e.key === ' ') {
+    e.preventDefault();
+    if (activeId === s.id) stopRec();
+    else if (cdTimer) cancelCountdown();
+    else if (activeId === null && savingId === null) countdownThen(() => startRec(s.id));
+  } else if (e.key === 'Enter') {
+    if (activeId === null && !cdTimer) focusNav(1);
+  } else if (e.key === 'ArrowRight') { focusNav(1); }
+  else if (e.key === 'ArrowLeft') { focusNav(-1); }
+  else if (e.key === 'r' || e.key === 'R') {
+    if (activeId === null && savingId === null && !cdTimer) countdownThen(() => startRec(s.id));
+  } else if (e.key === 'p' || e.key === 'P') {
+    const a = document.querySelector('#fAudio audio');
+    if (a) { a.currentTime = 0; a.play(); }
+  } else if (e.key === 'e' || e.key === 'E') { openEdit(s.id); }
 });
 
-document.getElementById('finishBtn').addEventListener('click', async () => {
+$('viewBtn').addEventListener('click', () => setView(view === 'focus' ? 'list' : 'focus'));
+$('reloadBtn').addEventListener('click', loadSegs);
+$('editCancel').addEventListener('click', closeEdit);
+$('editSave').addEventListener('click', saveEdit);
+
+$('finishBtn').addEventListener('click', async () => {
   await fetch('/done', { method: 'POST' });
+  setView('list');
   document.querySelector('main').style.display = 'none';
-  document.getElementById('finish').style.display = 'none';
-  document.getElementById('doneMsg').style.display = 'block';
+  $('finish').style.display = 'none';
+  $('doneMsg').style.display = 'block';
 });
 
-fetch('/segments').then(r => r.json()).then(d => { segs = d; render(); drawMeter(); });
+loadSegs().then(drawMeter);
 </script>
 </body>
 </html>
