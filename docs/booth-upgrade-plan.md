@@ -76,7 +76,26 @@ on `/save` — ffmpeg/ffprobe astats), `recorder.html` (badges).
    retake rate, total record time, QC flags — surfaced on the done screen and
    available for the project PLAYBOOK.
 
-## Batch 3 — Share it: standalone booth + daily-skill adoption
+## Batch 3 — Share it: standalone booth + daily-skill adoption  ✅ LANDED 2026-07-03
+
+Shipped as the LAST batch (reordered: with all features building in one push, the
+daily skills adopt the finished booth in one switch). What landed:
+- `tools/launch_booth.py` is the shared entry point: `--status <dir>` (DONE/
+  PENDING/NOT_OPEN, v1 record-status parity, durable marker), port auto-fallback
+  :8766-:8770 when :8765 is another project's booth, same-project idempotency
+  guard (title match), `work/booth_port` records the chosen port.
+- Verified live against a copy of the real 2026-06-30 FTT project (script/1):
+  identical card list to v1 incl. the project's own brand spoken-CTA card; full
+  status lifecycle exercised.
+- Audit result: three voiced routines (FTT weekly, Monday MedTech weekly, daily
+  founder tip — pair disabled), each + its recording-check companion, switched
+  from v1 `record-open`/`record-status` to the shared launcher. IG carousel is
+  image-only — no change. Checkers gained a NOT_OPEN recovery branch (re-open,
+  takes persist). v1 code untouched. Doc:
+  `make_money/routine_changes/2026-07-03-recording-booth-2-adoption-voiced-routines.md`.
+- Open risk to watch: first unattended FTT/MedTech fires — if the new
+  `~/myenv/bin/python3.12 launch_booth.py` shape prompts, add it to the
+  user-level allowlist (detailed in the routine doc).
 
 Do this BEFORE the remaining feature batches so every later improvement lands
 once and benefits all channels (FWF deep dives + FTT + MedTech Mondays + any
