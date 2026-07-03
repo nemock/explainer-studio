@@ -6,31 +6,45 @@
 <title>{{TITLE}} — record voiceover</title>
 <style>
   :root { --bg:#0b1020; --fg:#f5f7ff; --accent:#5b8cff; --good:#3ddc84; --bad:#ff7a59;
-          --warn:#ffd166; --line:#20284a; --card:#121a33; }
+          --warn:#ffd166; --line:#20284a; --card:#121a33; --red:#ff4d5e; }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--fg);
     font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }
   header { position:sticky; top:0; z-index:5; background:rgba(11,16,32,.95);
-    backdrop-filter:blur(8px); padding:14px 24px; border-bottom:1px solid var(--line);
-    display:flex; align-items:center; gap:14px; }
-  header h1 { font-size:18px; margin:0; font-weight:800; flex:1; min-width:0;
+    backdrop-filter:blur(8px); padding:12px 24px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; gap:12px; }
+  header h1 { font-size:17px; margin:0; font-weight:800; flex:1; min-width:0;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  #progress { font-size:14px; opacity:.85; white-space:nowrap; }
-  #meter { width:160px; height:34px; background:#0d1430; border:1px solid var(--line);
+  #progress { font-size:13px; opacity:.85; white-space:nowrap; }
+  #meter { width:150px; height:32px; background:#0d1430; border:1px solid var(--line);
     border-radius:8px; }
+  #micSel { max-width:170px; font:inherit; font-size:12px; background:#0d1430;
+    color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:6px 8px; }
   .hbtn { font:inherit; font-size:13px; font-weight:700; border:1px solid var(--line);
-    border-radius:999px; padding:8px 14px; cursor:pointer; background:#0d1430; color:var(--fg); }
+    border-radius:999px; padding:8px 14px; cursor:pointer; background:#0d1430; color:var(--fg);
+    white-space:nowrap; }
   .hbtn:hover { border-color:var(--accent); }
-  main { max-width:860px; margin:0 auto; padding:24px; }
+  .hbtn.warn { border-color:var(--warn); color:var(--warn); }
+  .hbtn.good { border-color:var(--good); color:var(--good); }
+  .hbtn.bad { border-color:var(--red); color:var(--red); }
+  main { max-width:880px; margin:0 auto; padding:24px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:22px;
     margin-bottom:18px; }
   .card.recorded { border-color:var(--good); }
   .card.active { border-color:var(--bad); box-shadow:0 0 0 2px var(--bad); }
   .meta { font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent);
-    font-weight:700; margin-bottom:6px; display:flex; justify-content:space-between; gap:10px; }
+    font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:8px;
+    flex-wrap:wrap; }
+  .meta .right { margin-left:auto; display:flex; align-items:center; gap:8px; }
   .status.ok { color:var(--good); } .status.none { color:#7a85ad; }
-  .chip { display:inline-block; font-size:11px; font-weight:800; letter-spacing:.06em;
-    padding:2px 8px; border-radius:999px; background:#26305c; color:var(--warn); margin-left:8px; }
+  .chip { display:inline-block; font-size:11px; font-weight:800; letter-spacing:.05em;
+    padding:2px 9px; border-radius:999px; background:#26305c; color:var(--warn);
+    text-transform:none; cursor:default; }
+  .chip.click { cursor:pointer; }
+  .chip.good { background:rgba(61,220,132,.14); color:var(--good); }
+  .chip.warn { background:rgba(255,209,102,.14); color:var(--warn); }
+  .chip.bad  { background:rgba(255,77,94,.16);  color:var(--red); }
+  .chip.dim  { background:#1a2244; color:#7a85ad; }
   .device { font-size:13px; color:var(--warn); font-weight:700; margin-bottom:8px; }
   .script { font-size:28px; line-height:1.45; font-weight:600; margin-bottom:14px; }
   .sub { font-size:13px; opacity:.65; margin-bottom:14px; }
@@ -45,107 +59,176 @@
   #finish { position:sticky; bottom:0; background:linear-gradient(transparent,#0b1020 40%);
     padding:24px; text-align:center; }
   #finishBtn { background:var(--good); color:#06210f; font-size:18px; padding:16px 40px; }
-  #doneMsg { display:none; text-align:center; padding:60px 24px; font-size:24px; }
+  #doneMsg { display:none; text-align:center; padding:48px 24px; font-size:22px; }
+  #doneStats { max-width:560px; margin:22px auto 0; text-align:left; font-size:15px;
+    background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px 22px; }
+  #doneStats div { display:flex; justify-content:space-between; padding:4px 0; }
+  #doneStats b { color:var(--good); }
   .hint { opacity:.7; font-size:14px; margin-top:6px; }
 
-  /* ---------- Focus Mode (Booth 2.0 Batch 1) ---------- */
+  /* ---------- Focus Mode ---------- */
   #focus { position:fixed; inset:0; z-index:20; background:var(--bg); display:none;
     flex-direction:column; }
   #focus.on { display:flex; }
-  #fTop { display:flex; align-items:center; gap:14px; padding:16px 28px;
-    border-bottom:1px solid var(--line); font-size:14px; }
+  #fTop { display:flex; align-items:center; gap:12px; padding:14px 26px;
+    border-bottom:1px solid var(--line); font-size:13px; flex-wrap:wrap;
+    transition:opacity .3s; }
   #fCount { font-weight:800; color:var(--accent); letter-spacing:.08em; }
   #fSlide { opacity:.75; text-transform:uppercase; letter-spacing:.1em; font-size:12px;
     font-weight:700; }
   #fStatus { margin-left:auto; font-weight:700; white-space:nowrap; }
   #fStatus.ok { color:var(--good); } #fStatus.none { color:#7a85ad; }
-  #fBody { flex:1; overflow:auto; display:flex; flex-direction:column; justify-content:center;
-    padding:24px 8vw; max-width:1100px; margin:0 auto; width:100%; }
-  #fDevice { color:var(--warn); font-weight:800; font-size:16px; margin-bottom:18px;
-    letter-spacing:.02em; }
+  #fBody { flex:1; overflow:hidden; position:relative; display:flex; }
+  #fScroll { flex:1; overflow:auto; display:flex; flex-direction:column;
+    justify-content:center; padding:24px 8vw; max-width:1100px; margin:0 auto; width:100%;
+    position:relative; z-index:2; }
+  #bigWave { position:absolute; inset:0; z-index:1; opacity:0; transition:opacity .4s;
+    pointer-events:none; }
+  #focus.recording #bigWave { opacity:.33; }
+  #fDevice { color:var(--warn); font-weight:800; font-size:16px; margin-bottom:18px; }
   #fText { font-size:clamp(30px, 3.4vw, 46px); line-height:1.5; font-weight:650; }
   #fNote { margin-top:22px; font-size:15px; opacity:.6; max-width:70ch; }
   #fAudio { margin-top:22px; }
-  #fBottom { display:flex; align-items:center; gap:18px; padding:14px 28px;
-    border-top:1px solid var(--line); font-size:13px; opacity:.85; flex-wrap:wrap; }
+  #fBottom { display:flex; align-items:center; gap:16px; padding:13px 26px;
+    border-top:1px solid var(--line); font-size:13px; opacity:.85; flex-wrap:wrap;
+    transition:opacity .3s; }
+  #focus.recording #fBottom { opacity:.18; }
   kbd { background:#0d1430; border:1px solid var(--line); border-bottom-width:2px;
     border-radius:6px; padding:2px 7px; font-family:inherit; font-weight:700; font-size:12px; }
   #focus.recording { box-shadow: inset 0 0 0 4px var(--bad); }
+  #onAir { display:none; align-items:center; gap:8px; color:var(--red); font-weight:900;
+    letter-spacing:.14em; font-size:13px; border:1px solid var(--red); border-radius:6px;
+    padding:3px 10px; background:rgba(255,77,94,.1); }
+  #focus.recording #onAir { display:flex; }
   #recDot { display:none; align-items:center; gap:8px; color:var(--bad); font-weight:800; }
-  #recDot::before { content:""; width:12px; height:12px; border-radius:50%;
+  #recDot::before { content:""; width:11px; height:11px; border-radius:50%;
     background:var(--bad); animation:blink 1s infinite; display:inline-block; }
   #focus.recording #recDot { display:flex; }
+  #pace.over { color:var(--warn); font-weight:800; }
   @keyframes blink { 50% { opacity:.25; } }
   #countdown { position:fixed; inset:0; z-index:30; display:none; align-items:center;
     justify-content:center; background:rgba(11,16,32,.82); }
   #countdown.on { display:flex; }
-  #cdNum { font-size:26vh; font-weight:900; color:var(--good); text-shadow:0 0 80px rgba(61,220,132,.35); }
+  #cdNum { font-size:26vh; font-weight:900; color:var(--good);
+    text-shadow:0 0 80px rgba(61,220,132,.35); }
+  /* slide mini-preview */
+  #slidePrev { position:absolute; right:22px; bottom:20px; z-index:3; width:250px;
+    aspect-ratio:16/9; background:radial-gradient(120% 120% at 50% 30%, #101a3c 0%, #090d1c 70%);
+    border:1px solid var(--line); border-radius:10px; padding:12px 14px; overflow:hidden;
+    display:none; flex-direction:column; justify-content:center; text-align:center;
+    box-shadow:0 10px 30px rgba(0,0,0,.45); }
+  #slidePrev.on { display:flex; }
+  #spType { position:absolute; top:6px; right:9px; font-size:9px; letter-spacing:.1em;
+    text-transform:uppercase; color:#7a85ad; font-weight:800; }
+  #spKicker { font-size:9px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--good); font-weight:800; margin-bottom:6px; }
+  #spMain { font-size:14px; font-weight:800; line-height:1.25; }
+  #spMain .punch { font-size:22px; color:var(--good); font-weight:900; }
+  #spMain .quote { font-style:italic; font-weight:600; font-size:12px; }
+  #spMain ul { text-align:left; margin:0; padding-left:16px; font-size:11px; font-weight:600; }
 
-  /* ---------- Edit modal ---------- */
-  #editWrap { position:fixed; inset:0; z-index:40; display:none; align-items:center;
+  /* ---------- modals ---------- */
+  .modalWrap { position:fixed; inset:0; z-index:40; display:none; align-items:center;
     justify-content:center; background:rgba(6,9,20,.8); }
-  #editWrap.on { display:flex; }
-  #editBox { background:var(--card); border:1px solid var(--accent); border-radius:16px;
-    width:min(860px, 92vw); padding:22px; }
-  #editBox h3 { margin:0 0 12px; font-size:15px; letter-spacing:.06em; color:var(--accent);
+  .modalWrap.on { display:flex; }
+  .modalBox { background:var(--card); border:1px solid var(--accent); border-radius:16px;
+    width:min(860px, 92vw); max-height:84vh; overflow:auto; padding:22px; }
+  .modalBox h3 { margin:0 0 12px; font-size:14px; letter-spacing:.06em; color:var(--accent);
     text-transform:uppercase; }
   #editTa { width:100%; min-height:170px; font:inherit; font-size:19px; line-height:1.5;
     background:#0d1430; color:var(--fg); border:1px solid var(--line); border-radius:10px;
     padding:14px; resize:vertical; }
-  #editBox .row { margin-top:14px; justify-content:flex-end; }
-  #editHint { margin-right:auto; font-size:12px; opacity:.6; }
+  .modalBox .row { margin-top:14px; justify-content:flex-end; }
+  .mhint { margin-right:auto; font-size:12px; opacity:.6; }
+  .diffText { font-size:17px; line-height:1.7; }
+  .diffText del { color:var(--red); text-decoration:line-through; opacity:.85; }
+  .diffText ins { color:var(--good); text-decoration:none; font-weight:700; }
+  .takeRow { display:flex; align-items:center; gap:12px; padding:10px 0;
+    border-bottom:1px solid var(--line); }
+  .takeRow:last-child { border-bottom:0; }
+  .takeRow .lbl { font-weight:800; width:90px; }
 </style>
 </head>
 <body>
 <header>
   <h1>🎙️ {{TITLE}}</h1>
-  <canvas id="meter" width="160" height="34"></canvas>
+  <select id="micSel" title="Microphone"><option>mic…</option></select>
+  <canvas id="meter" width="150" height="32" title="Input level"></canvas>
+  <button class="hbtn" id="rtBtn" title="3-second room-tone / noise-floor check">🎚 Room tone</button>
   <div id="progress">0 / 0</div>
-  <button class="hbtn" id="reloadBtn" title="Re-read script.json from disk">↻ Reload script</button>
+  <button class="hbtn" id="reloadBtn" title="Re-read script.json from disk">↻ Reload</button>
   <button class="hbtn" id="viewBtn" title="Toggle Focus Mode (Tab)">⛶ Focus</button>
 </header>
 <main id="list"></main>
 <div id="finish"><button id="finishBtn">Finish session ✓</button>
   <div class="hint">Record every segment (re-record any time — earlier takes are kept).
     <b>Tab</b> = Focus Mode teleprompter · <b>Esc</b> stops a recording.</div></div>
-<div id="doneMsg">✅ Session saved — you can close this tab.</div>
+<div id="doneMsg">✅ Session saved — you can close this tab.<div id="doneStats"></div></div>
 
 <!-- Focus Mode -->
 <div id="focus">
   <div id="fTop">
-    <span id="fCount"></span><span id="fSlide"></span><span id="fBeat" class="chip" style="display:none"></span>
+    <span id="fCount"></span><span id="fSlide"></span>
     <span id="fEdited" class="chip" style="display:none">edited</span>
-    <span id="recDot">REC <span id="recClock">0:00</span></span>
+    <span id="fQc"></span><span id="fDrift"></span>
+    <span id="onAir">● ON AIR</span>
+    <span id="recDot">REC <span id="recClock">0:00</span> <span id="pace"></span></span>
     <span id="fStatus"></span>
   </div>
   <div id="fBody">
-    <div id="fDevice"></div>
-    <div id="fText"></div>
-    <div id="fNote"></div>
-    <div id="fAudio"></div>
+    <canvas id="bigWave"></canvas>
+    <div id="fScroll">
+      <div id="fDevice"></div>
+      <div id="fText"></div>
+      <div id="fNote"></div>
+      <div id="fAudio"></div>
+    </div>
+    <div id="slidePrev"><span id="spType"></span><div id="spKicker"></div><div id="spMain"></div></div>
   </div>
   <div id="fBottom">
     <span><kbd>Space</kbd> record / stop</span>
     <span><kbd>Enter</kbd> keep &amp; next</span>
     <span><kbd>R</kbd> retake</span>
     <span><kbd>P</kbd> play</span>
-    <span><kbd>E</kbd> edit line</span>
+    <span><kbd>C</kbd> tail of prev, then record</span>
+    <span><kbd>T</kbd> takes</span>
+    <span><kbd>E</kbd> edit</span>
     <span><kbd>←</kbd><kbd>→</kbd> cards</span>
-    <span><kbd>Tab</kbd> list view</span>
+    <span><kbd>Tab</kbd> list</span>
   </div>
 </div>
 <div id="countdown"><div id="cdNum">3</div></div>
 
 <!-- Inline edit -->
-<div id="editWrap">
-  <div id="editBox">
+<div id="editWrap" class="modalWrap">
+  <div class="modalBox">
     <h3>Edit line — saves back to the script</h3>
     <textarea id="editTa"></textarea>
     <div class="row">
-      <span id="editHint"><kbd>⌘Enter</kbd> save · <kbd>Esc</kbd> cancel</span>
+      <span class="mhint"><kbd>⌘Enter</kbd> save · <kbd>Esc</kbd> cancel</span>
       <button class="ghost" id="editCancel">Cancel</button>
       <button id="editSave">Save to script</button>
     </div>
+  </div>
+</div>
+
+<!-- Drift diff -->
+<div id="diffWrap" class="modalWrap">
+  <div class="modalBox">
+    <h3 id="diffTitle">What you said vs the script</h3>
+    <div class="diffText" id="diffBody"></div>
+    <div class="row"><span class="mhint">Like the ad-lib better? <kbd>E</kbd>dit the card and paste it in.</span>
+      <button class="ghost" id="diffClose">Close</button></div>
+  </div>
+</div>
+
+<!-- Takes manager -->
+<div id="takesWrap" class="modalWrap">
+  <div class="modalBox">
+    <h3 id="takesTitle">Takes</h3>
+    <div id="takesBody"></div>
+    <div class="row"><span class="mhint">Promote makes that take the primary clip (current is archived).</span>
+      <button class="ghost" id="takesClose">Close</button></div>
   </div>
 </div>
 
@@ -153,31 +236,63 @@
 let segs = [], stream = null, rec = null, chunks = [], activeId = null, savingId = null;
 let audioCtx = null, analyser = null, meterRAF = 0;
 let view = 'list', fIdx = 0, cdTimer = null, editingId = null, recT0 = 0, recTick = null;
-let focusEntered = false;
+let focusEntered = false, session = {}, slideCache = {}, contAudio = null, rtBusy = false;
 const WPM = 150;
-
 const $ = id => document.getElementById(id);
 
 function readTime(text) {
   const w = (text.trim().match(/\S+/g) || []).length;
   return Math.max(1, Math.round(w / WPM * 60));
 }
+const fmtT = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
+/* ---------------- mic + meters ---------------- */
+async function acquire(deviceId) {
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  const c = deviceId ? { audio: { deviceId: { exact: deviceId } } } : { audio: true };
+  stream = await navigator.mediaDevices.getUserMedia(c);
+  if (!audioCtx) audioCtx = new AudioContext();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 1024;
+  audioCtx.createMediaStreamSource(stream).connect(analyser);
+  await listMics();
+}
 async function ensureMic() {
-  if (!stream) {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    audioCtx = new AudioContext();
-    analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 512;
-    audioCtx.createMediaStreamSource(stream).connect(analyser);
-  }
+  if (!stream) await acquire(localStorage.getItem('boothMic') || undefined);
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
   return stream;
+}
+async function listMics() {
+  const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput');
+  const sel = $('micSel'), cur = stream && stream.getAudioTracks()[0];
+  const curId = cur && cur.getSettings().deviceId;
+  sel.innerHTML = '';
+  devs.forEach(d => {
+    const o = document.createElement('option');
+    o.value = d.deviceId; o.textContent = d.label || 'Microphone';
+    if (d.deviceId === curId) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+$('micSel').addEventListener('change', async e => {
+  if (activeId !== null) return;
+  localStorage.setItem('boothMic', e.target.value);
+  await acquire(e.target.value);
+});
+
+function rms() {
+  if (!analyser) return 0;
+  const buf = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteTimeDomainData(buf);
+  let s = 0;
+  for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; s += v * v; }
+  return Math.sqrt(s / buf.length);
 }
 
 function drawMeter() {
   const c = $('meter'), g = c.getContext('2d');
   g.clearRect(0, 0, c.width, c.height);
-  if (analyser && activeId !== null) {
+  if (analyser && activeId !== null) {                    // scope while recording
     const buf = new Uint8Array(analyser.frequencyBinCount);
     analyser.getByteTimeDomainData(buf);
     g.strokeStyle = '#ff7a59'; g.lineWidth = 2; g.beginPath();
@@ -186,19 +301,58 @@ function drawMeter() {
       i ? g.lineTo(x, y) : g.moveTo(x, y);
     }
     g.stroke();
+  } else if (analyser) {                                  // calibration bar otherwise
+    const level = Math.min(1, rms() * 3.2);
+    g.fillStyle = level > 0.85 ? '#ff4d5e' : (level > 0.6 ? '#ffd166' : '#3ddc84');
+    g.fillRect(2, c.height / 2 - 5, (c.width - 4) * level, 10);
+    g.strokeStyle = '#20284a'; g.strokeRect(1, c.height / 2 - 6, c.width - 2, 12);
   } else {
     g.strokeStyle = '#20284a'; g.beginPath();
     g.moveTo(0, c.height / 2); g.lineTo(c.width, c.height / 2); g.stroke();
   }
+  drawBigWave();
   meterRAF = requestAnimationFrame(drawMeter);
 }
 
-function progress() {
-  const n = segs.filter(s => s.recorded).length;
-  const total = segs.reduce((a, s) => a + readTime(s.text), 0);
-  $('progress').textContent =
-    `${n} / ${segs.length} · ~${Math.floor(total / 60)}m${String(total % 60).padStart(2, '0')}s read`;
-  $('finishBtn').disabled = n < segs.length;
+function drawBigWave() {
+  const c = $('bigWave');
+  if (!c || view !== 'focus') return;
+  if (c.width !== c.clientWidth) { c.width = c.clientWidth; c.height = c.clientHeight; }
+  const g = c.getContext('2d');
+  g.clearRect(0, 0, c.width, c.height);
+  if (!analyser || activeId === null) return;
+  const buf = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteTimeDomainData(buf);
+  g.strokeStyle = 'rgba(255,122,89,.9)'; g.lineWidth = 3; g.beginPath();
+  for (let i = 0; i < buf.length; i++) {
+    const x = i / buf.length * c.width;
+    const y = c.height / 2 + ((buf[i] - 128) / 128) * c.height * 0.42;
+    i ? g.lineTo(x, y) : g.moveTo(x, y);
+  }
+  g.stroke();
+}
+
+/* ---------------- chips ---------------- */
+function qcChip(s) {
+  if (!s.recorded || !s.qc) return '';
+  const q = s.qc;
+  if (q.level === 'good') return `<span class="chip good" title="peak ${q.peak_db} dB · mean ${q.mean_db} dB · ${q.dur_s}s">✓ audio</span>`;
+  const cls = q.level === 'bad' ? 'bad' : 'warn';
+  const icon = q.level === 'bad' ? '⛔' : '⚠';
+  return `<span class="chip ${cls}" title="${(q.notes || []).join(' · ')}">${icon} ${(q.notes[0] || 'check audio')}</span>`;
+}
+function driftChip(s) {
+  if (!s.recorded || !session.drift_enabled) return '';
+  const d = s.drift;
+  if (!d || ['queued', 'running'].includes(d.status))
+    return `<span class="chip dim">…listening</span>`;
+  if (d.status === 'deferred') return `<span class="chip dim" title="waiting for the render to finish">drift ⏸</span>`;
+  if (d.status === 'error') return `<span class="chip dim" title="${d.error || ''}">drift n/a</span>`;
+  if (d.status !== 'done') return '';
+  const pct = Math.round((d.drift || 0) * 100);
+  if (d.drift < 0.02) return `<span class="chip good">✓ verbatim</span>`;
+  if (d.drift < 0.15) return `<span class="chip warn click" data-diff="${s.id}">≈ ad-lib ${pct}% · diff</span>`;
+  return `<span class="chip bad click" data-diff="${s.id}">! drift ${pct}% · diff</span>`;
 }
 
 /* ---------------- list view ---------------- */
@@ -215,33 +369,52 @@ function render() {
     const label = isSaving ? 'Saving…' : (activeId === s.id ? '■ Stop' : (s.recorded ? 'Re-record' : 'Record'));
     const locked = isSaving || (savingId !== null && activeId !== s.id);
     card.innerHTML =
-      `<div class="meta"><span>Card ${s.id + 1} · ${s.slide}${beat}${s.edited ? '<span class="chip">edited</span>' : ''}</span>
-        <span class="status ${s.recorded ? 'ok' : 'none'}">${s.recorded ? '✓ recorded' + takes : '~' + readTime(s.text) + 's'}</span></div>
+      `<div class="meta"><span>Card ${s.id + 1} · ${s.slide}${beat}</span>
+        ${s.edited ? '<span class="chip">edited</span>' : ''}
+        ${qcChip(s)} ${driftChip(s)}
+        <span class="right"><span class="status ${s.recorded ? 'ok' : 'none'}">${s.recorded ? '✓ recorded' + takes : '~' + readTime(s.text) + 's'}</span></span></div>
        ${s.device ? `<div class="device">⚡ ${s.device}</div>` : ''}
        <div class="script">${s.text}</div>
        ${s.note ? `<div class="sub">${s.note}</div>` : ''}
        <div class="row">
          <button data-rec="${s.id}" ${locked ? 'disabled' : ''}>${label}</button>
          <button class="ghost" data-edit="${s.id}" title="Edit this line (writes back to the script)">✎ Edit</button>
+         ${s.takes > 1 ? `<button class="ghost" data-takes="${s.id}">Takes (${s.takes})</button>` : ''}
          ${s.recorded && activeId !== s.id && !isSaving ? `<audio controls src="/clip?seg=${s.id}&t=${s.takes || 0}"></audio>` : ''}
        </div>`;
     list.appendChild(card);
   });
-  document.querySelectorAll('[data-rec]').forEach(b =>
+  list.querySelectorAll('[data-rec]').forEach(b =>
     b.addEventListener('click', () => toggle(parseInt(b.dataset.rec))));
-  document.querySelectorAll('[data-edit]').forEach(b =>
-    b.addEventListener('click', () => openEdit(parseInt(b.dataset.edit))));
+  wireCommon(list);
   progress();
+}
+
+function wireCommon(root) {
+  root.querySelectorAll('[data-edit]').forEach(b =>
+    b.addEventListener('click', () => openEdit(parseInt(b.dataset.edit))));
+  root.querySelectorAll('[data-takes]').forEach(b =>
+    b.addEventListener('click', () => openTakes(parseInt(b.dataset.takes))));
+  root.querySelectorAll('[data-diff]').forEach(b =>
+    b.addEventListener('click', () => openDiff(parseInt(b.dataset.diff))));
+}
+
+function progress() {
+  const n = segs.filter(s => s.recorded).length;
+  const total = segs.reduce((a, s) => a + readTime(s.text), 0);
+  $('progress').textContent =
+    `${n} / ${segs.length} · ~${Math.floor(total / 60)}m${String(total % 60).padStart(2, '0')}s read`;
+  $('finishBtn').disabled = n < segs.length;
 }
 
 /* ---------------- focus mode ---------------- */
 function setView(v) {
-  if (activeId !== null || cdTimer) return;   // don't switch mid-record / mid-countdown
+  if (activeId !== null || cdTimer) return;
   view = v;
   $('focus').classList.toggle('on', v === 'focus');
   $('viewBtn').textContent = v === 'focus' ? '☰ List' : '⛶ Focus';
   if (v === 'focus') {
-    if (!focusEntered) {                     // first entry: land on the first open card
+    if (!focusEntered) {
       const firstOpen = segs.findIndex(s => !s.recorded);
       fIdx = firstOpen >= 0 ? firstOpen : 0;
       focusEntered = true;
@@ -250,7 +423,6 @@ function setView(v) {
     focusRender();
   }
 }
-
 function focusSeg() { return segs[fIdx]; }
 
 function focusRender() {
@@ -259,7 +431,9 @@ function focusRender() {
   $('fCount').textContent = `CARD ${fIdx + 1} / ${segs.length}`;
   $('fSlide').textContent = s.slide + (s.beat ? ` · ${s.beat}` : '');
   $('fEdited').style.display = s.edited ? '' : 'none';
-  $('fBeat').style.display = 'none';
+  $('fQc').innerHTML = qcChip(s);
+  $('fDrift').innerHTML = driftChip(s);
+  wireCommon($('fTop'));
   const st = $('fStatus');
   if (savingId === s.id) { st.textContent = 'Saving…'; st.className = ''; }
   else if (activeId === s.id) { st.textContent = ''; st.className = ''; }
@@ -270,6 +444,34 @@ function focusRender() {
   $('fNote').textContent = s.note || '';
   $('fAudio').innerHTML = (s.recorded && activeId !== s.id && savingId !== s.id)
     ? `<audio controls src="/clip?seg=${s.id}&t=${s.takes || 0}"></audio>` : '';
+  renderSlidePrev(s);
+}
+
+async function renderSlidePrev(s) {
+  const box = $('slidePrev');
+  if (s.plan_slug) { box.classList.remove('on'); return; }   // short cards: no deck slide
+  if (!(s.slide in slideCache)) {
+    try {
+      const r = await fetch('/deckslide?slide=' + encodeURIComponent(s.slide));
+      slideCache[s.slide] = r.ok ? await r.json() : null;
+    } catch (e) { slideCache[s.slide] = null; }
+    if (focusSeg() !== s) return;         // navigated away while fetching
+  }
+  const d = slideCache[s.slide];
+  if (!d) { box.classList.remove('on'); return; }
+  $('spType').textContent = d.type || '';
+  $('spKicker').textContent = d.kicker || '';
+  let main = '';
+  const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  if (d.type === 'punch') main = `<span class="punch">${esc(d.word || d.headline || '')}</span>`;
+  else if (d.type === 'quote') main = `<span class="quote">“${esc(d.quote || '')}”</span>`;
+  else if (d.items) main = '<ul>' + d.items.slice(0, 4).map(i => `<li>${esc(i)}</li>`).join('') + '</ul>';
+  else if (d.stats) main = d.stats.map(x => esc(x.value)).join(' · ');
+  else if (d.type === 'compare') main = `${esc((d.left || {}).title || '')} vs ${esc((d.right || {}).title || '')}`;
+  else if (d.type === 'reframe') main = `${esc(d.strike || d.before || '')} → ${esc(d.after || '')}`;
+  else main = esc(d.headline || '');
+  $('spMain').innerHTML = main;
+  box.classList.add('on');
 }
 
 function focusNav(d) {
@@ -291,16 +493,18 @@ function countdownThen(fn) {
     } else num.textContent = n;
   }, 700);
 }
-
 function cancelCountdown() {
   if (cdTimer) { clearInterval(cdTimer); cdTimer = null; $('countdown').classList.remove('on'); }
 }
 
-function recClockStart() {
+function recClockStart(expected) {
   recT0 = Date.now();
   recTick = setInterval(() => {
-    const t = Math.floor((Date.now() - recT0) / 1000);
-    $('recClock').textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+    const t = (Date.now() - recT0) / 1000;
+    $('recClock').textContent = fmtT(t);
+    const p = $('pace');
+    p.textContent = `/ ~${fmtT(expected)}`;
+    p.className = t > expected * 1.35 ? 'over' : '';
   }, 250);
 }
 
@@ -316,14 +520,15 @@ async function startRec(id) {
     const blob = new Blob(chunks, { type: 'audio/webm' });
     activeId = null; savingId = id;
     $('focus').classList.remove('recording');
-    if (recTick) { clearInterval(recTick); recTick = null; }
+    if (recTick) { clearInterval(recTick); recTick = null; $('pace').textContent = ''; }
     render(); if (view === 'focus') focusRender();
     try {
       const r = await fetch('/save?seg=' + id, { method: 'POST', body: blob });
       const j = await r.json();
       if (j.ok) {
         const s = segs.find(s => s.id === id);
-        s.recorded = true; s.takes = j.takes || 1;
+        s.recorded = true; s.takes = j.takes || 1; s.qc = j.qc || null;
+        s.drift = session.drift_enabled ? { status: 'queued' } : null;
       }
     } catch (e) {
       console.error('save failed', e);
@@ -333,20 +538,66 @@ async function startRec(id) {
     }
   };
   rec.start();
-  if (view === 'focus') { $('focus').classList.add('recording'); recClockStart(); }
+  const s = segs.find(x => x.id === id);
+  if (view === 'focus') { $('focus').classList.add('recording'); recClockStart(readTime(s ? s.text : '')); }
   render(); if (view === 'focus') focusRender();
   const el = $('seg' + id);
   if (el && view === 'list') el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
-
 function stopRec() { if (rec && rec.state === 'recording') rec.stop(); }
-
-async function toggle(id) {          // list view: legacy immediate toggle
+async function toggle(id) {
   if (activeId === id) { stopRec(); return; }
   startRec(id);
 }
 
-/* ---------------- inline edit ---------------- */
+/* continuity: play the tail of the previous card, then roll into this one */
+function continuity() {
+  const s = focusSeg();
+  if (!s || fIdx === 0 || activeId !== null || cdTimer) return;
+  const prev = segs[fIdx - 1];
+  if (!prev || !prev.recorded) return;
+  if (contAudio) { contAudio.pause(); contAudio = null; }
+  contAudio = new Audio('/clip?seg=' + prev.id + '&t=' + (prev.takes || 0));
+  contAudio.addEventListener('loadedmetadata', () => {
+    contAudio.currentTime = Math.max(0, contAudio.duration - 3);
+    contAudio.play();
+  });
+  contAudio.addEventListener('ended', () => {
+    contAudio = null;
+    countdownThen(() => startRec(s.id));
+  });
+}
+
+/* ---------------- room tone ---------------- */
+async function roomTone() {
+  if (rtBusy || activeId !== null) return;
+  rtBusy = true;
+  const btn = $('rtBtn');
+  btn.textContent = '🎚 quiet please…'; btn.className = 'hbtn';
+  try {
+    await ensureMic();
+    const rt = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    const parts = [];
+    rt.ondataavailable = e => parts.push(e.data);
+    const done = new Promise(res => rt.onstop = res);
+    rt.start();
+    await new Promise(r => setTimeout(r, 3000));
+    rt.stop(); await done;
+    const r = await fetch('/roomtone', { method: 'POST', body: new Blob(parts, { type: 'audio/webm' }) });
+    session.roomtone = await r.json();
+  } catch (e) { console.error(e); }
+  rtBusy = false;
+  rtBadge();
+}
+function rtBadge() {
+  const btn = $('rtBtn'), rt = session.roomtone;
+  if (!rt) { btn.textContent = '🎚 Room tone'; btn.className = 'hbtn warn'; btn.title = 'Run a 3s noise-floor check before recording'; return; }
+  btn.className = 'hbtn ' + (rt.level === 'good' ? 'good' : rt.level === 'warn' ? 'warn' : 'bad');
+  btn.textContent = rt.level === 'good' ? '🎚 room ✓' : (rt.level === 'warn' ? '🎚 room ⚠' : '🎚 room ⛔');
+  btn.title = (rt.notes || []).join(' · ') + ' — click to re-check';
+}
+
+/* ---------------- edit / diff / takes ---------------- */
 function openEdit(id) {
   if (activeId !== null || cdTimer) return;
   const s = segs.find(s => s.id === id);
@@ -356,35 +607,90 @@ function openEdit(id) {
   $('editWrap').classList.add('on');
   $('editTa').focus();
 }
-
 function closeEdit() { editingId = null; $('editWrap').classList.remove('on'); }
-
 async function saveEdit() {
-  const text = $('editTa').value;
   const r = await fetch('/edit', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ seg: editingId, text }) });
-  const j = await r.json();
-  if (j.ok) { closeEdit(); await loadSegs(); }
+    body: JSON.stringify({ seg: editingId, text: $('editTa').value }) });
+  if ((await r.json()).ok) { closeEdit(); await loadSegs(); }
   else alert('Edit failed — see booth log.');
+}
+
+function tokenize(t) { return (t.toLowerCase().replace(/[^a-z0-9' ]/g, ' ').match(/\S+/g)) || []; }
+function wordDiff(a, b) {   // LCS-based: returns html of b with ins/del vs a
+  const n = a.length, m = b.length;
+  const L = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--)
+    for (let j = m - 1; j >= 0; j--)
+      L[i][j] = a[i] === b[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const out = [];
+  let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (a[i] === b[j]) { out.push(b[j]); i++; j++; }
+    else if (L[i + 1][j] >= L[i][j + 1]) { out.push(`<del>${a[i]}</del>`); i++; }
+    else { out.push(`<ins>${b[j]}</ins>`); j++; }
+  }
+  while (i < n) out.push(`<del>${a[i++]}</del>`);
+  while (j < m) out.push(`<ins>${b[j++]}</ins>`);
+  return out.join(' ');
+}
+function openDiff(id) {
+  const s = segs.find(s => s.id === id);
+  if (!s || !s.drift || s.drift.status !== 'done') return;
+  $('diffTitle').textContent = `Card ${id + 1} — drift ${Math.round(s.drift.drift * 100)}% (green = you said, red = script only)`;
+  $('diffBody').innerHTML = wordDiff(tokenize(s.text), tokenize(s.drift.asr_text || ''));
+  $('diffWrap').classList.add('on');
+}
+
+async function openTakes(id) {
+  const s = segs.find(s => s.id === id);
+  if (!s) return;
+  const list = await fetch('/takes?seg=' + id).then(r => r.json());
+  $('takesTitle').textContent = `Card ${id + 1} — takes`;
+  $('takesBody').innerHTML = list.map(t =>
+    `<div class="takeRow"><span class="lbl">${t.label}</span>
+      <audio controls src="/takefile?seg=${id}&n=${t.take}&x=${t.mtime}"></audio>
+      ${t.take !== 0 ? `<button class="ghost" data-promote="${t.take}">Promote</button>` : '<span class="chip good">primary</span>'}
+     </div>`).join('') || '<p>No takes yet.</p>';
+  $('takesBody').querySelectorAll('[data-promote]').forEach(b =>
+    b.addEventListener('click', async () => {
+      await fetch('/promote', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seg: id, take: parseInt(b.dataset.promote) }) });
+      $('takesWrap').classList.remove('on');
+      await loadSegs();
+    }));
+  $('takesWrap').classList.add('on');
 }
 
 /* ---------------- data + wiring ---------------- */
 async function loadSegs() {
-  const d = await fetch('/segments').then(r => r.json());
-  segs = d;
+  segs = await fetch('/segments').then(r => r.json());
   render();
   if (view === 'focus') focusRender();
 }
+async function loadSession() {
+  try { session = await fetch('/session').then(r => r.json()); } catch (e) { session = {}; }
+  rtBadge();
+}
+setInterval(async () => {   // drift results arrive asynchronously — poll while pending
+  if (document.hidden || activeId !== null || savingId !== null) return;
+  const pending = segs.some(s => s.recorded && s.drift &&
+    ['queued', 'running', 'deferred'].includes(s.drift.status));
+  if (pending) await loadSegs();
+}, 6000);
 
 document.addEventListener('keydown', e => {
-  // typing in the edit box: only handle save/cancel
   if (editingId !== null) {
     if (e.key === 'Escape') { e.preventDefault(); closeEdit(); }
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveEdit(); }
     return;
   }
+  if ($('diffWrap').classList.contains('on') || $('takesWrap').classList.contains('on')) {
+    if (e.key === 'Escape') { $('diffWrap').classList.remove('on'); $('takesWrap').classList.remove('on'); }
+    return;
+  }
   if (e.key === 'Tab') { e.preventDefault(); setView(view === 'focus' ? 'list' : 'focus'); return; }
   if (e.key === 'Escape') {
+    if (contAudio) { contAudio.pause(); contAudio = null; return; }
     if (cdTimer) { cancelCountdown(); return; }
     stopRec(); return;
   }
@@ -405,23 +711,42 @@ document.addEventListener('keydown', e => {
   } else if (e.key === 'p' || e.key === 'P') {
     const a = document.querySelector('#fAudio audio');
     if (a) { a.currentTime = 0; a.play(); }
-  } else if (e.key === 'e' || e.key === 'E') { openEdit(s.id); }
+  } else if (e.key === 'c' || e.key === 'C') { continuity(); }
+  else if (e.key === 't' || e.key === 'T') { if (s.takes > 1) openTakes(s.id); }
+  else if (e.key === 'e' || e.key === 'E') { openEdit(s.id); }
 });
 
 $('viewBtn').addEventListener('click', () => setView(view === 'focus' ? 'list' : 'focus'));
 $('reloadBtn').addEventListener('click', loadSegs);
+$('rtBtn').addEventListener('click', roomTone);
 $('editCancel').addEventListener('click', closeEdit);
 $('editSave').addEventListener('click', saveEdit);
+$('diffClose').addEventListener('click', () => $('diffWrap').classList.remove('on'));
+$('takesClose').addEventListener('click', () => $('takesWrap').classList.remove('on'));
 
 $('finishBtn').addEventListener('click', async () => {
-  await fetch('/done', { method: 'POST' });
+  const j = await fetch('/done', { method: 'POST' }).then(r => r.json()).catch(() => ({}));
   setView('list');
   document.querySelector('main').style.display = 'none';
   $('finish').style.display = 'none';
   $('doneMsg').style.display = 'block';
+  const rep = j.report;
+  if (rep) {
+    const rows = [
+      ['Cards recorded', `${rep.recorded} / ${rep.total_cards}`],
+      ['Total takes', `${rep.total_takes} (retakes: ${rep.retakes})`],
+      ['Audio recorded', fmtT(rep.audio_s || 0)],
+      ['Session length', fmtT(rep.session_s || 0)],
+      ['Audio QC flags', String(rep.qc_flags)],
+      ['Drift flags (>15%)', String(rep.drift_flags)],
+      ['Lines edited in-booth', String(rep.edited_cards)],
+    ];
+    $('doneStats').innerHTML = rows.map(r => `<div><span>${r[0]}</span><b>${r[1]}</b></div>`).join('');
+  }
 });
 
-loadSegs().then(drawMeter);
+loadSession().then(loadSegs).then(drawMeter);
+ensureMic().catch(() => {});   // arm the level bar + mic list up front (grant is per-origin)
 </script>
 </body>
 </html>

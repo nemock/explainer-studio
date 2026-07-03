@@ -54,7 +54,10 @@ The session-changers. Files: `recorder.py`, `assets/recorder.html`.
 Acceptance: record the next video (#39 or #40) entirely in Focus Mode; at least
 one inline edit round-trips to script.json without a restart.
 
-## Batch 2 — Quality gates: take QC + room tone + WPM + wrap report
+## Batch 2 — Quality gates: take QC + room tone + WPM + wrap report  ✅ LANDED 2026-07-03
+
+Note: 'live WPM' shipped as a pace readout (elapsed vs the ~150wpm expected time,
+amber past 1.35×) — honest without ASR; true WPM needs the Batch-4 transcript.
 
 Catch bad audio in the booth, not at render QA. Files: `recorder.py` (analysis
 on `/save` — ffmpeg/ffprobe astats), `recorder.html` (badges).
@@ -94,7 +97,11 @@ voiced short).
     `make_money/routine_changes/` (standing rule) + the skill's SKILL.md
     updated. Verify one live FTT run end-to-end before flipping the rest.
 
-## Batch 4 — The ear: per-take drift + take manager + continuity
+## Batch 4 — The ear: per-take drift + take manager + continuity  ✅ LANDED 2026-07-03
+
+Verified live (whisper worker queued→running→done; render-lock deferral wired).
+Found + fixed in test: archive numbering is now max+1 (count+1 collided with a
+surviving archive after /promote and silently overwrote it).
 
 11. **Per-take drift badge.** On save, queue mlx_whisper transcription in a
     serialized worker (skip + mark "pending" if a render holds the render
@@ -109,7 +116,13 @@ voiced short).
     card, roll straight into the countdown. Tone/energy matching for
     out-of-order retakes.
 
-## Batch 5 — Stagecraft: slide previews + on-air ambiance + mic picker
+## Batch 5 — Stagecraft: slide previews + on-air ambiance + mic picker  ✅ LANDED 2026-07-03
+
+Note: slide previews render as stylized mini-cards straight from deck.json
+(/deckslide) instead of Playwright PNG screenshots — instant, dependency-free,
+and honest: the deck engine has no per-slide nav and Remotion is the real
+renderer, so an 'exact' PNG was the wrong promise. Revisit only if the cue
+proves insufficient in real sessions.
 
 14. **Slide preview per card.** At booth launch, if `deck.json` exists,
     pre-render per-slide PNG thumbs (existing deckbuild + html2png path);
