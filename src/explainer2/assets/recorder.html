@@ -377,7 +377,7 @@ function render() {
     const takes = s.takes > 1 ? ` · take ${s.takes}` : '';
     const isSaving = savingId === s.id;
     const label = isSaving ? 'Saving…' : (activeId === s.id ? '■ Stop' : (s.recorded ? 'Re-record' : 'Record'));
-    const locked = isSaving || (savingId !== null && activeId !== s.id);
+    const locked = isSaving;   // only the card mid-save is locked; others stay recordable
     card.innerHTML =
       `<div class="meta"><span>Card ${s.id + 1} · ${s.slide}${beat}</span>
         ${s.edited ? '<span class="chip">edited</span>' : ''}
@@ -503,6 +503,14 @@ function focusNav(d) {
   focusRender();
 }
 
+function flashStatus(msg) {
+  const st = $('fStatus');
+  st.textContent = msg;
+  st.className = '';
+  st.style.color = 'var(--warn)';
+  setTimeout(() => { st.style.color = ''; if (view === 'focus') focusRender(); }, 1400);
+}
+
 function countdownThen(fn) {
   const el = $('countdown'), num = $('cdNum');
   let n = 3;
@@ -534,7 +542,8 @@ function recClockStart(expected) {
 /* ---------------- record core ---------------- */
 async function startRec(id) {
   if (rec && rec.state === 'recording') return;
-  if (savingId !== null) return;
+  if (savingId === id) return;   // only block re-recording the card that's mid-save —
+                                 // recording the NEXT card during a save is the normal flow
   await ensureMic();
   chunks = []; activeId = id;
   rec = new MediaRecorder(stream, { mimeType: 'audio/webm' });
@@ -544,6 +553,11 @@ async function startRec(id) {
     activeId = null; savingId = id;
     $('focus').classList.remove('recording');
     if (recTick) { clearInterval(recTick); recTick = null; $('pace').textContent = ''; }
+    // Enter-mid-record: advance IMMEDIATELY (the save runs in the background).
+    // Waiting for the save created a ~1s dead window where the operator's next
+    // Space press was swallowed — cards then got read with nothing rolling
+    // (caught live on #40, cards 9-12).
+    if (pendingAdvance) { pendingAdvance = false; if (view === 'focus') focusNav(1); }
     render(); if (view === 'focus') focusRender();
     let ok = false;
     try {
@@ -558,12 +572,9 @@ async function startRec(id) {
     } catch (e) {
       console.error('save failed', e);
     } finally {
-      savingId = null;
+      if (savingId === id) savingId = null;   // don't clobber a newer card's in-flight save
       render(); if (view === 'focus') focusRender();
-      // Enter-mid-record: keep the take and roll straight to the next card.
-      // Only when the save landed and the operator hasn't navigated away meanwhile.
-      const adv = pendingAdvance; pendingAdvance = false;
-      if (adv && ok && view === 'focus' && focusSeg() && focusSeg().id === id) focusNav(1);
+      if (!ok) alert(`Save FAILED for card ${id + 1} — it is NOT recorded. See booth log.`);
     }
   };
   rec.start();
@@ -730,14 +741,19 @@ document.addEventListener('keydown', e => {
     e.preventDefault();
     if (activeId === s.id) stopRec();
     else if (cdTimer) cancelCountdown();
-    else if (activeId === null && savingId === null) countdownThen(() => startRec(s.id));
+    else if (activeId === null && savingId !== s.id) countdownThen(() => startRec(s.id));
   } else if (e.key === 'Enter') {
     if (activeId === s.id) { pendingAdvance = true; stopRec(); }   // accept take + next card
-    else if (activeId === null && !cdTimer) focusNav(1);
+    else if (activeId === null && !cdTimer) {
+      // Enter NEVER silently navigates an unrecorded card — that's how cards
+      // got skipped unnoticed on #40. Nudge toward Space instead.
+      if (s.recorded || savingId === s.id) focusNav(1);
+      else flashStatus('⚠ not recorded — press Space to record');
+    }
   } else if (e.key === 'ArrowRight') { focusNav(1); }
   else if (e.key === 'ArrowLeft') { focusNav(-1); }
   else if (e.key === 'r' || e.key === 'R') {
-    if (activeId === null && savingId === null && !cdTimer) countdownThen(() => startRec(s.id));
+    if (activeId === null && savingId !== s.id && !cdTimer) countdownThen(() => startRec(s.id));
   } else if (e.key === 'p' || e.key === 'P') {
     const a = document.querySelector('#fAudio audio');
     if (a) { a.currentTime = 0; a.play(); }
