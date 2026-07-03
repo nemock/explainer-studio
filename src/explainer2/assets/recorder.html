@@ -29,9 +29,10 @@
   .hbtn.bad { border-color:var(--red); color:var(--red); }
   main { max-width:880px; margin:0 auto; padding:24px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:22px;
-    margin-bottom:18px; }
+    margin-bottom:18px; cursor:pointer; }
   .card.recorded { border-color:var(--good); }
   .card.active { border-color:var(--bad); box-shadow:0 0 0 2px var(--bad); }
+  .card.sel { box-shadow:-5px 0 0 0 var(--accent); }   /* the card Tab will focus */
   .meta { font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent);
     font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:8px;
     flex-wrap:wrap; }
@@ -367,9 +368,10 @@ function driftChip(s) {
 function render() {
   const list = $('list');
   list.innerHTML = '';
-  segs.forEach(s => {
+  segs.forEach((s, i) => {
     const card = document.createElement('div');
-    card.className = 'card' + (s.recorded ? ' recorded' : '') + (activeId === s.id ? ' active' : '');
+    card.className = 'card' + (s.recorded ? ' recorded' : '') + (activeId === s.id ? ' active' : '')
+      + (focusEntered && i === fIdx ? ' sel' : '');
     card.id = 'seg' + s.id;
     const beat = s.beat ? ` · ${s.beat}` : '';
     const takes = s.takes > 1 ? ` · take ${s.takes}` : '';
@@ -390,6 +392,12 @@ function render() {
          ${s.takes > 1 ? `<button class="ghost" data-takes="${s.id}">Takes (${s.takes})</button>` : ''}
          ${s.recorded && activeId !== s.id && !isSaving ? `<audio controls src="/clip?seg=${s.id}&t=${s.takes || 0}"></audio>` : ''}
        </div>`;
+    // click the card body (not its buttons/player) to make it the Focus Mode target
+    card.addEventListener('click', e => {
+      if (e.target.closest('button, audio, a, textarea')) return;
+      fIdx = i; focusEntered = true;
+      render();
+    });
     list.appendChild(card);
   });
   list.querySelectorAll('[data-rec]').forEach(b =>
