@@ -244,6 +244,7 @@ let segs = [], stream = null, rec = null, chunks = [], activeId = null, savingId
 let audioCtx = null, analyser = null, meterRAF = 0;
 let view = 'list', fIdx = 0, cdTimer = null, editingId = null, recT0 = 0, recTick = null;
 let focusEntered = false, session = {}, slideCache = {}, contAudio = null, rtBusy = false;
+let pendingAdvance = false;   // Enter mid-record = stop + keep + auto-advance once saved
 const WPM = 150;
 const $ = id => document.getElementById(id);
 
@@ -536,10 +537,12 @@ async function startRec(id) {
     $('focus').classList.remove('recording');
     if (recTick) { clearInterval(recTick); recTick = null; $('pace').textContent = ''; }
     render(); if (view === 'focus') focusRender();
+    let ok = false;
     try {
       const r = await fetch('/save?seg=' + id, { method: 'POST', body: blob });
       const j = await r.json();
       if (j.ok) {
+        ok = true;
         const s = segs.find(s => s.id === id);
         s.recorded = true; s.takes = j.takes || 1; s.qc = j.qc || null;
         s.drift = session.drift_enabled ? { status: 'queued' } : null;
@@ -549,6 +552,10 @@ async function startRec(id) {
     } finally {
       savingId = null;
       render(); if (view === 'focus') focusRender();
+      // Enter-mid-record: keep the take and roll straight to the next card.
+      // Only when the save landed and the operator hasn't navigated away meanwhile.
+      const adv = pendingAdvance; pendingAdvance = false;
+      if (adv && ok && view === 'focus' && focusSeg() && focusSeg().id === id) focusNav(1);
     }
   };
   rec.start();
@@ -717,7 +724,8 @@ document.addEventListener('keydown', e => {
     else if (cdTimer) cancelCountdown();
     else if (activeId === null && savingId === null) countdownThen(() => startRec(s.id));
   } else if (e.key === 'Enter') {
-    if (activeId === null && !cdTimer) focusNav(1);
+    if (activeId === s.id) { pendingAdvance = true; stopRec(); }   // accept take + next card
+    else if (activeId === null && !cdTimer) focusNav(1);
   } else if (e.key === 'ArrowRight') { focusNav(1); }
   else if (e.key === 'ArrowLeft') { focusNav(-1); }
   else if (e.key === 'r' || e.key === 'R') {
