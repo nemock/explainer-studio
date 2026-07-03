@@ -79,9 +79,13 @@
   #fStatus { margin-left:auto; font-weight:700; white-space:nowrap; }
   #fStatus.ok { color:var(--good); } #fStatus.none { color:#7a85ad; }
   #fBody { flex:1; overflow:hidden; position:relative; display:flex; }
+  /* NOTE: no justify-content:center here — centering a scrollable flex column clips
+     overflowing content at BOTH ends and makes the top unreachable (caught live on a
+     long #40 card). #fInner's margin:auto centers short cards; long cards scroll. */
   #fScroll { flex:1; overflow:auto; display:flex; flex-direction:column;
-    justify-content:center; padding:24px 8vw; max-width:1100px; margin:0 auto; width:100%;
+    padding:24px 8vw; max-width:1100px; margin:0 auto; width:100%;
     position:relative; z-index:2; }
+  #fInner { margin:auto 0; width:100%; }
   #bigWave { position:absolute; inset:0; z-index:1; opacity:0; transition:opacity .4s;
     pointer-events:none; }
   #focus.recording #bigWave { opacity:.33; }
@@ -178,10 +182,12 @@
   <div id="fBody">
     <canvas id="bigWave"></canvas>
     <div id="fScroll">
-      <div id="fDevice"></div>
-      <div id="fText"></div>
-      <div id="fNote"></div>
-      <div id="fAudio"></div>
+      <div id="fInner">
+        <div id="fDevice"></div>
+        <div id="fText"></div>
+        <div id="fNote"></div>
+        <div id="fAudio"></div>
+      </div>
     </div>
     <div id="slidePrev"><span id="spType"></span><div id="spKicker"></div><div id="spMain"></div></div>
   </div>
@@ -440,7 +446,14 @@ function focusRender() {
   else if (s.recorded) { st.textContent = '✓ recorded' + (s.takes > 1 ? ` · take ${s.takes}` : ''); st.className = 'ok'; }
   else { st.textContent = `not recorded · ~${readTime(s.text)}s`; st.className = 'none'; }
   $('fDevice').textContent = s.device ? `⚡ ${s.device}` : '';
-  $('fText').textContent = s.text;
+  const ft = $('fText');
+  ft.textContent = s.text;
+  // teleprompter sizing: shrink long cards so they (mostly) fit without scrolling
+  const wc = (s.text.match(/\S+/g) || []).length;
+  ft.style.fontSize = wc > 110 ? 'clamp(21px, 2.1vw, 29px)'
+                    : wc > 75  ? 'clamp(24px, 2.5vw, 33px)'
+                    : wc > 45  ? 'clamp(27px, 2.9vw, 39px)' : '';
+  $('fScroll').scrollTop = 0;
   $('fNote').textContent = s.note || '';
   $('fAudio').innerHTML = (s.recorded && activeId !== s.id && savingId !== s.id)
     ? `<audio controls src="/clip?seg=${s.id}&t=${s.takes || 0}"></audio>` : '';
