@@ -316,6 +316,18 @@ def cmd_talktime(args):
         return 1
 
 
+def cmd_learn(args):
+    from . import learn
+    if args.action == "refresh":
+        return learn.refresh(args.projects_dir)
+    if args.action == "ingest":
+        if not args.csv:
+            print("ingest needs --csv <YouTube Studio content export>")
+            return 1
+        return learn.ingest(args.csv)
+    return learn.report()
+
+
 def cmd_wiki(args):
     if args.kind == "source":
         path = wiki.add_node(args.root, "source", args.name, args.body or args.name,
@@ -474,6 +486,14 @@ def main(argv=None):
     tt.add_argument("--topics", default=None, help="comma list of topic keywords to narrow candidates")
     tt.add_argument("--library", default=None, help="override the talk-time library path")
     tt.set_defaults(func=cmd_talktime)
+
+    ln = sub.add_parser("learn", help="channel feedback loop: snapshot published-video performance "
+                                      "(yt-dlp public stats / YouTube Studio CSV) and report what's working")
+    ln.add_argument("action", choices=["refresh", "ingest", "report"])
+    ln.add_argument("--csv", default=None, help="YouTube Studio content export (for `ingest`)")
+    ln.add_argument("--projects-dir", default=str(_REPO_ROOT / "projects"), dest="projects_dir",
+                    help="projects root scanned for published meta.json files")
+    ln.set_defaults(func=cmd_learn)
 
     wk = sub.add_parser("wiki", help="add a wiki node")
     wk.add_argument("kind", choices=["source", "fact"])

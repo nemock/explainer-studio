@@ -147,10 +147,9 @@ The end-to-end procedure, gates, and hard rules are written down in the skill (b
 
 ## Roadmap (what's coming next)
 
-The pipeline above all works today from the CLI. Two PRD phases are still in flight — listed here so the feature tour stays honest about what runs *now*:
+The pipeline above all works today from the CLI — including **Learn**, the results feedback loop (`bin/explainer2 learn refresh / ingest / report`): public stats via yt-dlp plus optional YouTube Studio CSV exports build a local memory of which titles and structures actually perform on *your* channel, and the next Blueprint reads the report before ranking titles. One PRD phase is still in flight:
 
 - **Mission Control (PRD Phase 4) — a local web GUI.** A FastAPI + HTML/JS app (served from the Mac, opened in Chrome) where every project is a card moving across a board — Intel → Blueprint → Script → Voice → Assets → Compose → Render → Package — with the review gates, the recording booth, the Adobe Stock asset queue, render progress, and the final package preview all in one place. Every action it adds will have the CLI twin it already wraps. *Not built yet — today the same gates run from the terminal.*
-- **Learn (PRD Phase 5) — a results feedback loop.** Drop in YouTube Studio CSV exports and build a local memory of which titles, hooks, and structures actually perform on *your* channel, cited by the next Blueprint. *Not built yet.*
 
 ## Documentation
 

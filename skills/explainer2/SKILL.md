@@ -95,7 +95,10 @@ thumbnails. If the sweep errors, check yt-dlp/network, retry once, then report.
 ### 3. Blueprint (generation plane — YOUR main analytical job)
 Read `references/blueprint-playbook.md` IN FULL, then execute its procedure
 against `intel/intel.json` (read finalist thumbnails with vision; read at least
-the top-3 finalists' full transcripts). Write `intel/blueprint.md` and
+the top-3 finalists' full transcripts). Also read `channel/learn/REPORT.md` —
+our own scoreboard (refresh if >7 days stale: `bin/explainer2 learn refresh`
+then `learn report`; unattended yt-dlp, no auth) — and let it tiebreak title
+ranking per playbook §7. Write `intel/blueprint.md` and
 `intel/blueprint.json` using the playbook's templates.
 **GATE: present the Blueprint summary to the operator. Wait for approval.**
 

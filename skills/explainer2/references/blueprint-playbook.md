@@ -187,6 +187,17 @@ teardown; high-leverage, takes precedence when ranking):
 These are tests, not new patterns — apply them on top of §3b. A title can be a
 "number promise" AND acute AND problem-aware; that's the strongest kind.
 
+**Check our own scoreboard before ranking (Learn, added 2026-07-03).** If
+`channel/learn/REPORT.md` exists, read it before finalizing the ranked list:
+which of OUR videos are breakouts vs laggards, and which deterministic title
+features (question / number / second person / negation / two-part) are
+currently ahead. Refresh it first when stale (>7 days): `bin/explainer2 learn
+refresh` then `learn report` — it's unattended yt-dlp, no auth. Treat the
+feature aggregates as a **tiebreaker between otherwise-equal candidates,
+never a veto** — the sample is small and correlation isn't causation; the
+acute/problem-aware tests above still dominate. Cite the report in the
+blueprint's title section when it influenced the ranking.
+
 **Avoid algorithm-triggering words in the title** (operator directive 2026-06-21).
 Even as harmless metaphor, words the recommendation/ads systems may read literally
 as violent or unsafe — **kill, die, dead, destroy, attack, weapon, etc.** — can
