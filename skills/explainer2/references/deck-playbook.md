@@ -97,6 +97,14 @@ substrings of the text they accent or nothing highlights.
 - **`timeline`** → `events[]` of `{date, label}`.
 - **`matrix`** → `x_axis[lo,hi]`, `y_axis[lo,hi]`, `points[]{x,y,label,kind}` (2×2).
 - **`compare`** → `left{title,value,kind}` vs `right{title,value,kind}`.
+- **`schematic`** *(Remotion engine only, 2026-07-04)* → the guided node/edge diagram:
+  `nodes[]{id, label, sub?, x, y, w?, kind?(good|bad|neutral)}` (x/y/w in 0–1 frame
+  space, YOU author the layout), `edges[]{from, to, label?, kind?}`,
+  `stages[]{reveal: [node ids and "<from>-><to>" edge ids], cue: "<spoken phrase>"}`,
+  optional `camera[]{center:[x,y], zoom, stage}` (drifts to the active region),
+  optional `sketch: true` (hand-drawn outlines). Nodes/edges assemble stage-by-stage
+  AS the narration describes them. 5–9 nodes max. Under `--engine deck` it falls back
+  to a plain headline card — don't author schematics for deck-engine projects.
 
 ### Media slides — REQUIRE a real image on disk (see §4)
 - **`figure`** → `image` (path, **must exist**) + `caption`. A framed still /
@@ -170,6 +178,31 @@ dropped on the slide"). Do it as framed `figure` slides, not raw dumps:
 - **Copyright:** short fair-use excerpts with on-slide attribution only (same
   posture as the script). Never reproduce the whole document.
 
+## 4c. Narration cues + the annotation layer (Remotion engine, 2026-07-04)
+
+The motion engine syncs visuals to the SPOKEN audio (full contract:
+motion-playbook §5/§2H). What you author in `deck.json`:
+
+- **Cue phrases are verbatim script text.** Every `cue` field is matched against the
+  aligned narration — copy the exact words from that segment's `text`. A missed cue
+  never breaks the render (proportional fallback + a `sync WARNING` in
+  `work/run.log`) but check the log after rendering.
+- **Free sync (no authoring):** `list`/`steps`/`timeline`/`waterfall` items appear as
+  their labels are spoken. Write item text whose FIRST content word matches the
+  narration's wording ("Platform architecture" syncs on "platform").
+- **`"cues": {"land": "seventy five percent"}`** on a `stat` slide lands the counter
+  on the phrase.
+- **`annotations: [...]`** on ANY slide — hand-drawn overlay elements in 0–1
+  full-frame space, each with a `cue`:
+  `{kind: arrow|circle|underline|strike|box, from/to or at+w/h, color?, label?, cue}`
+  or `{kind: doodle, name: "<category>/<name>" from library/doodles/manifest.json,
+  at, w, color?, reveal: pop|wipe, cue}`. One focal annotation at a time; use them to
+  point at the thing being said, not as decoration.
+- **`figure` guided tours:** `moves[]{to:{x,y,scale}, cue}` pans/zooms the framed
+  image region-to-region as the narration discusses each part;
+  `assemble{pieces[]{clip:[x,y,w,h], cue}}` builds the image in cued pieces;
+  `highlight{..., cue}` wipes the marker on the phrase.
+
 ## 5. Validate before the full render
 
 Run the deck stage alone — it's fast and catches bad fields / missing images
@@ -203,6 +236,14 @@ every `accent`/`accent2`/`mark` token is a substring of its headline/title; no
 - [ ] No `figure`/`footage` without an existing image; otherwise a text type.
 - [ ] Visual mode changes at least every 3–4 slides; the midroll seam gets the
       strongest visual.
+- [ ] Every `cue` phrase appears VERBATIM in its segment's script text; after the
+      render, `grep "sync WARNING" work/run.log` comes back empty (or each warning
+      is consciously accepted).
+- [ ] Annotations: ≤2 per slide, one focal at a time; doodle `name`s exist in
+      `library/doodles/manifest.json`; schematic ≤9 nodes.
+- [ ] Long segments (>20s) carry a mid-scene motion beat — an annotation, a cued
+      stage, or a figure move — so no shot sits static through speech (QA's
+      longest-shot warning is the tell).
 - [ ] `bin/explainer2 deck <dir>` renders with no error.
 
 The deck has no separate operator gate — the operator sees it in the rendered

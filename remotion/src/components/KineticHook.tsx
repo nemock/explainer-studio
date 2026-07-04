@@ -1,25 +1,12 @@
 import React from 'react';
 import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
+import {colorizeText} from './colorize';
 
 // motion-playbook §2A — the cold-open / outro punch: kicker + a big headline that
 // springs in, accent words colored. fields: {kicker, headline, accent[], accentRed[], sub}
-const colorize = (text: string, accent: string[] = [], accentRed: string[] = []) => {
-  const lc = (s: string) => s.replace(/[^a-z0-9]/gi, '').toLowerCase();
-  // flatten multi-word accent phrases ("IN CHARGE") into per-word tokens so they tint
-  const a = accent.flatMap((s) => s.split(' ')).map(lc);
-  const r = accentRed.flatMap((s) => s.split(' ')).map(lc);
-  return text.split(' ').map((w, i) => {
-    const key = lc(w);
-    const color = r.includes(key) ? BRAND.red : a.includes(key) ? BRAND.green : BRAND.white;
-    return (
-      <span key={i} style={{color}}>
-        {w}
-        {i < text.split(' ').length - 1 ? ' ' : ''}
-      </span>
-    );
-  });
-};
+const colorize = (text: string, accent: string[] = [], accentRed: string[] = []) =>
+  colorizeText(text, accent, accentRed);
 
 export const KineticHook: React.FC<{fields: any}> = ({fields}) => {
   const frame = useCurrentFrame();

@@ -8,8 +8,10 @@ import {StatCounter} from './components/StatCounter';
 import {StatGrid} from './components/StatGrid';
 import {TalkingScene} from './components/TalkingScene';
 import {Hero3D} from './components/Hero3D';
-import {KineticHeadline, Quote, PunchWord, Reframe, BuildList, SideBySide, Timeline} from './components/TextScenes';
+import {KineticHeadline, DefineTerm, Quote, PunchWord, Reframe, BuildList, SideBySide, Timeline} from './components/TextScenes';
 import {Figure, Footage} from './components/Media';
+import {AnnotateOverlay} from './components/Annotate';
+import {Schematic} from './components/Schematic';
 import {CTA} from './components/CTA';
 import {BrandSting, StepFlow} from './components/Extras';
 import {DrawLine, Waterfall, Pictograph, Ring, Funnel} from './components/DataViz2';
@@ -28,6 +30,7 @@ const REGISTRY: Record<string, React.FC<any>> = {
   Waveform,
   KineticHook,
   KineticHeadline,
+  DefineTerm,
   StatCounter,
   StatGrid,
   Quote,
@@ -38,6 +41,7 @@ const REGISTRY: Record<string, React.FC<any>> = {
   Timeline,
   Figure,
   Footage,
+  Schematic,
   CTA,
   TalkingScene,
 };
@@ -80,6 +84,9 @@ export const Video: React.FC<VideoProps> = (props) => {
               <AbsoluteFill style={{bottom: contentBottom}}>
                 <Comp fields={scene.fields || {}} durationInFrames={scene.durationInFrames} sceneFrom={scene.from} audioFrom={audioFrom} />
               </AbsoluteFill>
+              {/* narration-cued hand-drawn annotations (motion-playbook §2H) — full-frame
+                  coordinate space, on top of the scene, under the captions */}
+              {(scene as any).annotations?.length ? <AnnotateOverlay annotations={(scene as any).annotations} /> : null}
             </SceneWrap>
           </Sequence>
         );

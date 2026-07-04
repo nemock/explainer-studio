@@ -1,6 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
+import {colorizeText} from './colorize';
 
 // motion-playbook §2A/F — the closing CTA. Floats the brand book cover in next to the
 // call-to-action text (operator directive 2026-06-24: show the cover, don't just talk
@@ -37,7 +38,7 @@ export const CTA: React.FC<{fields: any}> = ({fields}) => {
         </div>
       ) : null}
       <div style={{fontFamily: BRAND.font, color: BRAND.white, fontWeight: 900, fontSize: height * 0.07, lineHeight: 1.05, textShadow: '0 10px 50px rgba(0,0,0,.6)'}}>
-        {fields.headline}
+        {colorizeText(fields.headline, fields.accent, fields.accentRed)}
       </div>
       {fields.subkicker ? (
         <div style={{fontFamily: BRAND.font, color: BRAND.white, opacity: 0.82, fontWeight: 700, fontSize: height * 0.03, marginTop: height * 0.028, lineHeight: 1.3}}>

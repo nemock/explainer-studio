@@ -11,13 +11,20 @@ const fmt = (n: number, prefix = '') => {
 
 export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
   const frame = useCurrentFrame();
-  const {height} = useVideoConfig();
+  const {height, fps} = useVideoConfig();
   const from = fields.from ?? 0;
   const to = fields.to ?? 0;
   const prefix = fields.prefix ?? '';
-  // count happens over the cue window (fraction of the scene), default mid-scene
+  // count happens over the cue window (fraction of the scene), default mid-scene.
+  // cueFrames.land (a narration cue resolved by the Python spec-builder — author
+  // `"cues": {"land": "<spoken phrase>"}` on the slide) makes the counter LAND on
+  // the phrase: the count runs the ~1.1s up to that exact frame.
+  const land: number | undefined = fields.cueFrames?.land;
   const cue = fields.cue ?? [0.28, 0.72];
-  const value = interpolate(frame, [cue[0] * durationInFrames, cue[1] * durationInFrames], [from, to], {
+  const window: [number, number] = land != null
+    ? [Math.max(0, land - Math.round(1.1 * fps)), Math.max(1, land)]
+    : [cue[0] * durationInFrames, cue[1] * durationInFrames];
+  const value = interpolate(frame, window, [from, to], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
@@ -89,6 +96,11 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
           }}
         >
           {negative ? fields.labelNeg || fields.label : fields.label}
+        </div>
+      ) : null}
+      {fields.subkicker ? (
+        <div style={{fontFamily: BRAND.font, color: BRAND.white, opacity: 0.75, fontWeight: 700, fontSize: height * 0.024, marginTop: height * 0.024, textAlign: 'center'}}>
+          {fields.subkicker}
         </div>
       ) : null}
     </AbsoluteFill>

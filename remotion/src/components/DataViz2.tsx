@@ -39,11 +39,14 @@ export const DrawLine: React.FC<{fields: any; durationInFrames: number}> = ({fie
   );
 };
 
-// waterfall -> cumulative bars building (motion-playbook §2B). fields: {kicker, start, steps[], end}
+// waterfall -> cumulative bars building (motion-playbook §2B).
+// fields: {kicker, start, steps[], end, itemTimes?: (number|null)[]} — itemTimes are
+// narration-cue frames (Python-resolved); bars land as their labels are spoken.
 export const Waterfall: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
   const bars = [fields.start, ...(fields.steps || []), fields.end].filter(Boolean);
+  const itemTimes: (number | null)[] | undefined = fields.itemTimes;
   const per = durationInFrames / Math.max(1, bars.length + 1);
   const maxV = Math.max(1, ...bars.map((b: any) => Math.abs(b.value || 0)));
   return (
@@ -51,7 +54,8 @@ export const Waterfall: React.FC<{fields: any; durationInFrames: number}> = ({fi
       <Kicker text={fields.kicker} o={spring({frame, fps, config: {damping: 18}})} height={height} />
       <div style={{display: 'flex', alignItems: 'flex-end', gap: height * 0.02, height: height * 0.4}}>
         {bars.map((b: any, i: number) => {
-          const g = spring({frame: frame - i * per, fps, config: {damping: 16}});
+          const at = itemTimes && itemTimes[i] != null ? (itemTimes[i] as number) : i * per;
+          const g = spring({frame: frame - at, fps, config: {damping: 16}});
           const isEnd = i === bars.length - 1 || i === 0;
           const col = (b.kind === 'bad') ? BRAND.red : isEnd ? BRAND.green : 'rgba(255,255,255,.5)';
           return (
@@ -115,18 +119,21 @@ export const Ring: React.FC<{fields: any; durationInFrames: number}> = ({fields,
   );
 };
 
-// funnel -> stages narrowing, revealing top-to-bottom (motion-playbook §2C). fields: {kicker, stages:[{label,value}]}
+// funnel -> stages narrowing, revealing top-to-bottom (motion-playbook §2C).
+// fields: {kicker, stages:[{label,value}], itemTimes?: (number|null)[]} — cue-synced.
 export const Funnel: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
   const stages = fields.stages || [];
+  const itemTimes: (number | null)[] | undefined = fields.itemTimes;
   const per = durationInFrames / Math.max(1, stages.length + 1);
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
       <Kicker text={fields.kicker} o={spring({frame, fps, config: {damping: 18}})} height={height} />
       <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: height * 0.012}}>
         {stages.map((s: any, i: number) => {
-          const e = spring({frame: frame - i * per, fps, config: {damping: 16}});
+          const at = itemTimes && itemTimes[i] != null ? (itemTimes[i] as number) : i * per;
+          const e = spring({frame: frame - at, fps, config: {damping: 16}});
           const w = interpolate(i, [0, Math.max(1, stages.length - 1)], [62, 26]); // % width narrowing
           return (
             <div key={i} style={{width: `${w}vw`, padding: height * 0.022, borderRadius: 12, background: `rgba(61,220,132,${0.5 - i * 0.07})`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: e, transform: `scaleY(${e})`}}>

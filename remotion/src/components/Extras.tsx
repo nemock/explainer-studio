@@ -30,13 +30,17 @@ export const BrandSting: React.FC<{fields: any; durationInFrames: number}> = ({f
 };
 
 // motion-playbook §2C — a process flow: nodes connected by arrows, revealing in sequence.
-// fields: {kicker, steps:[string | {title,text}]}
+// fields: {kicker, steps:[string | {title,text}], itemTimes?: (number|null)[]}
+// itemTimes (narration-cue frames, resolved by the Python spec-builder) land each node
+// AS it's spoken; null/absent entries fall back to the even stagger.
 export const StepFlow: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
   const frame = useCurrentFrame();
   const {fps, height, width} = useVideoConfig();
   const raw = fields.steps || [];
   const steps = raw.map((s: any) => (typeof s === 'string' ? {title: s} : s));
+  const itemTimes: (number | null)[] | undefined = fields.itemTimes;
   const per = durationInFrames / Math.max(1, steps.length + 1);
+  const appearAt = (i: number) => (itemTimes && itemTimes[i] != null ? (itemTimes[i] as number) : i * per);
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 6%'}}>
       <div style={{width: '100%'}}>
@@ -47,8 +51,10 @@ export const StepFlow: React.FC<{fields: any; durationInFrames: number}> = ({fie
         ) : null}
         <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: height * 0.012, flexWrap: 'nowrap'}}>
           {steps.map((s: any, i: number) => {
-            const e = spring({frame: frame - i * per, fps, config: {damping: 16, stiffness: 110}});
-            const arrow = i > 0 ? interpolate(frame, [(i - 0.5) * per, i * per], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}) : 0;
+            const at = appearAt(i);
+            const prevAt = i > 0 ? appearAt(i - 1) : 0;
+            const e = spring({frame: frame - at, fps, config: {damping: 16, stiffness: 110}});
+            const arrow = i > 0 ? interpolate(frame, [Math.max(prevAt, at - 0.5 * per), at], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}) : 0;
             return (
               <React.Fragment key={i}>
                 {i > 0 ? (

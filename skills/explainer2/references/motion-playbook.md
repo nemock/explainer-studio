@@ -12,6 +12,12 @@ Status (2026-06-24): the **vocabulary + doctrine** below are the standard. The
 next build; the pilots in `experiments/remotion-pilot/` (kinetic hook, document
 highlight, synced stat-counter + draining bar) are the proof it works locally and free.
 
+Status (2026-07-04): the engine is SHIPPED and default, and the **narration-sync
+system is implemented** — the §5 `cues` contract, the §2H annotation layer
+(hand-drawn arrows/circles/underlines + the operator's CopyDoodles stamps), the
+`schematic` guided diagram, and Figure guided tours (`moves`/`assemble`) all render.
+Verify new specs against `remotion/motion-lab.json` (still-frame fixture).
+
 Read this file before authoring any video's motion spec.
 
 ---
@@ -89,12 +95,40 @@ Each entry: **what · when · spec fields · motion · don't.**
 *Rule:* tie the key moment to the alignment cue; tabular-nums; figures trace to wiki/intel.
 
 ### C. Diagrams & process (build-on — the teaching core)
-- **StepFlow** — nodes assemble and arrows draw, one node per beat (idea→MVP→launch→scale).
-- **DecisionTree / Branch** — a fork resolving as you explain the choice.
-- **Funnel** — stages narrowing; great for sales/customer math.
-- **Timeline** — events appear along a line in time (AI-winter cycles; a company history).
-- **Cycle** — a loop diagram (the hype cycle; a flywheel).
+- **Schematic** (IMPLEMENTED 2026-07-04, deck type `schematic`) — the guided diagram:
+  nodes at authored 0-1 positions spring in per **cued stage**, edges draw on
+  underneath, and a **camera** drifts/zooms to the active region so the viewer's eye
+  is led through the picture as the narration walks it. `sketch: true` gives seeded
+  hand-drawn node outlines. Fields: `nodes[{id,label,sub?,x,y,w?,kind?}]`,
+  `edges[{from,to,label?,kind?}]`, `stages[{reveal:[ids],cue}]`,
+  `camera[{center,zoom,stage}]`. 5–9 nodes max (legibility). Use for anything
+  non-linear: org maps, buying chains, system diagrams, decision forks, cycles.
+- **StepFlow** — the linear pipeline (idea→MVP→launch→scale); now lands each node on
+  its narration cue automatically (auto item-sync, §5).
+- **Funnel** — stages narrowing; great for sales/customer math (auto item-synced).
+- **Timeline** — events appear along a line in time (auto item-synced).
 *Rule:* build in sync with the explanation; never reveal the whole diagram at once.
+
+### H. The annotation layer (IMPLEMENTED 2026-07-04 — hand-drawn, narration-cued)
+Any slide can carry `annotations: [...]` — an overlay ON TOP of the scene, drawn in
+0-1 FULL-FRAME space, each element firing on a spoken cue. Two families, freely mixed:
+- **Vector (rough.js, seeded — true draw-on):** `arrow` (`from`→`to`, auto arrowhead),
+  `circle` (`at`+`w`/`h`), `underline` (`at`+`w`), `strike` (`from`→`to`), `box`
+  (`at`+`w`/`h`). Options: `color: green|red|white` (default green), `label` (small
+  italic tag near the target), `cue: "<spoken phrase>"`.
+- **Doodle stamps (`kind: "doodle"`)** — the operator's licensed **CopyDoodles**
+  library (real Sharpie scans): `name` from `library/doodles/manifest.json`
+  (106 pieces: arrows/ovals/boxes/brackets/bullets/crossouts/lines/misc/numbers/
+  shapes), `at`+`w`, `color` tint, `reveal: pop|wipe`, optional `rotate`. Authentic
+  hand-drawn character; use for emphasis stamps (check, question marks, starburst,
+  circled scribbles). The vector kinds beat doodles for point-to-point geometry;
+  doodles beat vectors for personality. LICENSE: the files are gitignored
+  (`library/`), staged per-render into the project's private work dir, and must
+  never enter a public repo — flattened into rendered video is the permitted use.
+*Rules:* one focal annotation at a time; annotations reinforce the narration's exact
+words (set `cue` to the phrase being said); keep labels ≥ caption size; on `figure`
+slides prefer the figure's own image-space `moves`/`highlight` for document work and
+frame-space annotations for editorial arrows.
 
 ### D. Document & evidence (the #38 lane, generalized)
 - **DocReveal** — scroll a real page/screenshot.
@@ -180,12 +214,25 @@ Reach for these freely; they are a big part of "dynamic is the norm" (§0).
 
 ## 5. The spec contract (data in, motion out)
 
-- A video's motion is a **`motion.json`** — `scenes[]` keyed 1:1 to script segments
-  (`id` matches the script `slide`), each `{id, component, fields, sync?}`. Same 1:1
-  discipline as `deck.json`.
+- **The authored artifact is `deck.json`** (one slide per script segment — the
+  deck-playbook's 1:1 contract). The engine (`remotion_engine.py`) maps each slide
+  type to a component and resolves all narration cues at spec-build time. (The
+  separate `motion.json` this section originally sketched was never needed.)
 - `fields` = that component's data (headline, value, image, items, points…).
-- `sync` = optional cue word/time the component lands its key moment on; defaults to the
-  alignment JSON for that segment.
+- **The sync contract (IMPLEMENTED 2026-07-04).** All cue resolution happens in
+  Python against `work/alignment.json`; components receive frame numbers and stay
+  pure functions of frame. Four authoring surfaces on any slide:
+  1. `"cues": {"<name>": "<spoken phrase>"}` → `fields.cueFrames.<name>`. Known
+     names: `land` (StatCounter lands its count on the phrase).
+  2. **Auto item-sync** (no authoring needed): `list`/`steps`/`funnel`/`waterfall`/
+     `timeline` items each appear AS their label is spoken (first-content-word match,
+     walking forward). Even-stagger fallback per item.
+  3. `annotations[].cue`, `schematic` `stages[].cue`, `figure` `moves[].cue` /
+     `assemble.pieces[].cue` / `highlight.cue` — per-element phrases.
+  4. Misses NEVER break a render: proportional fallback + a `sync WARNING` line in
+     `work/run.log` (grep it after every render; fix the phrase or accept the fallback).
+  Cue phrases must be copied VERBATIM from the segment's script text (they're matched
+  against what was actually said — the aligner's words).
 - **Duration is computed**, not hand-set: `calculateMetadata` derives `durationInFrames`
   from the narration audio (Mediabunny / get-audio-duration). Never hardcode frame counts.
 - **Determinism:** `useCurrentFrame`/`interpolate`/`spring` only; no CSS animation; no
@@ -210,11 +257,13 @@ Reach for these freely; they are a big part of "dynamic is the norm" (§0).
 - **Captions:** kinetic captions render from the alignment JSON; the `.srt`/`.vtt` sidecar
   still ships for YouTube.
 - **Deck-type → motion-component map** (the migration table): `statement`→KineticHook/
-  Headline · `stat`/`statgrid`→StatCounter · `delta`/`compare`→Delta/SideBySide ·
-  `diagram`/`ranked`→BuildBars · `trend`→DrawLine · `waterfall`→Waterfall ·
-  `timeline`→Timeline · `list`/`steps`→BuildList/StepFlow · `quote`→Quote ·
-  `punch`→PunchWord · `reframe`→Reframe · `figure`→DocZoomAnnotate · `footage`→Footage/
-  Cutaway · `payoff`/`cta`→BrandSting. Until the engine ships, the **deck-playbook governs**.
+  Headline · `define`→DefineTerm · `stat`/`statgrid`→StatCounter/StatGrid ·
+  `delta`/`compare`→SideBySide · `trend`/`ranked`/`diagram`→DrawLine ·
+  `waterfall`→Waterfall · `timeline`→Timeline · `list`→BuildList · `steps`→StepFlow ·
+  **`schematic`→Schematic** · `quote`→Quote · `punch`→PunchWord · `reframe`→Reframe ·
+  `figure`→Figure (tours/assemble/highlight) · `footage`→Footage · `hook`→Hero3D ·
+  `payoff`/`cta`→CTA. The **deck-playbook governs slide-type semantics**; this file
+  governs their motion.
 
 ## 7. Self-QA checklist (run before rendering a motion spec)
 

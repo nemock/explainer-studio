@@ -1,0 +1,74 @@
+{
+  "_readme": "MotionLab fixture — exercises the narration-sync + annotation + schematic + figure-tour system with NO project data. Render single frames to eyeball every new component: npx remotion still src/index.ts Video out.png --props=motion-lab.json --frame=N --public-dir=<dir with doodle__*.png staged from library/doodles>. Good check frames: 80 (define+underline), 170 (schematic assembled, camera moved), 250 (arrow+circle drawn), 350 (stat landed + doodles). cueFrames/stageTimes/itemTimes are hand-set here; in production the Python spec-builder resolves them from spoken-phrase cues (remotion_engine.py).",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "durationInFrames": 360,
+  "audio": "",
+  "words": [],
+  "audioFrom": 0,
+  "captionBottomPx": 160,
+  "captionFontSize": 34,
+  "scenes": [
+    {
+      "component": "DefineTerm",
+      "from": 0,
+      "durationInFrames": 90,
+      "fields": {"kicker": "MOTION LAB · DEFINE", "term": "The cue resolver",
+                 "definition": "Every element lands exactly when the narration says it."},
+      "annotations": [
+        {"kind": "underline", "at": [0.5, 0.66], "w": 0.34, "color": "green", "cueFrame": 30}
+      ]
+    },
+    {
+      "component": "Schematic",
+      "from": 90,
+      "durationInFrames": 90,
+      "fields": {
+        "kicker": "MOTION LAB · SCHEMATIC",
+        "sketch": true,
+        "nodes": [
+          {"id": "champion", "label": "Clinical champion", "sub": "wants it", "x": 0.18, "y": 0.32, "w": 0.2},
+          {"id": "vac", "label": "Value analysis", "sub": "scores it", "x": 0.5, "y": 0.5, "w": 0.2},
+          {"id": "procurement", "label": "Procurement", "sub": "negotiates it", "x": 0.8, "y": 0.34, "w": 0.2},
+          {"id": "cfo", "label": "CFO", "sub": "pays for it", "x": 0.8, "y": 0.72, "w": 0.14, "kind": "bad"}
+        ],
+        "edges": [
+          {"from": "champion", "to": "vac", "label": "sponsors"},
+          {"from": "vac", "to": "procurement", "label": "approves"},
+          {"from": "procurement", "to": "cfo", "kind": "bad"}
+        ],
+        "stages": [
+          {"reveal": ["champion"]},
+          {"reveal": ["vac", "champion->vac"]},
+          {"reveal": ["procurement", "vac->procurement"]},
+          {"reveal": ["cfo", "procurement->cfo"]}
+        ],
+        "stageTimes": [4, 24, 46, 66],
+        "camera": [{"center": [0.65, 0.5], "zoom": 1.25, "stage": 2}]
+      }
+    },
+    {
+      "component": "KineticHeadline",
+      "from": 180,
+      "durationInFrames": 90,
+      "fields": {"kicker": "MOTION LAB · ANNOTATE", "headline": "Drawn while the voice is talking.",
+                 "accent": ["Drawn"]},
+      "annotations": [
+        {"kind": "arrow", "from": [0.16, 0.78], "to": [0.4, 0.6], "color": "green", "label": "the gap", "cueFrame": 18},
+        {"kind": "circle", "at": [0.72, 0.53], "w": 0.2, "h": 0.16, "color": "red", "cueFrame": 52}
+      ]
+    },
+    {
+      "component": "StatCounter",
+      "from": 270,
+      "durationInFrames": 90,
+      "fields": {"kicker": "MOTION LAB · CUED STAT + DOODLES", "from": 0, "to": 75,
+                 "label": "percent saved", "cueFrames": {"land": 60}},
+      "annotations": [
+        {"kind": "doodle", "file": "doodle__misc_check_mark.png", "aspect": 0.9319, "at": [0.76, 0.32], "w": 0.07, "color": "green", "cueFrame": 62},
+        {"kind": "doodle", "file": "doodle__ovals_oval.png", "aspect": 1.8577, "at": [0.5, 0.47], "w": 0.4, "color": "white", "reveal": "wipe", "cueFrame": 70}
+      ]
+    }
+  ]
+}
