@@ -419,8 +419,10 @@ def main(argv=None):
     rc.add_argument("--no-open", action="store_true", help="don't auto-open the browser")
     rc.set_defaults(func=cmd_record)
 
-    ad = sub.add_parser("adlib", help="ASR-check operator recordings against the script (local whisper); "
-                                      "--apply rewrites drifted segment text so captions follow what was said")
+    ad = sub.add_parser("adlib", help="FALLBACK drift check: the booth now ASR-checks takes live and writes "
+                                      "work/adlib_report.json at Finish; run this only when that report is "
+                                      "missing or has 'unchecked' segments. --apply rewrites drifted segment "
+                                      "text to raw ASR (normally avoid)")
     ad.add_argument("project_dir")
     ad.add_argument("--apply", action="store_true")
     ad.set_defaults(func=cmd_adlib)

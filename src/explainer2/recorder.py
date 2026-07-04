@@ -390,6 +390,29 @@ def run(proj, open_browser=True):
                "session_s": round(time.time() - state["t0"], 1),
                "roomtone": roomtone or None}
         (work_dir / "booth_session.json").write_text(json.dumps(rep, indent=2))
+        # Adlib-stage retirement (2026-07-03): emit the same artifact media/adlib.run
+        # produces, straight from the in-session drift results — no second whisper
+        # pass needed after recording. Cards whose drift check didn't complete are
+        # "unchecked"; `explainer2 adlib` remains as the FALLBACK for those only.
+        if drift_enabled:
+            from .media.adlib import MODEL, MINOR, MAJOR
+            rows, worst = [], 0.0
+            for s in segs:
+                sid = s["id"]; st = cur["stem"][sid]
+                if not recorded(sid):
+                    rows.append({"id": sid, "status": "not_recorded"}); continue
+                dr = drift_state.get(st) or {}
+                if dr.get("status") != "done":
+                    rows.append({"id": sid, "status": "unchecked"}); continue
+                d = dr.get("drift", 0.0); worst = max(worst, d)
+                status = "verbatim" if d < MINOR else ("adlib" if d < MAJOR else "rerecord")
+                rows.append({"id": sid, "status": status, "drift": d,
+                             "script_text": s["text"], "asr_text": dr.get("asr_text", "")})
+            (work_dir / "adlib_report.json").write_text(json.dumps(
+                {"model": MODEL, "segments": rows, "worst_drift": worst,
+                 "rerecord": [r["id"] for r in rows if r.get("status") == "rerecord"],
+                 "unchecked": [r["id"] for r in rows if r.get("status") == "unchecked"],
+                 "applied": [], "source": "booth"}, indent=2))
         return rep
 
     class H(BaseHTTPRequestHandler):

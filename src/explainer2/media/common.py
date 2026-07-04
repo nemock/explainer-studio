@@ -11,7 +11,14 @@ def effective_segments(proj, script):
     spoken_cta = (brand.get("cta") or {}).get("spoken")
     # `auto_cta` (default true) gates the spoken CTA, mirroring the deck CTA slide in deckbuild —
     # set false (scaffold --no-cta) so a branded act sub-segment isn't narrated with a CTA tail.
-    if spoken_cta and proj.data.get("auto_cta", True) and not any(s.get("slide") == "cta" for s in segments):
+    # already_covered: the script-playbook has authors copy the CTA verbatim into their own
+    # closing segment, but that segment is numbered s21/s30/etc, never the literal "cta"
+    # sentinel — so also check the text itself, or every branded project double-reads its CTA.
+    already_covered = any(
+        s.get("slide") == "cta" or (spoken_cta and spoken_cta in s.get("text", ""))
+        for s in segments
+    )
+    if spoken_cta and proj.data.get("auto_cta", True) and not already_covered:
         next_id = (max(s["id"] for s in segments) + 1) if segments else 0
         segments.append({"id": next_id, "slide": "cta", "text": spoken_cta})
     return segments

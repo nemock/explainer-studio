@@ -191,6 +191,32 @@ Diagnose by rendering once and looking; if the torso dissolves, separate it —
 Record which adjustment (if any) was used in the project's PLAYBOOK §5 so the
 series stays consistent.
 
+## 5b. Per-brand color override (multi-brand studios)
+
+The red/green/navy signature in §0/§2 is the **default channel's** brand — it
+is not universal across every brand this studio produces for. Before building
+a thumbnail, **check the project's `--brand` config** (`project.json.brand`,
+sourced from the brand's `brand.json`) for a `thumbnail` block. If one exists,
+it overrides the template's default colors for that brand's whole run:
+
+- `accent_hex` replaces the green `.sub span` accent (`#3ddc84` default).
+- `inner_hotspot_hex` replaces the gradient's inner hotspot (`#1a2750`
+  default) — still subject to §5's hard limits (dark, cool; never light or
+  warm) even when brand-driven.
+- `bands_hex` replaces the red `.band` color (`#ff4d4d` default) — often left
+  at the default even when the accent changes, since the red bands read as a
+  cross-studio structural device more than a brand-identity color.
+
+**Example — BRG (Base Reality Group), decided 2026-07-02 for its whole
+10-video fractional-CPO series:** `accent_hex: #7b5bff` (BRG's own brand
+accent), `inner_hotspot_hex: #28204f` (the indigo option already vetted in
+§5's outfit-swap table), `bands_hex` unchanged. See
+`~/.claude/explainer-brands/BRG/brand.json`. Apply this to every thumbnail in
+that series without re-asking; it's a standing series decision, not a
+per-video judgment call.
+
+If a brand has no `thumbnail` block, use the §0/§2 defaults.
+
 ## 6. Render
 
 ```

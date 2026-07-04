@@ -96,7 +96,7 @@ def run(proj):
         if brand.get("product"):
             bc["product"] = "../" + brand["product"]
         deck["brand"] = bc
-        if proj.data.get("auto_cta", True) and not any(s.get("id") == "cta" for s in deck.get("slides", [])):
+        if proj.data.get("auto_cta", True) and not any(s.get("type") == "cta" for s in deck.get("slides", [])):
             deck.setdefault("slides", []).append({"id": "cta", "type": "cta"})
     w, h = proj.size
     base = (ASSETS / "deck_base.html").read_text()

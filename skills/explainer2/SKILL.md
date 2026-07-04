@@ -167,13 +167,16 @@ body line).
     returns the instant that file appears — so the harness notifies you that
     recording is done, no polling and no asking. The sentinel is durable: if the
     waiter dies on suspension, re-run `--wait` or just check for the file.
-  - Editing `script.json` after launch requires a booth **restart** (`--stop` then
-    relaunch); a page refresh does NOT reload cached cards.
-  Then run the ad-lib drift check (full procedure in §7b): `bin/explainer2 adlib
-  <project_dir>`. If a segment is flagged `rerecord`, tell the operator which and
-  relaunch the booth (`launch_booth.py`). Fix any real drift BY HAND (edit the
-  segment, re-run narrate+align) — **do NOT use `--apply`** (it overwrites your
-  spelled-out numbers and proper nouns with raw ASR; see §7b).
+  - Script edits during a session need NO restart (Booth 2.0): the booth
+    hot-reloads `script.json` on refresh, and the operator can edit lines
+    inline in the booth (writes back to the script with a backup).
+  Then read `work/adlib_report.json` — the booth drift-checks every take live
+  and writes the report at Finish (§7b; run `bin/explainer2 adlib` only as the
+  fallback for `unchecked` segments). If a segment is flagged `rerecord`, tell
+  the operator which and relaunch the booth (`launch_booth.py`). Fix any real
+  drift BY HAND (edit the segment, re-run narrate+align) — **do NOT use
+  `--apply`** (it overwrites your spelled-out numbers and proper nouns with raw
+  ASR; see §7b).
 - Kokoro tier: skip record/adlib entirely.
 
 ### 6b. Assets (Adobe Stock assist — optional, never blocking)
@@ -269,11 +272,19 @@ No raw `ffmpeg` for an encode, ever, now that the helper exists.
 The operator records with flexibility: they cut, add, and rephrase live, and that
 freedom is intentional. But captions are generated from the recorded script
 **snapshot**, so any live deviation leaves captions showing words that weren't
-said (or missing words that were). Before packaging, ALWAYS run:
+said (or missing words that were).
+
+**The booth now does this check live (2026-07-03 — the standalone stage is
+retired as a mandatory step).** Every take gets a whisper drift badge in the
+booth, and clicking Finish writes `work/adlib_report.json` from those results —
+same schema as the old stage, plus an `"unchecked"` list for any cards whose
+in-booth check didn't complete (drift disabled, deferred behind a render, or a
+worker error). So before packaging: **read `work/adlib_report.json`**; only if
+it's missing or has `unchecked` entries, run the fallback:
 ```
-bin/explainer2 adlib <project_dir>
+bin/explainer2 adlib <project_dir>    # FALLBACK only — re-transcribes everything
 ```
-Read `work/adlib_report.json` per segment (`drift`, `script_text`, `asr_text`) and
+Either way, review per segment (`drift`, `script_text`, `asr_text`) and
 separate **recognizer noise** from **real drift**:
 - **Noise — IGNORE.** Spelled-out numbers transcribed as digits ("seventy-five
   billion" → "$75 billion"), "A.I."/"I.P.O." losing their dots, contractions,

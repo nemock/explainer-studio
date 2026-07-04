@@ -15,6 +15,8 @@ A local-first **explainer-video studio**: YouTube competitive intelligence → r
 
 **This is NOT v1.** The production v1 lives at `/Volumes/Casima/claudeCode/explainer-system` and is **frozen from this project's perspective: never import from it, never write into it.** Its proven media core was vendored once into `src/explainer2/` (headers say `VENDORED_FROM` + the v1 commit); divergence here is expected and fine.
 
+**`projects/`, `channel/`, and `research/` are symlinks into a separate private repo.** This repo (`explainer-studio` on GitHub) is **public**. The actual operator content — project dirs, `channel/CATALOG.md`, `promotions.json`/`PROMOTIONS.md`, the research wiki — lives in a private sibling repo, `/Volumes/Casima/claudeCode/explainer-content` (its own independent git repo), and is symlinked in at those three paths (see `.gitignore`'s comment above `/projects`, `/channel`, `/research`). explainer2 is the code; explainer-content is the data. Read/write through the symlinked paths as normal — they resolve transparently, and `bin/explainer2 scaffold --outdir <repo>/projects` already lands in the right place — but never conclude a project doesn't exist just because a fresh clone of explainer2 shows `projects/` as empty or a broken symlink; check `explainer-content` directly.
+
 ## Hard constraints (from the PRD — do not violate without asking)
 
 - **Target machine:** Apple **M3, 16 GB unified memory, Metal — no CUDA**. Budget against unified memory; **serialize** memory-heavy stages (never Kokoro + Chrome capture + ffmpeg concurrently).
@@ -48,7 +50,7 @@ the playbook — the repo, not the session, is where insight accumulates.
 ## How to run
 
 - CLI: **`bin/explainer2`** (wraps `PYTHONPATH=src ~/myenv/bin/python3.12 -m explainer2.cli`). The shared `~/myenv` venv holds the verified torch/Kokoro/Playwright stack — do not create a new venv without asking.
-- Projects land in `projects/<date>_<slug>/` (gitignored). Per-project layout: PRD §10.
+- Projects land in `projects/<date>_<slug>/` — a symlink into the private `explainer-content` repo, not a plain gitignored local dir (see "What this project is" above). Per-project layout: PRD §10.
 - **Media stages run in the foreground EXCEPT the heavy render.** Run the light stages synchronously (`bin/explainer2 media --only narrate,align <dir>`), then launch the deep-dive render **detached** with `bin/explainer2 render <dir>` — it exceeds the Bash 10-min cap and a harness-backgrounded encode dies on app-suspend, and detaching keeps the machine usable instead of locking it up mid-encode. No polling loops (global CLAUDE.md shell rules apply: no loops, no brace expansion, absolute paths). See SKILL §7 for the full render-robustness + render-lock detail. **Rendering defaults to the Remotion motion engine** (motion-playbook.md; needs `npm install` in `remotion/`); pass `--engine deck` for the legacy JS deck engine (then also run the `deck` stage).
 
 ## Decisions already made (don't relitigate without asking)
