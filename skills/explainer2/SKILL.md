@@ -365,6 +365,19 @@ End with a one-line *Voice note* describing the register, for the operator's
 reference. No render gate — it's text, reviewed in place. (Mirror the format of
 an existing `package/linkedin.md`, e.g. video #07's.)
 
+### 8d. Package completeness — `validate` enforces it
+A complete package is FOUR generation-plane deliverables, none produced by a
+media stage (so nothing else guarantees they exist — that's how #16 shipped
+without `linkedin.md`, 2026-07-04):
+`package/meta.json` · `package/article.md` · `package/linkedin.md` ·
+`package/thumbnails/thumb_a.png` + `thumb_b.png` (the A/B pair).
+**Run `bin/explainer2 validate <project_dir>` at the end of Package and again
+before any upload/promo.** It checks the manifest handoff AND the four package
+files, and fails with the specific missing path. (It is engine-correct: the
+remotion default produces no `deck/index.html`, and validate no longer requires
+one.) Treat a non-`ok` validate as a blocker — do not present the package gate
+or start an upload until it returns `{"ok": true}`.
+
 Upload-flow checklist (operator-approved Chrome tag-team on the iMac Chrome;
 the operator drags the video + both thumbnail PNGs, you drive the form; the
 tool itself never posts): every deep dive gets (1) title/description/tags from
