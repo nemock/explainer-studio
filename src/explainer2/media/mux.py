@@ -1,7 +1,8 @@
 # VENDORED_FROM: nemock/video-explainer-system @ d593aa41dc32d04e3b714b4731b1763f6e31843e (src/explainer/media/mux.py) — copied 2026-06-10; diverges freely (v1 is frozen).
 """MUX — ffmpeg VideoToolbox hardware encode: per-aspect frames + normalized
 narration -> one MP4 per aspect, with bt709 color tags and faststart."""
-import json, time, subprocess
+import json, time, subprocess, shutil
+from pathlib import Path
 
 
 def _music_path(proj):
@@ -54,8 +55,30 @@ def _mux_one(proj, aspect, fps):
             "duration_s": round(dur, 2), "size_mb": round(size_mb, 2)}
 
 
+def _copy_music_license(proj):
+    """Local copy of the music track's Pixabay license into the project
+    (monetization-readiness, operator directive 2026-07-04). Matches the license
+    beside the track in library/music/ by its shared trailing track id."""
+    music = _music_path(proj)
+    if not music:
+        return
+    import re
+    mp = Path(music)
+    ids = re.findall(r"\d{4,}", mp.stem)
+    if not ids:
+        return
+    tid = ids[-1]
+    for lic in sorted(mp.parent.glob("*.txt")):
+        if "licen" in lic.name.lower() and tid in lic.name:
+            dest = Path(proj.dir) / lic.name
+            if not (dest.exists() and dest.read_bytes() == lic.read_bytes()):
+                shutil.copy2(lic, dest)
+            return
+
+
 def run(proj):
     fps = proj.fps
     results = {a: _mux_one(proj, a, fps) for a in proj.aspects}
     proj.write_json(proj.work / "metrics_mux.json", {"aspects": results})
+    _copy_music_license(proj)
     return {a: results[a]["out_mp4"] for a in results}
