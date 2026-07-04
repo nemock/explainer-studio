@@ -22,10 +22,20 @@ frozen and untouched — routines simply call THIS script instead of v1's
 `record-open`/`record-status`.
 
 Usage:
-  python3 tools/launch_booth.py <project_dir>            # start detached, wait for READY
+  python3 tools/launch_booth.py <project_dir>            # start detached, wait for READY, pop the tab
+  python3 tools/launch_booth.py --no-open <project_dir>  # same, but don't open a browser tab
   python3 tools/launch_booth.py --wait <project_dir>     # block until the green Finish button
   python3 tools/launch_booth.py --status <project_dir>   # DONE / PENDING / NOT_OPEN (instant)
   python3 tools/launch_booth.py --stop                   # stop any running booth
+
+Tab opening (operator directive, 2026-07-04): a booth the operator can't see
+isn't open. On a successful start — including the idempotent "already open for
+this project" path — the launcher pops the booth URL as a Chrome tab via
+macOS `open` (`open -a "Google Chrome" <url>`, falling back to plain `open`).
+That's a fire-and-forget OS handoff: no browser automation, no control over
+the tab, just the tab appearing. Best-effort — a failed `open` never fails
+the launch (the URL is still printed). `--status` and `--wait` never open
+anything; pass --no-open for headless/testing launches.
 
 Port: 8765 fixed (Chrome scopes the mic grant to the exact origin). If 8765 is
 already held by ANOTHER project's booth, the launcher auto-falls back to the
@@ -83,6 +93,20 @@ def stop():
         print(f"stopped booth on :{port}")
 
 
+def _pop_tab(url):
+    """Open the booth URL as a tab in the operator's Chrome via macOS `open`.
+    Fire-and-forget: no automation, no tab control — the OS hands the URL to
+    the browser and we're done. Never fails the launch."""
+    try:
+        r = subprocess.run(["/usr/bin/open", "-a", "Google Chrome", url],
+                           capture_output=True, timeout=15)
+        if r.returncode != 0:  # Chrome missing/renamed — default browser instead
+            subprocess.run(["/usr/bin/open", url], capture_output=True, timeout=15)
+        print(f"booth tab opened -> {url}")
+    except Exception as e:
+        print(f"could not open a browser tab ({e}); open it yourself: {url}")
+
+
 def _booth_serves_project(port, proj):
     """Does the booth on `port` belong to THIS project? Checked by title match on
     the served page (cheap, no new endpoint). Best-effort: False on any error."""
@@ -94,16 +118,19 @@ def _booth_serves_project(port, proj):
         return False
 
 
-def start(project):
+def start(project, open_tab=True):
     proj = Path(project).resolve()
     if not (proj / "project.json").exists() or not (proj / "script.json").exists():
         print(f"not a bookable project (need project.json + script.json): {proj}")
         return 1
     # idempotency (v1 record-open parity): if a live booth already serves THIS
-    # project, report it instead of opening a duplicate on a fallback port.
+    # project, report it instead of opening a duplicate on a fallback port —
+    # but still pop the tab: re-running the launcher means "get me the booth".
     for cand in _booth_ports_in_use():
         if _booth_serves_project(cand, proj):
             print(f"booth already open for this project -> http://127.0.0.1:{cand}/")
+            if open_tab:
+                _pop_tab(f"http://127.0.0.1:{cand}/")
             return 0
     # marker semantics: --status says DONE iff work/record_done.json exists, so a
     # fresh launch must clear a stale one BEFORE the checker can ever see it. The
@@ -141,6 +168,8 @@ def start(project):
             (proj / "work" / "booth_port").write_text(str(port))
             print(f"booth READY (detached, caffeinated) pid={p.pid} -> {url}")
             print(f"log: {LOG}")
+            if open_tab:
+                _pop_tab(url)
             return 0
         except Exception:
             if p.poll() is not None:
@@ -193,6 +222,8 @@ if __name__ == "__main__":
         sys.exit(wait(sys.argv[2]))
     elif len(sys.argv) == 3 and sys.argv[1] == "--status":
         sys.exit(status(sys.argv[2]))
+    elif len(sys.argv) == 3 and sys.argv[1] == "--no-open":
+        sys.exit(start(sys.argv[2], open_tab=False))
     elif len(sys.argv) == 2 and not sys.argv[1].startswith("-"):
         sys.exit(start(sys.argv[1]))
     else:

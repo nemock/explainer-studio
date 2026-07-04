@@ -160,7 +160,13 @@ body line).
   harness-tracked background task DIES when the machine/app suspends while the
   operator is AFK, which silently freezes the booth UI mid-record (the Stop button
   stops responding because its backend is gone). `launch_booth.py` does the detached
-  launch, waits for the server to answer, and prints READY; `--stop` takes it down.
+  launch, waits for the server to answer, prints READY, and **pops the booth tab
+  in the operator's Chrome itself** (2026-07-04: macOS `open -a "Google Chrome"
+  <url>`, plain `open` fallback — a fire-and-forget OS handoff, no browser
+  automation). Launching the booth IS opening the tab: never tell the operator
+  to open the URL by hand, and never reach for browser-control tools just to
+  show the booth. Re-running the launcher on an already-open booth re-pops the
+  tab (`--no-open` for headless launches). `--stop` takes it down.
   The operator records in the browser; takes save to `voiceover/` as they go (a
   restart never loses recorded takes). When done, `python3 tools/launch_booth.py --stop`.
   - **Finish signal (operator directive 2026-06-23): right after READY, start the
