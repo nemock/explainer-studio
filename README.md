@@ -6,7 +6,8 @@
 
 **Status: working and in daily use.** It takes a topic and produces finished, packaged videos end-to-end on an Apple-Silicon Mac — no cloud render, no per-token bill. [PRD.md](PRD.md) is the source of truth for scope and build phases. The proven v1, [`video-explainer-system`](https://github.com/nemock/video-explainer-system), is still its own production tool; this is a ground-up successor whose media core was vendored once from v1 and has since happily diverged.
 
-<!-- TODO: hero GIF — a finished frame + the Remotion motion library in motion -->
+![Focus Mode — the built-in teleprompter/recording booth](docs/images/booth-focus.png)
+*Focus Mode in the built-in recording booth: one card at a time, delivery cues, a live preview of the slide you're narrating over, and a fully keyboard-driven record loop.*
 
 ---
 
@@ -26,8 +27,8 @@ Hand it a topic. It pulls comparable videos, scores the breakout outliers agains
 **2. It writes scripts engineered to hold attention.** ✍️
 Cold-open hook, open loops that pay off later, re-hook beats at the dips, pattern interrupts — the actual retention craft, not filler. It writes in *your* voice (pulled from a talk-time library of your real takes and one-liners) and hands you the script next to its retention map so you can see *why* each beat is there before you touch it.
 
-**3. It records in your real voice.** 🎙️
-A built-in browser teleprompter + recorder: read it segment by segment, retake any line, watch the waveform, see your read-time per segment. Local ffmpeg cleans the audio; ad-lib-tolerant forced alignment means you can go off-script and it still lands the captions. Don't feel like talking today? Local **Kokoro** TTS is the fully-headless fallback — same align → render path either way.
+**3. It records in your real voice — in a booth that behaves like a studio.** 🎙️
+A built-in browser recording booth with a full-screen **Focus Mode teleprompter**: `Space` counts you in 3-2-1 (no more clipped first words), you read, and `Enter` accepts the take and rolls straight into the next card — one key between cards, start to finish. Every take gets an **instant audio QC badge** (clipping, too quiet, longer than the read-time target), a local **Whisper** pass badges each card *verbatim / ad-lib N% / re-record* with a word-level diff, and a **room-tone check** rates your noise floor before you start. Found a clunky line on the prompter? Edit it right there — it writes back to the script. Takes are archived with a promote-any-take manager, and Finish hands you a session wrap report. Don't feel like talking today? Local **Kokoro** TTS is the fully-headless fallback — same align → render path either way. [See it below.](#inside-the-recording-booth)
 
 **4. It builds motion graphics that *perform* the explanation.** 🎬
 A deterministic **Remotion** (React/TS) component library where every pixel is a function of time, audio, and data: numbers that *count up* as you say them, charts that *build* on the cue, documents that *highlight* as they're read, diagrams that *assemble*, 3D scenes, kinetic word-synced captions, a music bed that auto-ducks under your voice. Need real footage? A guided **Adobe Stock** workflow suggests searches, you license and drop the files, and it ingests and conforms them — and every footage scene has a designed fallback so a render never breaks on a missing clip.
@@ -40,6 +41,32 @@ Locally rendered thumbnail candidates (both the brand-template cutout *and* illu
 
 **7. It re-shares your greatest hits.** 🔁
 The `promote` command reaches into your back catalogue, picks an already-published Short, writes a fresh caption, and re-shares it across platforms via Blotato — **dry-run by default**, `--fire` to actually post, every promotion logged in `promotions.json`. This is the *one* place the studio touches social, and only for videos you already put out yourself.
+
+## Inside the recording booth
+
+The booth is a local web app the pipeline serves on demand — no external recording software, and the whole session runs from the keyboard.
+
+| | |
+|---|---|
+| ![Card list with QC and status chips](docs/images/booth-list.png) | ![3-2-1 countdown into a take](docs/images/booth-countdown.png) |
+| *The card list: per-take audio-QC chips, take counts, inline edit, room-tone badge, mic picker.* | *`Space` counts you in — first words never get clipped.* |
+| ![Recording — ON AIR with live waveform](docs/images/booth-recording.png) | ![Focus Mode teleprompter](docs/images/booth-focus.png) |
+| *Rolling: ON AIR lamp, live waveform behind the text, elapsed vs. target pace.* | *Focus Mode: delivery cues, the note from the script author, and a mini-preview of the slide this line narrates.* |
+
+Under the hood: takes save per segment as WAV, archived on every retake (nothing is ever overwritten); a serialized Whisper worker checks each take against the script and defers automatically while a video render holds the machine's render lock; and the booth server survives you walking away — it launches detached under `caffeinate`, so an idle Mac never kills a session. One booth serves **every** channel: the same launcher records the flagship deep dives here and the daily/weekly short-form skills that feed other outlets.
+
+## What comes out the other end
+
+Frames from published videos rendered by the Remotion motion engine — deterministic, brand-locked, driven entirely by the script's timing data:
+
+| | |
+|---|---|
+| ![A punch beat](docs/images/frame-punch.jpg) | ![An animated stat grid](docs/images/frame-statgrid.jpg) |
+| *A `punch` beat landing the midroll thesis.* | *A `statgrid` — four sourced numbers springing in on cue.* |
+
+And the package ships upload-ready A/B thumbnails (the composed-scene style — the operator generates an AI base image, the studio composites the brand headline):
+
+![Composed-scene thumbnail example](docs/images/thumbnail-example.jpg)
 
 ## The one rule: generation stops at the package
 
@@ -54,7 +81,7 @@ Producing a video **ends at a labeled output directory + a versioned manifest** 
 | Text-to-speech (fallback tier) | Kokoro-82M, local |
 | Your voice | Browser teleprompter/recorder + local ffmpeg cleanup chain |
 | Word-level timing | torchaudio forced alignment (Apple-Silicon-native) |
-| Ad-lib transcription | Whisper, local |
+| Ad-lib transcription | Whisper (mlx, Metal-native) — live drift badges in the booth + the post-session ad-lib check |
 | Motion graphics (default engine) | **Remotion** (React/TS), rendered headless — deterministic via `useCurrentFrame`/`interpolate`/seeded RNG |
 | Legacy visuals (`--engine deck`) | HTML/CSS/JS layer stack, captured via headless Chrome |
 | Encode | ffmpeg + VideoToolbox (hardware) |
@@ -137,6 +164,7 @@ The analytical methodology is documented as a **skill + playbooks** so the pipel
 - [skills/explainer2/references/motion-playbook.md](skills/explainer2/references/motion-playbook.md) — the Remotion motion engine
 - [skills/explainer2/references/deck-playbook.md](skills/explainer2/references/deck-playbook.md) — the legacy deck engine
 - [skills/explainer2/references/thumbnail-playbook.md](skills/explainer2/references/thumbnail-playbook.md) · [article-playbook.md](skills/explainer2/references/article-playbook.md) · [shorts-playbook.md](skills/explainer2/references/shorts-playbook.md) — packaging
+- [docs/booth-upgrade-plan.md](docs/booth-upgrade-plan.md) — the Booth 2.0 build plan (all five batches shipped 2026-07-03)
 - [docs/examples/](docs/examples/) — a worked Blueprint example
 
 ## Boundaries (choices, not gaps)
