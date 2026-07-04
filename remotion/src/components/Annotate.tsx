@@ -78,8 +78,10 @@ const useRoughPaths = (a: Ann, i: number, W: number, H: number) => {
     } else if (a.kind === 'underline') {
       const [cx, cy] = px(a.at);
       const w = (a.w ?? 0.24) * W;
-      drawable = gen.line(cx - w / 2, cy, cx + w / 2, cy, {...opts, bowing: 3});
-      length = w * 2.3;
+      // single stroke: rough's default double-pass closes a bowed line into a lens shape
+      drawable = gen.line(cx - w / 2, cy, cx + w / 2, cy,
+                          {...opts, bowing: 2, disableMultiStroke: true});
+      length = w * 1.2;
     }
     const paths = drawable ? gen.toPaths(drawable) : [];
     return {paths, length: Math.max(60, length), color, sw, tip};
