@@ -98,6 +98,11 @@
     border-top:1px solid var(--line); font-size:13px; opacity:.85; flex-wrap:wrap;
     transition:opacity .3s; }
   #focus.recording #fBottom { opacity:.18; }
+  #fFinish { display:none; margin-left:auto; background:var(--good); color:#06210f;
+    border:0; border-radius:10px; font:inherit; font-weight:800; font-size:14px;
+    padding:9px 22px; cursor:pointer; }
+  #fFinish.on { display:block; }
+  #fFinish:disabled { opacity:.45; cursor:default; }
   kbd { background:#0d1430; border:1px solid var(--line); border-bottom-width:2px;
     border-radius:6px; padding:2px 7px; font-family:inherit; font-weight:700; font-size:12px; }
   #focus.recording { box-shadow: inset 0 0 0 4px var(--bad); }
@@ -196,13 +201,14 @@
   <div id="fBottom">
     <span><kbd>Space</kbd> record / stop</span>
     <span><kbd>Enter</kbd> keep &amp; roll next</span>
-    <span><kbd>R</kbd> retake</span>
+    <span><kbd>R</kbd> retake — works mid-record</span>
     <span><kbd>P</kbd> play</span>
     <span><kbd>C</kbd> tail of prev, then record</span>
     <span><kbd>T</kbd> takes</span>
     <span><kbd>E</kbd> edit</span>
     <span><kbd>←</kbd><kbd>→</kbd> cards</span>
     <span><kbd>Tab</kbd> list</span>
+    <button id="fFinish" title="Write the session report and finish">Finish session ✓</button>
   </div>
 </div>
 <div id="countdown"><div id="cdNum">3</div></div>
@@ -246,6 +252,7 @@ let audioCtx = null, analyser = null, meterRAF = 0;
 let view = 'list', fIdx = 0, cdTimer = null, editingId = null, recT0 = 0, recTick = null;
 let focusEntered = false, session = {}, slideCache = {}, contAudio = null, rtBusy = false;
 let pendingAdvance = false;   // Enter mid-record = stop + keep + auto-advance once saved
+let pendingRetake = false;    // R mid-record = stop + immediately re-record the SAME card
 const WPM = 150;
 const $ = id => document.getElementById(id);
 
@@ -467,6 +474,16 @@ function focusRender() {
   $('fNote').textContent = s.note || '';
   $('fAudio').innerHTML = (s.recorded && activeId !== s.id && savingId !== s.id)
     ? `<audio controls src="/clip?seg=${s.id}&t=${s.takes || 0}"></audio>` : '';
+  // On the LAST card, surface the green Finish button right in Focus Mode — no
+  // Tab-back-to-list detour to end the session (operator request 2026-07-04).
+  // Same gating as the list button: enabled only once every card is recorded.
+  const fin = $('fFinish');
+  const done = segs.filter(x => x.recorded).length;
+  fin.classList.toggle('on', fIdx === segs.length - 1);
+  fin.disabled = done < segs.length;
+  fin.textContent = done < segs.length
+    ? `Finish (${segs.length - done} card${segs.length - done === 1 ? '' : 's'} left)`
+    : 'Finish session ✓';
   renderSlidePrev(s);
 }
 
@@ -542,8 +559,13 @@ function recClockStart(expected) {
 /* ---------------- record core ---------------- */
 async function startRec(id) {
   if (rec && rec.state === 'recording') return;
-  if (savingId === id) return;   // only block re-recording the card that's mid-save —
-                                 // recording the NEXT card during a save is the normal flow
+  // Only the card that's mid-save is blocked (recording the NEXT card during a
+  // save is the normal flow). For an R-instant-retake the SAME card's save is
+  // usually still in flight when the GO beat lands — WAIT for it (max ~3s)
+  // instead of silently refusing, or the retake would do nothing (the same
+  // swallowed-keypress class of bug as the #40 card-skips).
+  for (let w = 0; savingId === id && w < 60; w++) await new Promise(r => setTimeout(r, 50));
+  if (savingId === id) return;
   await ensureMic();
   chunks = []; activeId = id;
   rec = new MediaRecorder(stream, { mimeType: 'audio/webm' });
@@ -570,6 +592,13 @@ async function startRec(id) {
           countdownThen(() => startRec(nxt.id), 1);
         }
       }
+    }
+    // R-mid-record: roll the SAME card again on a GO beat. The aborted take still
+    // saves below and is archived by the new take (take manager keeps it), so
+    // nothing is lost and /promote can always bring it back.
+    if (pendingRetake) {
+      pendingRetake = false;
+      countdownThen(() => startRec(id), 1);
     }
     render(); if (view === 'focus') focusRender();
     let ok = false;
@@ -766,7 +795,11 @@ document.addEventListener('keydown', e => {
   } else if (e.key === 'ArrowRight') { focusNav(1); }
   else if (e.key === 'ArrowLeft') { focusNav(-1); }
   else if (e.key === 'r' || e.key === 'R') {
-    if (activeId === null && savingId !== s.id && !cdTimer) countdownThen(() => startRec(s.id));
+    // Mid-record R = instant retake: stop, discard-to-archive, and roll the SAME
+    // card again on a quick GO beat — one key, no Space-then-R dance (operator
+    // request 2026-07-04). Idle R keeps the 3-2-1 re-record as before.
+    if (activeId === s.id) { pendingRetake = true; stopRec(); }
+    else if (activeId === null && savingId !== s.id && !cdTimer) countdownThen(() => startRec(s.id));
   } else if (e.key === 'p' || e.key === 'P') {
     const a = document.querySelector('#fAudio audio');
     if (a) { a.currentTime = 0; a.play(); }
@@ -784,7 +817,7 @@ $('editSave').addEventListener('click', saveEdit);
 $('diffClose').addEventListener('click', () => $('diffWrap').classList.remove('on'));
 $('takesClose').addEventListener('click', () => $('takesWrap').classList.remove('on'));
 
-$('finishBtn').addEventListener('click', async () => {
+async function finishSession() {
   const j = await fetch('/done', { method: 'POST' }).then(r => r.json()).catch(() => ({}));
   setView('list');
   document.querySelector('main').style.display = 'none';
@@ -803,7 +836,9 @@ $('finishBtn').addEventListener('click', async () => {
     ];
     $('doneStats').innerHTML = rows.map(r => `<div><span>${r[0]}</span><b>${r[1]}</b></div>`).join('');
   }
-});
+}
+$('finishBtn').addEventListener('click', finishSession);
+$('fFinish').addEventListener('click', finishSession);
 
 loadSession().then(loadSegs).then(drawMeter);
 ensureMic().catch(() => {});   // arm the level bar + mic list up front (grant is per-origin)
