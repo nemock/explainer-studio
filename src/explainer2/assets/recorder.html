@@ -753,11 +753,37 @@ async function loadSession() {
   try { session = await fetch('/session').then(r => r.json()); } catch (e) { session = {}; }
   rtBadge();
 }
-setInterval(async () => {   // drift results arrive asynchronously — poll while pending
+/* Drift results arrive asynchronously — poll while pending. Two hard rules
+   (operator bug report 2026-07-06: playback died after 1–3 s and the controls
+   flashed every cycle): (1) NEVER re-render while any playback is live — a
+   re-render rebuilds list.innerHTML and destroys the <audio> mid-play; (2) only
+   re-render when a card's state actually CHANGED — a drift check stuck in
+   'deferred' (render lock held for a long encode) used to cause an endless
+   6-second flash loop. */
+function audioPlaying() {
+  if (contAudio && !contAudio.paused && !contAudio.ended) return true;
+  return [...document.querySelectorAll('audio')].some(a => !a.paused && !a.ended);
+}
+let driftDirty = false;   // fetched fresh state during playback; render when it ends
+const segsKey = list => JSON.stringify(list.map(s =>
+  [s.id, s.recorded, s.takes, s.edited, s.text, s.qc && s.qc.warn,
+   s.drift && s.drift.status, s.drift && s.drift.drift]));
+setInterval(async () => {
   if (document.hidden || activeId !== null || savingId !== null) return;
+  if (driftDirty && !audioPlaying()) {
+    driftDirty = false;
+    render(); if (view === 'focus') focusRender();
+    return;
+  }
   const pending = segs.some(s => s.recorded && s.drift &&
     ['queued', 'running', 'deferred'].includes(s.drift.status));
-  if (pending) await loadSegs();
+  if (!pending) return;
+  let fresh;
+  try { fresh = await fetch('/segments').then(r => r.json()); } catch (e) { return; }
+  if (segsKey(fresh) === segsKey(segs)) return;   // nothing changed — no flash
+  segs = fresh;
+  if (audioPlaying()) { driftDirty = true; return; }   // update after playback ends
+  render(); if (view === 'focus') focusRender();
 }, 6000);
 
 document.addEventListener('keydown', e => {
