@@ -74,6 +74,14 @@ class Project:
     @property
     def voice_source(self): return self.data.get("voice_source", "kokoro")  # kokoro | operator
     @property
+    def content_type(self):
+        """Canonical content type (contenttypes.py). Legacy projects predate the
+        field; infer from aspect (every 16:9 to date is a deep dive)."""
+        from . import contenttypes
+        return self.data.get("content_type") or contenttypes.infer_from_aspect(self.aspect)
+    @property
+    def series(self): return self.data.get("series")  # masterclass only
+    @property
     def voiceover_dir(self):
         p = self.dir / "voiceover"; p.mkdir(exist_ok=True); return p
     @property

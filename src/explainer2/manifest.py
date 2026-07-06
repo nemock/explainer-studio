@@ -56,11 +56,18 @@ def run(proj):
         },
         "per_platform": meta.get("per_platform", []),
         "sources": meta.get("sources", []),
+        # Canonical content type (contenttypes.py); series/promotes ride along
+        # so a downstream consumer never has to open project.json.
+        "content_type": proj.content_type,
         # v2 fields (PRD §5.7/§10): format roster + licensed-asset provenance.
         "formats": proj.data.get("formats", []),
         "assets": {"licensed": licenses},
         "package": meta.get("package", {}),
     }
+    if proj.series:
+        manifest["series"] = proj.series
+    if proj.data.get("promotes"):
+        manifest["promotes"] = proj.data["promotes"]
     proj.write_json(proj.dir / "manifest.json", manifest)
     return {"manifest": "manifest.json", "ready_for_post": ready,
             "aspects": proj.aspects, "length_warning": length_warning}

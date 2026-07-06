@@ -3,25 +3,32 @@
 contract (PRD §9) before a downstream poster touches it. Read-only."""
 import json
 
+from . import contenttypes
+
+_PKG_DESC = {"meta.json": "upload metadata: title/description/chapters/tags",
+             "article.md": "written companion (article-playbook)",
+             "linkedin.md": "social-share copy (SKILL §8c)"}
+
 
 def _package_issues(proj):
     """The Package-step deliverables (SKILL §8). These are authored by the generation
     plane, NOT by any media stage, so nothing else enforces they exist — which is how
-    package/linkedin.md slipped through on #16 (2026-07-04). A complete handoff needs
-    all of them. Skips a project that never entered Package (no package/ dir yet)."""
+    package/linkedin.md slipped through on #16 (2026-07-04). The required set is
+    per-content-type (contenttypes.py; unknown types get the strictest set). Skips a
+    project that never entered Package (no package/ dir yet)."""
     pkg = proj.dir / "package"
     if not pkg.exists():
         return ["package/ missing — the Package step (meta/thumbnails/article/linkedin) has not run"]
+    files, thumbnails = contenttypes.package_requirements(proj.content_type)
     out = []
-    for name, desc in (("meta.json", "upload metadata: title/description/chapters/tags"),
-                       ("article.md", "written companion (article-playbook)"),
-                       ("linkedin.md", "social-share copy (SKILL §8c)")):
+    for name in files:
         if not (pkg / name).exists():
-            out.append(f"package/{name} missing — {desc}")
-    tdir = pkg / "thumbnails"
-    for t in ("thumb_a.png", "thumb_b.png"):
-        if not (tdir / t).exists():
-            out.append(f"package/thumbnails/{t} missing — the A/B thumbnail pair is standard")
+            out.append(f"package/{name} missing — {_PKG_DESC.get(name, name)}")
+    if thumbnails:
+        tdir = pkg / "thumbnails"
+        for t in ("thumb_a.png", "thumb_b.png"):
+            if not (tdir / t).exists():
+                out.append(f"package/thumbnails/{t} missing — the A/B thumbnail pair is standard")
     return out
 
 

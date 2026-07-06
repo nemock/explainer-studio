@@ -2,9 +2,10 @@
 name: explainer-studio
 description: >
   Produce a YouTube-intelligence-driven, retention-engineered explainer video
-  (deep dive and/or Shorts) end-to-end on this Mac: intel sweep → Blueprint →
-  script → operator recording (or Kokoro) → align → render → package. Use when
-  the user says "/explainer-studio <topic>", "make a video about", "run the studio
+  (deep dive, Shorts, a masterclass/Operator's-Guide series episode, or a
+  promotional video) end-to-end on this Mac: intel sweep → Blueprint → script →
+  operator recording (or Kokoro) → align → render → package. Use when the user
+  says "/explainer-studio <topic>", "make a video about", "run the studio
   pipeline", or asks for a Blueprint on a topic. Local/free only; the single
   allowed subscription is the operator's stock.adobe.com membership,
   human-in-the-loop. This skill NEVER posts to social platforms.
@@ -31,6 +32,10 @@ method lives in four reference files you MUST read at the step that needs them:
 - `references/thumbnail-playbook.md` — read BEFORE building thumbnails (Package).
 - `references/article-playbook.md` — read BEFORE writing the written companion
   essay (`package/article.md`, after Package).
+- `references/masterclass-playbook.md` — read BEFORE scaffolding a multi-part
+  series (Operator's Guide / Masterclass) or any episode of one.
+- `references/promo-playbook.md` — read BEFORE any `promo` content type (the
+  copywriting-driven commercial for one specific offer).
 
 These files encode the methodology that makes the videos good. If your own
 judgment conflicts with a playbook rule, follow the playbook and note the
@@ -65,15 +70,47 @@ conflict for the operator. Do not skip steps because they seem obvious.
 - Talk-time library (operator's voice): pass
   `--library /Volumes/Casima/claudeCode/make_money/talk_time` to `talktime`.
 
+## Content types (canonized 2026-07-06 — pick ONE before scaffolding)
+
+One production system, four canonical types (`src/explainer2/contenttypes.py`
+is the registry; `--content-type` on scaffold; recorded in project.json + the
+manifest). The media plane is identical for all of them — a type changes which
+playbooks you read, the structure/CTA rules, and what `validate` requires in
+the package.
+
+| Type | What it is | Extra playbook | Package set |
+|---|---|---|---|
+| `deepdive` | standalone retention-engineered teaching video (~8–17 min); the default for 16:9 | — | meta + article + linkedin + A/B thumbs |
+| `short` | 9:16 vertical; usually a derived cut, sometimes a standalone run | — | meta only |
+| `masterclass` | ONE EPISODE of a multi-part series teaching a large concept in order (15–35 min; episodes build on each other) | `masterclass-playbook.md` | same as deepdive |
+| `promo` | a little commercial: direct-response piece for ONE offer/event/book (60 s–3 min, multiple CTAs) | `promo-playbook.md` | meta + linkedin + A/B thumbs (no article) |
+
+Rules of thumb:
+- **Ten standalone ideas = ten deep dives. One large concept split into
+  ordered episodes that build on each other = a masterclass-type series.**
+- **Branding for `masterclass` follows `--distribution` (2026-07-05 rule):**
+  `youtube` (free) → "The Operator's Guide to X"; `paywalled` → "Masterclass".
+  The word "masterclass" never appears in a free series' public copy.
+- **A teaching video with a CTA at the end is NOT a promo.** `promo` is only
+  for videos whose success metric is an action (register/buy/join), and it
+  requires `--promotes "<the one offer>"` at scaffold.
+- Recognized sub-uses, not separate types: a series/book **trailer** is a
+  `promo`; a case study/teardown is a `deepdive` angle.
+- Omitted `--content-type` is inferred (16:9 → deepdive, else short), so
+  legacy projects and existing routines behave exactly as before.
+
 ## Pipeline (follow in order)
 
 ### 1. Scaffold
 ```
 bin/explainer2 scaffold "<slug>" --title "<topic>" --aspect 16:9 \
-  --outdir <repo>/projects [--brand <SLUG>]
+  --content-type <type> --outdir <repo>/projects [--brand <SLUG>]
 ```
-Default 16:9 for deep dives, 9:16 for Shorts-only runs. Ask the operator for
-angle/length/aspect ONLY if not given — one cheap confirmation, then proceed.
+Default 16:9 for deep dives, 9:16 for Shorts-only runs. Masterclass episodes
+add `--series/--series-title/--episode/--distribution` and scaffold into the
+SERIES root, not `projects/` (masterclass-playbook §3); promos add
+`--promotes`. Ask the operator for angle/length/aspect ONLY if not given —
+one cheap confirmation, then proceed.
 
 **The canonical number is auto-assigned** from the `projects/` folder (highest
 `_NN_` + 1, zero-padded) and written into the dir name + `project.json`; the
@@ -366,11 +403,13 @@ reference. No render gate — it's text, reviewed in place. (Mirror the format o
 an existing `package/linkedin.md`, e.g. video #07's.)
 
 ### 8d. Package completeness — `validate` enforces it
-A complete package is FOUR generation-plane deliverables, none produced by a
+A complete package is generation-plane deliverables, none produced by a
 media stage (so nothing else guarantees they exist — that's how #16 shipped
-without `linkedin.md`, 2026-07-04):
-`package/meta.json` · `package/article.md` · `package/linkedin.md` ·
-`package/thumbnails/thumb_a.png` + `thumb_b.png` (the A/B pair).
+without `linkedin.md`, 2026-07-04). For a deep dive or masterclass episode
+that's FOUR: `package/meta.json` · `package/article.md` · `package/linkedin.md`
+· `package/thumbnails/thumb_a.png` + `thumb_b.png` (the A/B pair). The set is
+per-content-type (promo drops the article; standalone short needs meta only —
+`contenttypes.py` is the registry and validate reads it).
 **Run `bin/explainer2 validate <project_dir>` at the end of Package and again
 before any upload/promo.** It checks the manifest handoff AND the four package
 files, and fails with the specific missing path. (It is engine-correct: the

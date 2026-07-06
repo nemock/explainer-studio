@@ -7,7 +7,7 @@ from datetime import date
 from pathlib import Path
 
 from .project import Project, ASPECTS
-from . import deckbuild, manifest, wiki, ingest, themes, qa, presets, validate, handoff, brand, talktime, stills, renderlock
+from . import deckbuild, manifest, wiki, ingest, themes, qa, presets, validate, handoff, brand, talktime, stills, renderlock, contenttypes
 from .media import synth, align, render, mux
 
 STAGES = [("narrate", synth.run), ("align", align.run), ("deck", deckbuild.run),
@@ -116,6 +116,20 @@ def cmd_scaffold(args):
         aspects = [aspect]
     primary = aspects[0]
     w, h = ASPECTS[primary]
+    ctype = args.content_type or contenttypes.infer_from_aspect(primary)
+    if ctype == "masterclass":
+        if not args.series or args.episode is None:
+            sys.exit("content-type masterclass needs --series <slug> and --episode <n> "
+                     "(the series outline is the source of both; see masterclass-playbook.md)")
+    elif args.series or args.episode is not None:
+        sys.exit(f"--series/--episode are masterclass-only flags (content type here: {ctype}); "
+                 "pass --content-type masterclass")
+    if ctype == "promo" and not args.promotes:
+        sys.exit("content-type promo needs --promotes \"<the one offer this video sells>\" "
+                 "(a promo with no named offer is a failed promo; see promo-playbook.md)")
+    if args.promotes and ctype != "promo":
+        sys.exit(f"--promotes is a promo-only flag (content type here: {ctype}); "
+                 "pass --content-type promo")
     # Auto-number ONLY for the numbered channel `projects/` collection. Other routines
     # (Monday MedTech, Founder Tip Tuesday) scaffold into their own non-numbered outdirs;
     # leave those exactly as before. Trigger auto-numbering when the outdir already holds
@@ -139,7 +153,15 @@ def cmd_scaffold(args):
     proj = {"title": args.title or args.slug, "slug": slug, "aspect": primary,
             "aspects": aspects, "width": w, "height": h, "fps": args.fps,
             "voice": args.voice, "voice_source": args.voice_source,
-            "language": "en", "theme": args.theme, "safe_bottom": safe_bottom}
+            "language": "en", "theme": args.theme, "safe_bottom": safe_bottom,
+            "content_type": ctype}
+    if ctype == "masterclass":
+        proj["series"] = {"slug": wiki.slugify(args.series), "title": args.series_title,
+                          "episode": args.episode, "episodes_total": args.episodes_total,
+                          "distribution": args.distribution,
+                          "brand_label": contenttypes.brand_label(args.distribution)}
+    if args.promotes:
+        proj["promotes"] = args.promotes
     if num is not None:
         proj["number"] = num
     if min_length:
@@ -166,7 +188,8 @@ def cmd_scaffold(args):
         catalog_updated = _refresh_catalog_counter(args.outdir)
     except Exception:
         catalog_updated = False
-    print(json.dumps({"project_dir": str(out), "number": num, "aspects": aspects, "brand": brand_note,
+    print(json.dumps({"project_dir": str(out), "number": num, "aspects": aspects,
+                      "content_type": ctype, "series": proj.get("series"), "brand": brand_note,
                       "catalog_counter_updated": catalog_updated,
                       "next": "author script.json + deck.json, then `explainer media <dir>`"}, indent=2))
 
@@ -356,6 +379,24 @@ def main(argv=None):
     s.add_argument("--voice", default="af_heart", help="Kokoro voice (when voice-source=kokoro)")
     s.add_argument("--voice-source", default="kokoro", choices=["kokoro", "operator"], dest="voice_source",
                    help="kokoro = local TTS; operator = your recorded voiceover (`explainer record`)")
+    s.add_argument("--content-type", default=None, choices=list(contenttypes.CONTENT_TYPES),
+                   dest="content_type",
+                   help="canonical content type (contenttypes.py); default: inferred from the "
+                        "primary aspect (16:9 = deepdive, else short)")
+    s.add_argument("--series", default=None,
+                   help="masterclass only: series slug (e.g. iso-14971); groups the episodes")
+    s.add_argument("--series-title", default=None, dest="series_title",
+                   help="masterclass only: the public series title (e.g. \"The Operator's Guide to ISO 14971\")")
+    s.add_argument("--episode", type=int, default=None,
+                   help="masterclass only: episode number within the series (1-based)")
+    s.add_argument("--episodes-total", type=int, default=None, dest="episodes_total",
+                   help="masterclass only: planned episode count (optional; from the series outline)")
+    s.add_argument("--distribution", default="youtube", choices=list(contenttypes.DISTRIBUTIONS),
+                   help="masterclass only: youtube = free, branded \"The Operator's Guide\"; "
+                        "paywalled = paid, branded \"Masterclass\" (2026-07-05 naming rule)")
+    s.add_argument("--promotes", default=None,
+                   help="promo only: the ONE offer this video sells (e.g. \"Plan to Market cohort, "
+                        "Sept 2026\"); recorded in project.json + manifest")
     s.add_argument("--theme", default="midnight", choices=list(themes.THEMES))
     s.add_argument("--platform", default=None, choices=list(presets.PLATFORMS),
                    help="sets aspect + safe-zone (+ min length) from a platform preset")

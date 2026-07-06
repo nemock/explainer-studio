@@ -235,6 +235,31 @@ A project declares `formats: [deepdive_16x9, shorts_9x16]`. After the long-form 
 | **Standard** | Kokoro or operator | deck + a few stock scenes | 9:16 and/or 16:9 | light review gates |
 | **Flagship deep dive** | **operator** | full layer stack, stock B-roll, chapters, progress bar | 16:9 master + Shorts cuts | full review gates: Blueprint → Script → Record → Package |
 
+### 7.1 Content types (canonized 2026-07-06)
+
+Tiers (above) describe *production effort*; content **types** describe *what
+kind of video it is*. The two are orthogonal (a masterclass episode is usually
+Flagship-tier; a promo can be Standard). The registry is
+`src/explainer2/contenttypes.py`; the type is chosen at scaffold
+(`--content-type`), stored in `project.json`, carried in the manifest, and
+`validate` enforces a per-type package-deliverable set. The media plane is
+type-agnostic.
+
+| Type | What it is | Governing playbook |
+|---|---|---|
+| `deepdive` | standalone retention-engineered teaching video (~8–17 min); the default | blueprint/script playbooks |
+| `short` | 9:16 vertical — usually a derived cut of a parent video, sometimes standalone | shorts-playbook |
+| `masterclass` | one episode of a multi-part series teaching a large concept in order (15–35 min; episodes build on each other; series outline is a gate) | masterclass-playbook |
+| `promo` | direct-response commercial for ONE offer/event/book (60 s–3 min, multiple CTAs, copywriting-driven) | promo-playbook |
+
+Branding rule for `masterclass` (operator decision 2026-07-05, ISO 14971
+series): `--distribution youtube` (free) brands as **"The Operator's Guide to
+X"**; `--distribution paywalled` brands as **"Masterclass"** — the word
+"masterclass" never appears in a free series' public copy. Recognized sub-uses,
+not separate types: a series/book trailer is a `promo`; a case study/teardown
+is a `deepdive` angle. A paywalled masterclass changes nothing at the boundary:
+the pipeline still stops at the package and never uploads anywhere.
+
 ---
 
 ## 8. Risks & mitigations
@@ -261,7 +286,7 @@ A project declares `formats: [deepdive_16x9, shorts_9x16]`. After the long-form 
 - **Phase 4 — Mission Control.** Board, gates, render queue, package preview wired over the existing CLI verbs. *Accept:* a full Flagship project run start-to-finish without touching a terminal. **○ Planned (not built — the review gates run from the CLI in the meantime).**
 - **Phase 5 — Dual-format + packaging + Learn.** Shorts cutter, thumbnail engine, description/chapters/CTA package, CSV ingest. *Accept:* one real deep dive published to the channel with its Shorts, fully packaged by the system; first Learn report generated 30 days later. **✅ Complete — Shorts cutter (2026-06-11), thumbnail engine, the description/chapters/CTA/manifest package, and Learn (2026-07-03: yt-dlp refresh + Studio CSV ingest + REPORT.md, first real report generated same day) are all shipped.**
 
-**Beyond the original plan** (additions made after the phase ladder was drawn): a default **Remotion motion-graphics engine** (`--engine remotion`, 2026-06-24) now drives the visual layer (the legacy deck engine remains as `--engine deck`); a written **article companion** ships with each package; **illustrative composed thumbnails** are now the *standard* (operator directive 2026-06-29: a composed scene with the operator in it — ideally opposite a "foil" character — beats the plain cutout template, which remains the fallback); the operator-invoked **`promote`** command (2026-06-20, §N1) re-shares already-published Shorts via Blotato (dry-run by default); **Booth 2.0** shipped all five upgrade batches in one day (2026-07-03, §5.3) and the booth became the **shared recorder for the v1-based daily/weekly channels** via routine-level adoption (v1 code untouched); and the standing **music bed** switched to an upbeat presentation track (2026-06-29) — which also stopped triggering the benign-but-recurring Content ID match the old café bed produced at upload.
+**Beyond the original plan** (additions made after the phase ladder was drawn): a default **Remotion motion-graphics engine** (`--engine remotion`, 2026-06-24) now drives the visual layer (the legacy deck engine remains as `--engine deck`); a written **article companion** ships with each package; **illustrative composed thumbnails** are now the *standard* (operator directive 2026-06-29: a composed scene with the operator in it — ideally opposite a "foil" character — beats the plain cutout template, which remains the fallback); the operator-invoked **`promote`** command (2026-06-20, §N1) re-shares already-published Shorts via Blotato (dry-run by default); **Booth 2.0** shipped all five upgrade batches in one day (2026-07-03, §5.3) and the booth became the **shared recorder for the v1-based daily/weekly channels** via routine-level adoption (v1 code untouched); and the standing **music bed** switched to an upbeat presentation track (2026-06-29) — which also stopped triggering the benign-but-recurring Content ID match the old café bed produced at upload; and **content types were canonized** (2026-07-06, §7.1): `deepdive` / `short` / `masterclass` (branded "Operator's Guide" free vs. "Masterclass" paid) / `promo`, with a code registry (`contenttypes.py`), scaffold flags, manifest fields, per-type validate rules, and two new playbooks (masterclass, promo).
 
 Each phase ends shippable; the system is useful from Phase 1 onward (Blueprints alone improve the current v1 workflow).
 

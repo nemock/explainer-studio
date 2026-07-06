@@ -166,6 +166,7 @@ def build_derived(parent: Project, cut):
                  "voice_source": parent.voice_source, "language": "en",
                  "theme": parent.data.get("theme", "midnight"),
                  "safe_bottom": 0.18,  # Shorts UI overlays sit higher than feed players
+                 "content_type": "short",
                  "derived_from": parent.dir.name,
                  "parent_segments": cut["segments"]}
     for k in ("music", "music_gain"):
