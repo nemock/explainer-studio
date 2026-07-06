@@ -58,9 +58,32 @@ to date missed length on the first draft; the rule exists because it bites).
    believe…"), and start in media res. Full craft + the two gate tests
    (specificity test, substance test) live in **`references/spoken-humanizer.md`
    §B1** — read it before drafting the cold open.
+
+   **Name the problem so the viewer self-qualifies (added 2026-07-06).** The
+   first line should let the viewer answer "is this me?" — name the problem
+   they already feel (survival tension) and/or who they are (identity mirror:
+   "if you're…"). Self-qualification IS the retention filter: the right viewer
+   leans in, the wrong one leaves before hurting average-view-duration. This is
+   the story's opening tension, not a demographic label. Same guardrail as the
+   blueprint's tension check: name a real pain the video really solves.
 2. **Promise stack (by seg 2):** open 2–3 loops explicitly ("here's what
    you're getting…"). Record each in `retention_map.open_loops` with its
    closing segment. EVERY loop opened MUST close; verify ids exist.
+   - **Paint the transformation, don't list topics (added 2026-07-06).** At
+     least one promise should be the AFTER-STATE — what the viewer can do or
+     see differently by the end ("by the end you'll spot this trap in any
+     pitch deck in thirty seconds"), not a table of contents ("we'll cover
+     three things"). Imagining the outcome fires the same circuitry as having
+     it; a topic list doesn't. Every painted transformation must be one the
+     video actually delivers — it's a promise, and it maps to a closing beat.
+   - **Honest exclusion (optional, use sparingly).** ONE line naming who this
+     is/isn't for can sharpen the promise when it's TRUE ("this is for the
+     founder six months in, not the one picking a logo") — it deepens
+     self-qualification and costs only viewers who'd have bounced anyway.
+     GUARDRAIL: only when the video genuinely isn't for them; never
+     manufactured tribalism or drill-sergeant gatekeeping ("this isn't for
+     people who make excuses…") — that register is the manipulation this
+     brand is the antidote to.
 3. **Credibility is a toll booth** (≤ 1 segment, ≤ 30 words, before the first
    payoff — never before the hook).
    - **Honesty rule — never claim "nothing to sell" (operator directive

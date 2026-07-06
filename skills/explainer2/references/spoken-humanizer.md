@@ -129,6 +129,14 @@ without the substance. Build the substance instead:
   close at a real segment.
 - **Open in media res.** Drop into the surprising fact, scene, or claim. No
   runway, no slow build, no setup of the setup. Thesis inside ~10 seconds.
+- **Let the viewer self-qualify (added 2026-07-06).** The strongest openings
+  also answer "is this me?" in the first breath — name the problem the viewer
+  already feels, or mirror who they are ("if you're the founder who…").
+  Problem-first and identity-mirror openings pull attention almost
+  involuntarily because they hit survival/identity tension — but ONLY when
+  honest: a real pain the video really solves, a real viewer it really serves.
+  The dishonest versions (manufactured fear, secret-knowledge framing,
+  drill-sergeant exclusion) are exactly what §A1 bans.
 
 Two tests every cold open must pass:
 - **Specificity test:** could this exact opening front a different video on

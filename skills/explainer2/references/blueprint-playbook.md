@@ -99,9 +99,10 @@ settled advice. List each beat in one line.
 **b. Title patterns.** Classify every finalist title into: number promise /
 objection-removal qualifier ("without ads", "no audience") / conditional
 restart ("If I started in YEAR") / borrowed authority (named org/person) /
-earned authority ($X MRR) / negative-or-mistake framing / command. Note word
-counts. Our titles must use these patterns — ideally a combination or an
-unused permutation (see §7).
+earned authority ($X MRR) / negative-or-mistake framing / command /
+identity-mirror (names WHO the viewer is: "If you're a first-time founder…",
+"You're not lazy — …"). Note word counts. Our titles must use these patterns —
+ideally a combination or an unused permutation (see §7).
 
 **c. Hook shapes (first 30 s of transcripts).** Classify each: negation
 ("forget X, forget Y") / credential-stack / proof-montage / question-mirror
@@ -187,6 +188,28 @@ teardown; high-leverage, takes precedence when ranking):
 These are tests, not new patterns — apply them on top of §3b. A title can be a
 "number promise" AND acute AND problem-aware; that's the strongest kind.
 
+**Tension check (adopted 2026-07-06 from a persuasion-psychology teardown,
+youtube.com/watch?v=bWR_3Sg-H-8).** Every title pulls at least one of three
+psychological tensions, and you should be able to NAME which:
+
+- **Survival** — a problem, threat, or missed opportunity the viewer already
+  feels (this is what the problem-aware test detects; Schwartz level two).
+- **Identity** — names who the viewer IS, so they self-select ("if you're…",
+  "you're not forgetful"). The §3b identity-mirror pattern is this tension
+  turned into packaging.
+- **Progress** — the transformation / after-state the viewer wants.
+
+Rule of thumb: a cold audience is overwhelmingly survival- and identity-driven,
+so the PACKAGING (title, thumbnail, hook) should pull survival and/or identity;
+meaning-and-purpose framing belongs in the body and the CTA, not the title.
+The densest winning titles compress problem + identity + solution into one
+line ("You're Not Forgetful — My System for Memorizing Everything", 3.9M
+views, eight words). When ranking candidates, annotate each with its
+tension(s); a candidate pulling two tensions honestly beats one pulling one.
+GUARDRAIL: tension-naming must stay honest — name a pain the video genuinely
+solves for a viewer the video genuinely serves. No manufactured fear, no
+manufactured tribalism (see spoken-humanizer §A1 secret-knowledge ban).
+
 **Check our own scoreboard before ranking (Learn, added 2026-07-03).** If
 `channel/learn/REPORT.md` exists, read it before finalizing the ranked list:
 which of OUR videos are breakouts vs laggards, and which deterministic title
@@ -214,6 +237,9 @@ to never say it on the mic.
 one-line lesson per row) · 2 What the winners share (§3) · 3 The gap (§6, with
 the recommended angle) · 4 Title candidates (§7) · 5 Hook strategy (draft the
 actual cold-open lines; name the open loops and where each pays off) ·
+5b For each cold-open line, note which tension it pulls (survival / identity /
+progress, per §7) — line one should name the problem so the viewer can
+self-qualify ("is this me?") ·
 6 Structure & retention-map skeleton (beats table with times + devices; mark
 the midroll seam for 8 min+) · 7 Thumbnail direction (§5) · 8 SEO/description
 notes (keywords from finalist tags; chapters; operator CTA block; pinned-

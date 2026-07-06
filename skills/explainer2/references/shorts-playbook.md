@@ -32,7 +32,9 @@ are single-vendor and unverified — don't quote figures.
 - **Mute-proof:** a bold on-screen headline carrying the hook in frame one (most
   viewers watch muted). Our `hook_headline` is that text.
 - **Hook archetypes** (rotate): contrarian claim · "you've been doing X wrong"
-  (negativity bias) · result/proof-first · curiosity gap · in-media-res.
+  (negativity bias) · result/proof-first · curiosity gap · in-media-res ·
+  identity call-out ("if you're X…" — the viewer self-qualifies in one breath;
+  honest version only, per spoken-humanizer §B1).
 
 **Structure.**
 - **Payoff first, explanation after** — reverse of long-form; never make a cold
