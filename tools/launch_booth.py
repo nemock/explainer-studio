@@ -26,6 +26,7 @@ Usage:
   python3 tools/launch_booth.py --no-open <project_dir>  # same, but don't open a browser tab
   python3 tools/launch_booth.py --wait <project_dir>     # block until the green Finish button
   python3 tools/launch_booth.py --status <project_dir>   # DONE / PENDING / NOT_OPEN (instant)
+  python3 tools/launch_booth.py --claim <project_dir>    # CLAIMED / LOCKED — atomically claim completion so concurrent/resumed fires can't double-post
   python3 tools/launch_booth.py --stop                   # stop any running booth
 
 Tab opening (operator directive, 2026-07-04): a booth the operator can't see
@@ -198,6 +199,57 @@ def status(project):
     return 0
 
 
+def claim(project):
+    """Atomically claim the render+publish pipeline for a finished recording so
+    that two checker fires (or one that suspended and resumed) can't BOTH run
+    Steps 8-11 and double-post. Prints one of:
+
+      CLAIMED           -> this fire won the race; proceed through completion.
+      LOCKED done       -> a README already exists; the week is fully published.
+                           (Nothing to do; STOP.)
+      LOCKED <holder>   -> another fire is mid-completion right now; back off.
+
+    The lock is work/publish_lock.json, created with O_CREAT|O_EXCL so exactly
+    one caller can win even under concurrent fires. It self-heals: once the
+    winner writes PROJ/README.md the week is done, and any later caller short-
+    circuits on the README check before ever touching the lock. A stale lock
+    (holder pid gone, no README) older than max_age_s is reclaimed so a fire
+    that died mid-completion can't wedge the week forever."""
+    proj = Path(project).resolve()
+    if (proj / "README.md").exists():
+        print("LOCKED done"); return 0
+    lock = proj / "work" / "publish_lock.json"
+    max_age_s = 45 * 60  # a completion run is minutes; 45m means the holder died
+    payload = json.dumps({"pid": os.getpid(), "ts": time.time()})
+    try:
+        fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+    except FileExistsError:
+        try:
+            prev = json.loads(lock.read_text())
+        except (OSError, ValueError):
+            prev = {}
+        pid, ts = prev.get("pid"), prev.get("ts", 0)
+        alive = pid is not None and _pid_alive(pid)
+        if alive or (time.time() - ts) < max_age_s:
+            print("LOCKED", pid if pid is not None else "unknown"); return 0
+        # stale: the previous holder is gone and it's been too long — reclaim it.
+        lock.write_text(payload)
+        print("CLAIMED"); return 0
+    with os.fdopen(fd, "w") as fh:
+        fh.write(payload)
+    print("CLAIMED"); return 0
+
+
+def _pid_alive(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
 def wait(project, max_seconds=6 * 3600):
     """Block until the booth's Finish sentinel appears, then print it and return 0.
     Returns 2 if the booth process disappears before finishing (crash / early stop)."""
@@ -222,6 +274,8 @@ if __name__ == "__main__":
         sys.exit(wait(sys.argv[2]))
     elif len(sys.argv) == 3 and sys.argv[1] == "--status":
         sys.exit(status(sys.argv[2]))
+    elif len(sys.argv) == 3 and sys.argv[1] == "--claim":
+        sys.exit(claim(sys.argv[2]))
     elif len(sys.argv) == 3 and sys.argv[1] == "--no-open":
         sys.exit(start(sys.argv[2], open_tab=False))
     elif len(sys.argv) == 2 and not sys.argv[1].startswith("-"):
