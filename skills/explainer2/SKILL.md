@@ -168,8 +168,13 @@ Read `references/deck-playbook.md` IN FULL, then author `deck.json` — one slid
 per script segment, ids matching the script. The `media` pipeline's `deck` stage
 **fails without `deck.json`**; it is never auto-generated. Validate with
 `bin/explainer2 deck <project_dir>` (fast; catches bad fields / missing `figure`
-or `footage` images) before the full render. No separate operator gate — the
-deck is seen in the rendered video at the Package gate.
+or `footage` images) before the full render. **Then run
+`python3 tools/deck_census.py <project_dir>` — the visual-variety floor
+(motion-playbook §4b, added 2026-07-06 after #18 shipped as a "narrated
+PowerPoint"). A FAIL census blocks the render exactly like a failed word
+budget blocks the script gate; paste the tally into PLAYBOOK's deck notes.**
+No separate operator gate — the deck is seen in the rendered video at the
+Package gate.
 
 ### 5c. Shorts plan (generation plane — author at the Script stage, BEFORE the booth)
 Read `references/shorts-playbook.md`, then author `shorts/plan.json` (3 cuts, each

@@ -212,6 +212,51 @@ Reach for these freely; they are a big part of "dynamic is the norm" (§0).
   brakes are the five guardrails in §0 (determinism, brand, legibility, no jank, serves the
   story). Don't self-censor energy for fear of "too much" — fear flat.
 
+### 4b. The visual-variety floor (QUANTIFIED — added 2026-07-06 after #18)
+
+The doctrine above was not enough: video #18 shipped with **14 of 22 slides
+typography-only, zero data-viz, zero footage/figure slides, and zero narration
+cues**, and the operator watched it and called it a narrated PowerPoint. The
+"dynamic is the norm" language reads as permission; this section is the
+REQUIREMENT. Run the census below on every deck before render — a deck that
+fails the floor is not ready, exactly like a script that fails the word budget.
+
+**Text-type slides** for this census: `statement`, `reframe`, `punch`, `quote`,
+`highlight`, `define`, `list` — anything whose only visual is typography.
+Everything else (data-viz, `schematic`, `steps`, `funnel`, `timeline`,
+`figure`, `footage`, compare-with-imagery, 3D) is a **performing** slide.
+
+The floor (all MUST pass):
+
+1. **Text-type slides ≤ 40% of the deck**, and **never more than 2 in a row**.
+   A third consecutive text card means one of them is really a diagram, a
+   number, a document, or footage wearing a text costume — find it.
+2. **Every number the narration speaks gets a data-viz slide** (StatCounter /
+   BuildBars / DrawLine / Pictograph / Gauge / Waterfall…) with a `cues.land`
+   phrase so it lands on the spoken word. A number on a `statement` card is a
+   floor violation.
+3. **At least one `schematic` or `figure` tour per act** (≈ every 4–5 min).
+   These are the teaching core — the beats viewers screenshot.
+4. **At least one hero beat** (3D / Hero3D hook, or an equivalent §2G accent)
+   in the cold open, AND the biggest motion of the video at the midroll seam.
+5. **Annotations on ≥ 1/3 of slides** (vector arrows/circles/underlines or
+   doodle stamps), each with a `cue` on the exact spoken phrase. The
+   hand-drawn layer is the channel's personality; a bare deck reads corporate.
+6. **Narration cues resolve on every deck: a deck with `cues: 0` authored
+   fields is a failed deck.** Auto item-sync covers list-ish types, but
+   counters, schematics, figures, and annotations need authored phrases.
+7. **Footage/`figure` slides wherever the blueprint's visual budget names
+   b-roll or artifacts.** If the budget listed five broll scenes and the deck
+   has zero `footage` slides, the deck ignored the blueprint.
+
+**The census is one command** — run it and paste the tally into PLAYBOOK §
+(deck gate notes):
+```
+python3 tools/deck_census.py <project_dir>
+```
+It prints slide-type counts, text-type %, max text run, annotation coverage,
+cue count, and PASS/FAIL per rule above. Fix fails before rendering.
+
 ## 5. The spec contract (data in, motion out)
 
 - **The authored artifact is `deck.json`** (one slide per script segment — the
@@ -267,6 +312,9 @@ Reach for these freely; they are a big part of "dynamic is the norm" (§0).
 
 ## 7. Self-QA checklist (run before rendering a motion spec)
 
+- [ ] **The visual-variety floor passes: `python3 tools/deck_census.py <dir>`**
+      (§4b — text-type cap, no 3-in-a-row, numbers as synced data-viz,
+      schematic/figure per act, annotation coverage, cues authored).
 - [ ] Every scene has a clear motion ROLE (performs the point; not decoration).
 - [ ] Synced to narration where a cue exists; counters land on the spoken number.
 - [ ] Brand constants only (palette / type / bg / house spring); nothing off-brand.
