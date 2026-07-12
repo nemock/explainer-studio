@@ -100,6 +100,44 @@ needed), and the **Deep Dives** playlist. On success it backfills `youtube_url` 
 
 ---
 
+## Package contract (for non-explainer2 projects)
+
+`publish` reads a small, stable contract — any project (e.g. the binaural generator)
+can be uploaded by conforming to it, rather than special-casing the command. Given a
+project dir `DIR`:
+
+```
+DIR/project.json        # any JSON dict; MUST include "youtube_channel": "<key>"
+DIR/package/meta.json   # the fields below
+```
+
+`package/meta.json`:
+```json
+{
+  "title": "<chosen title>",
+  "description": "<full description>",
+  "tags": ["...", "..."],
+  "category_id": "10",
+  "thumbnails": { "a": "thumbnails/thumb_a.jpg", "b": "thumbnails/thumb_b.jpg" },
+  "video": "video/explainer_16x9.mp4",
+  "playlist": null,
+  "made_for_kids": false,
+  "pinned_comment": null,
+  "youtube_url": "", "posted": ""
+}
+```
+
+Path-resolution rules (respect exactly):
+- `thumbnails.a`/`.b` resolve to **`DIR/package/<value>`** — put images under `DIR/package/thumbnails/`.
+- `video` resolves to **`DIR/<value>`** — the file may live at the project root; just reference it.
+- Thumbnails may be `.jpg` or `.png`; oversize (>2MB) thumbnail A is auto-compressed at upload.
+- `category_id`: `"22"` People & Blogs (default) · `"10"` Music · `"27"` Education — pick per content.
+- `youtube_url` + `posted` are backfilled by `publish` on a successful `--fire`.
+
+`project.json` needs no required fields beyond `youtube_channel` (it's read as a plain
+dict). Anything the contract can't express should be **added to the contract**, not
+worked around per project.
+
 ## Notes & limits
 - **Quota:** ~1,600 units/upload against a default 10,000/day ≈ 6 uploads/day.
 - **AI-use / altered-content** disclosure has no API field; the default is "No", which
