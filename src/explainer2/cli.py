@@ -324,6 +324,16 @@ def cmd_promote(args):
                                  plan=args.plan, fire=args.fire), indent=2))
 
 
+def cmd_publish(args):
+    from . import publish
+    if not args.authorize and not args.project_dir:
+        print("publish needs a project_dir (or --authorize --channel <key>)")
+        return 1
+    print(json.dumps(publish.run(args.project_dir, fire=args.fire, privacy=args.privacy,
+                                 when=args.when, channel=args.channel,
+                                 do_authorize=args.authorize), indent=2))
+
+
 def cmd_talktime(args):
     tag, library = args.tag, args.library
     if args.brand and not (tag and library):
@@ -507,6 +517,23 @@ def main(argv=None):
     pr.add_argument("--fire", action="store_true",
                     help="actually publish (default is a dry-run preview of the Blotato payloads)")
     pr.set_defaults(func=cmd_promote)
+
+    pub = sub.add_parser("publish", help="hybrid YouTube upload of the PRIMARY video via the "
+                         "operator's own OAuth (dry-run default; --fire to upload). API sets "
+                         "file+metadata+thumbnail+playlist+schedule; prints a Chrome checklist for "
+                         "the API-blind steps (A/B thumbs, title A/B, end screen, pinned comment)")
+    pub.add_argument("project_dir", nargs="?", help="omit only with --authorize")
+    pub.add_argument("--fire", action="store_true", help="actually upload (default: dry-run plan)")
+    pub.add_argument("--privacy", choices=["public", "unlisted", "private"], default="private",
+                     help="visibility on --fire (default: private — pass public to go live)")
+    pub.add_argument("--when", help="RFC3339 UTC timestamp to schedule (forces private + publishAt)")
+    pub.add_argument("--channel", default=None,
+                     help="target channel KEY; overrides project.json 'youtube_channel' "
+                          "(default: nemock). With --authorize, the key to bind.")
+    pub.add_argument("--authorize", action="store_true",
+                     help="one-time: run OAuth consent for --channel <key>, bind its token + "
+                          "record the channel in the registry (pick the right channel on Google's screen)")
+    pub.set_defaults(func=cmd_publish)
 
     va = sub.add_parser("validate", help="check the manifest is a complete handoff contract")
     va.add_argument("project_dir")
