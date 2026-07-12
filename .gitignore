@@ -20,3 +20,8 @@ node_modules/
 .cache/
 # operator/brand assets (personal media, not redistributed)
 book_cover/
+# SECRETS — OAuth client secrets / tokens must never be committed (this repo is public).
+# Real home is ~/.config/explainer2/. These patterns catch anything dropped in-repo by mistake.
+auth/
+*client_secret*
+token_*.json
