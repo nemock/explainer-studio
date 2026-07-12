@@ -84,7 +84,15 @@ bin/explainer2 publish <project_dir> --fire --privacy public
 
 # schedule (RFC3339 UTC; forces private + publishAt)
 bin/explainer2 publish <project_dir> --fire --when 2026-07-15T13:00:00Z
+
+# flip privacy of an already-uploaded video (the "validate unlisted, then go public" step)
+bin/explainer2 publish <project_dir> --set-privacy public         # video id read from meta.json
+bin/explainer2 publish --set-privacy public --video-id <id> --channel waveform
 ```
+
+The recommended first-fire flow: `--fire --privacy unlisted` → eyeball it in Studio →
+`--set-privacy public`. `--set-privacy` runs the same channel guard as `--fire` (it will
+not touch a video unless the loaded token's real channel id matches the registry).
 
 **What `--fire` sets via the API:** file, title, description (with chapters), tags,
 category, privacy/schedule, made-for-kids, **thumbnail A** (auto-compressed to <2MB if

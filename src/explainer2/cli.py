@@ -326,8 +326,13 @@ def cmd_promote(args):
 
 def cmd_publish(args):
     from . import publish
+    if args.set_privacy:
+        print(json.dumps(publish.set_privacy(video_id=args.video_id, project_dir=args.project_dir,
+                                             channel=args.channel, privacy=args.set_privacy,
+                                             when=args.when), indent=2))
+        return
     if not args.authorize and not args.project_dir:
-        print("publish needs a project_dir (or --authorize --channel <key>)")
+        print("publish needs a project_dir (or --authorize --channel <key>, or --set-privacy)")
         return 1
     print(json.dumps(publish.run(args.project_dir, fire=args.fire, privacy=args.privacy,
                                  when=args.when, channel=args.channel,
@@ -533,6 +538,12 @@ def main(argv=None):
     pub.add_argument("--authorize", action="store_true",
                      help="one-time: run OAuth consent for --channel <key>, bind its token + "
                           "record the channel in the registry (pick the right channel on Google's screen)")
+    pub.add_argument("--set-privacy", choices=["public", "unlisted", "private"], default=None,
+                     help="change privacy of an ALREADY-uploaded video (the 'validate unlisted, "
+                          "then flip public' flip). Target via project_dir (uses its meta youtube_url) "
+                          "or --video-id. Same channel guard as --fire.")
+    pub.add_argument("--video-id", default=None,
+                     help="explicit video id for --set-privacy (else read from the project's meta.json)")
     pub.set_defaults(func=cmd_publish)
 
     va = sub.add_parser("validate", help="check the manifest is a complete handoff contract")

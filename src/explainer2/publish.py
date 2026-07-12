@@ -216,6 +216,59 @@ def _thumb_for_upload(path):
     return str(out), f"thumbnail still {out.stat().st_size/1_048_576:.1f}MB after max compression"
 
 
+def _video_id_from_meta(proj):
+    """Pull the video id out of meta.json's youtube_url (youtu.be/<id> or watch?v=<id>)."""
+    import re
+    url = _meta(proj).get("youtube_url") or ""
+    m = re.search(r"(?:youtu\.be/|[?&]v=)([A-Za-z0-9_-]{6,})", url)
+    return m.group(1) if m else None
+
+
+def set_privacy(video_id=None, project_dir=None, channel=None, privacy="private", when=None):
+    """Change the privacy of an ALREADY-uploaded video (the 'validate unlisted, then
+    flip public' pattern). Same channel guard as --fire: verifies the loaded token's
+    real channel id against the registry before touching the video. Target the video
+    by --video-id or by a project dir whose meta.json carries youtube_url."""
+    from .project import Project
+    proj = None
+    if project_dir:
+        proj = Project.load(project_dir)
+        channel = channel or None
+        key = resolve_channel(proj, explicit=channel)
+        video_id = video_id or _video_id_from_meta(proj)
+    else:
+        key = (channel or DEFAULT_CHANNEL).lstrip("@")
+    if not video_id:
+        return {"aborted": True, "reason": "no video id (pass --video-id, or a project dir "
+                "whose package/meta.json has youtube_url)"}
+    reg = load_registry()
+    if key not in reg:
+        return {"aborted": True, "reason": f"channel '{key}' not authorized",
+                "fix": f"explainer2 publish --authorize --channel {key}"}
+    yt = _service(key, interactive=False)
+    live = _channel_of(yt)
+    if not live or live["id"] != reg[key]["id"]:
+        return {"aborted": True, "reason": "channel guard: token no longer matches registry",
+                "expected": reg[key], "got": live}
+    cur = yt.videos().list(part="status", id=video_id).execute().get("items", [])
+    if not cur:
+        return {"aborted": True, "reason": f"video {video_id} not found on channel '{key}' "
+                f"({live['title']}) — wrong channel or wrong id?"}
+    old = cur[0]["status"]
+    # send only writable status fields; publishAt only valid with privacyStatus=private
+    status = {"privacyStatus": "private" if when else privacy}
+    for f in ("selfDeclaredMadeForKids", "license", "embeddable", "publicStatsViewable"):
+        if f in old:
+            status[f] = old[f]
+    if "selfDeclaredMadeForKids" not in status and "madeForKids" in old:
+        status["selfDeclaredMadeForKids"] = old["madeForKids"]
+    if when:
+        status["publishAt"] = when
+    yt.videos().update(part="status", body={"id": video_id, "status": status}).execute()
+    return {"ok": True, "video_id": video_id, "channel": live,
+            "privacyStatus": status["privacyStatus"], "publishAt": status.get("publishAt")}
+
+
 def _backfill_meta(proj, url):
     """Close the loop: write youtube_url + posted date into package/meta.json."""
     import datetime
