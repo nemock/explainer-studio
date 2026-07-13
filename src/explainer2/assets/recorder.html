@@ -831,7 +831,7 @@ document.addEventListener('keydown', e => {
     if (a) { a.currentTime = 0; a.play(); }
   } else if (e.key === 'c' || e.key === 'C') { continuity(); }
   else if (e.key === 't' || e.key === 'T') { if (s.takes > 1) openTakes(s.id); }
-  else if (e.key === 'e' || e.key === 'E') { openEdit(s.id); }
+  else if (e.key === 'e' || e.key === 'E') { e.preventDefault(); openEdit(s.id); }
 });
 
 $('viewBtn').addEventListener('click', () => setView(view === 'focus' ? 'list' : 'focus'));
