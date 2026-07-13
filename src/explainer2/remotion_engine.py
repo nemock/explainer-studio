@@ -76,10 +76,43 @@ def _resolve_phrase(phrase, segw, s0, fps):
     return None
 
 
+def _monotonic_fill(times, fps=30):
+    """Gap-fill None item-times and force a STRICTLY increasing sequence.
+
+    A partially-matched label list (some items sync, some don't) must never hand a
+    component a descending or equal interpolate input range — that raised
+    'inputRange must be strictly monotonically increasing' and hard-crashed a render
+    (#19, StepFlow, frames [749, 294.25]) instead of the playbook's 'misses never
+    break a render' fallback. Unmatched items are interpolated between their matched
+    neighbors; ties/descents are bumped up by a frame."""
+    n = len(times)
+    if n == 0 or all(t is None for t in times):
+        return times  # nothing matched: let the component even-stagger (already monotonic)
+    idx = [i for i, t in enumerate(times) if t is not None]
+    out = list(times)
+    first = idx[0]
+    for i in range(first):                         # leading Nones -> ramp up to the first anchor
+        out[i] = int(round(out[first] * (i + 1) / (first + 1)))
+    for a, b in zip(idx, idx[1:]):                 # interior Nones -> linear between anchors
+        if b - a > 1:
+            span = out[b] - out[a]
+            for k in range(a + 1, b):
+                out[k] = int(round(out[a] + span * (k - a) / (b - a)))
+    last = idx[-1]                                 # trailing Nones -> extend by the last gap
+    gap = max(1, int(round((out[idx[-1]] - out[idx[-2]]) / (idx[-1] - idx[-2])))) if len(idx) >= 2 else fps // 2
+    for i in range(last + 1, n):
+        out[i] = out[i - 1] + gap
+    for i in range(1, n):                          # final guard: strictly increasing
+        if out[i] is None or out[i] <= out[i - 1]:
+            out[i] = out[i - 1] + 1
+    return out
+
+
 def _resolve_items(labels, segw, s0, fps):
-    """Sequential label list -> per-item scene-relative frames (None where unmatched).
+    """Sequential label list -> per-item scene-relative frames.
     Walks the segment's words FORWARD (a repeated word matches its next occurrence),
-    the behavior BuildList's item sync shipped with (#13)."""
+    the behavior BuildList's item sync shipped with (#13), then `_monotonic_fill`s
+    the result so misses never yield a descending interpolate range."""
     times, wp = [], 0
     for label in labels:
         key, t = _content_key(label), None
@@ -89,7 +122,7 @@ def _resolve_items(labels, segw, s0, fps):
                 break
             wp += 1
         times.append(None if t is None else max(0, int(round((t - s0) * fps))))
-    return times
+    return _monotonic_fill(times, fps)
 
 
 def _scene_for(slide):
