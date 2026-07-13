@@ -154,7 +154,11 @@ def _browser_checklist(meta, thumb_b, alt_title, chan):
     if pc:
         todo.append(f"PINNED COMMENT: VERIFY the active channel is {handle} (photo avatar, "
                     f"verified badge) before posting, then post + pin:\n    \"{pc}\"")
-    todo.append("AI-USE / altered-content: no API field; default 'No' is correct — confirm only.")
+    todo.append("ALTERED-CONTENT / AI disclosure (REQUIRED — the API CANNOT set this and it is NOT "
+                "auto-defaulted; it ships UNSET until you set it by hand): Studio > Details > "
+                "'Show more' > 'Altered content' > actively select 'No', then Save. 'No' is correct "
+                "for real operator voice + deterministic motion (an AI-assisted thumbnail does not "
+                "count). TTS projects (synthetic voice): decide per YouTube's synthetic-content policy.")
     return todo
 
 

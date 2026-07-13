@@ -103,7 +103,11 @@ needed), and the **Deep Dives** playlist. On success it backfills `youtube_url` 
 1. **A/B thumbnails** — A is set; open Test & Compare, add variant B, start the test.
 2. **Title A/B** (optional) — add the alternate title.
 3. **End screen** — subscribe + Best-for-viewer over the last ~20s.
-4. **Pinned comment** — **verify the active channel is the right one** (photo avatar,
+4. **Altered-content / AI-use disclosure** — REQUIRED, and neither the API nor a default sets
+   it: Details → **Show more** → **Altered content** → actively select **"No"** (correct for real
+   voice + deterministic motion; an AI-assisted thumbnail does not count), then Save. It ships
+   UNSET otherwise. TTS/synthetic-voice projects: decide per YouTube's synthetic-content policy.
+5. **Pinned comment** — **verify the active channel is the right one** (photo avatar,
    verified badge — not another channel on the same login), then post + pin.
 
 ---
@@ -148,7 +152,9 @@ worked around per project.
 
 ## Notes & limits
 - **Quota:** ~1,600 units/upload against a default 10,000/day ≈ 6 uploads/day.
-- **AI-use / altered-content** disclosure has no API field; the default is "No", which
-  is correct for our real-voice + deterministic-motion videos — confirm only.
+- **AI-use / altered-content** disclosure has no API field and is **NOT auto-defaulted** — it
+  ships unset and must be set BY HAND in Studio every upload (Details → Show more → Altered
+  content). Select **"No"** for our real-voice + deterministic-motion videos (an AI-assisted
+  thumbnail does not require disclosure). TTS projects: decide per YouTube's synthetic-content policy.
 - Safety: dry-run by default; `--fire` defaults to **private**; it refuses to fire
   while any blocking warning (missing file, unauthorized channel) is unresolved.
