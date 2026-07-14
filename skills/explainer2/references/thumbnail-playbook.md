@@ -139,6 +139,37 @@ next best, and the plain cutout is the fallback.
 When in doubt, ask the operator which path a given video should take; lean toward
 the illustrative path for story-driven / special-edition deep dives.
 
+## 2d. Optional: generate the base with Magnific image-gen (proven 2026-07-14)
+
+An **optional** capability: when the Magnific MCP is connected (`mcp__magnific__*`
+tools present — resolve via ToolSearch "magnific"), Claude can generate the illustrative
+base itself instead of waiting on the operator to paste prompts into an external tool.
+**It is never required** — if the tools aren't present, fall back to the §2c workflow
+(operator generates the base) unchanged. Full flow + guardrails:
+[docs/magnific-imagegen-plan.md](../../../docs/magnific-imagegen-plan.md).
+
+- **Model = `gpt-2` (GPT 2), the default** — best composition/likeness at **15 credits**
+  per 16:9 image; validated to beat Nano Banana Pro (`imagen-nano-banana-2`, 75 credits)
+  for our bases. Reserve Nano Banana Pro as a fallback only when GPT 2's likeness slips.
+  Photoreal thumbnail bases ARE allowed (this is a thumbnail, not in-video; see the
+  disclosure note in the plan doc).
+- **Selfie-as-base** (keep Dave in the scene, on-model): upload a `dave_selfies/*.png`,
+  then reference it. Sequence: `creations_request_upload {mimeType:"image/png"}` →
+  `python3 tools/imagegen.py put <selfie> "<proxyUploadUrl>"` →
+  `creations_finalize_upload {path}` (→ creation id) → `images_generate {prompt,
+  mode:"gpt-2", aspectRatio:"16:9", count:1, references:[{type:"image", identifier:<id>}]}`
+  → `creations_wait` → `python3 tools/imagegen.py fetch "<url>" <base.png> --project <dir>
+  --model gpt-2 --prompt "…"`. A single reference holds the likeness well.
+- **Wardrobe rule (operator directive 2026-07-14):** default to the **hoodie /
+  no-hoodie sweatshirt motif** — Dave's recognizable brand; it makes him stand out from
+  the scene. Restyle thematically only when the topic clearly earns it (the P.T. Barnum
+  tux, #35). Keep Dave recognizable regardless.
+- **Cost hygiene:** `simulate_cost {tool:"images_generate", arguments:{…}}` (free) before
+  generating. (The operator's plan has large credit headroom, but keep the habit.)
+- Then compose the brand headline on top exactly as §2c step 3 — the generated base
+  replaces the operator-supplied `base.png`; everything downstream is unchanged. A/B
+  still applies (§6).
+
 ## 3. Copy rules
 
 - Headline = the blueprint's **§7 thumbnail direction** distilled to a **2–4 word

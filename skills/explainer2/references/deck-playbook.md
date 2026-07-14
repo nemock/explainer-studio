@@ -203,6 +203,37 @@ motion-playbook §5/§2H). What you author in `deck.json`:
   `assemble{pieces[]{clip:[x,y,w,h], cue}}` builds the image in cued pieces;
   `highlight{..., cue}` wipes the marker on the phrase.
 
+## 4d. Optional: generate STYLIZED elements with Magnific image-gen (proven 2026-07-14)
+
+An **optional** capability: when the Magnific MCP is connected (`mcp__magnific__*`
+tools present — resolve via ToolSearch "magnific"), Claude can generate original
+illustrated elements for `figure`/`footage` slides — a paper-craft prop, a cutout
+character, an iconic scene — instead of relying only on Adobe Stock or authored HTML
+artifacts. **Never required**; if the tools aren't present, use §4's existing sources.
+Full flow + guardrails: [docs/magnific-imagegen-plan.md](../../../docs/magnific-imagegen-plan.md).
+
+- **STYLIZED ONLY — hard rule (operator directive 2026-07-14).** In-video AI imagery
+  must be clearly stylized: **layered cut-paper** (the house look), cartoon, flat
+  illustration. **NEVER photo-realistic or otherwise deceptive imagery/video inside the
+  video.** The test: could a viewer mistake it for real footage/photos? If yes, it's out.
+  (Photoreal AI is allowed on THUMBNAILS only — thumbnail-playbook §2d.)
+- **Stills only; motion stays deterministic.** Generate stills/cutouts and animate them
+  in Remotion (the existing `figure`/`footage` slides + motion-playbook cues). Do NOT
+  use `video_generate` for in-video content — no generative video.
+- **Model = `gpt-2`** (15 credits/image; renders clean layered-paper). Pure
+  text-to-image (no `references`) for a fresh element; add a `references:[{type:"image",
+  …}]` only to keep a recurring character/prop consistent.
+- **Transparent cutout:** `images_generate` output is opaque; for an element that must
+  sit over the deck background, chain `images_remove_background {creationIdentifier}`,
+  then `creations_wait` + fetch the transparent PNG.
+- **Flow:** `simulate_cost` (free) → `images_generate {prompt, mode:"gpt-2",
+  aspectRatio, count}` → `creations_wait` → `python3 tools/imagegen.py fetch "<url>"
+  <project>/assets/imagegen/<name>.png --project <dir> --model gpt-2 --prompt "…"
+  --in-video`. The `--in-video` flag records provenance so packaging sets the
+  AI-disclosure flag honestly (plan doc "AI-disclosure policy").
+- Reference the saved PNG from a `figure`/`footage` slide per §4's image rule (the file
+  must exist on disk before `media`).
+
 ## 5. Validate before the full render
 
 Run the deck stage alone — it's fast and catches bad fields / missing images

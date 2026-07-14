@@ -26,7 +26,7 @@ Explainer2 is the studio built around the proven v1 media core. **Separate repo,
 
 ### The constraint that defines the product (unchanged from v1, hardened)
 
-**No SaaS subscriptions required to operate** — with exactly **one declared exception: the operator's existing stock.adobe.com membership**, used as a *human-in-the-loop asset source*, never as an API dependency. The LLM is the operator's existing Claude subscription (via Claude Code / the Claude Agent SDK's subscription auth) — **no API key, no per-token billing.** Everything else runs on the M3: TTS, alignment, rendering, encoding, image work, even YouTube research.
+**No SaaS subscriptions required to operate** — with exactly **two declared, optional exceptions, both human-in-the-loop asset sources, never API dependencies**: (1) the operator's existing **stock.adobe.com** membership; (2) the operator's **Magnific** image-generation subscription (added 2026-07-14, MCP connector) — used *only when its MCP is present* to generate thumbnail bases and **stylized** in-video elements, with graceful fallback to manual/external generation when it's absent. The studio still runs fully with zero outside services; neither exception is a hard dependency. Magnific's guardrails (stylized-only in-video, never deceptive photoreal; deterministic Remotion motion; GPT-2 default) and flow live in [docs/magnific-imagegen-plan.md](docs/magnific-imagegen-plan.md). The LLM is the operator's existing Claude subscription (via Claude Code / the Claude Agent SDK's subscription auth) — **no API key, no per-token billing.** Everything else runs on the M3: TTS, alignment, rendering, encoding, image work, even YouTube research.
 
 ---
 
