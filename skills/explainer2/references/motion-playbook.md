@@ -159,7 +159,16 @@ full-bleed shot.
 - **Motivated transitions** (`@remotion/transitions`): fade / slide / wipe / clockWipe /
   shared-element. Use to *connect related beats*; hard-cut between unrelated ones.
 - **ChapterMarker / SectionDivider** — at beat boundaries (the chapter list).
-- **BrandSting** — a short FWF intro/outro animation, built once, reused every video.
+- **PaperSting** — the default FWF intro/outro (2026-07-14). A layered cut-paper "launch":
+  the paper D card settles, the cream paper rocket flies in from off-screen trailing a fan
+  of mixed-color paper flames and lands into the D to form the mark, then the wordmark
+  rises (INTRO ~3.5s). `fields.outro:true` gives the calm finished-mark card + subtitle
+  (OUTRO ~2.5s). Assets: `remotion/public/sting_paper_{d,rocket}.png` (Magnific paper-
+  stylized from Dave's real D-rocket logo). **The intro length is the narration offset —
+  now 3.5s (was 2.5s); see memory [[gag-splice-sting-offset]].** Component:
+  `remotion/src/components/PaperSting.tsx`.
+- **BrandSting** — the prior wordmark intro/outro (scale-in + light sweep). Retained as a
+  fallback; PaperSting is the default the engine inserts.
 - **Background drift / parallax** — ambient life under everything.
 
 ### G. Accents & ecosystem (use them — this is where videos *pop*)

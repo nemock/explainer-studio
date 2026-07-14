@@ -14,6 +14,7 @@ import {AnnotateOverlay} from './components/Annotate';
 import {Schematic} from './components/Schematic';
 import {CTA} from './components/CTA';
 import {BrandSting, StepFlow} from './components/Extras';
+import {PaperSting} from './components/PaperSting';
 import {DrawLine, Waterfall, Pictograph, Ring, Funnel} from './components/DataViz2';
 import {ReactiveStrip, Waveform} from './components/Audio';
 
@@ -21,6 +22,7 @@ import {ReactiveStrip, Waveform} from './components/Audio';
 const REGISTRY: Record<string, React.FC<any>> = {
   Hero3D,
   BrandSting,
+  PaperSting,
   StepFlow,
   DrawLine,
   Waterfall,

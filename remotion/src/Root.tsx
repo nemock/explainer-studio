@@ -3,6 +3,7 @@ import {Composition, Still} from 'remotion';
 import {Video} from './Video';
 import {videoSchema, type VideoProps} from './schema';
 import {Thumbnail, thumbnailSchema} from './Thumbnail';
+import {PaperSting} from './components/PaperSting';
 
 // Single parametric composition. The Python engine passes the whole motion spec as
 // props (--props=spec.json) and dimensions/duration come from those props.
@@ -53,6 +54,15 @@ export const RemotionRoot: React.FC = () => {
         innerHot: '#123a4a',
         bandSize: 104,
       }}
+    />
+    <Composition
+      id="PaperSting"
+      component={PaperSting}
+      durationInFrames={120}
+      fps={30}
+      width={1920}
+      height={1080}
+      defaultProps={{}}
     />
     </>
   );

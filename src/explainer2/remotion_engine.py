@@ -330,18 +330,22 @@ def build_spec(sp):
     audio_from = 0
     total = duration
     if sp.data.get("sting", width >= height):
-        INTRO, OUTRO = 2.5, 2.0
+        # Paper-launch sting (motion-playbook §2F, 2026-07-14). Intro plays the full
+        # launch+wordmark (~3.5s); outro is the calm finished-mark card (~2.5s). The intro
+        # length sets the narration offset — see memory gag-splice-sting-offset (now 3.5s
+        # for the explainer2 Remotion engine; v1 stays 2.5s).
+        INTRO, OUTRO = 3.5, 2.5
         off = int(round(INTRO * fps))
         for sc in scenes:
             sc["from"] += off
         for w in words:
             w["start"] += INTRO
             w["end"] += INTRO
-        scenes.insert(0, {"component": "BrandSting", "from": 0, "durationInFrames": off,
-                          "fields": {"title": "FOUNDERS WHO FINISH"}})
-        scenes.append({"component": "BrandSting", "from": off + int(round(duration * fps)),
+        scenes.insert(0, {"component": "PaperSting", "from": 0, "durationInFrames": off,
+                          "fields": {}})
+        scenes.append({"component": "PaperSting", "from": off + int(round(duration * fps)),
                        "durationInFrames": int(round(OUTRO * fps)),
-                       "fields": {"title": "FOUNDERS WHO FINISH", "subtitle": "davesaunders.net"}})
+                       "fields": {"outro": True, "subtitle": "davesaunders.net"}})
         audio_from = off
         total = INTRO + duration + OUTRO
 
