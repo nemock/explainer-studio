@@ -19,7 +19,7 @@ Booth 2.0 (docs/booth-upgrade-plan.md):
 
 Run it in the background; it returns when the operator clicks "Finish" in the browser."""
 import fcntl
-import json, os, queue, re, shutil, subprocess, threading, time, webbrowser
+import json, os, queue, re, shutil, subprocess, sys, threading, time, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
@@ -27,6 +27,25 @@ from urllib.parse import urlparse, parse_qs
 ASSETS = Path(__file__).parent / "assets"
 WPM = 150                    # matches the client + script-playbook read-rate math
 RENDER_LOCKFILE = "/tmp/explainer-render.lock"   # renderlock.LOCKFILE (shared, fixed)
+DRIFT_TIMEOUT_S = 150            # hard cap on a drift transcription; a hung mlx_whisper must never hold this server's GIL
+
+
+def _transcribe_isolated(wav_path, model, timeout):
+    """Transcribe one take in a CHILD process with a hard timeout.
+
+    mlx_whisper runs on the Metal GPU and holds the Python GIL, so a single hung
+    transcription froze the entire booth (0% CPU, every /save and /clip wedged
+    behind the stuck GIL). Running it in a subprocess means a hang is killed by the
+    timeout and the server never notices, and each take gets a clean process free of
+    any Metal/GPU state that accumulates across runs. Raises subprocess.TimeoutExpired
+    on hang (the caller marks the take errored and moves on)."""
+    code = ("import sys, json, mlx_whisper; "
+            "print(json.dumps(mlx_whisper.transcribe(sys.argv[1], path_or_hf_repo=sys.argv[2])['text']))")
+    r = subprocess.run([sys.executable, "-c", code, wav_path, model],
+                       capture_output=True, text=True, timeout=timeout)
+    if r.returncode != 0:
+        raise RuntimeError((r.stderr or "transcribe failed").strip()[:200])
+    return json.loads(r.stdout.strip()).strip()
 
 
 def _load_segments(proj):
@@ -229,7 +248,6 @@ def run(proj, open_browser=True):
 
     def drift_worker():
         from .media.adlib import MODEL, _drift   # shared thresholds + normalizer
-        mw = None
         while True:
             sid = drift_q.get()
             if sid is None:
@@ -245,16 +263,19 @@ def run(proj, open_browser=True):
                 continue
             drift_state[st] = {"status": "running"}
             try:
-                if mw is None:
-                    import mlx_whisper as mw   # lazy: booth works even if whisper is broken
                 f = wav(sid)
                 mtime = f.stat().st_mtime
-                asr = mw.transcribe(str(f), path_or_hf_repo=MODEL)["text"].strip()
+                # transcribe in a child process (see _transcribe_isolated): a hung
+                # mlx_whisper must never hold this server's GIL and freeze the booth.
+                asr = _transcribe_isolated(str(f), MODEL, DRIFT_TIMEOUT_S)
                 c = card(sid)
                 d = _drift(c["text"] if c else "", asr)
                 # a re-take may have landed mid-transcription — only publish if still current
                 if f.exists() and f.stat().st_mtime == mtime:
                     drift_state[st] = {"status": "done", "drift": d, "asr_text": asr}
+            except subprocess.TimeoutExpired:
+                drift_state[st] = {"status": "error",
+                                   "error": f"drift transcription exceeded {DRIFT_TIMEOUT_S}s — skipped (booth unaffected)"}
             except Exception as e:
                 drift_state[st] = {"status": "error", "error": str(e)[:200]}
 
