@@ -147,6 +147,14 @@ to date missed length on the first draft; the rule exists because it bites).
        Dave: "that's the wrong time to suggest it's not important that they get it."
        So the CTA = name the book + site + newsletter, then the single subscribe
        line, and stop. Keep the genuine humility, just not at the moment of the ask.
+     - **Make the CTA crisp, direct, and confident (operator directive 2026-07-14).**
+       Beyond just removing the false-modesty line: the ask itself must be clean and
+       plainly stated — never wishy-washy, hedged, or padded. Don't pontificate over
+       it. Say it warmly and directly, name the offers, and stop. Model cadence:
+       *"Go grab a copy of my book, Founders Who Finish, at davesaunders.net. While
+       you're there, sign up for my newsletter, The Build."* You may add ONE genuinely
+       current teaser only when it's true (e.g. new books landing this year) — kept
+       truthful, never invented. Confident and generous is the register, not apologetic.
    - **Medium note — this is a VIDEO rule, not a universal one.** "Don't recap,
      don't signal the end" exists because a *watcher* who hears "let's recap"
      leaves, costing watch-time and the suggested-video click. The written
@@ -156,6 +164,22 @@ to date missed length on the first draft; the rule exists because it bites).
      practices (operator directive 2026-06-21); don't flatten one ruleset across
      video, article, and short.
 8. **Chapters** = the `beat` labels; every beat boundary is a chapter.
+9. **Define terms as you use them — comprehension IS retention (operator directive
+   2026-07-14).** An undefined term the viewer doesn't know blocks them from
+   following everything after it: they quietly tune out, so it's a retention leak,
+   not just a clarity miss. When the script reaches for a term a newcomer to the
+   topic might not know — jargon, an acronym, an insider phrase — define it
+   *observably* the first time. Not a dictionary gloss: what it looks like in real
+   life or how you'd actually do it. ("Progressive overload just means lift a weight
+   for a set number of reps, and once that's easy, add a little more.") This is the
+   channel's teaching thesis in miniature — guided, contextual understanding a
+   beginner won't get by prompting an LLM cold. **The filter (from the source
+   teardown):** reread the draft asking *"what does that mean?"* at every line;
+   anywhere you'd have to ask, it wasn't defined. Two payoffs land at once —
+   beginners get their first real grasp of the idea and bond to the operator,
+   while experts think "I've never heard it put that clearly." GUARDRAIL: define,
+   don't condescend. One clean observable definition, then move on; don't stop to
+   re-explain terms the whole audience already owns.
 
 ## 5. Voice rules (conversational, spoken, the operator's)
 
@@ -209,6 +233,8 @@ to date missed length on the first draft; the rule exists because it bites).
 - [ ] Seg 0 passes the cold-open FORBIDDEN list; ending passes rule 7
 - [ ] All numbers spelled out; no unsourced stats; talk-time rules honored
 - [ ] Title promise(s) each map to a specific segment
+- [ ] Every topic-specific term a newcomer might not know is defined observably on
+      first use (§4.9) — reread asking "what does that mean?"; no line leaves it unanswered
 - [ ] Read every segment aloud mentally — no tongue-twisters, no 70-word runs
 - [ ] **Spoken-humanizer pass (mandatory since 2026-06-19, supersedes the old
       speakability pass):** run `references/spoken-humanizer.md` end to end before
