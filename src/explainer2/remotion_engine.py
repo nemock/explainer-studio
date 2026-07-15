@@ -203,6 +203,10 @@ def _scene_for(slide):
         return "KineticHeadline", {"kicker": kicker, "headline": slide.get("value") or headline,
                                    "accent": accent, "accentRed": accent2,
                                    "subkicker": slide.get("subkicker", "")}
+    if t == "keepcard":
+        return "KeepCard", {"image": slide.get("image"),
+                            "label": slide.get("label") or headline,
+                            "sub": slide.get("sub")}
     if t == "figure":
         return "Figure", {"kicker": kicker, "image": slide.get("image"),
                           "caption": slide.get("caption", ""), "highlight": slide.get("highlight"),

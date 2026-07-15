@@ -4,6 +4,7 @@ import {Video} from './Video';
 import {videoSchema, type VideoProps} from './schema';
 import {Thumbnail, thumbnailSchema} from './Thumbnail';
 import {PaperSting} from './components/PaperSting';
+import {KeepCard} from './components/KeepCard';
 
 // Single parametric composition. The Python engine passes the whole motion spec as
 // props (--props=spec.json) and dimensions/duration come from those props.
@@ -63,6 +64,15 @@ export const RemotionRoot: React.FC = () => {
       width={1920}
       height={1080}
       defaultProps={{}}
+    />
+    <Composition
+      id="KeepCard"
+      component={KeepCard}
+      durationInFrames={60}
+      fps={30}
+      width={1920}
+      height={1080}
+      defaultProps={{fields: {image: 'keep_direction.png', label: 'DIRECTION', sub: 'the calls about where the whole thing is pointed'}}}
     />
     </>
   );
