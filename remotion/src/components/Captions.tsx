@@ -4,15 +4,27 @@ import {BRAND} from '../brand';
 import type {Word} from '../schema';
 
 // Word-synced, windowed kinetic captions (motion-playbook §2A). Baseline on every
-// scene. Reads the alignment words and highlights the active word in green.
+// scene. Reads the alignment words and highlights the active word in the accent color.
+// Theme-aware: the navy world uses a dark pill + white ink; the paper worlds
+// ('nemock-deep-dive' and 'cut-bond') use a cream paper-label strip + dark ink (white
+// text would vanish on off-white paper). Active-word accent: green for the davesaunders
+// brand, coral for Cut & Bond.
 export const Captions: React.FC<{
   words: Word[];
   bottomPx: number;
   fontSize: number;
-}> = ({words, bottomPx, fontSize}) => {
+  theme?: string;
+  accentColor?: string;
+}> = ({words, bottomPx, fontSize, theme, accentColor}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const t = frame / fps;
+  const cutbond = theme === 'cut-bond';
+  const paper = cutbond || theme === 'nemock-deep-dive';
+  const pill = paper ? 'rgba(250,245,232,.92)' : 'rgba(7,11,22,.55)';
+  const restInk = paper ? '#2a2622' : BRAND.white;
+  const activeInk = accentColor || (cutbond ? '#ff5a4d' : BRAND.green);
+  const shadow = paper ? '0 2px 6px rgba(120,92,40,.25)' : '0 3px 16px rgba(0,0,0,.8)';
 
   if (!words || words.length === 0) return null;
   // stay hidden before narration starts (intro sting) and after it ends (outro sting)
@@ -38,7 +50,7 @@ export const Captions: React.FC<{
           maxWidth: '86%',
           padding: `${Math.round(fontSize * 0.35)}px ${Math.round(fontSize * 0.55)}px`,
           borderRadius: 24,
-          background: 'rgba(7,11,22,.55)',
+          background: pill,
         }}
       >
         {win.map((w, i) => {
@@ -50,9 +62,9 @@ export const Captions: React.FC<{
                 fontFamily: BRAND.font,
                 fontWeight: 900,
                 fontSize,
-                color: isActive ? BRAND.green : BRAND.white,
-                opacity: isActive ? 1 : 0.72,
-                textShadow: '0 3px 16px rgba(0,0,0,.8)',
+                color: isActive ? activeInk : restInk,
+                opacity: isActive ? 1 : paper ? 0.55 : 0.72,
+                textShadow: shadow,
               }}
             >
               {w.word}

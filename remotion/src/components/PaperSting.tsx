@@ -15,6 +15,9 @@ export const PaperSting: React.FC<{fields?: any; durationInFrames?: number}> = (
 
   const outro = !!(fields && fields.outro);
   const subtitle = (fields && fields.subtitle) || '';
+  // Umbrella brand across all products (operator directive 2026-07-14): the sting wordmark
+  // is davesaunders.net, not a single show name.
+  const wordmark = (fields && fields.wordmark) || 'davesaunders.net';
 
   const CREAM = '#f4ecd6';
   const INK = '#2c1e4e';
@@ -109,7 +112,7 @@ export const PaperSting: React.FC<{fields?: any; durationInFrames?: number}> = (
         fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.06, letterSpacing: 2,
         color: INK, textAlign: 'center',
       }}>
-        FOUNDERS WHO FINISH
+        {wordmark}
       </div>
       {subtitle ? (
         <div style={{

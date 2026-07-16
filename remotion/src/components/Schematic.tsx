@@ -2,6 +2,7 @@ import React from 'react';
 import {AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import rough from 'roughjs';
 import {BRAND} from '../brand';
+import {useInk, PAPER_SHADOW} from '../ink';
 
 // motion-playbook §2C — Schematic: a node-and-edge diagram that ASSEMBLES under the
 // narration, with a camera that drifts to the active region ("lead the viewer's eye
@@ -34,6 +35,7 @@ const kindColor = (kind?: string) =>
 export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
   const frame = useCurrentFrame();
   const {fps, width: W, height: H} = useVideoConfig();
+  const ink = useInk();
   const nodes: any[] = fields.nodes || [];
   const edges: any[] = fields.edges || [];
   const stages: any[] = fields.stages || [];
@@ -182,14 +184,14 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
               position: 'absolute', left: b.x, top: b.y, width: b.w, height: b.h,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               borderRadius: 16, padding: `0 ${H * 0.012}px`, textAlign: 'center',
-              background: fields.sketch ? 'rgba(9,13,28,.72)' : 'rgba(255,255,255,.05)',
+              background: fields.sketch ? 'rgba(9,13,28,.72)' : ink.cardBg,
               border: fields.sketch ? 'none' : `2px solid ${color}66`,
-              boxShadow: `0 18px 60px rgba(0,0,0,.45)`,
+              boxShadow: ink.paper && !fields.sketch ? PAPER_SHADOW : `0 18px 60px rgba(0,0,0,.45)`,
               opacity: e,
               transform: `translateY(${interpolate(e, [0, 1], [22, 0])}px) scale(${interpolate(e, [0, 1], [0.88, 1])})`,
             }}>
               <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: H * 0.03,
-                           color: BRAND.white, lineHeight: 1.08}}>
+                           color: fields.sketch ? BRAND.white : ink.body, lineHeight: 1.08}}>
                 {n.label}
               </div>
               {n.sub ? (

@@ -18,9 +18,9 @@ export const ReactiveStrip: React.FC<{audio: string; audioFrom: number}> = ({aud
   const bins = visualizeAudio({fps, frame: f, audioData: data, numberOfSamples: 32});
   return (
     <AbsoluteFill style={{justifyContent: 'flex-end', alignItems: 'center', pointerEvents: 'none'}}>
-      <div style={{display: 'flex', alignItems: 'flex-end', gap: width * 0.004, width: '96%', height: '13%', opacity: 0.22, mixBlendMode: 'screen'}}>
+      <div style={{display: 'flex', alignItems: 'flex-end', gap: width * 0.004, width: '96%', height: '13%', opacity: 0.4}}>
         {bins.map((v, i) => (
-          <div key={i} style={{flex: 1, height: `${Math.min(100, v * 600)}%`, background: BRAND.green, borderRadius: 3}} />
+          <div key={i} style={{flex: 1, height: `${Math.min(100, v * 600)}%`, background: '#8b7bff', borderRadius: 3}} />
         ))}
       </div>
     </AbsoluteFill>

@@ -1,6 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
+import {useInk, PAPER_SHADOW} from '../ink';
 
 // motion-playbook §2A baseline — a talking beat where the kinetic captions are the hero.
 // Shows an optional kicker/headline above the captions so the frame isn't empty.
@@ -9,6 +10,7 @@ export const TalkingScene: React.FC<{fields: any}> = ({fields}) => {
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
   const a = spring({frame, fps, config: {damping: 18}});
+  const ink = useInk();
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 8%'}}>
       {fields.kicker ? (
@@ -32,14 +34,14 @@ export const TalkingScene: React.FC<{fields: any}> = ({fields}) => {
         <div
           style={{
             fontFamily: BRAND.font,
-            color: BRAND.white,
+            color: ink.body,
             fontWeight: 900,
             fontSize: height * 0.058,
             lineHeight: 1.08,
             textAlign: 'center',
             opacity: a,
             transform: `translateY(${interpolate(a, [0, 1], [24, 0])}px)`,
-            textShadow: '0 10px 50px rgba(0,0,0,.6)',
+            textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)',
           }}
         >
           {fields.headline}

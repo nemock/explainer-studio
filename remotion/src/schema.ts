@@ -28,6 +28,12 @@ export const videoSchema = z.object({
   captionBottomPx: z.number().default(160),
   captionFontSize: z.number().default(56),
   audioFrom: z.number().default(0), // narration starts here (frames) — leaves room for an intro sting
+  // Visual world. '' (default) = the navy studio world. 'paper' = the Cut & Bond
+  // off-white paper world (PaperBackground + ink-on-paper captions). Set per project.
+  theme: z.string().default(''),
+  // Optional caption active-word color (e.g. the element's category accent). Empty ->
+  // the theme default (navy: green, paper: coral).
+  captionAccent: z.string().default(''),
 });
 
 export type VideoProps = z.infer<typeof videoSchema>;

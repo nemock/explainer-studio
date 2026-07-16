@@ -1,6 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, Video, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
+import {useInk, PAPER_SHADOW} from '../ink';
 
 // wrap accent/accent2 substrings of `text` in green/red (figure's phase-1 title line,
 // footage's headline overlay). Regex-substring based (not token-split) so it also handles
@@ -37,6 +38,7 @@ const figColorize = (text: string, accents: string[] = [], accents2: string[] = 
 export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
+  const ink = useInk();
   const revealFrac = fields.imageFromFrac ?? 0;
   const revealAt = revealFrac * durationInFrames;
   const phased = revealFrac > 0 && !!fields.title;
@@ -80,7 +82,7 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
         </div>
       ) : null}
       {phased ? (
-        <div style={{position: 'absolute', left: 0, right: 0, textAlign: 'center', padding: '0 12%', fontFamily: BRAND.font, color: BRAND.white, fontWeight: 900, fontSize: height * 0.062, lineHeight: 1.15, opacity: titleOpacity, textShadow: '0 3px 18px rgba(0,0,0,.6)'}}>
+        <div style={{position: 'absolute', left: 0, right: 0, textAlign: 'center', padding: '0 12%', fontFamily: BRAND.font, color: ink.body, fontWeight: 900, fontSize: height * 0.062, lineHeight: 1.15, opacity: titleOpacity, textShadow: ink.paper ? PAPER_SHADOW : '0 3px 18px rgba(0,0,0,.6)'}}>
           {figColorize(fields.title, fields.accent, fields.accent2)}
         </div>
       ) : null}
@@ -110,7 +112,7 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
         ) : null}
       </div>
       {fields.caption ? (
-        <div style={{fontFamily: BRAND.font, color: BRAND.white, opacity: 0.75 * imgOpacity, fontSize: height * 0.022, marginTop: height * 0.025}}>
+        <div style={{fontFamily: BRAND.font, color: ink.body, opacity: 0.75 * imgOpacity, fontSize: height * 0.022, marginTop: height * 0.025}}>
           {fields.caption}
         </div>
       ) : null}

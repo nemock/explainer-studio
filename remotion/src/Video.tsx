@@ -2,6 +2,7 @@ import React from 'react';
 import {AbsoluteFill, Audio, interpolate, Sequence, staticFile, useCurrentFrame} from 'remotion';
 import type {VideoProps} from './schema';
 import {Background} from './components/Background';
+import {PaperBackground} from './components/PaperBackground';
 import {Captions} from './components/Captions';
 import {KineticHook} from './components/KineticHook';
 import {StatCounter} from './components/StatCounter';
@@ -16,8 +17,11 @@ import {CTA} from './components/CTA';
 import {BrandSting, StepFlow} from './components/Extras';
 import {PaperSting} from './components/PaperSting';
 import {KeepCard} from './components/KeepCard';
+import {PaperHook} from './components/PaperHook';
 import {DrawLine, Waterfall, Pictograph, Ring, Funnel} from './components/DataViz2';
 import {ReactiveStrip, Waveform} from './components/Audio';
+import {PaperAtom, ElementStat, DiscoveryCard, PeriodicSlot, PaperWord, PaperFire, PaperProp, PaperCTA, PaperMolecule} from './components/Chem';
+import {InkProvider, isPaperTheme} from './ink';
 
 // the component catalog (motion-playbook §2). Unknown -> TalkingScene (captions-led).
 const REGISTRY: Record<string, React.FC<any>> = {
@@ -25,6 +29,7 @@ const REGISTRY: Record<string, React.FC<any>> = {
   BrandSting,
   PaperSting,
   KeepCard,
+  PaperHook,
   StepFlow,
   DrawLine,
   Waterfall,
@@ -47,12 +52,22 @@ const REGISTRY: Record<string, React.FC<any>> = {
   Footage,
   Schematic,
   CTA,
+  // Cut & Bond paper chemistry kit
+  PaperAtom,
+  ElementStat,
+  DiscoveryCard,
+  PeriodicSlot,
+  PaperWord,
+  PaperFire,
+  PaperProp,
+  PaperCTA,
+  PaperMolecule,
   TalkingScene,
 };
 
 // motivated cross-fade so beats connect instead of hard-cutting (timing stays exact:
 // scenes keep their absolute from/duration; only opacity ramps).
-const SceneWrap: React.FC<{durationInFrames: number; children: React.ReactNode}> = ({durationInFrames, children}) => {
+const SceneWrap: React.FC<{durationInFrames: number; paper?: boolean; children: React.ReactNode}> = ({durationInFrames, paper, children}) => {
   const frame = useCurrentFrame();
   const f = 7;
   const opacity = interpolate(
@@ -61,30 +76,45 @@ const SceneWrap: React.FC<{durationInFrames: number; children: React.ReactNode}>
     [0, 1, 1, 0],
     {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}
   );
-  // warm light-leak flash on entrance (motion-playbook §2G) — a touch of produced polish
+  // warm light-leak flash on entrance (motion-playbook §2G) — a touch of produced polish.
+  // Skipped in the paper world: a screen-blend flash blows out an off-white surface.
   const leak = interpolate(frame, [0, 5, 16], [0, 0.4, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  // No global paper "breathe"/drift. An earlier attempt drifted the whole content layer to
+  // satisfy the QA freeze detector; on BOTH paper channels it read as the frame swirling —
+  // Cut & Bond called it a "ship-on-water" bob, and the deep dives made a viewer nauseous
+  // (operator feedback 2026-07-16). Paper stays STILL by design; motion comes only from each
+  // component's own entrance + narration-cued annotations. The QA dead-air warning on held
+  // cards is an accepted trait of the calm paper aesthetic, not a defect to animate away.
   return (
     <AbsoluteFill style={{opacity}}>
       {children}
-      <AbsoluteFill style={{background: 'radial-gradient(60% 50% at 68% 28%, rgba(255,205,130,.5) 0%, rgba(255,205,130,0) 70%)', mixBlendMode: 'screen', opacity: leak, pointerEvents: 'none'}} />
+      {paper ? null : (
+        <AbsoluteFill style={{background: 'radial-gradient(60% 50% at 68% 28%, rgba(255,205,130,.5) 0%, rgba(255,205,130,0) 70%)', mixBlendMode: 'screen', opacity: leak, pointerEvents: 'none'}} />
+      )}
     </AbsoluteFill>
   );
 };
 
 export const Video: React.FC<VideoProps> = (props) => {
-  const {audio, words, scenes, captionBottomPx, captionFontSize, audioFrom, width, height} = props;
+  const {audio, words, scenes, captionBottomPx, captionFontSize, audioFrom, width, height, theme, captionAccent} = props;
+  // Paper worlds: 'nemock-deep-dive' (Dave's deep dives) and 'cut-bond' (Cut & Bond).
+  // Everything else ('midnight', the ISO 14971 series) keeps the navy brand.
+  const paper = isPaperTheme(theme);
   // In portrait (Shorts), centered scene content collides with the burned-in captions
   // in the lower third while the top sits empty. Reserve the caption zone so content
-  // centers in the upper area. Landscape (deep dives) is unaffected (inset = 0).
-  const contentBottom = height > width ? Math.round(height * 0.24) : 0;
+  // centers in the upper area. Cut & Bond reserves MORE (operator 2026-07-16: push the
+  // animation up into the top two-thirds, let captions drop low). Landscape (deep dives)
+  // is unaffected (inset = 0).
+  const contentBottom = height > width ? Math.round(height * (theme === 'cut-bond' ? 0.36 : 0.24)) : 0;
   return (
-    <AbsoluteFill style={{backgroundColor: '#090d1c'}}>
-      <Background />
+    <InkProvider theme={theme}>
+    <AbsoluteFill style={{backgroundColor: paper ? '#f4ecd6' : '#090d1c'}}>
+      {paper ? <PaperBackground /> : <Background />}
       {scenes.map((scene, i) => {
         const Comp = REGISTRY[scene.component] || TalkingScene;
         return (
           <Sequence key={i} from={scene.from} durationInFrames={scene.durationInFrames} layout="none">
-            <SceneWrap durationInFrames={scene.durationInFrames}>
+            <SceneWrap durationInFrames={scene.durationInFrames} paper={paper}>
               <AbsoluteFill style={{bottom: contentBottom}}>
                 <Comp fields={scene.fields || {}} durationInFrames={scene.durationInFrames} sceneFrom={scene.from} audioFrom={audioFrom} />
               </AbsoluteFill>
@@ -95,13 +125,14 @@ export const Video: React.FC<VideoProps> = (props) => {
           </Sequence>
         );
       })}
-      {audio ? <ReactiveStrip audio={audio} audioFrom={audioFrom || 0} /> : null}
-      <Captions words={words} bottomPx={captionBottomPx} fontSize={captionFontSize} />
+      {audio && !paper ? <ReactiveStrip audio={audio} audioFrom={audioFrom || 0} /> : null}
+      <Captions words={words} bottomPx={captionBottomPx} fontSize={captionFontSize} theme={theme} accentColor={captionAccent} />
       {audio ? (
         <Sequence from={audioFrom || 0} layout="none">
           <Audio src={staticFile(audio)} />
         </Sequence>
       ) : null}
     </AbsoluteFill>
+    </InkProvider>
   );
 };

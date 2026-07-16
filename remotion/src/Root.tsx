@@ -5,6 +5,8 @@ import {videoSchema, type VideoProps} from './schema';
 import {Thumbnail, thumbnailSchema} from './Thumbnail';
 import {PaperSting} from './components/PaperSting';
 import {KeepCard} from './components/KeepCard';
+import {PaperHook} from './components/PaperHook';
+import {LogoAtom} from './components/Chem';
 
 // Single parametric composition. The Python engine passes the whole motion spec as
 // props (--props=spec.json) and dimensions/duration come from those props.
@@ -73,6 +75,24 @@ export const RemotionRoot: React.FC = () => {
       width={1920}
       height={1080}
       defaultProps={{fields: {image: 'keep_direction.png', label: 'DIRECTION', sub: 'the calls about where the whole thing is pointed'}}}
+    />
+    <Composition
+      id="PaperHook"
+      component={PaperHook}
+      durationInFrames={60}
+      fps={30}
+      width={1920}
+      height={1080}
+      defaultProps={{fields: {image: 'bottleneck.png', kicker: 'the advice everyone gives', headline: '"Stop being the bottleneck" is only half-right', accent: ['half-right']}}}
+    />
+    <Composition
+      id="LogoAtom"
+      component={LogoAtom}
+      durationInFrames={90}
+      fps={30}
+      width={1080}
+      height={1080}
+      defaultProps={{}}
     />
     </>
   );

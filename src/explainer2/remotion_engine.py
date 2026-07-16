@@ -28,7 +28,7 @@ def _parse_stat(value):
 
 def _items(slide):
     raw = slide.get("items") or slide.get("steps") or []
-    return [(i.get("text") if isinstance(i, dict) else i) for i in raw]
+    return [((i.get("text") or i.get("title")) if isinstance(i, dict) else i) for i in raw]
 
 
 # --- narration-cue resolution (motion-playbook §5's `sync` contract, built 2026-07-04) ---
@@ -125,10 +125,17 @@ def _resolve_items(labels, segw, s0, fps):
     return _monotonic_fill(times, fps)
 
 
-def _scene_for(slide):
+def _scene_for(slide, theme=""):
     """Map a deck slide -> (component, fields) per the motion-playbook §6 migration table.
     Unknown -> KineticHeadline (a clean animated headline). `image` fields stay as the
-    deck's source path; render() stages them into the public dir."""
+    deck's source path; render() stages them into the public dir.
+    `theme` selects the cold-open style (see the hook branch)."""
+    # Direct-component escape hatch: a slide may name its Remotion component + fields
+    # explicitly, bypassing the type map. The Cut & Bond paper channel authors its decks
+    # this way (component: "PaperAtom", fields: {...}) so its paper components never need
+    # entries here. The component must be registered in Video.tsx's REGISTRY.
+    if slide.get("component"):
+        return slide["component"], (slide.get("fields") or {})
     t = slide.get("type")
     kicker = slide.get("kicker", "")
     accent = slide.get("accent", []) or []
@@ -136,8 +143,16 @@ def _scene_for(slide):
     headline = slide.get("headline") or slide.get("title") or slide.get("word") or ""
 
     if t == "hook":
-        return "Hero3D", {"kicker": kicker, "headline": headline, "accent": accent,
-                          "accentRed": accent2, "shape": slide.get("shape", "ico")}
+        # Hook cold-open is THEME-KEYED (fix 2026-07-15). PaperHook (2026-07-14) applies
+        # ONLY to the paper worlds — nemock-deep-dive (Dave's deep dives) and cut-bond (Cut &
+        # Bond). Midnight-themed projects (the ISO 14971 series, and every deck before the
+        # change) keep the Hero3D rotating wireframe sphere, their consistent brand. Do NOT
+        # make PaperHook unconditional again: it leaks the paper rebrand into the midnight series.
+        if theme in ("cut-bond", "nemock-deep-dive"):
+            return "PaperHook", {"image": slide.get("image"), "kicker": kicker,
+                                 "headline": headline, "accent": accent}
+        return "Hero3D", {"kicker": kicker, "headline": headline,
+                          "accent": accent, "accentRed": accent2}
     if t in ("payoff", "cta"):
         return "CTA", {"kicker": kicker, "headline": headline, "accent": accent,
                        "accentRed": accent2, "subkicker": slide.get("subkicker", "")}
@@ -235,7 +250,7 @@ def build_spec(sp):
     for i, s in enumerate(segs):
         start = s["start"]
         end = segs[i + 1]["start"] if i + 1 < len(segs) else duration
-        comp, fields = _scene_for(slides_by_id.get(s["slide"], {}))
+        comp, fields = _scene_for(slides_by_id.get(s["slide"], {}), theme=sp.data.get("theme", ""))
         scenes.append({"component": comp, "from": int(round(start * fps)),
                        "durationInFrames": max(1, int(round((end - start) * fps))), "fields": fields})
 
@@ -334,52 +349,83 @@ def build_spec(sp):
     audio_from = 0
     total = duration
     if sp.data.get("sting", width >= height):
-        # Paper-launch sting (motion-playbook §2F, 2026-07-14). Intro plays the full
-        # launch+wordmark (~3.5s); outro is the calm finished-mark card (~2.5s). The intro
-        # length sets the narration offset — see memory gag-splice-sting-offset (now 3.5s
-        # for the explainer2 Remotion engine; v1 stays 2.5s).
-        INTRO, OUTRO = 3.5, 2.5
+        # The sting is THEME-KEYED (branding isolation, operator direction 2026-07-15).
+        # Each channel owns its brand; nothing here is a global default.
+        #   nemock-deep-dive (Dave's deep dives) -> paper-launch PaperSting + davesaunders.net
+        #   cut-bond         (Cut & Bond)         -> paper-launch PaperSting, its own wordmark
+        #                     (blank default; Cut & Bond is portrait shorts, so sting is off anyway)
+        #   midnight / other (ISO 14971 series, everything pre-paper) -> the legacy wordmark
+        #                     bumper (BrandSting). Do NOT let the paper rebrand leak here.
+        theme = sp.data.get("theme", "")
+        if theme in ("cut-bond", "nemock-deep-dive"):
+            # Paper-launch sting (motion-playbook §2F). Intro plays the full launch+wordmark
+            # (~3.5s); outro is the calm finished-mark card (~2.5s). The intro length sets the
+            # narration offset — see memory gag-splice-sting-offset (3.5s for this engine).
+            INTRO, OUTRO = 3.5, 2.5
+            wm = "davesaunders.net" if theme == "nemock-deep-dive" else ""
+            intro_comp, intro_fields = "PaperSting", ({"wordmark": wm} if wm else {})
+            outro_comp = "PaperSting"
+            outro_fields = {"outro": True, "wordmark": wm} if wm else {"outro": True}
+        else:
+            # Legacy wordmark bumper — the midnight brand (masterclass + every pre-paper deck).
+            INTRO, OUTRO = 2.5, 2.0
+            intro_comp, intro_fields = "BrandSting", {"title": "FOUNDERS WHO FINISH"}
+            outro_comp = "BrandSting"
+            outro_fields = {"title": "FOUNDERS WHO FINISH", "subtitle": "davesaunders.net"}
         off = int(round(INTRO * fps))
         for sc in scenes:
             sc["from"] += off
         for w in words:
             w["start"] += INTRO
             w["end"] += INTRO
-        scenes.insert(0, {"component": "PaperSting", "from": 0, "durationInFrames": off,
-                          "fields": {}})
-        scenes.append({"component": "PaperSting", "from": off + int(round(duration * fps)),
+        scenes.insert(0, {"component": intro_comp, "from": 0, "durationInFrames": off,
+                          "fields": intro_fields})
+        scenes.append({"component": outro_comp, "from": off + int(round(duration * fps)),
                        "durationInFrames": int(round(OUTRO * fps)),
-                       "fields": {"outro": True, "subtitle": "davesaunders.net"}})
+                       "fields": outro_fields})
         audio_from = off
         total = INTRO + duration + OUTRO
 
     safe_bottom = float(sp.data.get("safe_bottom", 0.12)) + 0.04
+    # Cut & Bond seats captions LOW in the bottom third (operator 2026-07-16: the default
+    # left them crowding the illustration, with the bottom third empty). The animation is
+    # pushed up in Video.tsx (larger content inset) to match. Other themes are unchanged.
+    cap_frac = 0.13 if sp.data.get("theme") == "cut-bond" else safe_bottom
     return {
         "width": width, "height": height, "fps": fps,
         "durationInFrames": int(round(total * fps)),
         "audio": "narration.wav", "words": words, "scenes": scenes,
-        "captionBottomPx": int(round(height * safe_bottom)),
+        "captionBottomPx": int(round(height * cap_frac)),
         "captionFontSize": int(round(height * (0.032 if height >= 1600 else 0.026))),
         "audioFrom": audio_from,
+        # Visual world: '' (navy studio) or 'paper' (Cut & Bond off-white). Set in project.json.
+        "theme": sp.data.get("theme", ""),
+        # Optional caption active-word color (e.g. an element's category accent).
+        "captionAccent": sp.data.get("captionAccent", ""),
         "_warnings": warnings,
     }
 
 
 def _stage_images(sp, spec, public):
-    """Copy any image referenced by a scene into the public dir, rebasing fields.image to
-    the basename. Resolves the deck's path against the project (and, for shorts, the parent)."""
+    """Copy any image referenced by a scene into the public dir, rebasing the field to the
+    basename. Resolves the deck's path against the project (and, for shorts, the parent).
+    Handles every image-bearing field a component may use (e.g. Cut & Bond's `bottomImage`
+    decorative prop on ElementStat)."""
     roots = [sp.dir, sp.dir.parent.parent, sp.dir.parent]  # project, then parent (shorts), then shorts/
+    IMG_FIELDS = ("image", "bottomImage")
     for scene in spec["scenes"]:
-        img = (scene.get("fields") or {}).get("image")
-        if not img:
-            continue
-        src = next((r / img for r in roots if (r / img).exists()), None)
-        if src is None:
-            scene["fields"]["image"] = None  # missing -> component shows headline/caption only
-            continue
-        dst = Path(img).name
-        shutil.copy(src, public / dst)
-        scene["fields"]["image"] = dst
+        fields = scene.get("fields") or {}
+        for key in IMG_FIELDS:
+            img = fields.get(key)
+            if not img:
+                continue
+            src = next((r / img for r in roots if (r / img).exists()), None)
+            if src is None:
+                fields[key] = None  # missing -> component shows headline/caption only
+                continue
+            dst = Path(img).name
+            shutil.copy(src, public / dst)
+            fields[key] = dst
 
 
 def _stage_doodles(spec, public, log):
@@ -487,6 +533,12 @@ def render(sp, log=print, frames=None, out=None):
     public = stage / "public"
     public.mkdir(parents=True, exist_ok=True)
     shutil.copy(sp.work / "narration.wav", public / "narration.wav")
+    # Brand static assets that components load via staticFile (NOT via a deck fields.image)
+    # must be copied into the fresh render public dir. The PaperSting sting loads these.
+    for _name in ("sting_paper_d.png", "sting_paper_rocket.png"):
+        _src = REMOTION_DIR / "public" / _name
+        if _src.exists():
+            shutil.copy(_src, public / _name)
     _stage_images(sp, spec, public)
     _stage_doodles(spec, public, log)
     # CTA scenes show the brand book cover unless the project opts out with

@@ -15,17 +15,31 @@ STAGES = [("narrate", synth.run), ("align", align.run), ("deck", deckbuild.run),
           ("qa", qa.run)]
 STAGE_MAP = dict(STAGES)
 
-# Standing channel music bed: the default for every scaffold so it's never
-# forgotten. Pixabay-licensed (cert in library/music); the benign Content ID
-# claim is accepted. Override with --music <path>/--music-gain, or --no-music.
-# Path resolves relative to the repo root so it survives a move off /Volumes.
-# Operator decision 2026-06-29: switched from the café bed to the more upbeat
-# "presentation background" track (same Alex Morgan / Pixabay library). The old
-# café bed (alex-morgan-cafe-warm-background-music-541034.mp3) stays in the
-# library for back-catalogue consistency.
+# Channel music beds are PER-CHANNEL (operator 2026-07-16), parallel to the theme-branding
+# isolation: each channel/theme owns its bed so changing one never disrupts another. Scaffold
+# resolves the bed from the project's --theme via THEME_MUSIC; a theme not listed falls back to
+# DEFAULT_MUSIC/DEFAULT_MUSIC_GAIN. --music/--music-gain override everything; a project's own
+# project.json `music` wins at render time. Paths resolve relative to the repo root so they
+# survive a move off /Volumes.
 _REPO_ROOT = Path(__file__).resolve().parents[2]
+
+# Fallback bed for any theme without its own entry (the Pixabay "presentation background"
+# track; benign Content ID claim accepted). Kept as the non-deep-dive default so existing
+# channels (midnight/masterclass etc.) are undisturbed by the deep-dive music change.
 DEFAULT_MUSIC = _REPO_ROOT / "library/music/07-alex-morgan-presentation-background-music-548620.mp3"
 DEFAULT_MUSIC_GAIN = 0.12
+
+# Per-channel beds. Keep beds FLAT at render (no sidechain ducking — the gaps between spoken
+# lines are too short, so ducking pumps; operator 2026-07-16). NOTE nemock-deep-dive's bed is
+# operator-generated Magnific (NOT Pixabay): the per-project license auto-copy won't fire for
+# it; monetization rights come from the Magnific subscription. Magnific caps generated audio at
+# 5:00, so this bed loops (~5:00/10:00 seams under an ~11-min deep dive) — accepted.
+THEME_MUSIC = {
+    "nemock-deep-dive": {
+        "path": _REPO_ROOT / "library/music/11-magnific_generate-a-sophisticated-_LU1wnIYswO.mp3",
+        "gain": 0.22,
+    },
+}
 
 
 def _log(proj, msg):
@@ -167,9 +181,19 @@ def cmd_scaffold(args):
     if min_length:
         proj["min_length"] = min_length
     if not args.no_music:
-        music_path = Path(args.music).resolve() if args.music else DEFAULT_MUSIC
+        # Resolve the bed PER CHANNEL: explicit --music wins; else the theme's own bed
+        # (THEME_MUSIC); else the global fallback. --music-gain (when given) overrides the
+        # resolved gain. Keeps each channel's music isolated from the others.
+        if args.music:
+            music_path, theme_gain = Path(args.music).resolve(), DEFAULT_MUSIC_GAIN
+        else:
+            tm = THEME_MUSIC.get(args.theme)
+            if tm:
+                music_path, theme_gain = Path(tm["path"]), tm["gain"]
+            else:
+                music_path, theme_gain = DEFAULT_MUSIC, DEFAULT_MUSIC_GAIN
         proj["music"] = str(music_path)
-        proj["music_gain"] = args.music_gain
+        proj["music_gain"] = args.music_gain if args.music_gain is not None else theme_gain
     if args.no_cta:
         proj["auto_cta"] = False  # branded but no CTA tail (deep-dive act sub-segments)
     brand_note = None
@@ -419,9 +443,9 @@ def main(argv=None):
     s.add_argument("--min-length", type=int, default=None, dest="min_length",
                    help="minimum playback seconds (sets manifest length_warning if unmet)")
     s.add_argument("--music", default=None,
-                   help="background music path (default: the channel café bed in library/music)")
-    s.add_argument("--music-gain", type=float, default=DEFAULT_MUSIC_GAIN, dest="music_gain",
-                   help=f"music bed gain (default {DEFAULT_MUSIC_GAIN})")
+                   help="background music path (default: the channel's own bed, resolved from --theme)")
+    s.add_argument("--music-gain", type=float, default=None, dest="music_gain",
+                   help="music bed gain (default: the channel's own gain, resolved from --theme)")
     s.add_argument("--no-music", action="store_true", dest="no_music",
                    help="scaffold without a music bed")
     s.add_argument("--brand", default=None,

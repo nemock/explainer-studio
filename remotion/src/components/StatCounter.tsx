@@ -1,6 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, interpolate, interpolateColors, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
+import {useInk, PAPER_SHADOW} from '../ink';
 
 // motion-playbook §2B — a number that counts to its figure and a bar that fills/drains,
 // landing on the narration cue. fields: {kicker, from, to, prefix, label, labelNeg, cue:[a,b]}
@@ -12,6 +13,7 @@ const fmt = (n: number, prefix = '') => {
 export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
   const frame = useCurrentFrame();
   const {height, fps} = useVideoConfig();
+  const ink = useInk();
   const from = fields.from ?? 0;
   const to = fields.to ?? 0;
   const prefix = fields.prefix ?? '';
@@ -31,7 +33,7 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
   const lo = Math.min(from, to, 0);
   const hi = Math.max(from, to, 0);
   // domain must be strictly increasing even when the range is one-sided (e.g. 0 -> -1000)
-  const numColor = interpolateColors(value, [Math.min(lo, -1), 0, Math.max(hi, 1)], [BRAND.red, '#cdd6ff', BRAND.green]);
+  const numColor = interpolateColors(value, [Math.min(lo, -1), 0, Math.max(hi, 1)], [BRAND.red, ink.paper ? ink.body : '#cdd6ff', BRAND.green]);
   const negative = value < 0;
 
   const TRACK = height * 0.62;
@@ -62,14 +64,14 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
           fontSize: height * 0.17,
           lineHeight: 1,
           color: numColor,
-          textShadow: '0 12px 60px rgba(0,0,0,.55)',
+          textShadow: ink.paper ? PAPER_SHADOW : '0 12px 60px rgba(0,0,0,.55)',
           fontVariantNumeric: 'tabular-nums',
         }}
       >
         {fmt(value, prefix)}
       </div>
-      <div style={{width: TRACK, height: height * 0.016, marginTop: height * 0.03, position: 'relative', background: 'rgba(255,255,255,.08)', borderRadius: 999}}>
-        <div style={{position: 'absolute', left: '50%', top: -height * 0.006, width: 2, height: height * 0.028, background: 'rgba(255,255,255,.35)'}} />
+      <div style={{width: TRACK, height: height * 0.016, marginTop: height * 0.03, position: 'relative', background: ink.track, borderRadius: 999}}>
+        <div style={{position: 'absolute', left: '50%', top: -height * 0.006, width: 2, height: height * 0.028, background: ink.neutral}} />
         <div
           style={{
             position: 'absolute',
@@ -90,7 +92,7 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
             fontSize: height * 0.022,
             letterSpacing: 2,
             textTransform: 'uppercase',
-            color: negative ? BRAND.red : BRAND.white,
+            color: negative ? BRAND.red : ink.body,
             opacity: 0.85,
             marginTop: height * 0.02,
           }}
@@ -99,7 +101,7 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
         </div>
       ) : null}
       {fields.subkicker ? (
-        <div style={{fontFamily: BRAND.font, color: BRAND.white, opacity: 0.75, fontWeight: 700, fontSize: height * 0.024, marginTop: height * 0.024, textAlign: 'center'}}>
+        <div style={{fontFamily: BRAND.font, color: ink.body, opacity: 0.75, fontWeight: 700, fontSize: height * 0.024, marginTop: height * 0.024, textAlign: 'center'}}>
           {fields.subkicker}
         </div>
       ) : null}

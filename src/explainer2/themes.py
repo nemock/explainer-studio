@@ -26,6 +26,13 @@ THEMES = {
     # glow (the kit forbids gradients except the vignette). Pair with the FFW brand.
     "fwf":      {"bg": "#36185B", "fg": "#FFFFFF", "accent": "#757BBD", "accent2": "#757BBD", "motion": "fade",
                  "ambient": False, "fonts": {"display": "Archivo", "body": "Archivo"}},
+    # --- Remotion-engine paper channels (2026-07-15). The Remotion engine keys its brand
+    # off the theme STRING (Video.tsx / remotion_engine.py); these palette values exist so
+    # scaffold accepts the theme and the legacy deck engine (if ever run) has sane colors.
+    # nemock-deep-dive = Dave Saunders deep dives (cream paper, dark-ink, green accent).
+    "nemock-deep-dive": {"bg": "#f4ecd6", "fg": "#2c1e4e", "accent": "#3ddc84", "accent2": "#3ddc84", "motion": "fade"},
+    # cut-bond = Cut & Bond channel (cream paper, warm ink, coral/teal accents).
+    "cut-bond": {"bg": "#f4ecd6", "fg": "#2a2622", "accent": "#ff5a4d", "accent2": "#17b7a6", "motion": "fade"},
 }
 DEFAULT = "midnight"
 VALID_MOTION = {"rise", "fade", "pop", "slide"}

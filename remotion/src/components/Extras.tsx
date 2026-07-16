@@ -1,6 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
+import {useInk} from '../ink';
 
 // motion-playbook §2F — the reusable FWF brand sting (intro/outro). Wordmark scales +
 // glows in with an accent sweep. fields: {title, subtitle?}
@@ -41,6 +42,7 @@ export const StepFlow: React.FC<{fields: any; durationInFrames: number}> = ({fie
   const itemTimes: (number | null)[] | undefined = fields.itemTimes;
   const per = durationInFrames / Math.max(1, steps.length + 1);
   const appearAt = (i: number) => (itemTimes && itemTimes[i] != null ? (itemTimes[i] as number) : i * per);
+  const ink = useInk();
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 6%'}}>
       <div style={{width: '100%'}}>
@@ -60,9 +62,9 @@ export const StepFlow: React.FC<{fields: any; durationInFrames: number}> = ({fie
                 {i > 0 ? (
                   <div style={{color: BRAND.green, fontSize: height * 0.05, fontWeight: 900, opacity: arrow, transform: `translateX(${interpolate(arrow, [0, 1], [-10, 0])}px)`}}>→</div>
                 ) : null}
-                <div style={{flex: '1 1 0', minWidth: 0, padding: height * 0.025, borderRadius: 18, background: 'rgba(255,255,255,.05)', border: '2px solid rgba(61,220,132,.4)', textAlign: 'center', opacity: e, transform: `translateY(${interpolate(e, [0, 1], [26, 0])}px) scale(${interpolate(e, [0, 1], [0.9, 1])})`}}>
-                  <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.036, color: BRAND.white, lineHeight: 1.1}}>{s.title}</div>
-                  {s.text ? <div style={{fontFamily: BRAND.font, fontWeight: 600, fontSize: height * 0.022, color: BRAND.white, opacity: 0.75, marginTop: height * 0.012}}>{s.text}</div> : null}
+                <div style={{flex: '1 1 0', minWidth: 0, padding: height * 0.025, borderRadius: 18, background: ink.cardBg, border: '2px solid rgba(61,220,132,.4)', textAlign: 'center', opacity: e, transform: `translateY(${interpolate(e, [0, 1], [26, 0])}px) scale(${interpolate(e, [0, 1], [0.9, 1])})`}}>
+                  <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.036, color: ink.body, lineHeight: 1.1}}>{s.title}</div>
+                  {s.text ? <div style={{fontFamily: BRAND.font, fontWeight: 600, fontSize: height * 0.022, color: ink.body, opacity: 0.75, marginTop: height * 0.012}}>{s.text}</div> : null}
                 </div>
               </React.Fragment>
             );
