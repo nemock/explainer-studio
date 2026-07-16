@@ -105,7 +105,10 @@ export const Video: React.FC<VideoProps> = (props) => {
   // centers in the upper area. Cut & Bond reserves MORE (operator 2026-07-16: push the
   // animation up into the top two-thirds, let captions drop low). Landscape (deep dives)
   // is unaffected (inset = 0).
-  const contentBottom = height > width ? Math.round(height * (theme === 'cut-bond' ? 0.36 : 0.24)) : 0;
+  // Portrait (Shorts): reserve the bottom THIRD for captions and let the scene content live
+  // in the upper two-thirds, so a single element settles around the top-third line instead of
+  // being pinned high with a dead middle (operator direction 2026-07-16). Landscape = 0.
+  const contentBottom = height > width ? Math.round(height * (theme === 'cut-bond' ? 0.36 : 0.34)) : 0;
   return (
     <InkProvider theme={theme}>
     <AbsoluteFill style={{backgroundColor: paper ? '#f4ecd6' : '#090d1c'}}>

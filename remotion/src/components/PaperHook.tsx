@@ -34,15 +34,23 @@ export const PaperHook: React.FC<{fields: any}> = ({fields}) => {
   const headIn = spring({frame: frame - 6, fps, config: {damping: 16, stiffness: 120}});
   const kickIn = interpolate(frame, [0, 14], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
 
+  // With a full-bleed illustration the label sits near the top (over the art). With NO image
+  // (headline-only hooks, e.g. Shorts), pin-to-top leaves a dead middle — center the label in
+  // the content box instead so it settles around the top-third line (operator direction 2026-07-16).
+  const hasImg = !!fields.image;
+  const labelPos: React.CSSProperties = hasImg
+    ? {position: 'absolute', top: '7%', left: '50%', transform: `translateX(-50%) translateY(${interpolate(headIn, [0, 1], [-height * 0.03, 0])}px) scale(${interpolate(headIn, [0, 1], [0.92, 1])})`}
+    : {position: 'relative', transform: `translateY(${interpolate(headIn, [0, 1], [-height * 0.03, 0])}px) scale(${interpolate(headIn, [0, 1], [0.92, 1])})`};
+
   return (
-    <AbsoluteFill style={{background: CREAM, overflow: 'hidden'}}>
+    <AbsoluteFill style={{background: CREAM, overflow: 'hidden', ...(hasImg ? {} : {alignItems: 'center', justifyContent: 'center'})}}>
       {fields.image ? (
         <Img src={staticFile(fields.image)} style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${kb})`}} />
       ) : (
         <AbsoluteFill style={{background: 'radial-gradient(120% 120% at 50% 40%, #fbf4e0 0%, #efe5cb 100%)'}} />
       )}
 
-      <div style={{position: 'absolute', top: '7%', left: '50%', transform: `translateX(-50%) translateY(${interpolate(headIn, [0, 1], [-height * 0.03, 0])}px) scale(${interpolate(headIn, [0, 1], [0.92, 1])})`, opacity: headIn, width: '84%'}}>
+      <div style={{...labelPos, opacity: headIn, width: '84%'}}>
         {fields.kicker ? (
           <div style={{textAlign: 'center', color: BRAND.green, fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.026, letterSpacing: 5, textTransform: 'uppercase', opacity: kickIn, marginBottom: height * 0.018}}>
             {fields.kicker}
