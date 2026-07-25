@@ -3,10 +3,82 @@
   "generated": "2026-07-25",
   "generator": "Magnific (operator Premium+), text-to-image, style reference to the davesaunders-hero-a founder's-desk creation (identifier l7Lqw0Igv9) so the family stays coherent; FWF palette prompt (ink #2A1142 / cream #FAF6EF / plum #36185B / violet #5A3494 / lilac #C7B6E6, 'no teal, no blue'); no text, no humans, no photorealism",
   "assets": [
-    {"file": "desk_wide_a.jpg", "creation": "WMYXtXbcXe", "role": "P1 set backdrop: wide founder's desk, empty cream center mat, objects at edges (PICKED for prototypes)"},
-    {"file": "desk_wide_b.jpg", "creation": "hEmq1qzvqL", "role": "P1 set backdrop, alternate take"},
-    {"file": "prop_bottleneck.png", "creation": "DBMmCFYpcl → background-removed DBMmQ4apcl", "role": "P2 stage prop: cream paper bottle, violet cork, lilac documents jammed in the neck (the bottleneck motif), transparent"},
-    {"file": "prop_docstack.png", "creation": "jSxON0ZLD0 → background-removed poDhF2Aehw", "role": "P2 stage prop: tilting approval-document stack with violet folder, transparent"}
+    {
+      "file": "desk_wide_a.jpg",
+      "creation": "WMYXtXbcXe",
+      "role": "P1 set backdrop: wide founder's desk, empty cream center mat, objects at edges (PICKED for prototypes)"
+    },
+    {
+      "file": "desk_wide_b.jpg",
+      "creation": "hEmq1qzvqL",
+      "role": "P1 set backdrop, alternate take"
+    },
+    {
+      "file": "prop_bottleneck.png",
+      "creation": "DBMmCFYpcl \u2192 background-removed DBMmQ4apcl",
+      "role": "P2 stage prop: cream paper bottle, violet cork, lilac documents jammed in the neck (the bottleneck motif), transparent"
+    },
+    {
+      "file": "prop_docstack.png",
+      "creation": "jSxON0ZLD0 \u2192 background-removed poDhF2Aehw",
+      "role": "P2 stage prop: tilting approval-document stack with violet folder, transparent"
+    }
   ],
-  "usage": "Reusable set dressing for Papercraft Motion scenes. Deck refs: set/props paths beginning with papercraft/ are staged wholesale by remotion_engine.render(); per-video backdrops belong in the project's assets/imagegen/ with their own provenance instead."
+  "usage": "Reusable set dressing for Papercraft Motion scenes. Deck refs: set/props paths beginning with papercraft/ are staged wholesale by remotion_engine.render(); per-video backdrops belong in the project's assets/imagegen/ with their own provenance instead.",
+  "elements": {
+    "generated": "2026-07-25",
+    "recipe": "same style-reference recipe as the set pieces (anchor l7Lqw0Igv9, FWF palette, single object on plain ink ground, no text) -> images_remove_background -> transparent PNG",
+    "items": [
+      {
+        "file": "elements/el_arrow.png",
+        "creation": "e8pato0dqL",
+        "meaning": "direction / annotation pointer"
+      },
+      {
+        "file": "elements/el_arrow_growth.png",
+        "creation": "ohBuaFH829",
+        "meaning": "growth / trend-up"
+      },
+      {
+        "file": "elements/el_pawn.png",
+        "creation": "5xbSL9SKxe",
+        "meaning": "the climber marker (stairs/journey beats)"
+      },
+      {
+        "file": "elements/el_tag.png",
+        "creation": "hEmbQyFvqL",
+        "meaning": "label/callout carrier (string tag)"
+      },
+      {
+        "file": "elements/el_warning.png",
+        "creation": "BmXEv9aoQR",
+        "meaning": "warning / bad beat"
+      },
+      {
+        "file": "elements/el_magnifier.png",
+        "creation": "aQvKH0hfSh",
+        "meaning": "inspection / audit beats"
+      },
+      {
+        "file": "elements/el_hourglass.png",
+        "creation": "VdTtBzkMMU",
+        "meaning": "time / cost-of-waiting"
+      },
+      {
+        "file": "elements/el_gears.png",
+        "creation": "CHf15QgEEy",
+        "meaning": "process / system"
+      },
+      {
+        "file": "elements/el_shield.png",
+        "creation": "swL4O4kl8e",
+        "meaning": "protection / keep"
+      },
+      {
+        "file": "elements/el_lightbulb.png",
+        "creation": "1sk7Sier4r",
+        "meaning": "idea / insight"
+      }
+    ]
+  }
 }
