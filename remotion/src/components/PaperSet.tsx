@@ -72,7 +72,9 @@ export const PaperSetHook: React.FC<{fields: any; durationInFrames: number}> = (
       ) : null}
       <Plane cam={cam} factor={PLANE.stage}>
         {(fields.props || []).map((p: any, i: number) => (
-          <div key={i} style={{position: 'absolute', left: width * (p.at?.[0] ?? 0.5) - width * (p.w ?? 0.18) / 2,
+          // zIndex 2: props are desk OBJECTS — they stand in front of the placed cards
+          // (real depth: an object in front of a sign), never hidden behind them.
+          <div key={i} style={{position: 'absolute', zIndex: 2, left: width * (p.at?.[0] ?? 0.5) - width * (p.w ?? 0.18) / 2,
                                top: height * (p.at?.[1] ?? 0.5), width: width * (p.w ?? 0.18)}}>
             <Placed at={p.cueFrame ?? 2}><Img src={staticFile(p.image)} style={{width: '100%', display: 'block'}} /></Placed>
           </div>
@@ -119,12 +121,14 @@ export const PaperPopCard: React.FC<{fields: any; durationInFrames: number}> = (
   const inAt = cf.in ?? Math.round(durationInFrames * 0.45);
   const pop = usePopup(popAt);
   const cam = resolveCamera(frame, fps, [{at: inAt, to: {zoom: 1.1, y: 0.47}}]);
-  const cardH = height * 0.74;
+  // 16:9 caption band lives in the lower ~18%: keep the card (and its on-card sub-line)
+  // fully above it (the same lower-third lesson as the Shorts thirds layout).
+  const cardH = height * 0.64;
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <Plane cam={cam} factor={PLANE.table}><PaperTable seed={fields.label || 'card'} tightenAt={inAt} /></Plane>
       <Plane cam={cam} factor={PLANE.stage}>
-        <div style={{position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}>
+        <div style={{position: 'absolute', left: '50%', top: '45%', transform: 'translate(-50%, -50%)'}}>
           {/* contact shadow grows as the card rises */}
           <div style={{position: 'absolute', left: '50%', bottom: -height * 0.02, width: '80%', height: height * 0.05,
                        transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(10px)', ...pop.shadow}} />
@@ -178,11 +182,14 @@ export const PaperCounter: React.FC<{fields: any; durationInFrames: number}> = (
       <div style={{position: 'absolute', left: width * 0.33 - chipW / 2, bottom: height * 0.24, width: chipW}}>
         {Array.from({length: nChips}, (_, i) => {
           const p = placeStyle(frame, fps, height, chipAt(i));
+          // seeded per-chip jitter (x + tilt) so the stack reads chip-by-chip, hand-placed
+          const j = ((i * 2654435761) % 97) / 97 - 0.5;
           return (
-            <div key={i} style={{position: 'absolute', bottom: i * chipH * 0.82, width: chipW, height: chipH,
-                                 background: W.paper, borderRadius: 10, borderBottom: `5px solid ${W.paperShade}`,
+            <div key={i} style={{position: 'absolute', bottom: i * chipH * 0.86, left: j * chipW * 0.12,
+                                 width: chipW, height: chipH,
+                                 background: W.paper, borderRadius: 10, borderBottom: `6px solid ${W.paperShade}`,
                                  boxShadow: `0 ${height * 0.008}px ${height * 0.02}px ${W.shadow}`, ...p,
-                                 transform: `${p.transform} rotate(${i % 2 ? 1.4 : -1.2}deg)`}} />
+                                 transform: `${p.transform} rotate(${(i % 2 ? 2.4 : -2.2) + j * 1.5}deg)`}} />
           );
         })}
         <div style={{position: 'absolute', bottom: -height * 0.018, left: '50%', width: chipW * 1.2, height: height * 0.03,
