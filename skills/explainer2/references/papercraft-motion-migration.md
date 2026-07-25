@@ -37,24 +37,32 @@ it is for the ISO series, so the sequestration costs nothing.
   - **elements/** — 10 storytelling cutouts: arrow, growth-arrow, pawn, tag,
     warning, magnifier, hourglass, gears, shield, lightbulb.
 
-## 3. What migrates next (the remaining papercraft scene map)
+## 3. The papercraft scene map (migration wave SHIPPED 2026-07-25)
 
-Per spec §7, in priority order (each is a new `Paper*` component; the classic
-component remains as the midnight fallback):
+`_papercraft_scene` in `remotion_engine.py` routes deck **types** to `Paper*`
+components when `theme == nemock-deep-dive`; anything it returns None for
+falls back to the classic component, so decks never break mid-migration.
 
-1. `PaperStairs` (trend/chart as popup staircase + pawn climber)
-2. `PaperCompare` (two popup trays, mood shadow on the bad side)
-3. `PaperSteps` (flow as popup cards along a paper path, camera lateral steps)
-4. `PaperSchematic` (raised node cards + violet strip edges; reuse camera)
-5. `PaperDefine`, `PaperPunch` (place + spotlight snap + emboss)
-6. `PaperCTA` variant with the cover-matched book hero
-7. Tear transition (act boundaries)
+| deck type | papercraft component |
+|---|---|
+| hook (`set`/`beats` present) | PaperSetHook (multi-plane set) |
+| hook (illustration only) | PaperHook (full-bleed, kept) |
+| statement / highlight / quote | PaperStatement |
+| define | PaperDefine (term tag + unfolding definition) |
+| punch | PaperPunch (embossed stamp; kind:bad adds the warning element) |
+| compare / delta | PaperCompare |
+| steps / flow | PaperSteps (per-item narration sync + lateral camera) |
+| list | PaperList (per-item narration sync) |
+| trend / ranked (with points) | PaperStairs (+ the pawn climber) |
+| ring / progress | PaperCounter |
+| keepcard | PaperPopCard |
+| cta / payoff | PaperCTA (real book cover on the table) |
+| any slide + `"transition": "tear"` | TearReveal act-boundary (spec §4) |
 
-Wiring: extend `_scene_for`'s theme gate so deck **types** map to `Paper*`
-components when `theme == nemock-deep-dive` (deck.json stays type-based; the
-prototypes' direct-`component` slides were a prototyping convenience only).
-Until a type is migrated it falls back to the classic component — decks never
-break mid-migration.
+**Still classic on papercraft (later waves, by demand):** schematic (keeps the
+post-it/Sharpie paper treatment it already has), figure/footage (Ken Burns +
+marks are strong as-is), waterfall, pictograph, statgrid, stat, timeline,
+reframe, funnel, waveform.
 
 ## 4. Authoring cost per video (after migration)
 
