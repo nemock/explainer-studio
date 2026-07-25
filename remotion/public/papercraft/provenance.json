@@ -1,0 +1,12 @@
+{
+  "style": "FWF/davesaunders papercraft (papercraft-motion-spec.md; canon: brgweb/brand-assets/papercraft/manifest.json + make_money/brand_kits/FWF/papercraft/README.md)",
+  "generated": "2026-07-25",
+  "generator": "Magnific (operator Premium+), text-to-image, style reference to the davesaunders-hero-a founder's-desk creation (identifier l7Lqw0Igv9) so the family stays coherent; FWF palette prompt (ink #2A1142 / cream #FAF6EF / plum #36185B / violet #5A3494 / lilac #C7B6E6, 'no teal, no blue'); no text, no humans, no photorealism",
+  "assets": [
+    {"file": "desk_wide_a.jpg", "creation": "WMYXtXbcXe", "role": "P1 set backdrop: wide founder's desk, empty cream center mat, objects at edges (PICKED for prototypes)"},
+    {"file": "desk_wide_b.jpg", "creation": "hEmq1qzvqL", "role": "P1 set backdrop, alternate take"},
+    {"file": "prop_bottleneck.png", "creation": "DBMmCFYpcl → background-removed DBMmQ4apcl", "role": "P2 stage prop: cream paper bottle, violet cork, lilac documents jammed in the neck (the bottleneck motif), transparent"},
+    {"file": "prop_docstack.png", "creation": "jSxON0ZLD0 → background-removed poDhF2Aehw", "role": "P2 stage prop: tilting approval-document stack with violet folder, transparent"}
+  ],
+  "usage": "Reusable set dressing for Papercraft Motion scenes. Deck refs: set/props paths beginning with papercraft/ are staged wholesale by remotion_engine.render(); per-video backdrops belong in the project's assets/imagegen/ with their own provenance instead."
+}

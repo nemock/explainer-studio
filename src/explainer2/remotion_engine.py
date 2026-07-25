@@ -227,10 +227,12 @@ def _scene_for(slide, theme=""):
                           "caption": slide.get("caption", ""), "highlight": slide.get("highlight"),
                           "title": slide.get("title", ""), "accent": accent, "accent2": accent2,
                           "imageFromFrac": slide.get("imageFromFrac", 0),
-                          "moves": slide.get("moves", []), "assemble": slide.get("assemble")}
+                          "moves": slide.get("moves", []), "assemble": slide.get("assemble"),
+                          "marks": slide.get("marks", [])}
     if t == "footage":
         return "Footage", {"image": slide.get("image"), "headline": headline,
-                           "accent": accent, "accent2": accent2}
+                           "accent": accent, "accent2": accent2,
+                           "marks": slide.get("marks", []), "fit": slide.get("fit")}
     if t == "highlight":
         return "KineticHeadline", {"kicker": kicker, "headline": headline,
                                    "accent": slide.get("mark") or accent}
@@ -328,6 +330,13 @@ def build_spec(sp):
             if pc.get("cue") and f is None:
                 warnings.append(f"{sid}: assemble piece cue unmatched (\"{pc['cue']}\")")
             pc["cueFrame"] = f if f is not None else int(round(dur * (pi + 1) / (len(pieces) + 1)))
+        # 3b) figure image-space MARKS (circle/arrow/underline on the art, ride the Ken Burns)
+        marks = (sc.get("fields") or {}).get("marks") or []
+        for ki, mk in enumerate(marks):
+            f = _resolve_phrase(mk.get("cue", ""), segw, s0, fps) if mk.get("cue") else None
+            if mk.get("cue") and f is None:
+                warnings.append(f"{sid}: figure mark cue unmatched (\"{mk['cue']}\")")
+            mk["cueFrame"] = f if f is not None else int(round(dur * (ki + 1) / (len(marks) + 1)))
         # 4) annotations: overlay drawings on any scene; each may carry a cue phrase.
         #    Unresolved/missing cues stagger proportionally through the scene's middle.
         anns = slide.get("annotations") or []
@@ -412,20 +421,29 @@ def _stage_images(sp, spec, public):
     Handles every image-bearing field a component may use (e.g. Cut & Bond's `bottomImage`
     decorative prop on ElementStat)."""
     roots = [sp.dir, sp.dir.parent.parent, sp.dir.parent]  # project, then parent (shorts), then shorts/
-    IMG_FIELDS = ("image", "bottomImage")
+    # `set` = Papercraft Motion backdrop (papercraft-motion-spec.md §8). Paths under
+    # papercraft/ are shared brand set dressing staged wholesale by render() — leave
+    # them un-rebased so staticFile('papercraft/...') resolves.
+    IMG_FIELDS = ("image", "bottomImage", "set")
+
+    def _stage_one(img):
+        if not img or str(img).startswith("papercraft/"):
+            return img
+        src = next((r / img for r in roots if (r / img).exists()), None)
+        if src is None:
+            return None  # missing -> component shows headline/caption only
+        dst = Path(img).name
+        shutil.copy(src, public / dst)
+        return dst
+
     for scene in spec["scenes"]:
         fields = scene.get("fields") or {}
         for key in IMG_FIELDS:
-            img = fields.get(key)
-            if not img:
-                continue
-            src = next((r / img for r in roots if (r / img).exists()), None)
-            if src is None:
-                fields[key] = None  # missing -> component shows headline/caption only
-                continue
-            dst = Path(img).name
-            shutil.copy(src, public / dst)
-            fields[key] = dst
+            if fields.get(key):
+                fields[key] = _stage_one(fields[key])
+        for prop in (fields.get("props") or []):
+            if isinstance(prop, dict) and prop.get("image"):
+                prop["image"] = _stage_one(prop["image"])
 
 
 def _stage_doodles(spec, public, log):
@@ -539,6 +557,11 @@ def render(sp, log=print, frames=None, out=None):
         _src = REMOTION_DIR / "public" / _name
         if _src.exists():
             shutil.copy(_src, public / _name)
+    # Papercraft Motion shared set dressing (papercraft-motion-spec.md §8): staged as a
+    # directory so deck `set`/`props` refs like "papercraft/desk_wide_a.jpg" resolve.
+    _pcraft = REMOTION_DIR / "public" / "papercraft"
+    if _pcraft.exists():
+        shutil.copytree(_pcraft, public / "papercraft", dirs_exist_ok=True)
     _stage_images(sp, spec, public)
     _stage_doodles(spec, public, log)
     # CTA scenes show the brand book cover unless the project opts out with
@@ -561,7 +584,8 @@ def render(sp, log=print, frames=None, out=None):
 
     npx = shutil.which("npx") or "npx"
     cmd = [npx, "remotion", "render", "src/index.ts", "Video", str(out),
-           f"--props={props}", f"--public-dir={public}", "--log=error"]
+           f"--props={props}", f"--public-dir={public}", "--log=error",
+           "--timeout=300000"]  # generous delayRender timeout (slow disk I/O tolerance)
     if frames:
         cmd.append(f"--frames={frames}")
     log(f"remotion: rendering {sp.dir.name} ({len(spec['scenes'])} scenes, {spec['durationInFrames']}f"

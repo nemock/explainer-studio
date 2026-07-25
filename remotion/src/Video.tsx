@@ -18,6 +18,7 @@ import {BrandSting, StepFlow} from './components/Extras';
 import {PaperSting} from './components/PaperSting';
 import {KeepCard} from './components/KeepCard';
 import {PaperHook} from './components/PaperHook';
+import {PaperSetHook, PaperPopCard, PaperCounter} from './components/PaperSet';
 import {DrawLine, Waterfall, Pictograph, Ring, Funnel} from './components/DataViz2';
 import {ReactiveStrip, Waveform} from './components/Audio';
 import {PaperAtom, ElementStat, DiscoveryCard, PeriodicSlot, PaperWord, PaperFire, PaperProp, PaperCTA, PaperMolecule} from './components/Chem';
@@ -30,6 +31,10 @@ const REGISTRY: Record<string, React.FC<any>> = {
   PaperSting,
   KeepCard,
   PaperHook,
+  // Papercraft Motion prototypes (papercraft-motion-spec.md)
+  PaperSetHook,
+  PaperPopCard,
+  PaperCounter,
   StepFlow,
   DrawLine,
   Waterfall,
