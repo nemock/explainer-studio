@@ -141,7 +141,7 @@ export const PaperPopCard: React.FC<{fields: any; durationInFrames: number}> = (
                            opacity: interpolate(frame, [popAt + 8, popAt + 18], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}),
                            transform: `scale(${flick(frame, inAt)})`}}>{fields.label}</div>
               {fields.sub ? (
-                <div style={{fontFamily: BRAND.font, fontWeight: 600, fontSize: cardH * 0.034, color: W.accent, marginTop: cardH * 0.02, padding: '0 9%',
+                <div style={{fontFamily: BRAND.font, fontWeight: 600, fontSize: cardH * 0.034, color: W.accent, marginTop: cardH * 0.02, padding: '0 12.5%',
                              opacity: interpolate(frame, [popAt + 14, popAt + 24], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})}}>{fields.sub}</div>
               ) : null}
             </div>

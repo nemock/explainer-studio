@@ -47,7 +47,7 @@ export const KeepCard: React.FC<{fields: any; durationInFrames?: number}> = ({fi
           {sub && !portrait ? (
             <div style={{
               fontFamily: BRAND.font, fontWeight: 600, fontSize: cardH * 0.036, color: PURPLE,
-              marginTop: cardH * 0.022, padding: '0 9%', lineHeight: 1.2, opacity: subIn,
+              marginTop: cardH * 0.022, padding: '0 12.5%', lineHeight: 1.2, opacity: subIn,
             }}>
               {sub}
             </div>
