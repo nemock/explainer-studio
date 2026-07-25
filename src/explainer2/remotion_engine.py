@@ -125,11 +125,61 @@ def _resolve_items(labels, segw, s0, fps):
     return _monotonic_fill(times, fps)
 
 
+def _papercraft_scene(slide, t, kicker, accent, headline):
+    """The PAPERCRAFT style map (papercraft-motion-spec.md §7 / migration note §3):
+    deck TYPES render as the Paper* family on the nemock-deep-dive theme. Returns
+    None for types not yet migrated — they fall through to the classic map, so
+    decks never break mid-migration."""
+    if t in ("statement", "highlight"):
+        return "PaperStatement", {"kicker": kicker, "headline": headline, "accent": accent,
+                                  "subkicker": slide.get("subkicker", "")}
+    if t == "quote":
+        return "PaperStatement", {"headline": slide.get("quote") or headline,
+                                  "attrib": slide.get("attribution") or slide.get("source", "")}
+    if t == "define":
+        return "PaperDefine", {"kicker": kicker, "term": slide.get("term", ""),
+                               "definition": slide.get("definition", "")}
+    if t == "punch":
+        return "PaperPunch", {"word": slide.get("word") or headline, "kicker": kicker,
+                              "kind": slide.get("kind", "")}
+    if t == "compare":
+        return "PaperCompare", {"kicker": kicker, "left": slide.get("left", {}),
+                                "right": slide.get("right", {})}
+    if t == "delta":
+        return "PaperCompare", {"kicker": kicker,
+                                "left": {"title": slide.get("from_label", ""), "value": slide.get("from", "")},
+                                "right": {"title": slide.get("to_label", ""), "value": slide.get("to", "")}}
+    if t in ("steps", "flow"):
+        return "PaperSteps", {"kicker": kicker, "steps": _items(slide)}
+    if t == "list":
+        return "PaperList", {"kicker": kicker, "title": slide.get("title", ""), "items": _items(slide)}
+    if t in ("trend", "ranked"):
+        pts = [p.get("value") if isinstance(p, dict) else p for p in (slide.get("points") or slide.get("bars") or [])]
+        if pts:
+            return "PaperStairs", {"kicker": kicker, "points": pts,
+                                   "endLabel": slide.get("end_label", ""), "kind": slide.get("kind", "")}
+    if t in ("ring", "progress"):
+        return "PaperCounter", {"kicker": kicker, "value": slide.get("value", 0),
+                                "suffix": "%", "label": slide.get("label", "")}
+    if t == "keepcard":
+        return "PaperPopCard", {"image": slide.get("image"),
+                                "label": slide.get("label") or headline, "sub": slide.get("sub")}
+    if t in ("payoff", "cta"):
+        return "PaperCTA", {"kicker": kicker, "headline": headline, "accent": accent,
+                            "subkicker": slide.get("subkicker", "")}
+    if t == "hook" and (slide.get("set") or slide.get("beats")):
+        return "PaperSetHook", {"set": slide.get("set"), "props": slide.get("props", []),
+                                "beats": slide.get("beats", []), "kicker": kicker,
+                                "headline": headline, "accent": accent}
+    return None
+
+
 def _scene_for(slide, theme=""):
     """Map a deck slide -> (component, fields) per the motion-playbook §6 migration table.
     Unknown -> KineticHeadline (a clean animated headline). `image` fields stay as the
     deck's source path; render() stages them into the public dir.
-    `theme` selects the cold-open style (see the hook branch)."""
+    `theme` selects the STYLE: nemock-deep-dive routes through the papercraft map
+    first (classic components remain the fallback for unmigrated types)."""
     # Direct-component escape hatch: a slide may name its Remotion component + fields
     # explicitly, bypassing the type map. The Cut & Bond paper channel authors its decks
     # this way (component: "PaperAtom", fields: {...}) so its paper components never need
@@ -141,6 +191,11 @@ def _scene_for(slide, theme=""):
     accent = slide.get("accent", []) or []
     accent2 = slide.get("accent2", []) or []
     headline = slide.get("headline") or slide.get("title") or slide.get("word") or ""
+
+    if theme == "nemock-deep-dive":
+        pc = _papercraft_scene(slide, t, kicker, accent, headline)
+        if pc:
+            return pc
 
     if t == "hook":
         # Hook cold-open is THEME-KEYED (fix 2026-07-15). PaperHook (2026-07-14) applies
@@ -252,9 +307,15 @@ def build_spec(sp):
     for i, s in enumerate(segs):
         start = s["start"]
         end = segs[i + 1]["start"] if i + 1 < len(segs) else duration
-        comp, fields = _scene_for(slides_by_id.get(s["slide"], {}), theme=sp.data.get("theme", ""))
-        scenes.append({"component": comp, "from": int(round(start * fps)),
-                       "durationInFrames": max(1, int(round((end - start) * fps))), "fields": fields})
+        slide = slides_by_id.get(s["slide"], {})
+        comp, fields = _scene_for(slide, theme=sp.data.get("theme", ""))
+        sc = {"component": comp, "from": int(round(start * fps)),
+              "durationInFrames": max(1, int(round((end - start) * fps))), "fields": fields}
+        # act-boundary tear (papercraft-motion-spec.md §4): the scene reveals behind a
+        # parting torn seam instead of the cross-fade. Author: "transition": "tear".
+        if slide.get("transition") == "tear":
+            sc["tear"] = True
+        scenes.append(sc)
 
     words = []
     al = sp.work / "alignment.json"
@@ -274,7 +335,11 @@ def build_spec(sp):
                     "Waterfall": ("bars", lambda f: [b.get("label", "") for b in
                                                      ([f.get("start")] + list(f.get("steps") or []) + [f.get("end")])
                                                      if isinstance(b, dict)]),
-                    "Timeline": ("events", lambda f: [e.get("label", "") for e in (f.get("events") or [])])}
+                    "Timeline": ("events", lambda f: [e.get("label", "") for e in (f.get("events") or [])]),
+                    # Papercraft equivalents — same per-item narration sync
+                    "PaperList": ("items", lambda f: f.get("items") or []),
+                    "PaperSteps": ("steps", lambda f: [s.get("title") if isinstance(s, dict) else s
+                                                       for s in (f.get("steps") or [])])}
     for idx, sc in enumerate(scenes):
         if idx >= len(segs):
             continue
@@ -566,13 +631,13 @@ def render(sp, log=print, frames=None, out=None):
     _stage_doodles(spec, public, log)
     # CTA scenes show the brand book cover unless the project opts out with
     # "cta_book": false in project.json (e.g. masterclass modules use no book cover).
-    if sp.data.get("cta_book", True) and any(s["component"] == "CTA" for s in spec["scenes"]):
+    if sp.data.get("cta_book", True) and any(s["component"] in ("CTA", "PaperCTA") for s in spec["scenes"]):
         bc_dir = REMOTION_DIR.parent / "book_cover"
         bc = next(iter(sorted(bc_dir.glob("*.png"))), None) if bc_dir.exists() else None
         if bc:
             shutil.copy(bc, public / "book_cover.png")
             for s in spec["scenes"]:
-                if s["component"] == "CTA":
+                if s["component"] in ("CTA", "PaperCTA"):
                     s["fields"]["image"] = "book_cover.png"
     props = stage / "props.json"
     props.write_text(json.dumps(spec))

@@ -19,6 +19,9 @@ import {PaperSting} from './components/PaperSting';
 import {KeepCard} from './components/KeepCard';
 import {PaperHook} from './components/PaperHook';
 import {PaperSetHook, PaperPopCard, PaperCounter} from './components/PaperSet';
+import {PaperStatement, PaperDefine, PaperPunch} from './components/PaperText';
+import {PaperStairs, PaperCompare, PaperSteps, PaperList, PaperCTA} from './components/PaperData';
+import {TearReveal} from './components/PaperWorld';
 import {DrawLine, Waterfall, Pictograph, Ring, Funnel} from './components/DataViz2';
 import {ReactiveStrip, Waveform} from './components/Audio';
 import {PaperAtom, ElementStat, DiscoveryCard, PeriodicSlot, PaperWord, PaperFire, PaperProp, PaperCTA, PaperMolecule} from './components/Chem';
@@ -31,10 +34,19 @@ const REGISTRY: Record<string, React.FC<any>> = {
   PaperSting,
   KeepCard,
   PaperHook,
-  // Papercraft Motion prototypes (papercraft-motion-spec.md)
+  // Papercraft Motion (papercraft-motion-spec.md; migration map in
+  // papercraft-motion-migration.md §3)
   PaperSetHook,
   PaperPopCard,
   PaperCounter,
+  PaperStatement,
+  PaperDefine,
+  PaperPunch,
+  PaperStairs,
+  PaperCompare,
+  PaperSteps,
+  PaperList,
+  PaperCTA,
   StepFlow,
   DrawLine,
   Waterfall,
@@ -72,7 +84,7 @@ const REGISTRY: Record<string, React.FC<any>> = {
 
 // motivated cross-fade so beats connect instead of hard-cutting (timing stays exact:
 // scenes keep their absolute from/duration; only opacity ramps).
-const SceneWrap: React.FC<{durationInFrames: number; paper?: boolean; children: React.ReactNode}> = ({durationInFrames, paper, children}) => {
+const SceneWrap: React.FC<{durationInFrames: number; paper?: boolean; tear?: string | null; children: React.ReactNode}> = ({durationInFrames, paper, tear, children}) => {
   const frame = useCurrentFrame();
   const f = 7;
   const opacity = interpolate(
@@ -91,11 +103,14 @@ const SceneWrap: React.FC<{durationInFrames: number; paper?: boolean; children: 
   // component's own entrance + narration-cued annotations. The QA dead-air warning on held
   // cards is an accepted trait of the calm paper aesthetic, not a defect to animate away.
   return (
-    <AbsoluteFill style={{opacity}}>
+    <AbsoluteFill style={{opacity: tear ? 1 : opacity}}>
       {children}
       {paper ? null : (
         <AbsoluteFill style={{background: 'radial-gradient(60% 50% at 68% 28%, rgba(255,205,130,.5) 0%, rgba(255,205,130,0) 70%)', mixBlendMode: 'screen', opacity: leak, pointerEvents: 'none'}} />
       )}
+      {/* act-boundary tear (papercraft-motion-spec.md §4): the incoming scene is revealed
+          as two ink halves part along a seeded seam; replaces the cross-fade for this scene */}
+      {tear ? <TearReveal seed={tear} /> : null}
     </AbsoluteFill>
   );
 };
@@ -122,7 +137,7 @@ export const Video: React.FC<VideoProps> = (props) => {
         const Comp = REGISTRY[scene.component] || TalkingScene;
         return (
           <Sequence key={i} from={scene.from} durationInFrames={scene.durationInFrames} layout="none">
-            <SceneWrap durationInFrames={scene.durationInFrames} paper={paper}>
+            <SceneWrap durationInFrames={scene.durationInFrames} paper={paper} tear={(scene as any).tear ? `tear${i}` : null}>
               <AbsoluteFill style={{bottom: contentBottom}}>
                 <Comp fields={scene.fields || {}} durationInFrames={scene.durationInFrames} sceneFrom={scene.from} audioFrom={audioFrom} />
               </AbsoluteFill>

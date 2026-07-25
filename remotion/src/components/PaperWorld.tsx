@@ -90,6 +90,47 @@ export const placeStyle = (frame: number, fps: number, height: number, at: numbe
   };
 };
 
+// Pure (non-hook) popup physics — for hinged elements created in loops (stairs, trays).
+export const popupStyle = (frame: number, fps: number, at: number): React.CSSProperties => {
+  const e = spring({frame: frame - at, fps, config: HINGE});
+  return {
+    opacity: frame >= at ? 1 : 0,
+    transform: `perspective(1200px) rotateX(${(85 * (1 - e)).toFixed(2)}deg)`,
+    transformOrigin: '50% 100%',
+  };
+};
+
+// --- tear transition (spec §4) ----------------------------------------------
+// Two ink-dark halves with a seeded jagged seam part to reveal the incoming
+// scene (scene-local, deterministic; ~14 frames, loud). Rendered by SceneWrap
+// when the deck slide sets "transition": "tear".
+const tearPoints = (seed: string, n = 9): number[] => {
+  const out: number[] = [];
+  for (let i = 0; i < n; i++) out.push((hash(seed + i) - 0.5) * 6); // % jitter around the seam
+  return out;
+};
+
+export const TearReveal: React.FC<{seed?: string; world?: PaperWorldTokens}> = ({seed = 't', world = PAPER_FWF}) => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const DUR = 14;
+  if (frame >= DUR + 6) return null;
+  const e = spring({frame, fps, config: {damping: 15, stiffness: 120}});
+  const jit = tearPoints(seed);
+  const seam = (off: number) =>
+    jit.map((j, i) => `${(50 + j + off).toFixed(2)}% ${(i * 100 / (jit.length - 1)).toFixed(2)}%`).join(', ');
+  // left half: 0..seam ; right half: seam..100 — both slide out as e rises
+  return (
+    <AbsoluteFill style={{pointerEvents: 'none'}}>
+      <AbsoluteFill style={{background: world.groundDeep, transform: `translateX(${(-e * 104).toFixed(2)}%)`,
+                            clipPath: `polygon(0% 0%, ${seam(1.5)}, 0% 100%)`,
+                            boxShadow: `40px 0 80px ${world.shadow}`}} />
+      <AbsoluteFill style={{background: world.ground, transform: `translateX(${(e * 104).toFixed(2)}%)`,
+                            clipPath: `polygon(100% 0%, ${seam(-1.5)}, 100% 100%)`}} />
+    </AbsoluteFill>
+  );
+};
+
 // --- the table (P0) + key light (spec §6) -----------------------------------
 const hash = (s: string) => {
   let h = 2166136261;
