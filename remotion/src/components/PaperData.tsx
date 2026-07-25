@@ -31,8 +31,11 @@ export const PaperStairs: React.FC<{fields: any; durationInFrames: number}> = ({
   const lo = Math.min(...pts), hi = Math.max(...pts);
   const norm = (v: number) => (hi === lo ? 0.5 : (v - lo) / (hi - lo));
   const cf = fields.cueFrames || {};
-  const GAP = 7;
   const lastAt = cf.land ?? Math.round(durationInFrames * 0.5);
+  // spread the build across the story (start ~12% in), still landing the last
+  // step exactly on the cue — a late cue must not compress the whole staircase
+  // into one slam at the end
+  const GAP = Math.max(7, Math.round((lastAt - durationInFrames * 0.12) / Math.max(1, n - 1)));
   const stepAt = (i: number) => lastAt - (n - 1 - i) * GAP;
 
   const areaW = width * 0.6, stepW = areaW / n;
@@ -63,13 +66,13 @@ export const PaperStairs: React.FC<{fields: any; durationInFrames: number}> = ({
                                boxShadow: `0 ${height * 0.014}px ${height * 0.03}px ${W.shadow}`, ...st}} />
         );
       })}
-      {/* the climber */}
-      <div style={{position: 'absolute', left: px - pawnW / 2, top: py - pawnW * 1.9, width: pawnW, ...pawnIn.object}}>
+      {/* the climber (zIndex above the end tag so it never hides beneath it) */}
+      <div style={{position: 'absolute', zIndex: 2, left: px - pawnW / 2, top: py - pawnW * 1.9, width: pawnW, ...pawnIn.object}}>
         <Img src={staticFile('papercraft/elements/el_pawn.png')} style={{width: '100%', display: 'block',
              filter: `drop-shadow(0 ${height * 0.01}px ${height * 0.018}px ${W.shadow})`}} />
       </div>
       {fields.endLabel ? (
-        <div style={{position: 'absolute', left: Math.min(x(n - 1) + stepW * 0.1, width * 0.78), top: topY(n - 1) - height * 0.13,
+        <div style={{position: 'absolute', left: Math.min(x(n - 1) + stepW * 0.1, width * 0.78), top: topY(n - 1) - height * 0.26,
                      ...placeStyle(frame, fps, height, lastAt + 8)}}>
           <PaperCard style={{display: 'inline-block', padding: `${height * 0.012}px ${width * 0.016}px`, borderRadius: 10, transform: 'rotate(1.4deg)'}}>
             <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.03, color: W.accent, whiteSpace: 'nowrap'}}>{fields.endLabel}</div>
