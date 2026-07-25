@@ -165,7 +165,7 @@ def _papercraft_scene(slide, t, kicker, accent, headline):
         return "PaperPopCard", {"image": slide.get("image"),
                                 "label": slide.get("label") or headline, "sub": slide.get("sub")}
     if t in ("payoff", "cta"):
-        return "PaperCTA", {"kicker": kicker, "headline": headline, "accent": accent,
+        return "PaperBookCTA", {"kicker": kicker, "headline": headline, "accent": accent,
                             "subkicker": slide.get("subkicker", "")}
     if t == "hook" and (slide.get("set") or slide.get("beats")):
         return "PaperSetHook", {"set": slide.get("set"), "props": slide.get("props", []),
@@ -631,13 +631,13 @@ def render(sp, log=print, frames=None, out=None):
     _stage_doodles(spec, public, log)
     # CTA scenes show the brand book cover unless the project opts out with
     # "cta_book": false in project.json (e.g. masterclass modules use no book cover).
-    if sp.data.get("cta_book", True) and any(s["component"] in ("CTA", "PaperCTA") for s in spec["scenes"]):
+    if sp.data.get("cta_book", True) and any(s["component"] in ("CTA", "PaperBookCTA") for s in spec["scenes"]):
         bc_dir = REMOTION_DIR.parent / "book_cover"
         bc = next(iter(sorted(bc_dir.glob("*.png"))), None) if bc_dir.exists() else None
         if bc:
             shutil.copy(bc, public / "book_cover.png")
             for s in spec["scenes"]:
-                if s["component"] in ("CTA", "PaperCTA"):
+                if s["component"] in ("CTA", "PaperBookCTA"):
                     s["fields"]["image"] = "book_cover.png"
     props = stage / "props.json"
     props.write_text(json.dumps(spec))

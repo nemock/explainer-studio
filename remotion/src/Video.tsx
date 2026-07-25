@@ -20,7 +20,7 @@ import {KeepCard} from './components/KeepCard';
 import {PaperHook} from './components/PaperHook';
 import {PaperSetHook, PaperPopCard, PaperCounter} from './components/PaperSet';
 import {PaperStatement, PaperDefine, PaperPunch} from './components/PaperText';
-import {PaperStairs, PaperCompare, PaperSteps, PaperList, PaperCTA} from './components/PaperData';
+import {PaperStairs, PaperCompare, PaperSteps, PaperList, PaperBookCTA} from './components/PaperData';
 import {TearReveal} from './components/PaperWorld';
 import {DrawLine, Waterfall, Pictograph, Ring, Funnel} from './components/DataViz2';
 import {ReactiveStrip, Waveform} from './components/Audio';
@@ -46,7 +46,7 @@ const REGISTRY: Record<string, React.FC<any>> = {
   PaperCompare,
   PaperSteps,
   PaperList,
-  PaperCTA,
+  PaperBookCTA,
   StepFlow,
   DrawLine,
   Waterfall,

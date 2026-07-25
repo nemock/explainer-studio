@@ -226,10 +226,10 @@ export const PaperList: React.FC<{fields: any; durationInFrames: number}> = ({fi
 };
 
 // ---------------------------------------------------------------------------
-// PaperCTA — the close: the real book cover stands on the table (places with a
+// PaperBookCTA — the close: the real book cover stands on the table (places with a
 // settle + shadow), the offer card places beside it, warm soft light.
 // fields: {kicker, headline, accent, subkicker, image (book cover, staged)}
-export const PaperCTA: React.FC<{fields: any}> = ({fields}) => {
+export const PaperBookCTA: React.FC<{fields: any}> = ({fields}) => {
   const frame = useCurrentFrame();
   const {width, height} = useVideoConfig();
   const book = usePlace(6);
