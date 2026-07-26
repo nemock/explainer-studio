@@ -33,6 +33,28 @@ THEMES = {
     "nemock-deep-dive": {"bg": "#f4ecd6", "fg": "#2c1e4e", "accent": "#3ddc84", "accent2": "#3ddc84", "motion": "fade"},
     # cut-bond = Cut & Bond channel (cream paper, warm ink, coral/teal accents).
     "cut-bond": {"bg": "#f4ecd6", "fg": "#2a2622", "accent": "#ff5a4d", "accent2": "#17b7a6", "motion": "fade"},
+    # brg-paper = Base Reality Group papercraft promos (Plan to Market cohort, etc.). A
+    # DEDICATED paper theme so BRG marketing videos carry the exact site palette (cream
+    # #F5F0EB / navy #1B2B4B / teal #0D7377) WITHOUT overwriting the nemock-deep-dive or
+    # cut-bond paper worlds. Added 2026-07-21. Fraunces display + Inter body match the BRG
+    # brand system. NOTE (blast radius): the Remotion paper engine currently hardcodes the
+    # green/purple paper palette in ink.tsx + the Paper* components; full navy/teal ink
+    # threading is a separate, render-verified engine change (see the promo project's
+    # theme-plan.md). The papercraft LOOK itself comes from the generated image assets,
+    # which are authored in the BRG palette regardless of the ink layer.
+    "brg-paper": {"bg": "#f5f0eb", "fg": "#1b2b4b", "accent": "#0d7377", "accent2": "#c2410c",
+                  "motion": "fade", "fonts": {"display": "Fraunces", "body": "Inter"}},
+    # brg-deep-dive = the Base Reality Group DEEP-DIVE series (fractional-CPO / product &
+    # business teaching videos; baserealitygroup.com, never the book/newsletter CTA). Its own
+    # palette so the series can be papercraft WITHOUT repainting either neighbour: `brg-paper`
+    # is already rendering the Plan to Market cohort promo, and `nemock-deep-dive` is Dave's
+    # personal/book channel (davesaunders.net). Same BRG cream+navy, but the accent is BRG
+    # INDIGO (#7b5bff — the accent the series' thumbnails already use) rather than the promo
+    # world's teal. accent2 == accent so no off-brand colour can leak (same trick as `fwf`).
+    # Paired in the engine with BRGPaperSting (BRG's own mark) + a book-less paper CTA.
+    # Added 2026-07-26 per the operator's "give BRG its own style palette" directive.
+    "brg-deep-dive": {"bg": "#f5f0eb", "fg": "#1b2b4b", "accent": "#7b5bff", "accent2": "#7b5bff",
+                      "motion": "fade", "fonts": {"display": "Fraunces", "body": "Inter"}},
 }
 DEFAULT = "midnight"
 VALID_MOTION = {"rise", "fade", "pop", "slide"}

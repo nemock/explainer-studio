@@ -192,7 +192,10 @@ def _scene_for(slide, theme=""):
     accent2 = slide.get("accent2", []) or []
     headline = slide.get("headline") or slide.get("title") or slide.get("word") or ""
 
-    if theme == "nemock-deep-dive":
+    # Papercraft style map. nemock-deep-dive (Dave's book/davesaunders.net deep dives) and
+    # brg-deep-dive (the Base Reality Group series, added 2026-07-26) both render the Paper*
+    # family; they differ by ink/accent (ink.tsx) and by their stings, not by the type map.
+    if theme in ("nemock-deep-dive", "brg-deep-dive"):
         pc = _papercraft_scene(slide, t, kicker, accent, headline)
         if pc:
             return pc
@@ -203,7 +206,7 @@ def _scene_for(slide, theme=""):
         # Bond). Midnight-themed projects (the ISO 14971 series, and every deck before the
         # change) keep the Hero3D rotating wireframe sphere, their consistent brand. Do NOT
         # make PaperHook unconditional again: it leaks the paper rebrand into the midnight series.
-        if theme in ("cut-bond", "nemock-deep-dive"):
+        if theme in ("cut-bond", "nemock-deep-dive", "brg-deep-dive"):
             return "PaperHook", {"image": slide.get("image"), "kicker": kicker,
                                  "headline": headline, "accent": accent}
         return "Hero3D", {"kicker": kicker, "headline": headline,
@@ -428,10 +431,19 @@ def build_spec(sp):
         #   nemock-deep-dive (Dave's deep dives) -> paper-launch PaperSting + davesaunders.net
         #   cut-bond         (Cut & Bond)         -> paper-launch PaperSting, its own wordmark
         #                     (blank default; Cut & Bond is portrait shorts, so sting is off anyway)
+        #   brg-deep-dive    (Base Reality Group)  -> BRGPaperSting (BRG's OWN indigo D+rocket
+        #                     mark) + baserealitygroup.com. NOT PaperSting: that is Dave's
+        #                     personal/book mark, and BRG is a separate brand (2026-07-26).
         #   midnight / other (ISO 14971 series, everything pre-paper) -> the legacy wordmark
         #                     bumper (BrandSting). Do NOT let the paper rebrand leak here.
         theme = sp.data.get("theme", "")
-        if theme in ("cut-bond", "nemock-deep-dive"):
+        if theme == "brg-deep-dive":
+            INTRO, OUTRO = 3.0, 2.5
+            wm = "baserealitygroup.com"
+            intro_comp, intro_fields = "BRGPaperSting", {"wordmark": wm}
+            outro_comp = "BRGPaperSting"
+            outro_fields = {"outro": True, "wordmark": wm}
+        elif theme in ("cut-bond", "nemock-deep-dive"):
             # Paper-launch sting (motion-playbook §2F). Intro plays the full launch+wordmark
             # (~3.5s); outro is the calm finished-mark card (~2.5s). The intro length sets the
             # narration offset — see memory gag-splice-sting-offset (3.5s for this engine).
@@ -622,6 +634,15 @@ def render(sp, log=print, frames=None, out=None):
         _src = REMOTION_DIR / "public" / _name
         if _src.exists():
             shutil.copy(_src, public / _name)
+    # BRGPaperSting's mark (brg-deep-dive world) — BRG's own logo, staged from the PROJECT's
+    # brand dir so each BRG project stays self-contained. Missing -> the sting still renders
+    # (wordmark only), never a broken image.
+    _brg_mark = sp.dir / "brand" / "brg-sting-mark.png"
+    if _brg_mark.exists():
+        shutil.copy(_brg_mark, public / "brg_sting_mark.png")
+    elif sp.data.get("theme") == "brg-deep-dive":
+        log("remotion: WARNING brg-deep-dive sting mark missing "
+            "(expected <project>/brand/brg-sting-mark.png) — sting renders wordmark-only")
     # Papercraft Motion shared set dressing (papercraft-motion-spec.md §8): staged as a
     # directory so deck `set`/`props` refs like "papercraft/desk_wide_a.jpg" resolve.
     _pcraft = REMOTION_DIR / "public" / "papercraft"

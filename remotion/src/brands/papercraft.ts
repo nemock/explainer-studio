@@ -30,7 +30,8 @@ export const PAPER_FWF: PaperWorldTokens = {
   shadow: 'rgba(15,5,30,.45)',
 };
 
-// BRG (future BRG-branded series — parameterization proof, unused today)
+// BRG marketing/promo world — the teal site accent (pairs with the `brg-paper` theme,
+// which the Plan to Market cohort promo renders with).
 export const PAPER_BRG: PaperWorldTokens = {
   ground: '#1B2B4B',
   groundDeep: '#12203A',
@@ -44,8 +45,30 @@ export const PAPER_BRG: PaperWorldTokens = {
   shadow: 'rgba(6,14,30,.45)',
 };
 
+// BRG DEEP-DIVE world (2026-07-26) — the fractional-CPO/product series. Same BRG navy
+// ground + cream paper, but the accent is BRG INDIGO (#7b5bff), matching the series'
+// thumbnails and the PAPER_BRG_DEEP ink. Kept separate from PAPER_BRG so the cohort
+// promo's teal world is untouched (operator directive: add a palette, never repaint a
+// palette that is already in use).
+export const PAPER_BRG_DEEP: PaperWorldTokens = {
+  ground: '#1B2B4B',
+  groundDeep: '#12203A',
+  sheet: '#24365C',
+  sheetAlt: '#3B2E7A',
+  paper: '#F5F0EB',
+  paperShade: '#E5DCCE',
+  ink: '#1B2B4B',
+  accent: '#7B5BFF',
+  accentSoft: '#C3B4FF',
+  shadow: 'rgba(6,14,30,.45)',
+};
+
+// Theme -> world. Every paper channel owns its ground; anything unmapped keeps FWF
+// (zero regression for nemock-deep-dive and every deck that predates this).
 export const paperWorldFor = (theme?: string): PaperWorldTokens =>
-  theme === 'brg' ? PAPER_BRG : PAPER_FWF;
+  theme === 'brg-deep-dive' ? PAPER_BRG_DEEP
+    : theme === 'brg-paper' ? PAPER_BRG
+      : PAPER_FWF;
 
 // House timing (spec §3): snap-and-settle, stop-motion energy. Springs only.
 export const SNAP = {damping: 13, stiffness: 200} as const;   // place

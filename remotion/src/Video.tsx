@@ -16,6 +16,7 @@ import {Schematic} from './components/Schematic';
 import {CTA} from './components/CTA';
 import {BrandSting, StepFlow} from './components/Extras';
 import {PaperSting} from './components/PaperSting';
+import {BRGPaperSting} from './components/BRGPaperSting';
 import {KeepCard} from './components/KeepCard';
 import {PaperHook} from './components/PaperHook';
 import {PaperSetHook, PaperPopCard, PaperCounter} from './components/PaperSet';
@@ -26,12 +27,14 @@ import {DrawLine, Waterfall, Pictograph, Ring, Funnel} from './components/DataVi
 import {ReactiveStrip, Waveform} from './components/Audio';
 import {PaperAtom, ElementStat, DiscoveryCard, PeriodicSlot, PaperWord, PaperFire, PaperProp, PaperCTA, PaperMolecule} from './components/Chem';
 import {InkProvider, isPaperTheme} from './ink';
+import {WorldProvider} from './components/PaperWorld';
 
 // the component catalog (motion-playbook §2). Unknown -> TalkingScene (captions-led).
 const REGISTRY: Record<string, React.FC<any>> = {
   Hero3D,
   BrandSting,
   PaperSting,
+  BRGPaperSting,
   KeepCard,
   PaperHook,
   // Papercraft Motion (papercraft-motion-spec.md; migration map in
@@ -131,7 +134,10 @@ export const Video: React.FC<VideoProps> = (props) => {
   const contentBottom = height > width ? Math.round(height * (theme === 'cut-bond' ? 0.36 : 0.34)) : 0;
   return (
     <InkProvider theme={theme}>
-    <AbsoluteFill style={{backgroundColor: paper ? '#f4ecd6' : '#090d1c'}}>
+    <WorldProvider theme={theme}>
+    {/* base page: BRG's cream is a shade cooler than the FWF sheet; every other theme
+        keeps its exact prior value so no existing render moves. */}
+    <AbsoluteFill style={{backgroundColor: paper ? (theme === 'brg-deep-dive' ? '#f5f0eb' : '#f4ecd6') : '#090d1c'}}>
       {paper ? <PaperBackground /> : <Background />}
       {scenes.map((scene, i) => {
         const Comp = REGISTRY[scene.component] || TalkingScene;
@@ -156,6 +162,7 @@ export const Video: React.FC<VideoProps> = (props) => {
         </Sequence>
       ) : null}
     </AbsoluteFill>
+    </WorldProvider>
     </InkProvider>
   );
 };

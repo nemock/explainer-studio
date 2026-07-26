@@ -1,17 +1,17 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
-import {PAPER_FWF} from '../brands/papercraft';
-import {Camera, CameraMove, PLANE, Plane, PaperTable, PaperCard, resolveCamera, usePlace, usePopup, flick, placeStyle} from './PaperWorld';
+import {useWorld, Camera, CameraMove, PLANE, Plane, PaperTable, PaperCard, resolveCamera, usePlace, usePopup, flick, placeStyle} from './PaperWorld';
 
 // Papercraft Motion — prototype scene components (papercraft-motion-spec.md §7).
 // PaperSetHook: multi-plane cold open. PaperPopCard: keep-card popup on the table.
 // PaperCounter: a stat as stacked paper chips that slap down and land on the cue.
 // All beats come from the engine's cue resolution (deck "cues" -> fields.cueFrames).
 
-const W = PAPER_FWF;
+// W now comes from the world context (per component, below) so each paper
+// channel keeps its own ground; see PaperWorld.WorldProvider (2026-07-26).
 
-const colorize = (text: string, accent: string[] = []) => {
+const colorize = (text: string, accent: string[] = [], accentColor: string) => {
   if (!accent || !accent.length) return text;
   let parts: React.ReactNode[] = [text];
   accent.forEach((a) => {
@@ -21,7 +21,7 @@ const colorize = (text: string, accent: string[] = []) => {
       const segs = p.split(a);
       segs.forEach((s, i) => {
         if (s) out.push(s);
-        if (i < segs.length - 1) out.push(<span key={a + i} style={{color: W.accent}}>{a}</span>);
+        if (i < segs.length - 1) out.push(<span key={a + i} style={{color: accentColor}}>{a}</span>);
       });
       return out;
     });
@@ -32,6 +32,7 @@ const colorize = (text: string, accent: string[] = []) => {
 // A placed element: object + its lagged shadow (the unseen hand, spec §3).
 const Placed: React.FC<{at: number; style?: React.CSSProperties; shadowW?: string; children: React.ReactNode}> =
 ({at, style, shadowW = '86%', children}) => {
+  const W = useWorld();
   const {height} = useVideoConfig();
   const p = usePlace(at);
   return (
@@ -51,6 +52,7 @@ const Placed: React.FC<{at: number; style?: React.CSSProperties; shadowW?: strin
 // Beat cards place on b1..bN; on `push` the camera steps in and the headline
 // card places. Between beats: dead-still holds (stop-motion).
 export const PaperSetHook: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
+  const W = useWorld();
   const frame = useCurrentFrame();
   const {width, height} = useVideoConfig();
   const cf = fields.cueFrames || {};
@@ -101,7 +103,7 @@ export const PaperSetHook: React.FC<{fields: any; durationInFrames: number}> = (
                              textTransform: 'uppercase', color: W.accent, textAlign: 'center', marginBottom: height * 0.012}}>{fields.kicker}</div>
               ) : null}
               <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.062, lineHeight: 1.08,
-                           color: W.ink, textAlign: 'center'}}>{colorize(fields.headline || '', fields.accent)}</div>
+                           color: W.ink, textAlign: 'center'}}>{colorize(fields.headline || '', fields.accent, W.accent)}</div>
             </PaperCard>
           </div>
         </div>
@@ -114,6 +116,7 @@ export const PaperSetHook: React.FC<{fields: any; durationInFrames: number}> = (
 // PaperPopCard — a keep-card/figure pops up from the table (spec §7 "keep-card").
 // fields: {image, label, sub, cueFrames:{pop?, in?}}
 export const PaperPopCard: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
+  const W = useWorld();
   const frame = useCurrentFrame();
   const {fps, width, height} = useVideoConfig();
   const cf = fields.cueFrames || {};
@@ -158,6 +161,7 @@ export const PaperPopCard: React.FC<{fields: any; durationInFrames: number}> = (
 // counts with the chips and flicks on the landing; the key light snaps tight.
 // fields: {value, suffix?, label, kicker, cueFrames:{land}}
 export const PaperCounter: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
+  const W = useWorld();
   const frame = useCurrentFrame();
   const {fps, width, height} = useVideoConfig();
   const value = fields.value ?? 0;

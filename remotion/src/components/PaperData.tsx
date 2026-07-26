@@ -1,21 +1,23 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
-import {PAPER_FWF} from '../brands/papercraft';
-import {CameraMove, PLANE, Plane, PaperTable, PaperCard, resolveCamera, usePlace, popupStyle, placeStyle, flick} from './PaperWorld';
+import {useWorld, CameraMove, PLANE, Plane, PaperTable, PaperCard, resolveCamera, usePlace, popupStyle, placeStyle, flick} from './PaperWorld';
 
 // Papercraft Motion — data & structure family (papercraft-motion-spec.md §7).
 // Charts are physical objects: stairs pop up step by step and a paper pawn
 // climbs them; compares are two trays; flows are cards along a paper path.
 
-const W = PAPER_FWF;
+// W now comes from the world context (per component, below) so each paper
+// channel keeps its own ground; see PaperWorld.WorldProvider (2026-07-26).
 
-const Kicker: React.FC<{text?: string; height: number}> = ({text, height}) =>
-  text ? (
+const Kicker: React.FC<{text?: string; height: number}> = ({text, height}) => {
+  const W = useWorld();
+  return text ? (
     <div style={{position: 'absolute', top: height * 0.12, left: 0, right: 0, textAlign: 'center',
                  fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.026, letterSpacing: 5,
                  textTransform: 'uppercase', color: W.accentSoft}}>{text}</div>
   ) : null;
+};
 
 // ---------------------------------------------------------------------------
 // PaperStairs — trend/chart as a physical staircase. Steps popup in sequence
@@ -23,6 +25,7 @@ const Kicker: React.FC<{text?: string; height: number}> = ({text, height}) =>
 // element climbs them; the end label places on a tag at the top step.
 // fields: {kicker, points:[num], endLabel, kind, cueFrames:{land?}}
 export const PaperStairs: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
+  const W = useWorld();
   const frame = useCurrentFrame();
   const {fps, width, height} = useVideoConfig();
   const raw: number[] = (fields.points || []).map((p: any) => (typeof p === 'number' ? p : p?.value ?? 0));
@@ -88,6 +91,7 @@ export const PaperStairs: React.FC<{fields: any; durationInFrames: number}> = ({
 // harder shadow with a plum header strip (the palette carries the judgment).
 // fields: {left:{title,value,kind}, right:{title,value,kind}, cueFrames:{l?,r?}}
 export const PaperCompare: React.FC<{fields: any}> = ({fields}) => {
+  const W = useWorld();
   const frame = useCurrentFrame();
   const {fps, width, height} = useVideoConfig();
   const cf = fields.cueFrames || {};
@@ -131,6 +135,7 @@ export const PaperCompare: React.FC<{fields: any}> = ({fields}) => {
 // camera steps laterally with the active card.
 // fields: {kicker, steps:[string|{title}], itemTimes?}
 export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
+  const W = useWorld();
   const frame = useCurrentFrame();
   const {fps, width, height} = useVideoConfig();
   const steps: string[] = (fields.steps || []).map((s: any) => (typeof s === 'string' ? s : s?.title || ''));
@@ -186,6 +191,7 @@ export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({f
 // PaperList — items place one by one AS they're said: lilac number chip + a
 // cream strip per item. fields: {kicker, title, items[], itemTimes?}
 export const PaperList: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
+  const W = useWorld();
   const frame = useCurrentFrame();
   const {fps, width, height} = useVideoConfig();
   const items: string[] = fields.items || [];
@@ -230,6 +236,7 @@ export const PaperList: React.FC<{fields: any; durationInFrames: number}> = ({fi
 // settle + shadow), the offer card places beside it, warm soft light.
 // fields: {kicker, headline, accent, subkicker, image (book cover, staged)}
 export const PaperBookCTA: React.FC<{fields: any}> = ({fields}) => {
+  const W = useWorld();
   const frame = useCurrentFrame();
   const {width, height} = useVideoConfig();
   const book = usePlace(6);

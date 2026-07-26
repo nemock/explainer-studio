@@ -1,17 +1,17 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
-import {PAPER_FWF} from '../brands/papercraft';
-import {PaperTable, PaperCard, usePlace, usePopup, flick} from './PaperWorld';
+import {useWorld, PaperTable, PaperCard, usePlace, usePopup, flick} from './PaperWorld';
 
 // Papercraft Motion — text family (papercraft-motion-spec.md §7). Text is always
 // printed ON paper that physically exists in the set: statements/quotes/punches/
 // definitions are cream cards and tags placed or popped onto the dark table.
 // Beats come from the engine cue map ("cues" -> fields.cueFrames).
 
-const W = PAPER_FWF;
+// W now comes from the world context (per component, below) so each paper
+// channel keeps its own ground; see PaperWorld.WorldProvider (2026-07-26).
 
-const colorize = (text: string, accent: string[] = []) => {
+const colorize = (text: string, accent: string[] = [], accentColor: string) => {
   if (!accent || !accent.length) return text;
   let parts: React.ReactNode[] = [text];
   accent.forEach((a) => {
@@ -21,7 +21,7 @@ const colorize = (text: string, accent: string[] = []) => {
       const segs = p.split(a);
       segs.forEach((s, i) => {
         if (s) out.push(s);
-        if (i < segs.length - 1) out.push(<span key={a + i} style={{color: W.accent}}>{a}</span>);
+        if (i < segs.length - 1) out.push(<span key={a + i} style={{color: accentColor}}>{a}</span>);
       });
       return out;
     });
@@ -29,17 +29,20 @@ const colorize = (text: string, accent: string[] = []) => {
   return parts;
 };
 
-const Kicker: React.FC<{text?: string; height: number}> = ({text, height}) =>
-  text ? (
+const Kicker: React.FC<{text?: string; height: number}> = ({text, height}) => {
+  const W = useWorld();
+  return text ? (
     <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.022, letterSpacing: 4,
                  textTransform: 'uppercase', color: W.accent, textAlign: 'center', marginBottom: height * 0.014}}>
       {text}
     </div>
   ) : null;
+};
 
 // statement / quote / highlight -> a cream card places center; optional `hit`
 // cue flicks the card + snaps the light (used when the line lands mid-scene).
 export const PaperStatement: React.FC<{fields: any}> = ({fields}) => {
+  const W = useWorld();
   const frame = useCurrentFrame();
   const {width, height} = useVideoConfig();
   const cf = fields.cueFrames || {};
@@ -56,7 +59,7 @@ export const PaperStatement: React.FC<{fields: any}> = ({fields}) => {
           <PaperCard style={{...p.object, padding: `${height * 0.034}px ${width * 0.032}px`, borderRadius: 20}}>
             <Kicker text={fields.kicker} height={height} />
             <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.06, lineHeight: 1.1,
-                         color: W.ink, textAlign: 'center'}}>{colorize(fields.headline || '', fields.accent)}</div>
+                         color: W.ink, textAlign: 'center'}}>{colorize(fields.headline || '', fields.accent, W.accent)}</div>
             {fields.attrib ? (
               <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: height * 0.026, color: W.accent,
                            textAlign: 'center', marginTop: height * 0.018}}>— {fields.attrib}</div>
@@ -75,6 +78,7 @@ export const PaperStatement: React.FC<{fields: any}> = ({fields}) => {
 // define -> the term on a big tag (places on its cue), the definition UNFOLDS
 // beneath it (two-step clip reveal with a fold shade).
 export const PaperDefine: React.FC<{fields: any}> = ({fields}) => {
+  const W = useWorld();
   const frame = useCurrentFrame();
   const {fps, width, height} = useVideoConfig();
   const cf = fields.cueFrames || {};
@@ -114,6 +118,7 @@ export const PaperDefine: React.FC<{fields: any}> = ({fields}) => {
 // spotlight snap, flick; kind "bad" places the warning-triangle element beside
 // it a beat later (the palette has no red — the warning prop carries the alarm).
 export const PaperPunch: React.FC<{fields: any}> = ({fields}) => {
+  const W = useWorld();
   const frame = useCurrentFrame();
   const {width, height} = useVideoConfig();
   const cf = fields.cueFrames || {};

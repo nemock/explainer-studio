@@ -1,6 +1,16 @@
-import React from 'react';
+import React, {createContext, useContext} from 'react';
 import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
-import {PaperWorldTokens, PAPER_FWF, SNAP, HINGE, CAM} from '../brands/papercraft';
+import {PaperWorldTokens, PAPER_FWF, paperWorldFor, SNAP, HINGE, CAM} from '../brands/papercraft';
+
+// World context (2026-07-26) — which channel's paper ground/palette this render uses.
+// Mirrors InkProvider: theme-keyed, defaulting to FWF so every existing paper deck is
+// byte-identical. Components call useWorld() instead of importing PAPER_FWF directly,
+// which is what let BRG get its own ground without repainting Dave's.
+const WorldContext = createContext<PaperWorldTokens>(PAPER_FWF);
+export const WorldProvider: React.FC<{theme?: string; children: React.ReactNode}> = ({theme, children}) => (
+  <WorldContext.Provider value={paperWorldFor(theme)}>{children}</WorldContext.Provider>
+);
+export const useWorld = (): PaperWorldTokens => useContext(WorldContext);
 
 // Papercraft Motion — shared world infrastructure (papercraft-motion-spec.md §2/§3/§6).
 // The scene is a miniature SET on a dark table: four planes (table/set/stage/float)
@@ -110,7 +120,8 @@ const tearPoints = (seed: string, n = 9): number[] => {
   return out;
 };
 
-export const TearReveal: React.FC<{seed?: string; world?: PaperWorldTokens}> = ({seed = 't', world = PAPER_FWF}) => {
+export const TearReveal: React.FC<{seed?: string; world?: PaperWorldTokens}> = ({seed = 't', world: worldProp}) => {
+  const world = worldProp ?? useWorld();
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const DUR = 14;
@@ -146,7 +157,8 @@ export const PaperTable: React.FC<{
   seed?: string;
   tightenAt?: number | null;
   mood?: 'soft' | 'hard';
-}> = ({world = PAPER_FWF, seed = 'set', tightenAt = null, mood = 'soft'}) => {
+}> = ({world: worldProp, seed = 'set', tightenAt = null, mood = 'soft'}) => {
+  const world = worldProp ?? useWorld();
   const frame = useCurrentFrame();
   const {width, height} = useVideoConfig();
   const r1 = hash(seed), r2 = hash(seed + 'b'), r3 = hash(seed + 'c');
@@ -183,10 +195,13 @@ export const PaperCard: React.FC<{
   world?: PaperWorldTokens;
   style?: React.CSSProperties;
   children: React.ReactNode;
-}> = ({world = PAPER_FWF, style, children}) => (
+}> = ({world: worldProp, style, children}) => {
+  const world = worldProp ?? useWorld();
+  return (
   <div style={{background: world.paper, borderRadius: 14,
                borderBottom: `6px solid ${world.paperShade}`,
                padding: '0.6em 0.9em', ...style}}>
     {children}
   </div>
-);
+  );
+};
