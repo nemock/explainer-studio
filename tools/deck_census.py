@@ -28,7 +28,18 @@ def slide_has_cues(s):
         return True
     if any(a.get("cue") for a in s.get("annotations", [])):
         return True
+    if any(m.get("cue") for m in s.get("marks", [])):  # image-space figure callouts
+        return True
+    if any(m.get("cue") for m in s.get("moves", [])):  # top-level figure tour moves
+        return True
     if any(st.get("cue") for st in s.get("schematic", {}).get("stages", [])):
+        return True
+    # `schematic` slides carry their stages at the TOP level (that is what
+    # remotion_engine._scene_for reads); the nested form above never matches a real
+    # deck. Without this the census reports 0 cues on a fully-cued schematic deck.
+    if any(st.get("cue") for st in s.get("stages", [])):
+        return True
+    if any(e.get("cue") for e in s.get("camera", [])):
         return True
     fig = s.get("figure") or {}
     if any(m.get("cue") for m in fig.get("moves", [])) or fig.get("highlight", {}).get("cue"):
@@ -62,7 +73,7 @@ def main():
         run = run + 1 if f else 0
         max_run = max(max_run, run)
 
-    annotated = sum(1 for s in slides if s.get("annotations"))
+    annotated = sum(1 for s in slides if s.get("annotations") or s.get("marks"))
     cued = sum(1 for s in slides if slide_has_cues(s))
     dataviz = sum(types.get(t, 0) for t in DATA_VIZ_TYPES)
     teaching = sum(types.get(t, 0) for t in TEACHING_TYPES)
