@@ -129,6 +129,18 @@ to date missed length on the first draft; the rule exists because it bites).
      exactly the manipulation the brand is the antidote to. A small "I might be
      wrong about some of this" is good: it lowers the barrier to reply AND models
      the operator's voice. Annotate the segment `device: comment_prompt`.
+     - **Register: warm curiosity, NOT a debate invite (operator behavior, 2026-07-26).**
+       The comment prompt is the ONE beat the operator rewrites live in the booth
+       essentially every time, and he always softens it the same way. Across #48/#49/#51
+       he replaced scripted closers like *"I read the disagreements more carefully than
+       the applause"* and *"I'd rather be corrected than repeated"* with *"hey, tell me
+       that in the comments as well"*, *"I love the disagreements and I read them every
+       time"*, and *"let me know how this works, I'd genuinely love to know more."*
+       Those two stock lines are RETIRED. Write the warm version first: an honest open
+       question plus a genuine "I'd love to know how this actually works for you." Still
+       an opinion-splitter, just framed as an invitation rather than a contest — which
+       also matters whenever the video reaches past the operator's own expertise.
+       See memory [[comment-prompt-warmer-not-combative]].
    - **Final CTA = ONE ask, then stop.** Close on a single `cta`/`payoff` slide
      naming the operator's book/site/newsletter and a single "subscribe". That's
      the end of the video. **CUT the old "final sentence = an action imperative"

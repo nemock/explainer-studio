@@ -197,7 +197,14 @@ motion-playbook §5/§2H). What you author in `deck.json`:
   `{kind: arrow|circle|underline|strike|box, from/to or at+w/h, color?, label?, cue}`
   or `{kind: doodle, name: "<category>/<name>" from library/doodles/manifest.json,
   at, w, color?, reveal: pop|wipe, cue}`. One focal annotation at a time; use them to
-  point at the thing being said, not as decoration.
+  point at the thing being said, not as decoration. `annotations` are FRAME-space —
+  they do NOT move with a figure/footage Ken Burns.
+- **`marks: [...]`** — the IMAGE-space twin of annotations, for pointing at something
+  INSIDE a `figure`/`footage`'s art (a face, a robot, a chart). Same kinds + cue contract,
+  but `at`/`from`/`to` are **0-1 of the IMAGE**, and the mark rides the Ken Burns so it
+  stays locked on its subject as the shot pans/zooms (a frame-space `annotations` circle
+  drifts off a moving subject — that's the bug it fixes, motion-playbook §2H, 2026-07-17).
+  Measure the subject's fraction off the actual image file. Counts toward annotation coverage.
 - **`figure` guided tours:** `moves[]{to:{x,y,scale}, cue}` pans/zooms the framed
   image region-to-region as the narration discusses each part;
   `assemble{pieces[]{clip:[x,y,w,h], cue}}` builds the image in cued pieces;
@@ -261,6 +268,12 @@ every `accent`/`accent2`/`mark` token is a substring of its headline/title; no
       `list` slide on the segment where the framework is first laid out, so the
       viewer gets the artifact without an end recap.
 - [ ] On-screen text is terse — no slide dumps the full spoken sentence.
+- [ ] **Caption-break coherence (spoken-humanizer step 7, operator directive 2026-07-24):**
+      captions paginate at ~6 words + sentence boundaries. Confirm no page strands a
+      fragment that reads as a typo out of context (canonical failure: "form this
+      month." split off from "login form", #47). Where a break falls wrong,
+      repunctuate the segment text so the page breaks cleanly (a period forces a new
+      page; a comma does not) — then re-align.
 - [ ] Every `accent`/`accent2`/`mark` word actually appears in its headline/title.
 - [ ] Numbers on slides trace to the script/wiki; none invented; illustrative
       figures are labeled as such (a `delta.change` note, a caption).
@@ -272,6 +285,19 @@ every `accent`/`accent2`/`mark` token is a substring of its headline/title; no
       is consciously accepted).
 - [ ] Annotations: ≤2 per slide, one focal at a time; doodle `name`s exist in
       `library/doodles/manifest.json`; schematic ≤9 nodes.
+- [ ] **NO frame-space `annotations` on TEXT-type slides (statement / statgrid / punch /
+      compare / define / hook-without-image). Operator directive 2026-07-26, #49 — every
+      one of seven authored underlines landed wrong (under the subtitles, floating in a
+      gap, offset from the word), and Dave caught three of them himself.** Frame-space
+      marks guess an absolute x/y and the text is centered, wrapping, and drifting, so the
+      target moves out from under them. The `accent`/`accentRed` word coloring already
+      does that emphasis job correctly, because the renderer colors the actual word.
+      **Only use image-space `marks` on `figure`/`footage` slides** — those render INSIDE
+      the image's moving container, so they ride the Ken Burns and stay on-subject
+      ([[annotation-marks-land-on-subject]]). Place them by OPENING the actual image and
+      reading the subject's position, never by estimating; verify with a still before the
+      full render. If the census's annotation-coverage floor is short, add an image-space
+      mark to another figure — never satisfy it by putting an underline back on a text card.
 - [ ] Long segments (>20s) carry a mid-scene motion beat — an annotation, a cued
       stage, or a figure move — so no shot sits static through speech (QA's
       longest-shot warning is the tell).

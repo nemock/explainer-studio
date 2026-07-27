@@ -105,6 +105,30 @@ the ban is on the SPEAKER claiming new honesty about themselves.)
   reads as engineered. One short punch line for emphasis is good; a stack is not.
 - **Nominalizations / passive voice:** prefer active verbs and a named actor.
 
+### A4. Conversational fidelity — write the contraction, always (operator directive 2026-07-24)
+The operator reads every line aloud, and his delivery — the emotion, emphasis,
+and personality no TTS could ever match — **is the product**. It's what gives
+these videos their feeling. A stiff, written-out line makes him *fight the
+teleprompter* instead of telling the story, and that tension shows on camera.
+So the words on the page must already sound like a person talking, not a
+"stiff, overly perfect, machine-sounding script."
+
+Default to contractions **everywhere a person would use them**: don't (not "do
+not"), I'm, here's, that's, you're, it's, can't, couldn't, won't, who's, we're,
+they'd. Written-out forms ("do not", "I am", "cannot", "you are", "it is") read
+as machine-formal and flatten the read. Reserve them ONLY for a deliberate,
+spaced emphasis beat ("you can **not** ship that"). Grep for the written-out
+forms and contract every non-emphatic hit. *(Operator, verbatim: "I say don't,
+not do not. That's how human beings speak."; #47, 2026-07-24.)* See
+[[dave-delivery-style]].
+
+Caveat when fixing an ALREADY-RECORDED script: match the caption to what the
+operator actually SAID, not to a rule. He contracts naturally on the mic, so a
+written-out script usually just needs the text updated to the contraction +
+re-align (no re-record). But never invent a change the audio won't back — a
+caption that contradicts the voice is the [[annotation-marks-land-on-subject]]
+class of error for text.
+
 ---
 
 ## B. COMPEL — make the speech pull the listener
@@ -185,9 +209,27 @@ Two tests every cold open must pass:
 3. **COMPEL pass:** run the B checklist. Rewrite flat openers, even cadence,
    abstract nouns, and any segment that doesn't earn its next line. Apply the two
    hook tests to seg 0.
-4. **Read every segment ALOUD** (or mentally). Fix tongue-twisters, stacked
+4. **COHERENCE pass (mandatory — operator directive 2026-07-24).** We have shipped
+   several cards with a verb dropped, a word missing, or an entire sentence that
+   simply doesn't parse. These are tiny, human-readable strings — trivial to catch,
+   embarrassing to miss, and they wreck a live read. Go card by card and check:
+   - **Every sentence is complete.** Subject + verb, no dropped words, no half
+     sentence, no two sentences fused into nonsense. (You build massive code
+     flawlessly; hold these few hundred words of English to the same bar.)
+   - **It parses on first read.** If you have to re-read a line to understand it,
+     the operator will stumble on it cold on the teleprompter. Rewrite it.
+   - **The grammar matches how he'll say it** (contractions per A4), so the caption
+     can never contradict the audio.
+5. **Read every segment ALOUD** (or mentally). Fix tongue-twisters, stacked
    clauses, and compressions a first-time reader would stumble on.
-5. Only then present the script gate / open the booth.
+6. Only then present the script gate / open the booth.
+7. **After the deck is built, re-run the coherence pass on the CAPTION BREAKS**
+   (deck-playbook self-QA): captions paginate at ~6 words and sentence boundaries,
+   so confirm no page strands a fragment that reads wrong out of context (the
+   canonical failure: "form this month." split off from "login form", #47). Where a
+   break falls wrong, repunctuate the sentence so the page breaks cleanly — a period
+   forces a new caption page, a comma does not. Never leave a caption that reads as a
+   typo in isolation.
 
 Reusable CUT scanner (write to a file; do not inline multi-line `-c`):
 ```python
@@ -229,4 +271,10 @@ for s in d["segments"]:
 - [ ] Concrete nouns / real numbers / named people, not abstractions.
 - [ ] Direct "you" address; a clear point of view.
 - [ ] Every segment earns the next; open loops + re-hooks honored.
+- [ ] **Contractions everywhere natural (A4);** written-out "do not / I am / cannot"
+      only for deliberate emphasis.
+- [ ] **Coherence: every sentence complete + parses on first read** — no dropped
+      verbs, missing words, or broken/fused sentences.
 - [ ] Read aloud — nothing the operator would stumble on cold.
+- [ ] **After deck build: caption breaks reviewed** — no fragment stranded so it
+      reads as a typo out of context (repunctuate to force a clean page break).

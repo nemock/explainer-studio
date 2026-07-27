@@ -153,7 +153,20 @@ sourced claim you intend to use.
 ### 5. Script (generation plane)
 Read `references/script-playbook.md` AND `references/spoken-humanizer.md` IN FULL
 (the latter shapes the hook + cadence as you write, and is the mandatory CUT +
-COMPEL pass before the booth). Pull operator takes:
+COMPEL pass before the booth). **HumanER first (added 2026-07-26):** also read
+`~/.claude/skills/humaner/VOICE.md` and the "Operator VO script" dial in
+`~/.claude/skills/humaner/FORMATS.md` before drafting — the script is written IN
+the operator's mined voice from the start (spoken register: And/So starts,
+hedged recalled numbers, "right?" check-ins, verdict lines), not voiced after
+the fact. Where spoken-humanizer's blocklist conflicts with the voice profile,
+VOICE.md wins. Stories only from VOICE.md Part 3 or talk_time, flags honored.
+**Pre-booth gate (added 2026-07-26):** before the booth is opened, the finished
+script must pass all four checks: (1) grammar clean; (2) every segment/card is a
+complete thought (nothing ends mid-clause or depends on the previous card to
+parse); (3) the read-aloud test — read every line aloud, rewrite anything that
+trips the tongue, forces a mid-clause breath, or sounds "written"; (4) the stock
+`humanizer` skill has run as lint on the full script (VOICE.md wins conflicts).
+A script failing any check does not open the booth. Pull operator takes:
 ```
 bin/explainer2 talktime --library /Volumes/Casima/claudeCode/make_money/talk_time \
   --topics <comma-list from the blueprint>
@@ -379,9 +392,16 @@ Read `references/article-playbook.md` IN FULL, then write the read-not-heard
 companion essay to `package/article.md`: the SAME content and arc as the script,
 transformed into real written prose (de-spoken, numbers in written style,
 subheads, the Reliance Policy as a boxed list). **No new facts** beyond what the
-video earned. **Mandatory: run the full draft through the operator's `humanizer`
-skill — the actual skill, not a from-memory self-check — and apply its edits;
-it is ground truth for human-readable output.** Set `humanized: true` in the
+video earned. **HumanER first (added 2026-07-26; this article type is exactly
+what got flagged 100% AI on 2026-07-25):** before drafting, read
+`~/.claude/skills/humaner/SKILL.md` + `VOICE.md` (section 1.10 written register)
++ the Substack dial in `FORMATS.md`, and draft in voice from the start — watch
+the seven architecture tells (max one landed line, no coined frameworks or
+callbacks, uneven paragraph rhythm, a parked digression, hedged recalled
+numbers, verified stories only, no manufactured intimacy). **Then the
+`humanizer` skill runs as the mandatory LINT pass — the actual skill, not a
+from-memory self-check — and apply its edits except where they conflict with
+the voice profile; VOICE.md wins conflicts.** Set `humanized: true` in the
 front matter once done. No render gate — the article is text, reviewed in place.
 
 ### 8c. Social share copy (generation plane — `package/linkedin.md`)
@@ -401,8 +421,10 @@ Rules:
 - **Operator voice, not hustle-bro.** Measured, honest, the adult-in-the-room
   take (see the talk-time library + the article). No fabricated claims, no
   numbers the video didn't earn.
-- **Run the draft through the `humanizer` skill** (no em dashes, no clichés,
-  no AI tells) — same ground-truth pass the article gets.
+- **Draft via the HumanER LinkedIn dial** (`~/.claude/skills/humaner/FORMATS.md`;
+  clean register, affirm-then-deposit is for comments — posts open on the hook),
+  **then run the `humanizer` skill as lint** (no em dashes, no clichés, no AI
+  tells) — VOICE.md wins conflicts.
 End with a one-line *Voice note* describing the register, for the operator's
 reference. No render gate — it's text, reviewed in place. (Mirror the format of
 an existing `package/linkedin.md`, e.g. video #07's.)

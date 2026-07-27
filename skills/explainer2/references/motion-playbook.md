@@ -72,8 +72,16 @@ Each entry: **what · when · spec fields · motion · don't.**
 ### A. Typography & text
 - **KineticHook** — the cold open. A punchy headline springs in, accent word in red/green.
   *fields:* `kicker, headline, accent[]`. *Don't* dump the spoken sentence; this is the idea.
-- **KineticCaptions** — word-synced caption window (TikTok-style), active word in green,
-  driven by the alignment JSON. **Baseline on every scene** (long-form and shorts).
+- **KineticCaptions** — word-synced, **paged** caption block (TikTok-style), active word in
+  green, driven by the alignment JSON. **Baseline on every scene** (long-form and shorts).
+  A static block of up to 6 words shows at once; the highlight walks across it *in place*,
+  then the whole block swaps to the next page (one discrete swap every ~2-3s). Two grouping
+  rules in `buildPages`: (1) never exceed `MAX_WORDS` (6); (2) never span a sentence — break
+  after any word ending in `.`/`!`/`?`, so a page never mixes two sentences. *Changed 2026-07-21
+  from a continuously-sliding window* (`start = active − 2`), which recomputed every frame and
+  kept every word marching; a viewer called it jittery/"epilepsy-inducing." The swap is a hard
+  cut (no fade — a fade re-introduces the motion we removed); during pauses the current page
+  holds. *Don't* revert to the sliding window. See `remotion/src/components/Captions.tsx`.
 - **BuildHeadline** — a key line revealed word-by-word in time with delivery.
 - **Reframe** — `before → after` with the old phrase struck/dissolving into the new
   (e.g., "execution solved" → "execution **moved**"). One focal idea.
@@ -103,6 +111,12 @@ Each entry: **what · when · spec fields · motion · don't.**
   `edges[{from,to,label?,kind?}]`, `stages[{reveal:[ids],cue}]`,
   `camera[{center,zoom,stage}]`. 5–9 nodes max (legibility). Use for anything
   non-linear: org maps, buying chains, system diagrams, decision forks, cycles.
+  **Paper-world styling (2026-07-18, Dave):** on the paper themes the Schematic
+  auto-renders nodes as **colored post-it notes** (four colors cycled by node index,
+  navy ink, a turned-up dog-ear corner, a hand-placed tilt + real drop shadow) and edges
+  as **hand-drawn navy Sharpie lines** — the old cream cards + near-white dashed edges had
+  no contrast on the cream page. No authoring change needed; it keys off the theme
+  (`ink.paper`) so the midnight brand is untouched. Engine: `Schematic.tsx`.
 - **StepFlow** — the linear pipeline (idea→MVP→launch→scale); now lands each node on
   its narration cue automatically (auto item-sync, §5).
 - **Funnel** — stages narrowing; great for sales/customer math (auto item-synced).
@@ -129,6 +143,22 @@ Any slide can carry `annotations: [...]` — an overlay ON TOP of the scene, dra
 words (set `cue` to the phrase being said); keep labels ≥ caption size; on `figure`
 slides prefer the figure's own image-space `moves`/`highlight` for document work and
 frame-space annotations for editorial arrows.
+
+**Image-space figure `marks` (IMPLEMENTED 2026-07-17) — callouts that RIDE the Ken Burns.**
+`annotations` are a FRAME-space overlay: they sit over the whole scene and do NOT move
+with a `figure`/`footage` Ken Burns, so a frame-space circle on a panning/zooming subject
+DRIFTS OFF it (looks sloppy). To point at something INSIDE the paper art — the robot's
+head, the rookie's face, a chart — author a **`marks`** array on the `figure`/`footage`
+slide instead. Each mark renders inside the image's own moving container, so it stays
+locked on its subject as the shot moves. Same hand-drawn kinds and cue contract as
+annotations, but coords are **0-1 of the IMAGE** (not the frame):
+`marks: [{kind: circle|arrow|underline|box|strike, at:[x,y] (circle/box/underline) or
+from/to (arrow/strike), w?, h?, color?: green|red|white, cue: "<verbatim phrase>"}]`.
+Measure `at` off the actual generated image (open it and read the subject's fraction).
+Rule of thumb: **anything you'd circle/point-at ON the art → `marks`; editorial marks on
+stable text (a headline, a caption) → frame-space `annotations`.** `marks` count toward the
+§4b annotation-coverage floor. Engine: `FigureMarks` in `remotion/src/components/Media.tsx`,
+cue-resolved in `remotion_engine.py` (like `moves`).
 
 ### D. Document & evidence (the #38 lane, generalized)
 - **DocReveal** — scroll a real page/screenshot.

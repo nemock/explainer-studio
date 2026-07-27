@@ -14,6 +14,18 @@ numbers spelled out for the TTS. The article fixes all of that. If you find
 yourself copying segments across with light edits, stop — you are transcribing,
 not writing.
 
+**VOICE SOURCE (binding, added 2026-07-26):** the article is written in the
+operator's mined voice via the HumanER skill. Before drafting, read
+`~/.claude/skills/humaner/VOICE.md` (especially section 1.10, the written
+register) and the Substack dial in `~/.claude/skills/humaner/FORMATS.md`. The
+seven architecture tells in `~/.claude/skills/humaner/SKILL.md` are the failure
+modes that got this exact article type flagged 100% AI-generated (2026-07-25):
+max one landed line per piece, no coined frameworks or callback motifs, uneven
+paragraph rhythm, at least one parked digression, hedged recalled numbers vs
+exact cited ones, verified stories only, no manufactured intimacy. The stock
+`humanizer` skill runs AFTER drafting as a lint pass; VOICE.md wins conflicts.
+Everything below layers on top of that voice source.
+
 ---
 
 ## 0. The contract (read once)
