@@ -153,7 +153,20 @@ base itself instead of waiting on the operator to paste prompts into an external
   for our bases. Reserve Nano Banana Pro as a fallback only when GPT 2's likeness slips.
   Photoreal thumbnail bases ARE allowed (this is a thumbnail, not in-video; see the
   disclosure note in the plan doc).
-- **Selfie-as-base** (keep Dave in the scene, on-model): upload a `dave_selfies/*.png`,
+- **Operator directive 2026-07-24 (#47): for a PHOTOREAL Dave thumbnail, Claude generating
+  the base via Magnific is now the GO-TO** — generate a few 16:9 variations, pick an
+  acceptable one (show the operator; he'll flag any bad likeness), then superimpose the
+  headline. No longer wait on the operator to paste prompts into an external tool for these.
+- **Standing photoreal-Dave reference = the library character `self` (id 2046066)** — a
+  persistent Magnific character (salt-and-pepper beard, receding hairline). Pass
+  `references:[{type:"character", identifier:"2046066"}]`; NO per-video selfie upload needed.
+  (The `dave_selfies/*.png` upload flow below still works as a fallback / for a specific outfit.)
+- **Model for photoreal likeness = Nano Banana 2 (`imagen-nano-banana-2-flash`)** — strong
+  character consistency + photoreal (used #47, 2026-07-24: 4 variations, ~75cr each, likeness
+  held). `gpt-2` remains the default for STYLIZED/infographic bases; reach for Nano Banana when
+  the target is a photoreal scene with Dave in it. Put Dave on the RIGHT with a darker/cleaner
+  LEFT third for the headline; a legibility `.scrim` behind the text covers any busy base.
+- **Selfie-as-base** (fallback / specific outfit): upload a `dave_selfies/*.png`,
   then reference it. Sequence: `creations_request_upload {mimeType:"image/png"}` →
   `python3 tools/imagegen.py put <selfie> "<proxyUploadUrl>"` →
   `creations_finalize_upload {path}` (→ creation id) → `images_generate {prompt,
@@ -254,10 +267,20 @@ If a brand has no `thumbnail` block, use the §0/§2 defaults.
 python tools/html2png.py <project>/package/thumbnails/thumb_a.html \
   <project>/package/thumbnails/thumb_a.png --width 1280 --height 720
 ```
-(2× device scale is built in for crisp text.) **A/B Test & Compare is the
-standing default (operator directive, 2026-06-19): ALWAYS produce two variants
-and upload both to Test & Compare. Never ask the operator whether to A/B or
-which to lead with — both go up, every time, and YouTube picks the winner.**
+(2× device scale is built in for crisp text.)
+
+**A/B Test & Compare is RETIRED (operator directive, 2026-07-26).** Dave: "we
+really don't get enough data to do an A/B test. They're always inconclusive. It's
+just not worth the effort of uploading." The channel's per-video volume never
+reaches significance, so the extra step buys friction, not information.
+
+**The current rule: ship ONE best thumbnail and ONE best title.** Still build
+**two** thumbnails, but the second is for **promotional reuse** (social, the
+newsletter, LinkedIn), not for testing — design it to stand alone in those
+contexts rather than as a near-twin of A. Name them plainly: `thumb_a` = the live
+thumbnail, `thumb_b` = promo. `publish` sets thumbnail A over the API and nothing
+further is needed in Studio; the old "Ineligible until Public" two-step below is
+now moot and kept only as historical context.
 
 **Test & Compare is a TWO-STEP, post-publish flow (operator directive,
 2026-06-26: "it's always ineligible until the video is actually set as public;
