@@ -30,6 +30,30 @@ RENDER_LOCKFILE = "/tmp/explainer-render.lock"   # renderlock.LOCKFILE (shared, 
 DRIFT_TIMEOUT_S = 150            # hard cap on a drift transcription; a hung mlx_whisper must never hold this server's GIL
 
 
+def _resolve_tool(name):
+    """Resolve an external binary by PATH, falling back to common install dirs.
+
+    The booth is often launched detached from a scheduled/recovery context whose PATH
+    lacks /opt/homebrew/bin, so a bare "ffmpeg" lookup fails inside /save and a take is
+    captured but never finalized — the browser only sees a late "Save FAILED". Resolve
+    once, at import, against PATH and the usual Homebrew/local dirs. The serve() preflight
+    turns a still-unresolved tool into a loud startup failure. See routine_changes
+    2026-07-16-recording-booth-ffmpeg-path-failure.
+    """
+    found = shutil.which(name)
+    if found:
+        return found
+    for d in ("/opt/homebrew/bin", "/usr/local/bin", "/usr/bin"):
+        cand = Path(d) / name
+        if cand.exists():
+            return str(cand)
+    return name  # last resort; preflight fails loudly if it is genuinely absent
+
+
+FFMPEG = _resolve_tool("ffmpeg")
+FFPROBE = _resolve_tool("ffprobe")
+
+
 def _transcribe_isolated(wav_path, model, timeout):
     """Transcribe one take in a CHILD process with a hard timeout.
 
@@ -101,11 +125,11 @@ def _probe_wav(path: Path):
     """Duration + level stats via ffprobe/ffmpeg volumedetect. Cheap (<300ms)."""
     try:
         dur = float(subprocess.run(
-            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+            [FFPROBE, "-v", "error", "-show_entries", "format=duration",
              "-of", "csv=p=0", str(path)], capture_output=True, text=True).stdout.strip())
     except (ValueError, TypeError):
         return None
-    vd = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(path),
+    vd = subprocess.run([FFMPEG, "-hide_banner", "-i", str(path),
                          "-af", "volumedetect", "-f", "null", "-"],
                         capture_output=True, text=True).stderr
     mean = peak = None
@@ -509,7 +533,7 @@ def run(proj, open_browser=True):
                 webm = vdir / f"{cur['stem'][sid]}.webm"
                 webm.write_bytes(blob)
                 archive_take(sid)
-                r = subprocess.run(["ffmpeg", "-hide_banner", "-y", "-i", str(webm),
+                r = subprocess.run([FFMPEG, "-hide_banner", "-y", "-i", str(webm),
                                     "-ar", "48000", "-ac", "1", str(wav(sid))], capture_output=True)
                 webm.unlink(missing_ok=True)
                 ok = r.returncode == 0 and wav(sid).exists()
@@ -523,7 +547,7 @@ def run(proj, open_browser=True):
                 tmp = vdir / "roomtone.webm"
                 tmp.write_bytes(blob)
                 out = vdir / "roomtone.wav"
-                r = subprocess.run(["ffmpeg", "-hide_banner", "-y", "-i", str(tmp),
+                r = subprocess.run([FFMPEG, "-hide_banner", "-y", "-i", str(tmp),
                                     "-ar", "48000", "-ac", "1", str(out)], capture_output=True)
                 tmp.unlink(missing_ok=True)
                 if r.returncode == 0 and out.exists():
@@ -551,6 +575,17 @@ def run(proj, open_browser=True):
                 self._send(200, json.dumps({"ok": True, "report": wrap_report()}))
             else:
                 self._send(404, b"{}")
+
+    # Preflight: /save and /roomtone transcode with ffmpeg and /probe uses ffprobe. If either
+    # is missing, a take is captured but can never be finalized and the browser only sees a late
+    # "Save FAILED". Fail loudly HERE, before the port binds and the mic is ever armed, so a bad
+    # environment can never cost a recorded take. See routine_changes 2026-07-16.
+    missing = [n for n, p in (("ffmpeg", FFMPEG), ("ffprobe", FFPROBE)) if shutil.which(p) is None]
+    if missing:
+        raise RuntimeError(
+            f"recorder cannot start: required tool(s) not found: {', '.join(missing)}. "
+            f"Install with 'brew install ffmpeg', or ensure /opt/homebrew/bin is on the booth's "
+            f"PATH. Refusing to open the booth so a take is never lost to a failed save.")
 
     # FIXED port so the origin (host:port) is stable across segments — Chrome scopes the mic
     # permission to the exact origin, so a random port re-prompts every tab. Override with

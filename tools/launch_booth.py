@@ -38,11 +38,13 @@ the tab, just the tab appearing. Best-effort — a failed `open` never fails
 the launch (the URL is still printed). `--status` and `--wait` never open
 anything; pass --no-open for headless/testing launches.
 
-Port: 8765 fixed (Chrome scopes the mic grant to the exact origin). If 8765 is
-already held by ANOTHER project's booth, the launcher auto-falls back to the
-next free port (8766..8770) rather than failing an unattended routine fire —
-same trade v1's recordlock makes (a one-click mic re-grant on the new origin).
-The chosen URL is printed and recorded in <project>/work/booth_port.
+Port: each routine family gets its own stable "home" port (see FAMILY_HOME),
+so a booth tab always serves its own routine's script and Chrome remembers the
+mic grant per origin. Chrome scopes the mic grant to the exact origin, so a
+stable per-routine port also means at most one mic re-grant, ever. If a family's
+home port is already held (a same-family project, or an overflow), the launcher
+falls back to the next free port in the 8765..8794 pool rather than failing an
+unattended fire. The chosen URL is printed and recorded in <project>/work/booth_port.
 
 The Finish signal: the booth writes <project>/work/record_done.json when the operator
 clicks "Finish & render". Run `--wait` as a harness-tracked background task right after
@@ -50,6 +52,7 @@ launching the booth; it returns the moment that file appears, so the harness not
 agent that recording is done. The sentinel is durable, so even if the waiter dies (app
 suspend), the signal isn't lost: re-run `--wait`, `--status`, or just check for the file.
 """
+import hashlib
 import json
 import os
 import subprocess
@@ -59,9 +62,55 @@ import urllib.request
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+WORKSPACE = Path("/Volumes/Casima/claudeCode")
 BASE_PORT = 8765
-FALLBACK_PORTS = range(8765, 8771)
+NUM_PORTS = 30                                    # booth port pool: 8765..8794
+ALL_PORTS = range(BASE_PORT, BASE_PORT + NUM_PORTS)
 LOG = Path("/tmp/explainer-booth.log")
+
+# Per-routine "home" port so each routine's booth keeps its own origin. Two goals:
+# (1) a stray booth tab from a DIFFERENT routine can never end up serving this
+# routine's script (the :8765 collision of 2026-07-22, where a Who-Signs-the-Check
+# tab served an ISO 14971 masterclass deck), and (2) Chrome scopes the mic grant to
+# the origin, so a stable per-routine port means Chrome re-asks for the mic at most
+# once, ever, instead of every time the shared :8765 bounced to a fallback.
+# Key = the path segment directly under the workspace root (the routine family).
+# Residual (accepted): routines that SHARE a family dir (the two ig_carousel dailies)
+# or run two projects in one day (explainer deep dives) still contend within their
+# one home port and fall through to the free-port scan in start().
+FAMILY_HOME = {
+    "Monday MedTech":         8765,
+    "Founder_Tip_Tuesday":    8766,
+    "Who Signs The Check":    8767,
+    "The Teardown":           8768,
+    "Failure Modes Friday":   8769,
+    "ig_carousel":            8770,   # daily founder tip AND daily beats both write here
+    "explainer-content":      8771,   # explainer2 deep dives / studio
+    "ISO_14971_Masterclass":  8772,
+    "waveform-studio":        8773,
+}
+_HASH_BASE = 8780                                 # unlisted families hash into 8780..8794
+
+
+def _family(project):
+    """The routine family: the first path segment under the workspace root
+    (e.g. 'Who Signs The Check', 'ig_carousel', 'ISO_14971_Masterclass')."""
+    try:
+        return Path(project).resolve().relative_to(WORKSPACE).parts[0]
+    except (ValueError, IndexError):
+        return Path(project).resolve().parent.name
+
+
+def _preferred_port(project):
+    """Stable home port for this project's routine family. Known families get an
+    explicit port; anything else hashes deterministically into 8780..8794 so it
+    still keeps a consistent origin without stepping on the explicit assignments."""
+    fam = _family(project)
+    if fam in FAMILY_HOME:
+        return FAMILY_HOME[fam]
+    span = BASE_PORT + NUM_PORTS - _HASH_BASE      # width of the hash band
+    h = int(hashlib.sha1(fam.encode()).hexdigest(), 16)
+    return _HASH_BASE + (h % span)
 
 
 def _pids_on_port(port):
@@ -71,7 +120,7 @@ def _pids_on_port(port):
 
 
 def _booth_ports_in_use():
-    return [p for p in FALLBACK_PORTS if _pids_on_port(p)]
+    return [p for p in ALL_PORTS if _pids_on_port(p)]
 
 
 def _project_port(project):
@@ -86,7 +135,7 @@ def _project_port(project):
 def stop():
     ports = _booth_ports_in_use()
     if not ports:
-        print(f"no booth running on {BASE_PORT}-{max(FALLBACK_PORTS)}")
+        print(f"no booth running on {BASE_PORT}-{max(ALL_PORTS)}")
         return
     for port in ports:
         for pid in _pids_on_port(port):
@@ -139,16 +188,14 @@ def start(project, open_tab=True):
     (proj / "work").mkdir(exist_ok=True)
     (proj / "work" / "record_done.json").unlink(missing_ok=True)
 
-    port = None
-    for cand in FALLBACK_PORTS:
-        if not _pids_on_port(cand):
-            port = cand
-            break
+    pref = _preferred_port(proj)
+    ordered = [pref] + [p for p in ALL_PORTS if p != pref]
+    port = next((cand for cand in ordered if not _pids_on_port(cand)), None)
     if port is None:
-        print(f"no free booth port in {BASE_PORT}-{max(FALLBACK_PORTS)}; run --stop first")
+        print(f"no free booth port in {BASE_PORT}-{max(ALL_PORTS)}; run --stop first")
         return 1
-    if port != BASE_PORT:
-        print(f"note: :{BASE_PORT} busy (another booth) — using :{port}; "
+    if port != pref:
+        print(f"note: home port :{pref} busy (another booth) — using :{port}; "
               f"Chrome will re-ask for the mic once on the new origin")
 
     env = dict(os.environ, EXPLAINER_RECORDER_PORT=str(port))
@@ -190,7 +237,7 @@ def status(project):
         print("DONE", marker.read_text().strip())
         return 0
     port = _project_port(proj)
-    ports = [port] if port else list(FALLBACK_PORTS)
+    ports = [port] if port else list(ALL_PORTS)
     for cand in ports:
         if cand and _pids_on_port(cand):
             print(f"PENDING http://127.0.0.1:{cand}/")

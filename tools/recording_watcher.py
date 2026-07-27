@@ -35,6 +35,7 @@ import fcntl
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -42,6 +43,36 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})_")
+
+
+def pid_alive(pid):
+    """True if a process with this pid currently exists."""
+    try:
+        os.kill(int(pid), 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True  # exists but owned by someone else
+    except (ValueError, TypeError):
+        return False
+    return True
+
+
+def read_lock(proj):
+    try:
+        return json.loads((Path(proj) / "work" / "publish_lock.json").read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def write_lock(proj, pid):
+    f = Path(proj) / "work" / "publish_lock.json"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(json.dumps({"pid": pid, "ts": time.time()}))
+
+
+def render_done(proj):
+    return (Path(proj) / "work" / "render_complete.json").exists()
 
 
 def log(cfg, msg):
@@ -95,20 +126,60 @@ def booth(cfg, verb, proj):
 
 def completion_prompt(show, proj):
     return (
-        f"You are the {show['id']} recording-completion run, spawned by the zero-token "
-        f"recording watcher (which replaced the {show['checker_id']} scheduled task on "
-        f"2026-07-06). The watcher has ALREADY verified via launch_booth.py that the "
-        f"booth for this project reports DONE, and this run HOLDS the atomic publish "
-        f"claim (work/publish_lock.json) — do NOT run --claim again; proceed directly.\n\n"
+        f"You are the {show['id']} recording-PUBLISH run, spawned by the zero-token "
+        f"recording watcher (com.brg.recording-watcher). The watcher has ALREADY "
+        f"verified the booth reports DONE, has "
+        f"ALREADY rendered the video deterministically (media + stills 4:5 + handoff + "
+        f"validate all completed — see work/render_complete.json and the rendered "
+        f"files under video/, stills/, handoff.json, manifest.json), and this run "
+        f"HOLDS the atomic publish claim (work/publish_lock.json) — do NOT run --claim "
+        f"again; proceed directly.\n\n"
         f"Project directory: {proj}\n\n"
-        f"Read {show['skill']} in full, then execute ONLY its completion path — "
-        f"{show['completion_steps']} — exactly as written there, treating yourself as "
-        f"the recording-check task completing the pipeline for the project above. "
-        f"Never re-source content, never re-scaffold, never re-author "
-        f"script.json/deck.json/meta.json — that work is already done and sitting in "
-        f"the project directory. If a step fails, stop and leave the error visible in "
-        f"your output; do not switch toolchains to route around it."
+        f"Read {show['skill']} in full, then execute ONLY the PUBLISH portion of its "
+        f"completion path — {show['completion_steps']} — starting AFTER render/gate. "
+        f"The render is DONE: do NOT run `explainer media`, `explainer stills`, "
+        f"`explainer handoff`, or `explainer validate` again (re-rendering would waste "
+        f"20+ minutes and can hit the Bash time cap — that is exactly the failure this "
+        f"two-phase flow fixes). Read the ALREADY-generated manifest.json/handoff.json "
+        f"for durations, captions, and the length gate, then do the rest: any deck "
+        f"build/push the SKILL specifies, publish via Blotato useNextFreeSlot, and "
+        f"write README + uploads.json + ledger append. Never re-source, re-scaffold, or "
+        f"re-author script.json/deck.json/meta.json. If a step fails, stop and leave "
+        f"the error visible; do not switch toolchains to route around it."
     )
+
+
+def launch_render(cfg, show, proj):
+    """Phase 1: run the long deterministic render as a DETACHED OS process (no Bash
+    time cap), writing work/render_complete.json on success. Returns the pid, or None
+    on dry-run. PATH gets render_path_prepend (ffmpeg lives in /opt/homebrew/bin, which
+    is not on the minimal launchd PATH)."""
+    exp = cfg["explainer_bin"]
+    q = shlex.quote
+    p = q(str(proj))
+    rc = q(str(Path(proj) / "work" / "render_complete.json"))
+    script = (
+        f"{q(exp)} media {p} && "
+        f"{q(exp)} stills {p} --aspect 4:5 && "
+        f"{q(exp)} handoff {p} && "
+        f"{q(exp)} validate {p} && "
+        f'printf \'{{"ts": %s}}\' "$(date +%s)" > {rc}'
+    )
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    logdir = Path(cfg["logs_dir"]); logdir.mkdir(parents=True, exist_ok=True)
+    render_log = logdir / f"{show['id']}_{stamp}_render.log"
+    env = dict(os.environ)
+    prepend = cfg.get("render_path_prepend")
+    if prepend:
+        env["PATH"] = prepend + ":" + env.get("PATH", "")
+    child = subprocess.Popen(
+        ["/usr/bin/caffeinate", "-ims", "/bin/sh", "-c", script],
+        cwd=cfg["claude_cwd"], env=env, start_new_session=True,
+        stdout=render_log.open("w"), stderr=subprocess.STDOUT)
+    write_lock(proj, child.pid)  # hold the claim for the render's lifetime
+    log(cfg, f"RENDER (phase 1) launched for {show['id']}: {proj} "
+             f"(pid {child.pid}, log {render_log})")
+    return child.pid
 
 
 def spawn_completion(cfg, show, proj, dry):
@@ -120,21 +191,19 @@ def spawn_completion(cfg, show, proj, dry):
     cmd = ["/usr/bin/caffeinate", "-ims", cfg["claude_bin"], "-p", prompt_file.read_text(),
            "--output-format", "text"]
     if dry:
-        log(cfg, f"[DRY-RUN] would spawn completion for {show['id']}: {proj} "
+        log(cfg, f"[DRY-RUN] would spawn PUBLISH for {show['id']}: {proj} "
                  f"(log -> {out_file})")
         return None
     child = subprocess.Popen(
         cmd, cwd=cfg["claude_cwd"], start_new_session=True,
         stdout=out_file.open("w"), stderr=subprocess.STDOUT)
-    # Re-stamp the publish lock with the real worker's pid so --claim's
-    # stale-reclaim (dead pid + 45 min) tracks the completion run, not this
-    # short-lived watcher process.
-    lock = Path(proj) / "work" / "publish_lock.json"
+    # Re-stamp the publish lock with the publish worker's pid so a later cycle
+    # sees the live publisher (pid_alive) and backs off until the README lands.
     try:
-        lock.write_text(json.dumps({"pid": child.pid, "ts": time.time()}))
+        write_lock(proj, child.pid)
     except OSError as e:
         log(cfg, f"WARNING: could not re-stamp publish lock for {proj}: {e}")
-    log(cfg, f"SPAWNED completion for {show['id']}: {proj} (pid {child.pid}, "
+    log(cfg, f"PUBLISH (phase 2) spawned for {show['id']}: {proj} (pid {child.pid}, "
              f"log {out_file})")
     return child.pid
 
@@ -150,21 +219,42 @@ def run(cfg, dry):
                 break  # operator mid-recording; nothing to do for this show
             if state == "DONE":
                 if spawned:
-                    log(cfg, f"{show['id']}: {proj.name} DONE but a completion was "
-                             f"already spawned this cycle — next cycle picks it up")
+                    log(cfg, f"{show['id']}: {proj.name} DONE but work was already "
+                             f"started this cycle — next cycle picks it up")
                     break
-                if dry:
-                    log(cfg, f"[DRY-RUN] {show['id']}: {proj.name} is DONE — would "
-                             f"claim and spawn a completion run")
-                    spawned = True
+                # Mutual exclusion: the publish_lock pid is the live render (phase 1)
+                # or publish (phase 2) worker. Single-instance flock (main) means no
+                # concurrent watcher cycle, so a simple liveness check is sufficient
+                # and avoids launch_booth --claim's slow 45-min stale rule between the
+                # two phases.
+                lk = read_lock(proj)
+                if lk and pid_alive(lk.get("pid")):
+                    log(cfg, f"{show['id']}: {proj.name} DONE, worker pid "
+                             f"{lk.get('pid')} still active — backing off")
                     break
-                claim, cfull = booth(cfg, ["--claim"], proj)
-                if claim == "CLAIMED":
-                    spawn_completion(cfg, show, proj, dry)
+                if render_done(proj):
+                    # Phase 2: render finished; publish. Guard against re-posting if a
+                    # prior publish got partway (uploads.json written, README not yet).
+                    if (proj / "uploads.json").exists():
+                        log(cfg, f"{show['id']}: {proj.name} render done + uploads.json "
+                                 f"present but no README — prior publish partial; NOT "
+                                 f"auto-retrying (double-post risk), needs review")
+                        break
+                    if dry:
+                        log(cfg, f"[DRY-RUN] {show['id']}: {proj.name} render done — "
+                                 f"would spawn PUBLISH (phase 2)")
+                    else:
+                        spawn_completion(cfg, show, proj, dry)
                     spawned = True
                 else:
-                    log(cfg, f"{show['id']}: {proj.name} DONE, claim said "
-                             f"'{cfull}' — another worker owns it; backing off")
+                    # Phase 1: no render yet (or a prior render died before completing);
+                    # launch the detached render. launch_render writes the lock.
+                    if dry:
+                        log(cfg, f"[DRY-RUN] {show['id']}: {proj.name} DONE, no render "
+                                 f"yet — would launch RENDER (phase 1)")
+                    else:
+                        launch_render(cfg, show, proj)
+                    spawned = True
                 break
             if state == "NOT_OPEN":
                 today = date.today().isoformat()
