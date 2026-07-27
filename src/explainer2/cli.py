@@ -164,6 +164,13 @@ def cmd_scaffold(args):
         num = None
         out = Path(args.outdir).resolve() / f"{date.today().isoformat()}_{slug}"
     out.mkdir(parents=True, exist_ok=True)
+    # `--theme paper` is a legacy shorthand for Dave's nemock paper world. The standalone
+    # "paper" theme key is NOT recognized as a paper theme by the Remotion engine
+    # (PAPER_THEMES = nemock-deep-dive / cut-bond / brg-paper), so it renders in the MIDNIGHT
+    # navy look — a silent off-brand bug (caught on #47, 2026-07-24). Normalize it here so the
+    # project.json theme + the theme's music bed both resolve to the real paper channel.
+    if args.theme == "paper":
+        args.theme = "nemock-deep-dive"
     proj = {"title": args.title or args.slug, "slug": slug, "aspect": primary,
             "aspects": aspects, "width": w, "height": h, "fps": args.fps,
             "voice": args.voice, "voice_source": args.voice_source,

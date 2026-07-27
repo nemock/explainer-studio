@@ -187,8 +187,22 @@ def _service(key, interactive):
                          f"client (Desktop), download it there.")
     creds = Credentials.from_authorized_user_file(str(tok), SCOPES) if tok.exists() else None
     if not creds or not creds.valid:
+        refreshed = False
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
+            # A REVOKED (not merely expired) token raises here. Previously that aborted
+            # --authorize too, so a revoked channel could never be re-authorized without
+            # hand-deleting the token file. Fall through to fresh consent instead.
+            try:
+                creds.refresh(Request())
+                refreshed = True
+            except Exception as e:  # noqa: BLE001 — google.auth RefreshError et al
+                if not interactive:
+                    raise SystemExit(
+                        f"channel '{key}' token is expired/revoked ({e}). Re-authorize:\n"
+                        f"  explainer2 publish --authorize --channel {key}")
+                creds = None
+        if refreshed:
+            pass
         elif interactive:
             creds = InstalledAppFlow.from_client_secrets_file(str(cs), SCOPES).run_local_server(port=0)
         else:
