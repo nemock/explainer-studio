@@ -32,6 +32,17 @@ const seedFrom = (s: string) => {
 const kindColor = (kind?: string) =>
   kind === 'bad' ? BRAND.red : kind === 'neutral' ? 'rgba(245,247,255,.55)' : BRAND.green;
 
+// Paper-world schematic: nodes read as colored sticky notes (Dave 2026-07-18 — the cream
+// cards + white dotted edges had no contrast on the cream page). Four post-it colors cycled
+// by node index; edges become hand-drawn navy Sharpie lines (see the ink.paper branches).
+const POSTIT = ['#f4cf49', '#83db78', '#ff9585', '#7cbcef']; // yellow · green · coral · blue
+const darken = (hex: string, f: number) => {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgb(${Math.round(((n >> 16) & 255) * f)},${Math.round(((n >> 8) & 255) * f)},${Math.round((n & 255) * f)})`;
+};
+// deterministic small tilt per node so the notes look hand-placed, not gridded
+const tiltFor = (id: string) => ((seedFrom(id) % 7) - 3) * 0.7; // ~ -2.1°..+2.1°
+
 export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
   const frame = useCurrentFrame();
   const {fps, width: W, height: H} = useVideoConfig();
@@ -108,6 +119,26 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fields.sketch, nodes, W, H]);
 
+  // paper edges: hand-drawn navy Sharpie lines (seeded, pure of frame; drawn on via dashoffset)
+  const roughEdges = React.useMemo(() => {
+    const m = new Map<string, {d: string; len: number}>();
+    if (!ink.paper) return m;
+    const gen = rough.generator();
+    edges.forEach((e) => {
+      const a = nodeById.get(e.from), b = nodeById.get(e.to);
+      if (!a || !b) return;
+      const [x1, y1, x2, y2] = [a.x * W, a.y * H, b.x * W, b.y * H];
+      const dr = gen.line(x1, y1, x2, y2, {
+        seed: seedFrom(`edge:${e.from}->${e.to}`), roughness: 2, bowing: 2.4,
+        stroke: ink.body, strokeWidth: Math.max(3, H * 0.0055),
+      });
+      const d = gen.toPaths(dr).map((p) => p.d).join(' ');
+      m.set(`${e.from}->${e.to}`, {d, len: Math.hypot(x2 - x1, y2 - y1) * 2.4});
+    });
+    return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ink.paper, ink.body, edges, nodeById, W, H]);
+
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
       {fields.kicker ? (
@@ -119,7 +150,10 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
         </div>
       ) : null}
       <AbsoluteFill style={{
-        transform: `scale(${zoom}) translate(${(0.5 - cx) * W}px, ${(0.5 - cy) * H}px)`,
+        // camera transform + a slow ambient breathing so the diagram is never fully frozen,
+        // even with no camera keys or during the sparse pre-reveal stretch (paper freezedetect).
+        transform: `scale(${zoom * interpolate(frame, [0, durationInFrames], [1, 1.02])}) `
+          + `translate(${(0.5 - cx) * W}px, ${(0.5 - cy) * H - interpolate(frame, [0, durationInFrames], [0, 6])}px)`,
         transformOrigin: '50% 50%',
       }}>
         {/* edges under nodes */}
@@ -137,6 +171,26 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
             const angle = Math.atan2(y2 - y1, x2 - x1);
             const color = kindColor(e.kind);
             const head = Math.max(14, H * 0.024);
+            if (ink.paper) {
+              // hand-drawn navy Sharpie connector, drawn on with the reveal
+              const re = roughEdges.get(`${e.from}->${e.to}`);
+              const sw = Math.max(3, H * 0.0055);
+              return (
+                <g key={i}>
+                  {re ? (
+                    <path d={re.d} fill="none" stroke={ink.body} strokeWidth={sw}
+                          strokeLinecap="round" strokeLinejoin="round"
+                          strokeDasharray={re.len} strokeDashoffset={re.len * (1 - t)} />
+                  ) : null}
+                  <g opacity={t > 0.92 ? 1 : 0} stroke={ink.body} strokeWidth={sw}
+                     strokeLinecap="round" fill="none">
+                    <line x1={x2} y1={y2} x2={x2 - head * Math.cos(angle - 0.45)} y2={y2 - head * Math.sin(angle - 0.45)} />
+                    <line x1={x2} y1={y2} x2={x2 - head * Math.cos(angle + 0.45)} y2={y2 - head * Math.sin(angle + 0.45)} />
+                  </g>
+                  {/* paper edge labels render in a top chip layer (below), never buried under notes */}
+                </g>
+              );
+            }
             const hx = x1 + (x2 - x1) * t;
             const hy = y1 + (y2 - y1) * t;
             return (
@@ -173,36 +227,70 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
           }) : null}
         </svg>
         {/* node cards */}
-        {nodes.map((n) => {
+        {nodes.map((n, ni) => {
           const b = nodeBox(n);
           const at = revealAt.get(n.id) ?? 0;
           const e = spring({frame: frame - at, fps, config: {damping: 15, stiffness: 120}});
           if (frame < at) return null;
           const color = kindColor(n.kind);
+          const note = ink.paper && !fields.sketch;   // post-it treatment
+          // color-by-kind when the node carries semantic good/bad (e.g. jagged-frontier
+          // inside=green / outside=coral); otherwise cycle the decorative post-it palette.
+          const pc = n.kind === 'good' ? '#83db78' : n.kind === 'bad' ? '#ff9585' : POSTIT[ni % POSTIT.length];
+          const corner = Math.min(b.w, b.h) * 0.16;
           return (
             <div key={n.id} style={{
               position: 'absolute', left: b.x, top: b.y, width: b.w, height: b.h,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              borderRadius: 16, padding: `0 ${H * 0.012}px`, textAlign: 'center',
-              background: fields.sketch ? 'rgba(9,13,28,.72)' : ink.cardBg,
-              border: fields.sketch ? 'none' : `2px solid ${color}66`,
-              boxShadow: ink.paper && !fields.sketch ? PAPER_SHADOW : `0 18px 60px rgba(0,0,0,.45)`,
+              borderRadius: note ? 5 : 16, padding: `0 ${H * 0.014}px`, textAlign: 'center',
+              background: fields.sketch ? 'rgba(9,13,28,.72)' : note ? pc : ink.cardBg,
+              border: (fields.sketch || note) ? 'none' : `2px solid ${color}66`,
+              boxShadow: note ? '0 16px 32px rgba(0,0,0,.26), 0 3px 9px rgba(0,0,0,.18)'
+                       : ink.paper && !fields.sketch ? PAPER_SHADOW : `0 18px 60px rgba(0,0,0,.45)`,
               opacity: e,
-              transform: `translateY(${interpolate(e, [0, 1], [22, 0])}px) scale(${interpolate(e, [0, 1], [0.88, 1])})`,
+              transform: `translateY(${interpolate(e, [0, 1], [22, 0])}px) scale(${interpolate(e, [0, 1], [0.88, 1])}) rotate(${note ? tiltFor(n.id) : 0}deg)`,
             }}>
               <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: H * 0.03,
-                           color: fields.sketch ? BRAND.white : ink.body, lineHeight: 1.08}}>
+                           color: fields.sketch ? BRAND.white : note ? '#2c1e4e' : ink.body, lineHeight: 1.08}}>
                 {n.label}
               </div>
               {n.sub ? (
                 <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: H * 0.02,
-                             color, marginTop: H * 0.006, lineHeight: 1.1}}>
+                             color: note ? darken(pc, 0.42) : color, marginTop: H * 0.006, lineHeight: 1.1}}>
                   {n.sub}
                 </div>
+              ) : null}
+              {note ? (  // turned-up corner (dog-ear)
+                <div style={{position: 'absolute', right: 0, bottom: 0, width: corner, height: corner,
+                             background: darken(pc, 0.8), clipPath: 'polygon(100% 0%, 0% 100%, 100% 100%)',
+                             boxShadow: '-3px -3px 6px rgba(0,0,0,.18)'}} />
               ) : null}
             </div>
           );
         })}
+        {/* edge labels as cream chips ON TOP of the notes (paper) — never buried under a node */}
+        {ink.paper ? edges.map((e, i) => {
+          if (!e.label) return null;
+          const a = nodeById.get(e.from), b = nodeById.get(e.to);
+          if (!a || !b) return null;
+          const at = revealAt.get(`${e.from}->${e.to}`) ?? 0;
+          const t = interpolate(frame, [at, at + Math.round(0.6 * fps)], [0, 1],
+                                {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+          if (t < 0.9) return null;
+          const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+          return (
+            <div key={`el${i}`} style={{
+              position: 'absolute', left: mx * W, top: my * H, transform: 'translate(-50%, -50%)',
+              background: '#fbf5df', color: ink.body, borderRadius: 999,
+              padding: `${H * 0.007}px ${H * 0.017}px`, whiteSpace: 'nowrap',
+              fontFamily: BRAND.font, fontStyle: 'italic', fontWeight: 800, fontSize: H * 0.02,
+              boxShadow: '0 4px 14px rgba(0,0,0,.2)',
+              opacity: interpolate(t, [0.9, 1], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}),
+            }}>
+              {e.label}
+            </div>
+          );
+        }) : null}
       </AbsoluteFill>
     </AbsoluteFill>
   );

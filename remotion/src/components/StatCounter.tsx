@@ -40,8 +40,13 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
   const denom = Math.max(Math.abs(lo), Math.abs(hi)) || 1;
   const fillW = (Math.abs(value) / denom) * (TRACK / 2);
 
+  // continuous life: a gentle push-in + drift so the card is never frozen after the count lands
+  // (matches the livened text cards; clears the paper-theme freezedetect dead-air).
+  const live = interpolate(frame, [0, durationInFrames], [1, 1.03]);
+  const drift = interpolate(frame, [0, durationInFrames], [0, -height * 0.012]);
+
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', transform: `scale(${live}) translateY(${drift}px)`}}>
       {fields.kicker ? (
         <div
           style={{

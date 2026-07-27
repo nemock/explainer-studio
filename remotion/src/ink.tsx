@@ -18,6 +18,7 @@ export type Ink = {
   track: string;   // faint empty track / unfilled dot (Ring, Pictograph)
   neutral: string; // mid neutral fill (Waterfall neutral bar)
   accent: string;  // the ONE accent (kicker + highlighted words). Default = the studio green.
+  accentWash: string; // translucent accent for marker-wipe highlights laid OVER artwork
   paper: boolean;  // true on the paper worlds — gate dark drop-shadows off
 };
 
@@ -28,6 +29,7 @@ const NAVY: Ink = {
   track: 'rgba(255,255,255,.12)',
   neutral: 'rgba(255,255,255,.5)',
   accent: BRAND.green,
+  accentWash: 'rgba(61,220,132,.42)',  // the exact prior Figure highlight => zero regression
   paper: false,
 };
 
@@ -39,6 +41,7 @@ const PAPER: Ink = {
   track: 'rgba(70,50,30,.14)',
   neutral: 'rgba(90,70,45,.55)',
   accent: BRAND.green,
+  accentWash: 'rgba(61,220,132,.42)',
   paper: true,
 };
 
@@ -53,6 +56,7 @@ const PAPER_BRG: Ink = {
   track: 'rgba(27,43,75,.14)',
   neutral: 'rgba(27,43,75,.5)',
   accent: BRAND.green,
+  accentWash: 'rgba(61,220,132,.42)',
   paper: true,
 };
 
@@ -69,6 +73,7 @@ const PAPER_BRG_DEEP: Ink = {
   track: 'rgba(27,43,75,.14)',
   neutral: 'rgba(27,43,75,.5)',
   accent: '#7b5bff',
+  accentWash: 'rgba(123,91,255,.34)',
   paper: true,
 };
 

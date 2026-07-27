@@ -23,33 +23,74 @@ const Kicker: React.FC<{text?: string; o: number; height: number}> = ({text, o, 
     </div>
   ) : null;
 
-// statement -> a headline that scales/fades in. fields: {kicker, headline, accent, accentRed, subkicker}
-export const KineticHeadline: React.FC<{fields: any}> = ({fields}) => {
+// Word-by-word reveal that preserves accent coloring + pops the accent words. Keeps text
+// alive instead of one block-fade. (motion-playbook: text cards are the floor, give them life.)
+const normWord = (s: string) => s.toLowerCase().replace(/[^a-z0-9']/g, '');
+const RevealWords: React.FC<{text: string; accent?: string[]; accentRed?: string[]; startDelay?: number}> =
+({text, accent, accentRed, startDelay = 0}) => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  // match colorize.tsx exactly: split multi-word accent phrases into constituent words
+  const A = new Set((accent || []).flatMap((s) => s.split(/\s+/)).map(normWord));
+  const R = new Set((accentRed || []).flatMap((s) => s.split(/\s+/)).map(normWord));
+  const parts = (text || '').split(/(\s+)/);
+  let wi = 0;
+  return (
+    <>
+      {parts.map((w, i) => {
+        if (/^\s*$/.test(w)) return <span key={i}>{w}</span>;
+        const clean = normWord(w);
+        const isA = !!clean && A.has(clean), isR = !!clean && R.has(clean);
+        const delay = startDelay + wi * 2.2; wi++;
+        const e = spring({frame: frame - delay, fps, config: {damping: 15, stiffness: 130}});
+        const pop = (isA || isR) ? interpolate(e, [0, 1], [1.22, 1], {extrapolateRight: 'clamp'}) : 1;
+        return (
+          <span key={i} style={{display: 'inline-block', color: isA ? BRAND.green : isR ? BRAND.red : undefined,
+            opacity: e, transform: `translateY(${interpolate(e, [0, 1], [20, 0])}px) scale(${pop})`,
+            transformOrigin: 'center bottom'}}>{w}</span>
+        );
+      })}
+    </>
+  );
+};
+
+// statement -> a headline that reveals word-by-word, then keeps a slow continuous drift so it
+// never sits frozen. fields: {kicker, headline, accent, accentRed, subkicker}
+export const KineticHeadline: React.FC<{fields: any; durationInFrames?: number}> = ({fields, durationInFrames = 300}) => {
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
   const s = spring({frame, fps, config: {damping: 18, stiffness: 90}});
   const ink = useInk();
+  // slow continuous life: a gentle push-in + upward drift across the whole scene (clears the
+  // freezedetect dead-air the old one-shot fade left; premium, not jittery).
+  const live = interpolate(frame, [0, durationInFrames], [1, 1.035]);
+  const drift = interpolate(frame, [0, durationInFrames], [0, -height * 0.014]);
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 8%', color: ink.body}}>
-      <Kicker text={fields.kicker} o={s} height={height} />
-      <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.07, lineHeight: 1.07, textAlign: 'center', opacity: s, transform: `translateY(${interpolate(s, [0, 1], [28, 0])}px)`, textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
-        {colorize(fields.headline, fields.accent, fields.accentRed)}
+      <div style={{transform: `scale(${live}) translateY(${drift}px)`, display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
+        <Kicker text={fields.kicker} o={s} height={height} />
+        <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.07, lineHeight: 1.07, textAlign: 'center', textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
+          <RevealWords text={fields.headline} accent={fields.accent} accentRed={fields.accentRed} startDelay={4} />
+        </div>
+        <SubKicker text={fields.subkicker} height={height} />
       </div>
-      <SubKicker text={fields.subkicker} height={height} />
     </AbsoluteFill>
   );
 };
 
 // define -> a term + its definition. fields: {kicker, term, definition, accent, accentRed}
-export const DefineTerm: React.FC<{fields: any}> = ({fields}) => {
+export const DefineTerm: React.FC<{fields: any; durationInFrames?: number}> = ({fields, durationInFrames = 300}) => {
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
   const t = spring({frame, fps, config: {damping: 18, stiffness: 90}});
   const d = spring({frame: frame - 10, fps, config: {damping: 18}});
   const ink = useInk();
   const termSize = (fields.term || '').length > 16 ? height * 0.06 : height * 0.075;
+  // slow continuous life so the definition doesn't sit frozen after it reveals (paper freezedetect)
+  const live = interpolate(frame, [0, durationInFrames], [1, 1.03]);
+  const drift = interpolate(frame, [0, durationInFrames], [0, -height * 0.012]);
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 9%'}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 9%', transform: `scale(${live}) translateY(${drift}px)`}}>
       <Kicker text={fields.kicker} o={t} height={height} />
       <div style={{fontFamily: BRAND.font, color: BRAND.green, fontWeight: 900, fontSize: termSize, lineHeight: 1.1, textAlign: 'center', opacity: t, transform: `translateY(${interpolate(t, [0, 1], [24, 0])}px)`, textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
         {colorize(fields.term, fields.accent, fields.accentRed)}
@@ -62,14 +103,17 @@ export const DefineTerm: React.FC<{fields: any}> = ({fields}) => {
 };
 
 // quote -> big quote + attribution reveal. fields: {quote, attribution}
-export const Quote: React.FC<{fields: any}> = ({fields}) => {
+export const Quote: React.FC<{fields: any; durationInFrames?: number}> = ({fields, durationInFrames = 300}) => {
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
   const q = spring({frame, fps, config: {damping: 18}});
   const at = spring({frame: frame - 18, fps, config: {damping: 16}});
   const ink = useInk();
+  // slow continuous life so the quote doesn't sit frozen after it springs in (paper freezedetect)
+  const live = interpolate(frame, [0, durationInFrames], [1, 1.03]);
+  const drift = interpolate(frame, [0, durationInFrames], [0, -height * 0.012]);
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 9%'}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 9%', transform: `scale(${live}) translateY(${drift}px)`}}>
       <div style={{fontFamily: BRAND.font, color: ink.body, fontWeight: 800, fontSize: height * 0.058, lineHeight: 1.25, textAlign: 'center', opacity: q, transform: `translateY(${interpolate(q, [0, 1], [26, 0])}px)`, textShadow: ink.paper ? PAPER_SHADOW : '0 10px 40px rgba(0,0,0,.6)'}}>
         {fields.quote}
       </div>
@@ -158,12 +202,15 @@ export const BuildList: React.FC<{fields: any; durationInFrames: number}> = ({fi
 };
 
 // compare -> two columns animating in. fields: {left:{title,value}, right:{title,value}}
-export const SideBySide: React.FC<{fields: any}> = ({fields}) => {
+export const SideBySide: React.FC<{fields: any; durationInFrames?: number}> = ({fields, durationInFrames = 300}) => {
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
   const l = spring({frame, fps, config: {damping: 18}});
   const r = spring({frame: frame - 10, fps, config: {damping: 18}});
   const ink = useInk();
+  // continuous life so the two cards don't sit frozen after they slide in (paper freezedetect)
+  const live = interpolate(frame, [0, durationInFrames], [1, 1.028]);
+  const drift = interpolate(frame, [0, durationInFrames], [0, -height * 0.01]);
   const col = (d: any, o: number, dir: number, bad?: boolean) => (
     <div style={{flex: 1, padding: height * 0.03, borderRadius: 20, background: ink.cardBg, border: `2px solid ${bad ? 'rgba(255,77,77,.5)' : 'rgba(61,220,132,.4)'}`, opacity: o, transform: `translateX(${interpolate(o, [0, 1], [dir * 40, 0])}px)`}}>
       <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 3, textTransform: 'uppercase', color: bad ? BRAND.red : BRAND.green, marginBottom: height * 0.018}}>{d?.title}</div>
@@ -171,7 +218,7 @@ export const SideBySide: React.FC<{fields: any}> = ({fields}) => {
     </div>
   );
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 7%'}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 7%', transform: `scale(${live}) translateY(${drift}px)`}}>
       <div style={{display: 'flex', gap: height * 0.03, width: '100%', alignItems: 'stretch'}}>
         {col(fields.left, l, -1, false)}
         {col(fields.right, r, 1, true)}

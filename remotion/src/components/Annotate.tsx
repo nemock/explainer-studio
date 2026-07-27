@@ -2,6 +2,7 @@ import React from 'react';
 import {AbsoluteFill, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import rough from 'roughjs';
 import {BRAND} from '../brand';
+import {Ink, useInk} from '../ink';
 
 // motion-playbook §2H — the annotation overlay: hand-drawn arrows/circles/underlines
 // that DRAW THEMSELVES starting on a narration cue, leading the eye while the voice
@@ -26,7 +27,15 @@ const seedFrom = (s: string) => {
   return ((h >>> 0) % 2147483645) + 1; // rough.js treats 0 as "random" — never allow it
 };
 
-const COLOR: Record<string, string> = {green: BRAND.green, red: BRAND.red, white: BRAND.white};
+// Annotation ink is theme-keyed (2026-07-26). `green` means "the accent" — the studio
+// green on navy, indigo in the BRG world; `white` means "the body ink" — white on navy,
+// deep ink on cream (plain white is invisible on paper). `red` darkens on paper because
+// BRAND.red is tuned to glow on navy and washes out on cream.
+const colorsFor = (ink: Ink): Record<string, string> => ({
+  green: ink.accent,
+  red: ink.paper ? '#c2352b' : BRAND.red,
+  white: ink.body,
+});
 
 type Ann = {
   kind: 'arrow' | 'circle' | 'underline' | 'strike' | 'box' | 'doodle';
@@ -47,9 +56,10 @@ type Ann = {
 
 // one rough drawable -> svg paths + an estimated ink length (for draw-on pacing)
 const useRoughPaths = (a: Ann, i: number, W: number, H: number) => {
+  const ink = useInk();
   return React.useMemo(() => {
     const gen = rough.generator();
-    const color = COLOR[a.color || 'green'];
+    const color = colorsFor(ink)[a.color || 'green'];
     const sw = Math.max(3, H * 0.007);
     const opts = {seed: seedFrom(`${a.kind}:${i}:${a.from}:${a.to}:${a.at}`), roughness: 2.2,
                   bowing: 1.6, stroke: color, strokeWidth: sw, fill: undefined};
@@ -85,13 +95,14 @@ const useRoughPaths = (a: Ann, i: number, W: number, H: number) => {
     }
     const paths = drawable ? gen.toPaths(drawable) : [];
     return {paths, length: Math.max(60, length), color, sw, tip};
-  }, [a, i, W, H]);
+  }, [a, i, W, H, ink]);
 };
 
 const VectorAnn: React.FC<{a: Ann; i: number}> = ({a, i}) => {
   const frame = useCurrentFrame();
   const {fps, width: W, height: H} = useVideoConfig();
   const {paths, length, color, sw, tip} = useRoughPaths(a, i, W, H);
+  const ink = useInk();
   const drawFrames = Math.round((a.kind === 'circle' || a.kind === 'box' ? 0.8 : 0.55) * fps);
   const t = interpolate(frame, [a.cueFrame, a.cueFrame + drawFrames], [0, 1],
                         {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
@@ -104,7 +115,7 @@ const VectorAnn: React.FC<{a: Ann; i: number}> = ({a, i}) => {
         <path key={j} d={p.d} fill="none" stroke={color} strokeWidth={sw}
               strokeLinecap="round" strokeLinejoin="round"
               strokeDasharray={length} strokeDashoffset={length * (1 - t)}
-              style={{filter: `drop-shadow(0 0 12px ${color}66)`}} />
+              style={ink.paper ? undefined : {filter: `drop-shadow(0 0 12px ${color}66)`}} />
       ))}
       {tip ? (
         <g opacity={tipO} stroke={color} strokeWidth={sw} strokeLinecap="round" fill="none">
@@ -123,8 +134,9 @@ const VectorAnn: React.FC<{a: Ann; i: number}> = ({a, i}) => {
 const DoodleAnn: React.FC<{a: Ann}> = ({a}) => {
   const frame = useCurrentFrame();
   const {fps, width: W, height: H} = useVideoConfig();
+  const ink = useInk();
   if (!a.file || frame < a.cueFrame) return null;
-  const color = COLOR[a.color || 'white'];
+  const color = colorsFor(ink)[a.color || 'white'];
   const w = (a.w ?? 0.14) * W;
   const h = w / (a.aspect || 1);
   const [cx, cy] = [(a.at?.[0] ?? 0.5) * W, (a.at?.[1] ?? 0.5) * H];
@@ -152,6 +164,8 @@ const DoodleAnn: React.FC<{a: Ann}> = ({a}) => {
 export const AnnotateOverlay: React.FC<{annotations: Ann[]}> = ({annotations}) => {
   const frame = useCurrentFrame();
   const {fps, height: H} = useVideoConfig();
+  const ink = useInk();
+  const COLOR = colorsFor(ink);
   return (
     <AbsoluteFill style={{pointerEvents: 'none'}}>
       {annotations.map((a, i) => (
@@ -168,7 +182,7 @@ export const AnnotateOverlay: React.FC<{annotations: Ann[]}> = ({annotations}) =
             transform: `translate(-50%, ${H * 0.02}px)`,
             fontFamily: BRAND.font, fontStyle: 'italic', fontWeight: 800,
             fontSize: H * 0.026, color: COLOR[a.color || 'green'], opacity: o,
-            textShadow: '0 3px 14px rgba(0,0,0,.7)', whiteSpace: 'nowrap',
+            textShadow: ink.paper ? 'none' : '0 3px 14px rgba(0,0,0,.7)', whiteSpace: 'nowrap',
           }}>
             {a.label}
           </div>

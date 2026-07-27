@@ -1,5 +1,5 @@
 import React from 'react';
-import {AbsoluteFill, spring, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
 import {useInk, PAPER_SHADOW} from '../ink';
 
@@ -8,14 +8,17 @@ import {useInk, PAPER_SHADOW} from '../ink';
 // Values are shown as-authored strings ($1, $2.2B, 93%) so abbreviated figures render cleanly.
 const tone = (k: string | undefined, neutral: string) => (k === 'bad' ? BRAND.red : k === 'good' ? BRAND.green : neutral);
 
-export const StatGrid: React.FC<{fields: any; durationInFrames: number}> = ({fields}) => {
+export const StatGrid: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames = 300}) => {
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
   const ink = useInk();
   const stats: any[] = fields.stats || [];
   const cols = stats.length === 4 ? 2 : Math.min(Math.max(stats.length, 1), 3);
+  // continuous life so the grid doesn't sit frozen after the numbers land (paper freezedetect)
+  const live = interpolate(frame, [0, durationInFrames], [1, 1.028]);
+  const drift = interpolate(frame, [0, durationInFrames], [0, -height * 0.01]);
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 7%'}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 7%', transform: `scale(${live}) translateY(${drift}px)`}}>
       {fields.kicker ? (
         <div style={{fontFamily: BRAND.font, color: BRAND.green, fontWeight: 800, fontSize: height * 0.024,
           letterSpacing: 5, textTransform: 'uppercase', textAlign: 'center', marginBottom: height * 0.055}}>
