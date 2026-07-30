@@ -195,7 +195,11 @@ def _scene_for(slide, theme=""):
     # Papercraft style map. nemock-deep-dive (Dave's book/davesaunders.net deep dives) and
     # brg-deep-dive (the Base Reality Group series, added 2026-07-26) both render the Paper*
     # family; they differ by ink/accent (ink.tsx) and by their stings, not by the type map.
-    if theme in ("nemock-deep-dive", "brg-deep-dive"):
+    # wte-guide (the waste-to-fuel Operator's Guide, 2026-07-29) joins the family: the
+    # operator asked for heavy paper-craft throughout, in the BRG palette.
+    # circumvent (2026-07-30) joins the family: the Circumvent Global marketing program is
+    # papercraft on EVERY slide by operator directive, in its own green-ink palette.
+    if theme in ("nemock-deep-dive", "brg-deep-dive", "wte-guide", "circumvent"):
         pc = _papercraft_scene(slide, t, kicker, accent, headline)
         if pc:
             return pc
@@ -206,7 +210,7 @@ def _scene_for(slide, theme=""):
         # Bond). Midnight-themed projects (the ISO 14971 series, and every deck before the
         # change) keep the Hero3D rotating wireframe sphere, their consistent brand. Do NOT
         # make PaperHook unconditional again: it leaks the paper rebrand into the midnight series.
-        if theme in ("cut-bond", "nemock-deep-dive", "brg-deep-dive"):
+        if theme in ("cut-bond", "nemock-deep-dive", "brg-deep-dive", "wte-guide", "circumvent"):
             return "PaperHook", {"image": slide.get("image"), "kicker": kicker,
                                  "headline": headline, "accent": accent}
         return "Hero3D", {"kicker": kicker, "headline": headline,
@@ -425,7 +429,12 @@ def build_spec(sp):
     # project.json `sting` overrides. The narration is shifted to start after the intro.
     audio_from = 0
     total = duration
-    if sp.data.get("sting", width >= height):
+    # `wte-guide` (the waste-to-fuel Operator's Guide) carries NO brand bumper at all: its
+    # CTA is like-and-subscribe only — no book, no site wordmark, no cross-brand mark
+    # (operator direction 2026-07-29). Enforced here rather than left to each module's
+    # `"sting": false` so a forgotten flag can never leak FWF branding into a safety-training
+    # video — the exact failure mode the ISO 14971 series hit repeatedly.
+    if sp.data.get("theme") != "wte-guide" and sp.data.get("sting", width >= height):
         # The sting is THEME-KEYED (branding isolation, operator direction 2026-07-15).
         # Each channel owns its brand; nothing here is a global default.
         #   nemock-deep-dive (Dave's deep dives) -> paper-launch PaperSting + davesaunders.net
@@ -652,7 +661,9 @@ def render(sp, log=print, frames=None, out=None):
     _stage_doodles(spec, public, log)
     # CTA scenes show the brand book cover unless the project opts out with
     # "cta_book": false in project.json (e.g. masterclass modules use no book cover).
-    if sp.data.get("cta_book", True) and any(s["component"] in ("CTA", "PaperBookCTA") for s in spec["scenes"]):
+    # wte-guide never shows the book: like-and-subscribe is its only CTA (2026-07-29).
+    _cta_book = sp.data.get("cta_book", True) and sp.data.get("theme") != "wte-guide"
+    if _cta_book and any(s["component"] in ("CTA", "PaperBookCTA") for s in spec["scenes"]):
         bc_dir = REMOTION_DIR.parent / "book_cover"
         bc = next(iter(sorted(bc_dir.glob("*.png"))), None) if bc_dir.exists() else None
         if bc:

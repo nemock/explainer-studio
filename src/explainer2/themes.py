@@ -55,6 +55,32 @@ THEMES = {
     # Added 2026-07-26 per the operator's "give BRG its own style palette" directive.
     "brg-deep-dive": {"bg": "#f5f0eb", "fg": "#1b2b4b", "accent": "#7b5bff", "accent2": "#7b5bff",
                       "motion": "fade", "fonts": {"display": "Fraunces", "body": "Inter"}},
+    # wte-guide = The Operator's Guide to Waste-to-Fuel Process Safety (nemock channel,
+    # /Volumes/Casima/claudeCode/WTE_Operators_Guide). BRG cream+navy paper-craft like its
+    # brg-* neighbours, teal accent, but its OWN key because its branding differs from both:
+    # like-and-subscribe-only CTA (no book, no site) on Dave's personal channel. NOTE: engine
+    # pairing (isPaperTheme + ink palette + CTA end card, remotion/src) is a pre-render TODO
+    # tracked in that project's CLAUDE.md — do not render wte-guide before it ships.
+    "wte-guide": {"bg": "#f5f0eb", "fg": "#1b2b4b", "accent": "#0d7377", "accent2": "#c2410c",
+                  "motion": "fade", "fonts": {"display": "Fraunces", "body": "Inter"}},
+    # circumvent = Circumvent Global marketing + explainer videos (circumventglobal.com).
+    # NOT part of Dave's personal brand and NOT a BRG property: its own key so the Circumvent
+    # program can be papercraft without repainting any neighbour. Added 2026-07-30 per the
+    # operator's "create a Circumvent marketing color scheme" directive.
+    #
+    # Palette rationale (see the Circumvent Marketing project's PALETTE.md):
+    #   bg  #f2ede0 — warm kraft cream. Earthier than the BRG/nemock creams so the two paper
+    #                 worlds read as different brands on the same substrate.
+    #   fg  #1c3a29 — deep forest-green ink. Extends the #14532D already used in Circumvent's
+    #                 investor materials. Green INK (not navy/purple) is what distinguishes
+    #                 this world at a glance.
+    #   accent  #c89b3c — wheat/harvest gold. Deliberate: green alone reads "environmental
+    #                 advocacy", which is the wrong register for the agricultural and energy
+    #                 audience this brand sells to. Green + harvest gold reads farm, grain and
+    #                 refinery instead.
+    #   accent2 #2f7d4f — field green, for process/positive/growth marks.
+    "circumvent": {"bg": "#f2ede0", "fg": "#1c3a29", "accent": "#c89b3c", "accent2": "#2f7d4f",
+                   "motion": "fade", "fonts": {"display": "Fraunces", "body": "Inter"}},
 }
 DEFAULT = "midnight"
 VALID_MOTION = {"rise", "fade", "pop", "slide"}

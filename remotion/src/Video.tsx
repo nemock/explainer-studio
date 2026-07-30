@@ -118,6 +118,12 @@ const SceneWrap: React.FC<{durationInFrames: number; paper?: boolean; tear?: str
   );
 };
 
+// Paper worlds whose sheet is BRG's cooler cream (#f5f0eb) rather than the FWF/nemock
+// warm sheet (#f4ecd6). Additive list — a new BRG-palette series joins it, nothing moves.
+const BRG_CREAM_THEMES = ['brg-deep-dive', 'wte-guide'];
+// Circumvent's sheet is a warmer kraft cream than either neighbour (PALETTE.md).
+const CIRCUMVENT_CREAM = '#f2ede0';
+
 export const Video: React.FC<VideoProps> = (props) => {
   const {audio, words, scenes, captionBottomPx, captionFontSize, audioFrom, width, height, theme, captionAccent} = props;
   // Paper worlds: 'nemock-deep-dive' (Dave's deep dives) and 'cut-bond' (Cut & Bond).
@@ -137,7 +143,7 @@ export const Video: React.FC<VideoProps> = (props) => {
     <WorldProvider theme={theme}>
     {/* base page: BRG's cream is a shade cooler than the FWF sheet; every other theme
         keeps its exact prior value so no existing render moves. */}
-    <AbsoluteFill style={{backgroundColor: paper ? (theme === 'brg-deep-dive' ? '#f5f0eb' : '#f4ecd6') : '#090d1c'}}>
+    <AbsoluteFill style={{backgroundColor: paper ? (theme === 'circumvent' ? CIRCUMVENT_CREAM : BRG_CREAM_THEMES.includes(theme || '') ? '#f5f0eb' : '#f4ecd6') : '#090d1c'}}>
       {paper ? <PaperBackground /> : <Background />}
       {scenes.map((scene, i) => {
         const Comp = REGISTRY[scene.component] || TalkingScene;
