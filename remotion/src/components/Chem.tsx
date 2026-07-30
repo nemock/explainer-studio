@@ -435,7 +435,14 @@ export const PaperProp: React.FC<{fields: any}> = ({fields}) => {
   const inn = spring({frame: frame - 3, fps, config: {damping: 15, stiffness: 110}});
   const y = interpolate(inn, [0, 1], [width * 0.14, 0]);
   const rot = interpolate(inn, [0, 1], [3, 0]);
-  const breathe = 1 + 0.008 * Math.sin(frame * 0.06); // gentle, calm — not the old bob
+  // Slow one-way "Ken Burns" idle: a continuous float + drift + zoom + faint tilt over the
+  // hold. One-directional (NOT an oscillation), so it reads as alive without the old bob/nausea.
+  const kbEnd = 420; // ~14s ramp, then clamps and holds
+  const kbClamp = {extrapolateLeft: 'clamp' as const, extrapolateRight: 'clamp' as const};
+  const kbZoom = interpolate(frame, [0, kbEnd], [1, 1.07], kbClamp);
+  const kbY = interpolate(frame, [0, kbEnd], [0, -width * 0.03], kbClamp);
+  const kbX = interpolate(frame, [0, kbEnd], [0, width * 0.012], kbClamp);
+  const kbRot = interpolate(frame, [0, kbEnd], [0, 1.1], kbClamp);
   void s;
 
   return (
@@ -458,7 +465,7 @@ export const PaperProp: React.FC<{fields: any}> = ({fields}) => {
       {fields.image ? (
         <Img src={staticFile(fields.image)} style={{
           width: '58%', maxHeight: '44%', objectFit: 'contain', opacity: inn,
-          transform: `translateY(${y}px) rotate(${rot}deg) scale(${breathe})`,
+          transform: `translate(${kbX}px, ${y + kbY}px) rotate(${rot + kbRot}deg) scale(${kbZoom})`,
           filter: 'drop-shadow(0 22px 30px rgba(70,52,20,.24))',
         }} />
       ) : null}
@@ -524,6 +531,11 @@ export const DiscoveryCard: React.FC<{fields: any}> = ({fields}) => {
   const inn = spring({frame: frame - 2, fps, config: {damping: 15, stiffness: 110}});
   const y = interpolate(inn, [0, 1], [width * 0.4, 0]);
   const rot = interpolate(inn, [0, 1], [4, 0]);
+  // Gentle one-way idle after the card settles: slow float + faint tilt (no zoom — text stays
+  // crisp/legible). One-directional, so it adds life without the old bob.
+  const kbC = {extrapolateLeft: 'clamp' as const, extrapolateRight: 'clamp' as const};
+  const idleY = interpolate(frame, [18, 420], [0, -width * 0.018], kbC);
+  const idleRot = interpolate(frame, [18, 420], [0, -0.8], kbC);
   const cardW = width * 0.78;
   const cardEdge = darken('#fbf6e8', 0.86);
   const rid = 'r' + React.useId().replace(/:/g, '');
@@ -532,7 +544,7 @@ export const DiscoveryCard: React.FC<{fields: any}> = ({fields}) => {
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
       <RoughDefs id={rid} scale={14} freq={0.011} />
-      <div style={{position: 'relative', width: cardW, transform: `translateY(${y}px) rotate(${rot}deg)`, opacity: inn}}>
+      <div style={{position: 'relative', width: cardW, transform: `translateY(${y + idleY}px) rotate(${rot + idleRot}deg)`, opacity: inn}}>
         {/* the rough, grained paper card back (edges hand-cut; text stays crisp on top) */}
         <div style={{
           position: 'absolute', inset: 0, background: '#fbf6e8', borderRadius: 28,
@@ -608,13 +620,19 @@ export const PeriodicSlot: React.FC<{fields: any}> = ({fields}) => {
   const tx = interpolate(flight, [0, 1], [cx0, cx1]);
   const ty = interpolate(flight, [0, 1], [cy0, cy1]);
   const pulse = 1 + 0.12 * Math.max(0, Math.sin((frame - 26) * 0.5)) * interpolate(frame, [26, 46], [1, 0], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  // Gentle one-way idle push-in on the whole table once the tile has landed: slow float + tiny
+  // zoom + faint tilt. One-directional, so the diagram feels alive without the old bob.
+  const kbC = {extrapolateLeft: 'clamp' as const, extrapolateRight: 'clamp' as const};
+  const idleY = interpolate(frame, [50, 430], [0, -width * 0.015], kbC);
+  const idleZoom = interpolate(frame, [50, 430], [1, 1.04], kbC);
+  const idleRot = interpolate(frame, [50, 430], [0, 0.6], kbC);
   const rid = 'r' + React.useId().replace(/:/g, '');
   const rough = `url(#${rid})`;
 
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', flexDirection: 'column'}}>
       <RoughDefs id={rid} scale={8} freq={0.02} />
-      <div style={{position: 'relative', width: tableW, height: tableH}}>
+      <div style={{position: 'relative', width: tableW, height: tableH, transform: `translateY(${idleY}px) rotate(${idleRot}deg) scale(${idleZoom})`}}>
         {/* debossed table cells (slots cut into the base sheet) */}
         {Object.entries(MAIN_TABLE).flatMap(([r, cols]) =>
           cols.map((c) => {

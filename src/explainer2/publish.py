@@ -29,6 +29,7 @@ Dry-run by DEFAULT; --fire uploads. --fire defaults to privacyStatus=private.
 The google-api-python-client import is LAZY so dry-run needs no deps/creds.
 """
 import json
+import shutil
 from pathlib import Path
 
 DEFAULT_CATEGORY_ID = "22"        # People & Blogs (override via meta "category_id")
@@ -308,27 +309,65 @@ def _channel_of(yt):
             "handle": c["snippet"].get("customUrl", "")}
 
 
-def authorize(key):
+def authorize(key, force_rebind=False):
     """Bind channel `key` to a token by running consent (pick the channel on Google's
-    screen) and record its real id/title/handle in the registry."""
-    yt = _service(key, interactive=True)
-    chan = _channel_of(yt)
+    screen) and record its real id/title/handle in the registry.
+
+    RE-BIND GUARD: if `key` is ALREADY bound to a different channel in the registry
+    (i.e. you picked the wrong channel on Google's consent screen, or this key already
+    belongs to another channel), abort WITHOUT changing anything — the prior token is
+    restored and the registry is left untouched. This makes an accidental wrong-channel
+    pick a no-op instead of silently clobbering a working binding. Pass
+    force_rebind=True to intentionally move `key` to a new channel."""
+    tok = _token_path(key)
+    prior = load_registry().get(key)
+    # Snapshot the working token so a wrong-channel consent can be fully reverted.
+    backup = tok.with_name(tok.name + ".prev") if tok.exists() else None
+    if backup:
+        shutil.copy2(tok, backup)
+    try:
+        yt = _service(key, interactive=True)   # runs consent; (re)writes tok
+        chan = _channel_of(yt)
+    except Exception:
+        if backup:
+            shutil.move(str(backup), str(tok))
+        raise
     if not chan:
-        return {"ok": False, "reason": "no channel returned for this token"}
+        if backup:
+            shutil.move(str(backup), str(tok))
+        return {"ok": False, "reason": "no channel returned for this token (prior token restored)"}
+    if prior and prior.get("id") != chan["id"] and not force_rebind:
+        # Wrong-channel pick: revert the token, leave the registry alone, abort.
+        if backup:
+            shutil.move(str(backup), str(tok))
+        else:
+            tok.unlink(missing_ok=True)
+        return {"ok": False, "aborted": True,
+                "reason": (f"re-bind guard: '{key}' is already bound to {prior.get('title')} "
+                           f"({prior.get('handle')}, id {prior.get('id')}), but you just consented as "
+                           f"{chan['title']} ({chan.get('handle')}, id {chan['id']}). "
+                           f"Nothing was changed and the prior token was restored."),
+                "prior": prior, "consented_as": chan,
+                "fix": (f"Re-run and pick {prior.get('title')} on Google's screen, "
+                        f"or pass --force-rebind to intentionally move '{key}' to {chan['title']}.")}
+    # Match, first-time bind, or an intentional forced re-bind: commit.
+    if backup:
+        backup.unlink(missing_ok=True)
     reg = load_registry(); reg[key] = chan; _save_registry(reg)
     return {"ok": True, "channel_key": key, "bound_to": chan,
             "token": str(_token_path(key)),
+            "rebound_from": prior if (prior and prior.get("id") != chan["id"]) else None,
             "note": f"'{key}' now permanently targets {chan['title']} ({chan['handle']}). "
                     f"Set project.json \"youtube_channel\": \"{key}\" on projects for this channel."}
 
 
 # ------------------------------------------------------------------ entry point
 def run(project_dir=None, fire=False, privacy="private", when=None,
-        channel=None, do_authorize=False):
+        channel=None, do_authorize=False, force_rebind=False):
     # --authorize is project-independent
     if do_authorize:
         key = (channel or DEFAULT_CHANNEL).lstrip("@")
-        return authorize(key)
+        return authorize(key, force_rebind=force_rebind)
 
     from .project import Project
     proj = Project.load(project_dir)

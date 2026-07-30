@@ -367,7 +367,7 @@ def cmd_publish(args):
         return 1
     print(json.dumps(publish.run(args.project_dir, fire=args.fire, privacy=args.privacy,
                                  when=args.when, channel=args.channel,
-                                 do_authorize=args.authorize), indent=2))
+                                 do_authorize=args.authorize, force_rebind=args.force_rebind), indent=2))
 
 
 def cmd_talktime(args):
@@ -566,6 +566,10 @@ def main(argv=None):
     pub.add_argument("--channel", default=None,
                      help="target channel KEY; overrides project.json 'youtube_channel' "
                           "(default: nemock). With --authorize, the key to bind.")
+    pub.add_argument("--force-rebind", action="store_true", dest="force_rebind",
+                     help="with --authorize: allow re-binding a channel key to a DIFFERENT channel "
+                          "than it is currently bound to (default: abort + restore on mismatch, so an "
+                          "accidental wrong-channel pick can't clobber a working binding)")
     pub.add_argument("--authorize", action="store_true",
                      help="one-time: run OAuth consent for --channel <key>, bind its token + "
                           "record the channel in the registry (pick the right channel on Google's screen)")
