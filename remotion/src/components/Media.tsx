@@ -121,6 +121,14 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
   const revealFrac = fields.imageFromFrac ?? 0;
   const revealAt = revealFrac * durationInFrames;
   const phased = revealFrac > 0 && !!fields.title;
+  // A `title` authored WITHOUT imageFromFrac used to be silently discarded (titleOpacity
+  // stayed 0 forever), so headline copy the deck author wrote simply never appeared. That
+  // quietly cost real editorial lines across several videos before it surfaced — on #52
+  // seven of nine image slides had a dropped title, including the video's central claim
+  // (operator-caught 2026-07-28). A title is now ALWAYS rendered:
+  //   title + imageFromFrac -> phased  (title holds alone, then the image reveals under it)
+  //   title alone           -> persistent header above the image, for the whole scene
+  const persistentTitle = !!fields.title && !phased;
 
   const kIntro = spring({frame, fps, config: {damping: 18, stiffness: 90}});
   const imgIntro = spring({frame: frame - revealAt, fps, config: {damping: 18, stiffness: 90}});
@@ -160,9 +168,14 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
         + `translate(${interpolate(frame, [0, durationInFrames], [-4, 4]) * (kenSeed % 2 ? 1 : -1)}%, `
         + `${interpolate(frame, [0, durationInFrames], [-3, 3]) * ((kenSeed >> 1) % 2 ? 1 : -1)}%)`}
     : undefined;
-  const img = (
+  // _stage_images() nulls the field when it cannot resolve the asset, and its contract is
+  // "missing -> component shows headline/caption only". Figure used to call staticFile()
+  // unconditionally, so one unresolvable path threw and killed the whole render ~2 min in
+  // (#50, 2026-07-31: a deck referencing `imagegen/x.png` instead of `assets/imagegen/x.png`).
+  // Degrade to the caption card instead — a missing image must never cost a 20-minute render.
+  const img = fields.image ? (
     <Img src={staticFile(fields.image)} style={{maxWidth: '100%', maxHeight: Math.round(height * 0.56), objectFit: 'contain', display: 'block', borderRadius: 8}} />
-  );
+  ) : null;
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 6%'}}>
       {fields.kicker ? (
@@ -175,9 +188,17 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
           {figColorize(fields.title, fields.accent, fields.accent2, ink.accent)}
         </div>
       ) : null}
+      {persistentTitle ? (
+        // in-flow header: kicker -> title -> image card -> caption. Smaller than the phased
+        // title (which owns the whole frame on its own) so the image still leads.
+        <div style={{textAlign: 'center', padding: '0 4%', fontFamily: BRAND.font, color: ink.body, fontWeight: 900, fontSize: height * 0.042, lineHeight: 1.16, opacity: kIntro, marginBottom: height * 0.022, textShadow: ink.paper ? PAPER_SHADOW : '0 3px 18px rgba(0,0,0,.6)'}}>
+          {figColorize(fields.title, fields.accent, fields.accent2, ink.accent)}
+        </div>
+      ) : null}
       {/* The artifact frame: a bright white card + deep shadow reads as a lit print on the
           navy stage, but on the cream paper worlds it becomes a glaring white border with a
           gloomy halo. There the frame is a warm near-cream stock with the paper shadow. */}
+      {img ? (
       <div style={{position: 'relative', maxWidth: '76%', background: ink.paper ? '#fffcf5' : '#fff', borderRadius: 26, padding: height * 0.022, boxShadow: ink.paper ? PAPER_SHADOW : '0 40px 120px rgba(0,0,0,.55)', transform: `scale(${scale})`, opacity: imgOpacity, overflow: (tour || autoKen) ? 'hidden' : undefined}}>
         {pieces.length ? (
           // assembling: base image hidden; each piece is a clipped copy wiping in on cue
@@ -208,6 +229,7 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
           <div style={{position: 'absolute', top: `${hl.top ?? 30}%`, left: `${hl.left ?? 6}%`, height: `${hl.height ?? 12}%`, width: `${hlW}%`, background: ink.accentWash, borderRadius: 8}} />
         ) : null}
       </div>
+      ) : null}
       {fields.caption ? (
         <div style={{fontFamily: BRAND.font, color: ink.body, opacity: 0.75 * imgOpacity, fontSize: height * 0.022, marginTop: height * 0.025}}>
           {fields.caption}
