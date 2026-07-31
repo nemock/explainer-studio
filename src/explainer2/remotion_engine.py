@@ -481,7 +481,7 @@ def build_spec(sp):
     # `"sting": false` so a forgotten flag can never leak FWF branding into a safety-training
     # video — the exact failure mode the ISO 14971 series hit repeatedly.
     # `circumvent` likewise carries NO brand bumper (operator direction 2026-07-30). It is a
-    # Circumvent Global company video with no CTA; it ends on its own circumvent.com card.
+    # Circumvent Global company video with no CTA; it ends on its own circumventglobal.com card.
     # Without this guard it fell through to the legacy `else` below and stamped FOUNDERS WHO
     # FINISH / davesaunders.net onto the end of a Circumvent film — the same cross-brand leak
     # this block already guards wte-guide against.
@@ -554,15 +554,15 @@ def build_spec(sp):
 
 
 def _stage_images(sp, spec, public):
-    """Copy any image referenced by a scene into the public dir, rebasing the field to the
-    basename. Resolves the deck's path against the project (and, for shorts, the parent).
-    Handles every image-bearing field a component may use (e.g. Cut & Bond's `bottomImage`
-    decorative prop on ElementStat)."""
+    """Copy any media asset referenced by a scene into the public dir, rebasing the field to
+    the basename. Resolves the deck's path against the project (and, for shorts, the parent).
+    Handles every asset-bearing field a component may use (e.g. Cut & Bond's `bottomImage`
+    decorative prop on ElementStat, and `video` for its PaperFootage live-action window)."""
     roots = [sp.dir, sp.dir.parent.parent, sp.dir.parent]  # project, then parent (shorts), then shorts/
     # `set` = Papercraft Motion backdrop (papercraft-motion-spec.md §8). Paths under
     # papercraft/ are shared brand set dressing staged wholesale by render() — leave
     # them un-rebased so staticFile('papercraft/...') resolves.
-    IMG_FIELDS = ("image", "bottomImage", "set")
+    ASSET_FIELDS = ("image", "bottomImage", "set", "video")
 
     def _stage_one(img):
         if not img or str(img).startswith(("papercraft/", "papercraft-circumvent/")):
@@ -576,7 +576,7 @@ def _stage_images(sp, spec, public):
 
     for scene in spec["scenes"]:
         fields = scene.get("fields") or {}
-        for key in IMG_FIELDS:
+        for key in ASSET_FIELDS:
             if fields.get(key):
                 fields[key] = _stage_one(fields[key])
         for prop in (fields.get("props") or []):

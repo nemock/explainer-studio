@@ -178,7 +178,9 @@ export const CvgPunch: React.FC<{fields: any}> = ({fields}) => {
   const at = cf.in ?? 2;
   const s = spring({frame: frame - at, fps, config: {damping: 11, stiffness: 190}});
   const word = fields.word || fields.headline || '';
-  const size = height * (word.length > 12 ? 0.15 : word.length > 7 ? 0.2 : 0.26);
+  // Long words (a full domain on the end card) need an extra step down or they run
+  // past the safe area at 16:9.
+  const size = height * (word.length > 16 ? 0.105 : word.length > 12 ? 0.15 : word.length > 7 ? 0.2 : 0.26);
   return (
     <AbsoluteFill>
       <Set src={fields.set} anchor={fields.anchor} />
