@@ -174,6 +174,44 @@ def _papercraft_scene(slide, t, kicker, accent, headline):
     return None
 
 
+def _circumvent_scene(slide, t, kicker, accent, headline):
+    """CIRCUMVENT style map. Every deck type resolves to a Cvg* scene so no slide can
+    fall through to a card. `set`, `props`, `anchor`, `band` and `align` pass straight
+    through from the deck; `set`/`props[].image` paths under papercraft-circumvent/ are
+    staged wholesale by render()."""
+    common = {
+        "set": slide.get("set"),
+        "anchor": slide.get("anchor"),
+        "props": slide.get("props") or [],
+        "kicker": kicker,
+        "accent": accent,
+        "headline": headline,
+        "align": slide.get("align", "left"),
+        "band": slide.get("band", "top"),
+        "subkicker": slide.get("subkicker", ""),
+    }
+    if t == "punch":
+        return "CvgPunch", {**common, "word": slide.get("word") or headline,
+                            "kind": slide.get("kind", "")}
+    if t == "list":
+        return "CvgList", {**common, "items": _items(slide), "title": slide.get("title", "")}
+    if t in ("compare", "delta"):
+        left = slide.get("left") or {"title": slide.get("from_label", ""), "value": slide.get("from", "")}
+        right = slide.get("right") or {"title": slide.get("to_label", ""), "value": slide.get("to", "")}
+        return "CvgCompare", {**common, "left": left, "right": right}
+    if t in ("steps", "flow"):
+        return "CvgSteps", {**common, "steps": _items(slide),
+                            "stepImages": slide.get("step_images") or []}
+    if t == "define":
+        return "CvgDefine", {**common, "term": slide.get("term", ""),
+                             "definition": slide.get("definition", "")}
+    if t == "quote":
+        return "CvgScene", {**common, "headline": slide.get("quote") or headline,
+                            "attrib": slide.get("attribution") or slide.get("source", "")}
+    # statement / hook / payoff / highlight / anything else: type on the set.
+    return "CvgScene", common
+
+
 def _scene_for(slide, theme=""):
     """Map a deck slide -> (component, fields) per the motion-playbook §6 migration table.
     Unknown -> KineticHeadline (a clean animated headline). `image` fields stay as the
@@ -197,8 +235,16 @@ def _scene_for(slide, theme=""):
     # family; they differ by ink/accent (ink.tsx) and by their stings, not by the type map.
     # wte-guide (the waste-to-fuel Operator's Guide, 2026-07-29) joins the family: the
     # operator asked for heavy paper-craft throughout, in the BRG palette.
-    # circumvent (2026-07-30) joins the family: the Circumvent Global marketing program is
-    # papercraft on EVERY slide by operator directive, in its own green-ink palette.
+    # Circumvent gets its OWN scene family (2026-07-30). The shared Paper* components
+    # print every line on a rounded cream card over a gradient table, which reads as a UI
+    # panel pasted onto the generated paper art. Cvg* scenes drop the card: the set fills
+    # the frame, cut-outs stand in it, type sits on the paper. Checked BEFORE the shared
+    # papercraft map so it wins for this theme only.
+    if theme == "circumvent":
+        cvg = _circumvent_scene(slide, t, kicker, accent, headline)
+        if cvg:
+            return cvg
+
     if theme in ("nemock-deep-dive", "brg-deep-dive", "wte-guide", "circumvent"):
         pc = _papercraft_scene(slide, t, kicker, accent, headline)
         if pc:
@@ -513,7 +559,7 @@ def _stage_images(sp, spec, public):
     IMG_FIELDS = ("image", "bottomImage", "set")
 
     def _stage_one(img):
-        if not img or str(img).startswith("papercraft/"):
+        if not img or str(img).startswith(("papercraft/", "papercraft-circumvent/")):
             return img
         src = next((r / img for r in roots if (r / img).exists()), None)
         if src is None:
@@ -657,6 +703,11 @@ def render(sp, log=print, frames=None, out=None):
     _pcraft = REMOTION_DIR / "public" / "papercraft"
     if _pcraft.exists():
         shutil.copytree(_pcraft, public / "papercraft", dirs_exist_ok=True)
+    # Circumvent's own library (sequestered from the FWF world, 2026-07-30). Staged the
+    # same way so deck refs like "papercraft-circumvent/sets/set_ranch.png" resolve.
+    _cvg = REMOTION_DIR / "public" / "papercraft-circumvent"
+    if _cvg.exists():
+        shutil.copytree(_cvg, public / "papercraft-circumvent", dirs_exist_ok=True)
     _stage_images(sp, spec, public)
     _stage_doodles(spec, public, log)
     # CTA scenes show the brand book cover unless the project opts out with
