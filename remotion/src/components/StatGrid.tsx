@@ -20,7 +20,7 @@ export const StatGrid: React.FC<{fields: any; durationInFrames: number}> = ({fie
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 7%', transform: `scale(${live}) translateY(${drift}px)`}}>
       {fields.kicker ? (
-        <div style={{fontFamily: BRAND.font, color: BRAND.green, fontWeight: 800, fontSize: height * 0.024,
+        <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: height * 0.024,
           letterSpacing: 5, textTransform: 'uppercase', textAlign: 'center', marginBottom: height * 0.055}}>
           {fields.kicker}
         </div>
