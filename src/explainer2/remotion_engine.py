@@ -480,7 +480,13 @@ def build_spec(sp):
     # (operator direction 2026-07-29). Enforced here rather than left to each module's
     # `"sting": false` so a forgotten flag can never leak FWF branding into a safety-training
     # video — the exact failure mode the ISO 14971 series hit repeatedly.
-    if sp.data.get("theme") != "wte-guide" and sp.data.get("sting", width >= height):
+    # `circumvent` likewise carries NO brand bumper (operator direction 2026-07-30). It is a
+    # Circumvent Global company video with no CTA; it ends on its own circumvent.com card.
+    # Without this guard it fell through to the legacy `else` below and stamped FOUNDERS WHO
+    # FINISH / davesaunders.net onto the end of a Circumvent film — the same cross-brand leak
+    # this block already guards wte-guide against.
+    _NO_STING = ("wte-guide", "circumvent")
+    if sp.data.get("theme") not in _NO_STING and sp.data.get("sting", width >= height):
         # The sting is THEME-KEYED (branding isolation, operator direction 2026-07-15).
         # Each channel owns its brand; nothing here is a global default.
         #   nemock-deep-dive (Dave's deep dives) -> paper-launch PaperSting + davesaunders.net
