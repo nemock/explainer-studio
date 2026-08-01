@@ -173,6 +173,22 @@ def start(project, open_tab=True):
     if not (proj / "project.json").exists() or not (proj / "script.json").exists():
         print(f"not a bookable project (need project.json + script.json): {proj}")
         return 1
+    # Shorts-plan preflight (added 2026-07-28 after #52 opened the booth with no
+    # shorts/plan.json, so the operator recorded the main script and none of the
+    # native Short hooks/outros, and had to come back for a second session).
+    # The recorder builds its card list from script.json + shorts/plan.json, so a
+    # missing plan silently yields a main-script-only booth. Deep dives are supposed
+    # to record their Shorts in the SAME sitting (shorts-playbook: every cut gets a
+    # separately-recorded native hook + outro). Warn loudly; never block — a
+    # deliberate no-Shorts run is legitimate.
+    try:
+        _ctype = json.loads((proj / "project.json").read_text()).get("content_type", "")
+    except Exception:
+        _ctype = ""
+    if _ctype == "deepdive" and not (proj / "shorts" / "plan.json").exists():
+        print("WARNING: no shorts/plan.json — this booth will show the main script ONLY.")
+        print("         The native Short hooks/outros will NOT be recordable in this session.")
+        print("         Author shorts/plan.json first (shorts-playbook) unless you intend no Shorts.")
     # idempotency (v1 record-open parity): if a live booth already serves THIS
     # project, report it instead of opening a duplicate on a fallback port —
     # but still pop the tab: re-running the launcher means "get me the booth".
