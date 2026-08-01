@@ -86,7 +86,7 @@ export const PaperSetHook: React.FC<{fields: any; durationInFrames: number}> = (
                      justifyContent: 'center', gap: width * 0.02}}>
           {beats.map((b, i) => (
             <Placed key={i} at={beatAt(i)}>
-              <PaperCard style={{transform: `rotate(${(i % 2 ? 1.6 : -1.4)}deg) scale(${flick(frame, beatAt(i))})`}}>
+              <PaperCard id={`beat:${i}:${b}`} family="card_tag" style={{transform: `rotate(${(i % 2 ? 1.6 : -1.4)}deg) scale(${flick(frame, beatAt(i))})`}}>
                 <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.034, color: W.ink, whiteSpace: 'nowrap'}}>{b}</div>
               </PaperCard>
             </Placed>
@@ -97,7 +97,7 @@ export const PaperSetHook: React.FC<{fields: any; durationInFrames: number}> = (
           <div style={{opacity: frame >= pushAt + 4 ? 1 : 0}}>
             <div style={{position: 'absolute', left: '50%', bottom: -height * 0.016, width: '88%', height: height * 0.034,
                          transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(8px)', opacity: head.shadowOpacity}} />
-            <PaperCard style={{...head.object, padding: `${height * 0.03}px ${width * 0.03}px`, borderRadius: 20}}>
+            <PaperCard id={`head:${fields.headline ?? ''}`} style={{...head.object, padding: `${height * 0.03}px ${width * 0.03}px`, borderRadius: 20}}>
               {fields.kicker ? (
                 <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.022, letterSpacing: 4,
                              textTransform: 'uppercase', color: W.accent, textAlign: 'center', marginBottom: height * 0.012}}>{fields.kicker}</div>
@@ -202,7 +202,7 @@ export const PaperCounter: React.FC<{fields: any; durationInFrames: number}> = (
       </div>
       {/* the number tag */}
       <div style={{position: 'absolute', left: width * 0.52, top: '50%', transform: `translateY(-50%) scale(${flick(frame, land)})`}}>
-        <PaperCard style={{padding: `${height * 0.025}px ${width * 0.03}px`, borderRadius: 22,
+        <PaperCard id={`num:${fields.label ?? fields.value ?? ''}`} style={{padding: `${height * 0.025}px ${width * 0.03}px`, borderRadius: 22,
                            boxShadow: `0 ${height * 0.02}px ${height * 0.045}px ${W.shadow}`}}>
           <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.15, lineHeight: 1, color: W.ink, fontVariantNumeric: 'tabular-nums'}}>
             {shown}{fields.suffix || ''}
@@ -210,7 +210,7 @@ export const PaperCounter: React.FC<{fields: any; durationInFrames: number}> = (
         </PaperCard>
         {fields.label ? (
           <div style={{marginTop: height * 0.024, opacity: interpolate(frame, [land + 4, land + 12], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})}}>
-            <PaperCard style={{display: 'inline-block', padding: `${height * 0.01}px ${width * 0.016}px`, borderRadius: 10, transform: 'rotate(-1.2deg)'}}>
+            <PaperCard id={`numlbl:${fields.label ?? ''}`} family="card_tag" style={{display: 'inline-block', padding: `${height * 0.01}px ${width * 0.016}px`, borderRadius: 10, transform: 'rotate(-1.2deg)'}}>
               <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.03, color: W.accent}}>{fields.label}</div>
             </PaperCard>
           </div>

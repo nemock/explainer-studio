@@ -27,7 +27,7 @@ import {PaperStairs, PaperCompare, PaperSteps, PaperList, PaperBookCTA} from './
 import {TearReveal} from './components/PaperWorld';
 import {DrawLine, Waterfall, Pictograph, Ring, Funnel} from './components/DataViz2';
 import {ReactiveStrip, Waveform} from './components/Audio';
-import {PaperAtom, ElementStat, DiscoveryCard, PeriodicSlot, PaperWord, PaperFire, PaperProp, PaperCTA, PaperMolecule} from './components/Chem';
+import {PaperAtom, ElementStat, DiscoveryCard, PeriodicSlot, PaperWord, PaperFire, PaperProp, PaperFootage, PaperCTA, PaperMolecule} from './components/Chem';
 import {InkProvider, isPaperTheme} from './ink';
 import {WorldProvider} from './components/PaperWorld';
 
@@ -88,6 +88,7 @@ const REGISTRY: Record<string, React.FC<any>> = {
   PaperWord,
   PaperFire,
   PaperProp,
+  PaperFootage,
   PaperCTA,
   PaperMolecule,
   TalkingScene,

@@ -2,6 +2,7 @@ import React from 'react';
 import {AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
 import {useInk} from '../ink';
+import {useWorld} from './PaperWorld';
 
 // Paper cold-open hook (2026-07-14) — REPLACES the rotating 3D "buckyball" (Hero3D) as the
 // default open. A full-bleed paper illustration (this video's visual theme) with a gentle
@@ -31,8 +32,12 @@ export const PaperHook: React.FC<{fields: any}> = ({fields}) => {
   const ink = useInk();
   const frame = useCurrentFrame();
   const {fps, height, width} = useVideoConfig();
-  const CREAM = '#f4ecd6';
-  const INK = '#2c1e4e';
+  // Sheet + headline ink come from the channel's world tokens (2026-07-29). Every
+  // pre-existing world carries the exact values that were hardcoded here, so this is
+  // a no-op for them; new channels can own their cold open.
+  const world = useWorld();
+  const CREAM = world.hookSheet;
+  const INK = world.hookInk;
 
   const kb = interpolate(frame, [0, 150], [1.05, 1.12], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const headIn = spring({frame: frame - 6, fps, config: {damping: 16, stiffness: 120}});

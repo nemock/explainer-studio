@@ -3,6 +3,7 @@ import {AbsoluteFill, Easing, interpolate, spring, useCurrentFrame, useVideoConf
 import rough from 'roughjs';
 import {BRAND} from '../brand';
 import {useInk, PAPER_SHADOW} from '../ink';
+import {PaperNote, PaperSheet, fitNote, NOTE_PASTEL, PASTEL_CYCLE, NotePastel} from './PaperNote';
 
 // motion-playbook §2C — Schematic: a node-and-edge diagram that ASSEMBLES under the
 // narration, with a camera that drifts to the active region ("lead the viewer's eye
@@ -33,9 +34,10 @@ const kindColor = (kind?: string) =>
   kind === 'bad' ? BRAND.red : kind === 'neutral' ? 'rgba(245,247,255,.55)' : BRAND.green;
 
 // Paper-world schematic: nodes read as colored sticky notes (Dave 2026-07-18 — the cream
-// cards + white dotted edges had no contrast on the cream page). Four post-it colors cycled
-// by node index; edges become hand-drawn navy Sharpie lines (see the ink.paper branches).
-const POSTIT = ['#f4cf49', '#83db78', '#ff9585', '#7cbcef']; // yellow · green · coral · blue
+// cards + white dotted edges had no contrast on the cream page). Edges are hand-drawn navy
+// Sharpie lines (see the ink.paper branches). The notes themselves stopped being CSS on
+// 2026-07-31: they are now real generated paper substrates, and the four cycled colours
+// live in PaperNote's PASTEL_CYCLE.
 const darken = (hex: string, f: number) => {
   const n = parseInt(hex.slice(1), 16);
   return `rgb(${Math.round(((n >> 16) & 255) * f)},${Math.round(((n >> 8) & 255) * f)},${Math.round((n & 255) * f)})`;
@@ -96,10 +98,41 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
     zoom = zoom + (k.zoom - zoom) * t;
   }
 
+  // Notes size themselves to their CONTENT (operator directive 2026-07-28, #52: long
+  // labels/subs were overflowing the fixed-height notes — "It matches them against a
+  // playbook" and the redlining definition both spilled past their edges). The old
+  // formula ignored text length entirely, so anything that wrapped past two lines ran
+  // out of the note. Estimate the wrapped line count from the node's own width and the
+  // rendered font sizes, then grow the box to fit.
+  //   n.w      — width, frame-width fraction (unchanged)
+  //   n.h      — explicit height override, frame-height fraction (wins over everything)
+  //   n.shape  — 'square' for a chunky real-post-it note; there is usually plenty of
+  //              empty canvas, so bigger notes are cheap and read better.
   const nodeBox = (n: any) => {
     const w = (n.w ?? 0.2) * W;
-    const h = Math.max(H * 0.085, H * 0.06 + (n.sub ? H * 0.035 : 0));
-    return {x: n.x * W - w / 2, y: n.y * H - h / 2, w, h};
+    const padX = H * 0.014;                    // matches the rendered horizontal padding
+    const inner = Math.max(1, w - padX * 2);
+    const fLabel = H * 0.03, fSub = H * 0.02;  // must track the font sizes used below
+    // rough wrapped-line count: chars * (em width) / usable width, min 1 line
+    const linesOf = (txt: any, f: number, em: number) =>
+      Math.max(1, Math.ceil((String(txt ?? '').length * f * em) / inner));
+    const lLab = linesOf(n.label, fLabel, 0.55);        // 900-weight runs wide
+    const lSub = n.sub ? linesOf(n.sub, fSub, 0.50) : 0;
+    // slightly generous line-heights vs the render (1.08/1.1) so we never under-size
+    const content = lLab * fLabel * 1.10 + (lSub ? H * 0.006 + lSub * fSub * 1.15 : 0);
+    let h = Math.max(H * 0.085, content + H * 0.028);   // + breathing room top/bottom
+    if (n.shape === 'square') h = Math.max(h, w);       // true square, real-post-it look
+    if (n.h) h = n.h * H;                               // explicit override wins
+    // Paper mode: the substrate's real aspect sets the height, so the generated paper is
+    // never squashed to fit a box (papercraft-substrate-plan.md §3 — stretching smears the
+    // grain and mushes the torn edge). fitNote only ever picks paper no wider than the text
+    // needs, so this grows the box; the surplus is blank note. An explicit n.h still wins.
+    let fit;
+    if (ink.paper && !fields.sketch) {
+      fit = fitNote(`schem:${n.id}`, w / h);
+      if (!n.h) h = w / fit.aspect;
+    }
+    return {x: n.x * W - w / 2, y: n.y * H - h / 2, w, h, fit};
   };
   const nodeById = React.useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
 
@@ -236,34 +269,63 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
           const note = ink.paper && !fields.sketch;   // post-it treatment
           // color-by-kind when the node carries semantic good/bad (e.g. jagged-frontier
           // inside=green / outside=coral); otherwise cycle the decorative post-it palette.
-          const pc = n.kind === 'good' ? '#83db78' : n.kind === 'bad' ? '#ff9585' : POSTIT[ni % POSTIT.length];
-          const corner = Math.min(b.w, b.h) * 0.16;
+          // Paper mode: a real generated post-it substrate carries the node, and the type
+          // is laid on top (papercraft-substrate-plan.md). The CSS card below is kept for
+          // the non-paper themes, which have no substrate library of their own.
+          if (note) {
+            const pastel: NotePastel = n.kind === 'good' ? 'green' : n.kind === 'bad' ? 'pink'
+              : PASTEL_CYCLE[ni % PASTEL_CYCLE.length];
+            return (
+              <div key={n.id} style={{
+                position: 'absolute', left: b.x, top: b.y, width: b.w, height: b.h,
+                opacity: e,
+                transform: `translateY(${interpolate(e, [0, 1], [22, 0])}px) scale(${interpolate(e, [0, 1], [0.88, 1])}) rotate(${tiltFor(n.id)}deg)`,
+              }}>
+                <PaperNote
+                  id={`schem:${n.id}`}
+                  aspect={b.w / b.h}
+                  family={b.fit?.family}
+                  pastel={pastel}
+                  shadow={`0 ${Math.round(H * 0.012)}px ${Math.round(H * 0.022)}px rgba(12,4,24,.34)`}
+                >
+                  <div style={{padding: `0 ${H * 0.022}px`, textAlign: 'center'}}>
+                    <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: H * 0.03,
+                                 color: '#2c1e4e', lineHeight: 1.08}}>
+                      {n.label}
+                    </div>
+                    {n.sub ? (
+                      <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: H * 0.02,
+                                   color: darken(NOTE_PASTEL[pastel], 0.42),
+                                   marginTop: H * 0.006, lineHeight: 1.1}}>
+                        {n.sub}
+                      </div>
+                    ) : null}
+                  </div>
+                </PaperNote>
+              </div>
+            );
+          }
+          // sketch mode + the non-paper themes: the original drawn card
           return (
             <div key={n.id} style={{
               position: 'absolute', left: b.x, top: b.y, width: b.w, height: b.h,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              borderRadius: note ? 5 : 16, padding: `0 ${H * 0.014}px`, textAlign: 'center',
-              background: fields.sketch ? 'rgba(9,13,28,.72)' : note ? pc : ink.cardBg,
-              border: (fields.sketch || note) ? 'none' : `2px solid ${color}66`,
-              boxShadow: note ? '0 16px 32px rgba(0,0,0,.26), 0 3px 9px rgba(0,0,0,.18)'
-                       : ink.paper && !fields.sketch ? PAPER_SHADOW : `0 18px 60px rgba(0,0,0,.45)`,
+              borderRadius: 16, padding: `0 ${H * 0.014}px`, textAlign: 'center',
+              background: fields.sketch ? 'rgba(9,13,28,.72)' : ink.cardBg,
+              border: fields.sketch ? 'none' : `2px solid ${color}66`,
+              boxShadow: ink.paper && !fields.sketch ? PAPER_SHADOW : `0 18px 60px rgba(0,0,0,.45)`,
               opacity: e,
-              transform: `translateY(${interpolate(e, [0, 1], [22, 0])}px) scale(${interpolate(e, [0, 1], [0.88, 1])}) rotate(${note ? tiltFor(n.id) : 0}deg)`,
+              transform: `translateY(${interpolate(e, [0, 1], [22, 0])}px) scale(${interpolate(e, [0, 1], [0.88, 1])})`,
             }}>
               <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: H * 0.03,
-                           color: fields.sketch ? BRAND.white : note ? '#2c1e4e' : ink.body, lineHeight: 1.08}}>
+                           color: fields.sketch ? BRAND.white : ink.body, lineHeight: 1.08}}>
                 {n.label}
               </div>
               {n.sub ? (
                 <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: H * 0.02,
-                             color: note ? darken(pc, 0.42) : color, marginTop: H * 0.006, lineHeight: 1.1}}>
+                             color: color, marginTop: H * 0.006, lineHeight: 1.1}}>
                   {n.sub}
                 </div>
-              ) : null}
-              {note ? (  // turned-up corner (dog-ear)
-                <div style={{position: 'absolute', right: 0, bottom: 0, width: corner, height: corner,
-                             background: darken(pc, 0.8), clipPath: 'polygon(100% 0%, 0% 100%, 100% 100%)',
-                             boxShadow: '-3px -3px 6px rgba(0,0,0,.18)'}} />
               ) : null}
             </div>
           );
@@ -279,15 +341,18 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
           if (t < 0.9) return null;
           const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
           return (
+            // a small paper tag, not a flat cream pill. These sit directly ON the note
+            // substrates, so a drawn chip is the most exposed synthetic surface on the slide.
             <div key={`el${i}`} style={{
               position: 'absolute', left: mx * W, top: my * H, transform: 'translate(-50%, -50%)',
-              background: '#fbf5df', color: ink.body, borderRadius: 999,
+              color: ink.body, borderRadius: 8,
               padding: `${H * 0.007}px ${H * 0.017}px`, whiteSpace: 'nowrap',
               fontFamily: BRAND.font, fontStyle: 'italic', fontWeight: 800, fontSize: H * 0.02,
               boxShadow: '0 4px 14px rgba(0,0,0,.2)',
               opacity: interpolate(t, [0.9, 1], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}),
             }}>
-              {e.label}
+              <PaperSheet id={`edgelbl:${e.from}->${e.to}`} family="card_tag" radius={8} edge={7} tint="#fbf5df" />
+              <span style={{position: 'relative'}}>{e.label}</span>
             </div>
           );
         }) : null}

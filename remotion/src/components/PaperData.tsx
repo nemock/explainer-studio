@@ -2,6 +2,7 @@ import React from 'react';
 import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
 import {useWorld, CameraMove, PLANE, Plane, PaperTable, PaperCard, resolveCamera, usePlace, popupStyle, placeStyle, flick} from './PaperWorld';
+import {PaperSheet} from './PaperNote';
 
 // Papercraft Motion — data & structure family (papercraft-motion-spec.md §7).
 // Charts are physical objects: stairs pop up step by step and a paper pawn
@@ -63,10 +64,13 @@ export const PaperStairs: React.FC<{fields: any; durationInFrames: number}> = ({
       {pts.map((_, i) => {
         const st = popupStyle(frame, fps, stepAt(i));
         return (
+          // real paper columns (phase 3). Each step gets its own substrate id so a staircase
+          // is not the same sheet of paper repeated across every riser.
           <div key={i} style={{position: 'absolute', left: x(i), top: topY(i), width: stepW * 0.94,
-                               height: baseY - topY(i), background: W.paper, borderRadius: 8,
-                               borderBottom: `6px solid ${W.paperShade}`,
-                               boxShadow: `0 ${height * 0.014}px ${height * 0.03}px ${W.shadow}`, ...st}} />
+                               height: baseY - topY(i), borderRadius: 8,
+                               boxShadow: `0 ${height * 0.014}px ${height * 0.03}px ${W.shadow}`, ...st}}>
+            <PaperSheet id={`stair:${i}`} radius={8} edge={9} tint={W.paper} />
+          </div>
         );
       })}
       {/* the climber (zIndex above the end tag so it never hides beneath it) */}
@@ -77,7 +81,7 @@ export const PaperStairs: React.FC<{fields: any; durationInFrames: number}> = ({
       {fields.endLabel ? (
         <div style={{position: 'absolute', left: Math.min(x(n - 1) + stepW * 0.1, width * 0.78), top: topY(n - 1) - height * 0.26,
                      ...placeStyle(frame, fps, height, lastAt + 8)}}>
-          <PaperCard style={{display: 'inline-block', padding: `${height * 0.012}px ${width * 0.016}px`, borderRadius: 10, transform: 'rotate(1.4deg)'}}>
+          <PaperCard id={`stairlbl:${fields.end_label ?? ''}`} family="card_tag" style={{display: 'inline-block', padding: `${height * 0.012}px ${width * 0.016}px`, borderRadius: 10, transform: 'rotate(1.4deg)'}}>
             <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.03, color: W.accent, whiteSpace: 'nowrap'}}>{fields.endLabel}</div>
           </PaperCard>
         </div>
@@ -104,12 +108,17 @@ export const PaperCompare: React.FC<{fields: any}> = ({fields}) => {
         <div style={{position: 'absolute', left: '50%', bottom: -height * 0.018, width: '86%', height: height * 0.036,
                      transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%',
                      filter: `blur(${bad ? 12 : 8}px)`, opacity: frame >= at ? (bad ? 1 : 0.75) : 0}} />
-        <div style={{...st, background: W.paper, borderRadius: 18, borderBottom: `7px solid ${W.paperShade}`,
-                     overflow: 'hidden', boxShadow: `0 ${height * (bad ? 0.026 : 0.016)}px ${height * (bad ? 0.05 : 0.034)}px ${W.shadow}`}}>
-          <div style={{background: bad ? W.sheet : W.accentSoft, padding: `${height * 0.014}px 0`, textAlign: 'center',
+        {/* the tray body is real paper (phase 2); the flat W.paper fill and the fake
+            borderBottom "thickness" are what made it read as a UI panel next to the
+            generated art. The header band still paints over the paper, which is correct —
+            it is ink on the card, not a second material. */}
+        <div style={{...st, position: 'relative', borderRadius: 18, overflow: 'hidden',
+                     boxShadow: `0 ${height * (bad ? 0.026 : 0.016)}px ${height * (bad ? 0.05 : 0.034)}px ${W.shadow}`}}>
+          <PaperSheet id={`tray:${d?.title ?? ''}`} radius={18} tint={W.paper} />
+          <div style={{position: 'relative', background: bad ? W.sheet : W.accentSoft, padding: `${height * 0.014}px 0`, textAlign: 'center',
                        fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.026, letterSpacing: 3,
                        textTransform: 'uppercase', color: bad ? W.paper : W.ink}}>{d?.title}</div>
-          <div style={{padding: `${height * 0.03}px ${width * 0.018}px`, fontFamily: BRAND.font, fontWeight: 900,
+          <div style={{position: 'relative', padding: `${height * 0.03}px ${width * 0.018}px`, fontFamily: BRAND.font, fontWeight: 900,
                        fontSize: height * 0.042, lineHeight: 1.15, color: W.ink, textAlign: 'center'}}>{d?.value}</div>
         </div>
       </div>
@@ -163,19 +172,23 @@ export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({f
           return (
             <React.Fragment key={i}>
               {i > 0 ? (
+                // the connector between stages is a laid paper strip, not a drawn bar
                 <div style={{position: 'absolute', left: cx(i - 1), top: height * 0.545, width: cx(i) - cx(i - 1),
-                             height: height * 0.014, background: W.sheetAlt, borderRadius: 6,
+                             height: height * 0.014, borderRadius: 6,
                              transform: `scaleX(${stripT})`, transformOrigin: 'left center',
-                             boxShadow: `0 ${height * 0.006}px ${height * 0.014}px ${W.shadow}`}} />
+                             boxShadow: `0 ${height * 0.006}px ${height * 0.014}px ${W.shadow}`}}>
+                  <PaperSheet id={`strip:${i}`} family="card_tag" radius={6} edge={5} tint={W.sheetAlt} />
+                </div>
               ) : null}
               <div style={{position: 'absolute', left: cx(i) - cardW / 2, top: height * 0.42, width: cardW}}>
                 <div style={{position: 'absolute', left: '50%', bottom: -height * 0.014, width: '82%', height: height * 0.028,
                              transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(7px)',
                              opacity: frame >= at(i) ? 1 : 0}} />
-                <div style={{...st, background: W.paper, borderRadius: 16, borderBottom: `6px solid ${W.paperShade}`,
+                <div style={{...st, position: 'relative', borderRadius: 16,
                              padding: `${height * 0.022}px ${width * 0.012}px`, textAlign: 'center'}}>
-                  <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.05, color: W.accent, lineHeight: 1}}>{i + 1}</div>
-                  <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.028, color: W.ink,
+                  <PaperSheet id={`flowcard:${i}:${s}`} radius={16} tint={W.paper} />
+                  <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.05, color: W.accent, lineHeight: 1}}>{i + 1}</div>
+                  <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.028, color: W.ink,
                                lineHeight: 1.18, marginTop: height * 0.01}}>{s}</div>
                 </div>
               </div>
@@ -206,7 +219,7 @@ export const PaperList: React.FC<{fields: any; durationInFrames: number}> = ({fi
         <div>
           {fields.title ? (
             <div style={{...placeStyle(frame, fps, height, 4), marginBottom: height * 0.024}}>
-              <PaperCard style={{display: 'inline-block', padding: `${height * 0.012}px ${width * 0.02}px`, borderRadius: 12}}>
+              <PaperCard id={`ctrlbl:${fields.label ?? ''}`} family="card_tag" style={{display: 'inline-block', padding: `${height * 0.012}px ${width * 0.02}px`, borderRadius: 12}}>
                 <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.036, color: W.ink}}>{fields.title}</div>
               </PaperCard>
             </div>
@@ -214,11 +227,14 @@ export const PaperList: React.FC<{fields: any; durationInFrames: number}> = ({fi
           {items.map((it, i) => (
             <div key={i} style={{display: 'flex', alignItems: 'center', gap: width * 0.014,
                                  marginBottom: height * 0.02, ...placeStyle(frame, fps, height, at(i))}}>
-              <div style={{width: height * 0.062, height: height * 0.062, borderRadius: 12, background: W.accentSoft,
-                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                           borderBottom: `4px solid ${W.sheetAlt}`, boxShadow: `0 ${height * 0.008}px ${height * 0.016}px ${W.shadow}`,
-                           fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.034, color: W.ink}}>{i + 1}</div>
-              <PaperCard style={{padding: `${height * 0.012}px ${width * 0.018}px`, borderRadius: 12,
+              <div style={{position: 'relative', width: height * 0.062, height: height * 0.062, borderRadius: 12,
+                           display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto',
+                           boxShadow: `0 ${height * 0.008}px ${height * 0.016}px ${W.shadow}`,
+                           fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.034, color: W.ink}}>
+                <PaperSheet id={`num:${i}`} family="card_tag" radius={12} edge={7} tint={W.accentSoft} />
+                <span style={{position: 'relative'}}>{i + 1}</span>
+              </div>
+              <PaperCard id={`step:${i}`} style={{padding: `${height * 0.012}px ${width * 0.018}px`, borderRadius: 12,
                                  boxShadow: `0 ${height * 0.01}px ${height * 0.02}px ${W.shadow}`,
                                  transform: `rotate(${i % 2 ? 0.5 : -0.5}deg)`}}>
                 <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.038, color: W.ink}}>{it}</div>
@@ -258,7 +274,7 @@ export const PaperBookCTA: React.FC<{fields: any}> = ({fields}) => {
         <div style={{position: 'relative', maxWidth: width * 0.44}}>
           <div style={{position: 'absolute', left: '50%', bottom: -height * 0.016, width: '88%', height: height * 0.03,
                        transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(9px)', opacity: card.shadowOpacity}} />
-          <PaperCard style={{...card.object, padding: `${height * 0.03}px ${width * 0.028}px`, borderRadius: 20}}>
+          <PaperCard id={`ctacard:${fields.headline ?? ''}`} style={{...card.object, padding: `${height * 0.03}px ${width * 0.028}px`, borderRadius: 20}}>
             {fields.kicker ? (
               <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.022, letterSpacing: 4,
                            textTransform: 'uppercase', color: W.accent, marginBottom: height * 0.014}}>{fields.kicker}</div>

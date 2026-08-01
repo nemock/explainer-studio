@@ -714,6 +714,14 @@ def render(sp, log=print, frames=None, out=None):
     _cvg = REMOTION_DIR / "public" / "papercraft-circumvent"
     if _cvg.exists():
         shutil.copytree(_cvg, public / "papercraft-circumvent", dirs_exist_ok=True)
+    # Blank paper substrates (papercraft-substrate-plan.md). Unlike the two libraries above
+    # these are never named in a deck — components pick a substrate internally — so they
+    # must be staged unconditionally or PaperNote renders nothing.
+    for _lib in ("papercraft-notes", "papercraft-cards", "papercraft-fixings",
+                 "papercraft-grounds"):
+        _sub = REMOTION_DIR / "public" / _lib
+        if _sub.exists():
+            shutil.copytree(_sub, public / _lib, dirs_exist_ok=True)
     _stage_images(sp, spec, public)
     _stage_doodles(spec, public, log)
     # CTA scenes show the brand book cover unless the project opts out with

@@ -1,5 +1,5 @@
 import React from 'react';
-import {AbsoluteFill, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AbsoluteFill, Img, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {CUTANDBOND} from '../brands/cutandbond';
 
 // The Cut & Bond paper world backdrop (2026-07-15). The persistent surface every
@@ -30,38 +30,37 @@ export const PaperBackground: React.FC = () => {
 
   return (
     <AbsoluteFill style={{backgroundColor: CUTANDBOND.paper}}>
-      {/* warm paper base with a soft top-center light */}
+      {/* REAL paper ground (phase 4). This is the single most-seen surface in the catalogue —
+          it sits behind every Figure, Schematic, StatCounter and StatGrid scene — and it was
+          a flat radial gradient with an feTurbulence fractal-noise layer over it. Now it is
+          a generated sheet with actual fibre, which also retires a full-frame live SVG filter.
+          Desaturated then multiplied, exactly as the cards are, so the colour still comes from
+          the palette constant and no existing render shifts hue. */}
+      {/* The asset is a flat grey texture tile centred on 128 (see the library's
+          texture_prep note), so it OVERLAYS the palette colour rather than multiplying it:
+          multiply would halve the brightness, and the earlier grayscale+brightness+multiply
+          route flattened the fibre to roughly one grey level. Overlay leaves the mean exactly
+          on the palette value and modulates only by the fibre deviation. */}
+      <Img
+        src={staticFile('papercraft-grounds/ground_cream_1.webp')}
+        style={{position: 'absolute', inset: 0, width: '100%', height: '100%',
+                objectFit: 'cover', display: 'block', mixBlendMode: 'overlay'}}
+      />
+      {/* The warm top-center light. Was an opaque colour ramp that defined the whole tonal
+          field; now alpha-only, or it would bury the fibre it sits on. */}
       <AbsoluteFill
         style={{
-          background: `radial-gradient(130% 100% at ${hx}% ${hy}%, #fbf4df 0%, ${CUTANDBOND.paper} 52%, ${CUTANDBOND.paperDeep} 100%)`,
+          background: `radial-gradient(130% 100% at ${hx}% ${hy}%, rgba(255,250,229,.55) 0%, rgba(255,250,229,0) 52%, rgba(96,74,34,.13) 100%)`,
         }}
       />
-      {/* the breathing highlight */}
+      {/* the breathing highlight — kept. The ground itself is a still image, and a fully
+          frozen frame risks tripping freezedetect in QA; this is what keeps it alive. */}
       <AbsoluteFill
         style={{
           background: `radial-gradient(48% 42% at ${hx}% ${hy}%, rgba(255,255,255,${glow.toFixed(3)}) 0%, rgba(255,255,255,0) 70%)`,
           mixBlendMode: 'screen',
         }}
       />
-      {/* paper fiber tooth — multiply, very low opacity, slow drift */}
-      <AbsoluteFill style={{overflow: 'hidden', mixBlendMode: 'multiply', opacity: 0.05}}>
-        <svg
-          style={{
-            position: 'absolute',
-            width: '160%',
-            height: '160%',
-            left: `calc(-30% + ${gx}px)`,
-            top: `calc(-30% + ${gy}px)`,
-          }}
-        >
-          <defs>
-            <filter id={noiseId}>
-              <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves={2} stitchTiles="stitch" />
-            </filter>
-          </defs>
-          <rect width="100%" height="100%" filter={`url(#${noiseId})`} />
-        </svg>
-      </AbsoluteFill>
       {/* soft warm vignette to hold weight toward the center */}
       <AbsoluteFill style={{boxShadow: 'inset 0 0 340px rgba(120,92,40,.16)'}} />
     </AbsoluteFill>

@@ -2,6 +2,7 @@ import React from 'react';
 import {AbsoluteFill, interpolate, interpolateColors, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
 import {useInk, PAPER_SHADOW} from '../ink';
+import {PaperSheet} from './PaperNote';
 
 // motion-playbook §2B — a number that counts to its figure and a bar that fills/drains,
 // landing on the narration cue. fields: {kicker, from, to, prefix, label, labelNeg, cue:[a,b]}
@@ -75,8 +76,13 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
       >
         {fmt(value, prefix)}
       </div>
-      <div style={{width: TRACK, height: height * 0.016, marginTop: height * 0.03, position: 'relative', background: ink.track, borderRadius: 999}}>
-        <div style={{position: 'absolute', left: '50%', top: -height * 0.006, width: 2, height: height * 0.028, background: ink.neutral}} />
+      {/* On paper themes the meter is two laid paper strips rather than two flat pills, so a
+          StatCounter sitting between taped figures and real notes stays in the same material
+          (phase 3). Non-paper themes keep the flat gauge. */}
+      <div style={{width: TRACK, height: height * 0.016, marginTop: height * 0.03, position: 'relative',
+                   background: ink.paper ? undefined : ink.track, borderRadius: 999}}>
+        {ink.paper ? <PaperSheet id="meter-track" family="card_tag" radius={999} edge={5} tint={ink.track} /> : null}
+        <div style={{position: 'absolute', left: '50%', top: -height * 0.006, width: 2, height: height * 0.028, background: ink.neutral, zIndex: 2}} />
         <div
           style={{
             position: 'absolute',
@@ -85,9 +91,12 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
             borderRadius: 999,
             width: fillW,
             left: negative ? `calc(50% - ${fillW}px)` : '50%',
-            background: negative ? BRAND.red : BRAND.green,
+            background: ink.paper ? undefined : (negative ? BRAND.red : BRAND.green),
           }}
-        />
+        >
+          {ink.paper ? <PaperSheet id={`meter-fill:${negative ? 'n' : 'p'}`} family="card_tag" radius={999} edge={5}
+                                   tint={negative ? BRAND.red : BRAND.green} /> : null}
+        </div>
       </div>
       {fields.label || fields.labelNeg ? (
         <div

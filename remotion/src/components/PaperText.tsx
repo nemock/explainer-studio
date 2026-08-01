@@ -56,7 +56,7 @@ export const PaperStatement: React.FC<{fields: any}> = ({fields}) => {
         <div style={{position: 'relative', maxWidth: width * 0.66, transform: `scale(${hit != null ? flick(frame, hit) : 1})`}}>
           <div style={{position: 'absolute', left: '50%', bottom: -height * 0.016, width: '88%', height: height * 0.034,
                        transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(9px)', opacity: p.shadowOpacity}} />
-          <PaperCard style={{...p.object, padding: `${height * 0.034}px ${width * 0.032}px`, borderRadius: 20}}>
+          <PaperCard id={`punch:${fields.headline ?? ''}`} style={{...p.object, padding: `${height * 0.034}px ${width * 0.032}px`, borderRadius: 20}}>
             <Kicker text={fields.kicker} height={height} />
             <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.06, lineHeight: 1.1,
                          color: W.ink, textAlign: 'center'}}>{colorize(fields.headline || '', fields.accent, W.accent)}</div>
@@ -96,13 +96,13 @@ export const PaperDefine: React.FC<{fields: any}> = ({fields}) => {
         <div style={{position: 'relative'}}>
           <div style={{position: 'absolute', left: '50%', bottom: -height * 0.016, width: '86%', height: height * 0.032,
                        transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(9px)', opacity: p.shadowOpacity}} />
-          <PaperCard style={{...p.object, padding: `${height * 0.026}px ${width * 0.03}px`, borderRadius: 18, transform: `${(p.object.transform || '')} rotate(-0.8deg)`}}>
+          <PaperCard id={`term:${fields.term ?? ''}`} style={{...p.object, padding: `${height * 0.026}px ${width * 0.03}px`, borderRadius: 18, transform: `${(p.object.transform || '')} rotate(-0.8deg)`}}>
             <Kicker text={fields.kicker} height={height} />
             <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.078, lineHeight: 1.05,
                          color: W.ink, textAlign: 'center'}}>{fields.term}</div>
           </PaperCard>
           <div style={{clipPath: `inset(0 0 ${(100 - open * 100).toFixed(1)}% 0)`, marginTop: height * 0.02, position: 'relative'}}>
-            <PaperCard style={{padding: `${height * 0.02}px ${width * 0.026}px`, borderRadius: 14, maxWidth: width * 0.5}}>
+            <PaperCard id={`def:${fields.term ?? ''}`} family="card_index" style={{padding: `${height * 0.02}px ${width * 0.026}px`, borderRadius: 14, maxWidth: width * 0.5}}>
               <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: height * 0.034, lineHeight: 1.3,
                            color: W.ink, textAlign: 'center'}}>{fields.definition}</div>
             </PaperCard>
@@ -133,7 +133,7 @@ export const PaperPunch: React.FC<{fields: any}> = ({fields}) => {
         <div style={{position: 'relative', transform: `scale(${flick(frame, hit)})`}}>
           <div style={{position: 'absolute', left: '50%', bottom: -height * 0.02, width: '92%', height: height * 0.04,
                        transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(11px)', opacity: p.shadowOpacity}} />
-          <PaperCard style={{...p.object, padding: `${height * 0.03}px ${width * 0.04}px`, borderRadius: 24}}>
+          <PaperCard id={`stmt:${fields.headline ?? fields.text ?? ''}`} style={{...p.object, padding: `${height * 0.03}px ${width * 0.04}px`, borderRadius: 24}}>
             {fields.kicker ? <Kicker text={fields.kicker} height={height} /> : null}
             <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.16, lineHeight: 1.02,
                          color: W.ink, textTransform: 'uppercase', textAlign: 'center', whiteSpace: 'pre-line',

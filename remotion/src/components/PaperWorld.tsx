@@ -1,6 +1,7 @@
 import React, {createContext, useContext} from 'react';
-import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {PaperWorldTokens, PAPER_FWF, paperWorldFor, SNAP, HINGE, CAM} from '../brands/papercraft';
+import {PaperSheet, CardFamily} from './PaperNote';
 
 // World context (2026-07-26) — which channel's paper ground/palette this render uses.
 // Mirrors InkProvider: theme-keyed, defaulting to FWF so every existing paper deck is
@@ -111,14 +112,11 @@ export const popupStyle = (frame: number, fps: number, at: number): React.CSSPro
 };
 
 // --- tear transition (spec §4) ----------------------------------------------
-// Two ink-dark halves with a seeded jagged seam part to reveal the incoming
-// scene (scene-local, deterministic; ~14 frames, loud). Rendered by SceneWrap
-// when the deck slide sets "transition": "tear".
-const tearPoints = (seed: string, n = 9): number[] => {
-  const out: number[] = [];
-  for (let i = 0; i < n; i++) out.push((hash(seed + i) - 0.5) * 6); // % jitter around the seam
-  return out;
-};
+// Two ink-dark halves part along a torn seam to reveal the incoming scene
+// (scene-local, deterministic; ~14 frames, loud). Rendered by SceneWrap when
+// the deck slide sets "transition": "tear". The seam was a seeded 9-point
+// polygon until 2026-08-01; it is now a generated torn-fibre alpha mask, which
+// carries detail a handful of jitter points never could.
 
 export const TearReveal: React.FC<{seed?: string; world?: PaperWorldTokens}> = ({seed = 't', world: worldProp}) => {
   const world = worldProp ?? useWorld();
@@ -127,17 +125,23 @@ export const TearReveal: React.FC<{seed?: string; world?: PaperWorldTokens}> = (
   const DUR = 14;
   if (frame >= DUR + 6) return null;
   const e = spring({frame, fps, config: {damping: 15, stiffness: 120}});
-  const jit = tearPoints(seed);
-  const seam = (off: number) =>
-    jit.map((j, i) => `${(50 + j + off).toFixed(2)}% ${(i * 100 / (jit.length - 1)).toFixed(2)}%`).join(', ');
-  // left half: 0..seam ; right half: seam..100 — both slide out as e rises
+  // Phase 4: the seam is a real torn fibre edge, not a seeded polygon. tear_vl / tear_vr are
+  // a complementary pair cut from ONE generated tear, so the two halves interlock exactly.
+  // Take is seeded off the caller's id, so a given act boundary always tears the same way.
+  const take = (Math.floor(hash(seed) * 4) % 4) + 1;
+  const maskOf = (side: 'vl' | 'vr'): React.CSSProperties => {
+    const url = `url(${staticFile(`papercraft-grounds/tear_${side}_${take}.webp`)})`;
+    return {WebkitMaskImage: url, maskImage: url,
+            WebkitMaskSize: '100% 100%', maskSize: '100% 100%',
+            WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat'};
+  };
+  // left half: paper up to the tear ; right half: the complement — both slide out as e rises
   return (
     <AbsoluteFill style={{pointerEvents: 'none'}}>
       <AbsoluteFill style={{background: world.groundDeep, transform: `translateX(${(-e * 104).toFixed(2)}%)`,
-                            clipPath: `polygon(0% 0%, ${seam(1.5)}, 0% 100%)`,
-                            boxShadow: `40px 0 80px ${world.shadow}`}} />
+                            ...maskOf('vl')}} />
       <AbsoluteFill style={{background: world.ground, transform: `translateX(${(e * 104).toFixed(2)}%)`,
-                            clipPath: `polygon(100% 0%, ${seam(-1.5)}, 100% 100%)`}} />
+                            ...maskOf('vr')}} />
     </AbsoluteFill>
   );
 };
@@ -169,6 +173,11 @@ export const PaperTable: React.FC<{
   const sheetShadow = `0 ${height * 0.018}px ${height * 0.05}px ${world.shadow}`;
   return (
     <AbsoluteFill style={{background: world.ground}}>
+      {/* the table itself is real paper stock (phase 4), tinted to the channel's ground so
+          every paper world keeps its own colour. Sits under the laid sheets and the light. */}
+      <Img src={staticFile(`papercraft-grounds/ground_table_${(hash(seed + 'g') > 0.5 ? 2 : 1)}.webp`)}
+           style={{position: 'absolute', inset: 0, width: '100%', height: '100%',
+                   objectFit: 'cover', display: 'block', mixBlendMode: 'overlay'}} />
       {/* big paper sheets laid on the table (the hero-a ground language) */}
       <div style={{position: 'absolute', left: width * (0.06 + r1 * 0.08), top: height * (0.52 + r2 * 0.1),
                    width: width * 0.46, height: height * 0.5, background: world.sheet,
@@ -189,19 +198,45 @@ export const PaperTable: React.FC<{
   );
 };
 
-// A cream paper card (text always printed ON paper — spec §0). Paper thickness
-// via the shade edge; shadow provided by the caller (so place/popup can lag it).
+// A cream paper card (text always printed ON paper — spec §0). The card is REAL generated
+// paper as of 2026-08-01 (papercraft-substrate-plan.md phase 2), 9-sliced so the cut edge
+// and grain hold at any content size. The flat `world.paper` fill and the fake `borderBottom`
+// thickness edge were the primitive that made every card in the system read as a UI element
+// pasted into a photograph — and PaperCard backs punch cards, define tags, compare trays,
+// list cards, keep-cards and the CTA, so this one swap carries all of them.
+//
+// `id` seeds which take is used; pass a stable per-element string so two cards on the same
+// slide don't share paper. `substrate={false}` opts an individual card back out.
 export const PaperCard: React.FC<{
   world?: PaperWorldTokens;
   style?: React.CSSProperties;
+  id?: string;
+  family?: CardFamily;
+  substrate?: boolean;
   children: React.ReactNode;
-}> = ({world: worldProp, style, children}) => {
+}> = ({world: worldProp, style, id, family, substrate = true, children}) => {
   const world = worldProp ?? useWorld();
+  const radius = (style?.borderRadius as number) ?? 14;
+  if (!substrate) {
+    return (
+      <div style={{background: world.paper, borderRadius: 14,
+                   borderBottom: `6px solid ${world.paperShade}`,
+                   padding: '0.6em 0.9em', ...style}}>
+        {children}
+      </div>
+    );
+  }
   return (
-  <div style={{background: world.paper, borderRadius: 14,
-               borderBottom: `6px solid ${world.paperShade}`,
-               padding: '0.6em 0.9em', ...style}}>
-    {children}
-  </div>
+    // position:relative so the substrate backdrop can fill this box without touching the
+    // caller's padding or size; content rides above it in the normal flow.
+    <div style={{position: 'relative', borderRadius: radius, padding: '0.6em 0.9em', ...style}}>
+      {/* tinted to world.paper, not left as generated. The card stock comes out warmer than
+          the world's cream, and unnormalised it reads as kraft next to every other cream
+          surface in the scene. Routing it through the tint keeps the real grain and cut edge
+          while landing the colour exactly on the channel's token — which also means theme
+          isolation holds for free: BRG, Circumvent and Cut & Bond each get their own paper. */}
+      <PaperSheet id={id ?? 'card'} family={family} radius={radius} tint={world.paper} />
+      <div style={{position: 'relative'}}>{children}</div>
+    </div>
   );
 };

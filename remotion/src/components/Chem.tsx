@@ -1,5 +1,5 @@
 import React from 'react';
-import {AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AbsoluteFill, Img, OffthreadVideo, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {CUTANDBOND as CB} from '../brands/cutandbond';
 
 // Cut & Bond — the paper chemistry component kit (2026-07-15).
@@ -313,18 +313,24 @@ export const PaperWord: React.FC<{fields: any}> = ({fields}) => {
   const s = width / 1080;
   const accent = fields.accent || CB.coral;
   const pop = spring({frame: frame - 3, fps, config: {damping: 13, stiffness: 120}});
+  // Gentle one-way idle after the pop: slow float + faint tilt (no zoom — big text stays
+  // crisp). One-directional, so the word feels alive without the old bob.
+  const kbC = {extrapolateLeft: 'clamp' as const, extrapolateRight: 'clamp' as const};
+  const idleY = interpolate(frame, [15, 420], [0, -width * 0.02], kbC);
+  const idleRot = interpolate(frame, [15, 420], [0, -0.7], kbC);
+  const idle = `translateY(${idleY}px) rotate(${idleRot}deg)`;
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', flexDirection: 'column'}}>
       <div style={{
         fontFamily: CB.font, fontWeight: 900, fontSize: width * 0.13, lineHeight: 1.02,
-        color: accent, textAlign: 'center', maxWidth: '90%', transform: `scale(${pop})`,
+        color: accent, textAlign: 'center', maxWidth: '90%', transform: `${idle} scale(${pop})`,
         textShadow: `0 ${5 * s}px 0 ${darken(accent, 0.6)}, 0 ${16 * s}px ${14 * s}px rgba(70,52,20,.18)`,
       }}>
         {fields.word}
       </div>
       {fields.sub ? (
         <div style={{fontFamily: CB.font, fontWeight: 700, fontSize: width * 0.042, color: CB.ink,
-          textAlign: 'center', maxWidth: '80%', marginTop: width * 0.035, lineHeight: 1.2,
+          textAlign: 'center', maxWidth: '80%', marginTop: width * 0.035, lineHeight: 1.2, transform: idle,
           opacity: interpolate(frame, [10, 22], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})}}>
           {fields.sub}
         </div>
@@ -468,6 +474,71 @@ export const PaperProp: React.FC<{fields: any}> = ({fields}) => {
           transform: `translate(${kbX}px, ${y + kbY}px) rotate(${rot + kbRot}deg) scale(${kbZoom})`,
           filter: 'drop-shadow(0 22px 30px rgba(70,52,20,.24))',
         }} />
+      ) : null}
+    </AbsoluteFill>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// PaperFootage — REAL reference footage taped into the paper world. A landscape video
+// window sits on a torn-paper mat with a cast shadow and a slight tilt, so live-action
+// reads as a clipping pinned to the cut-paper background rather than breaking the style.
+// Use SPARINGLY: only when the script points at something the viewer is told they have
+// seen (e.g. "you've seen the videos" for sodium in water), where a stylized paper prop
+// cannot stand in for the real thing.
+// fields: {video, startFrom (seconds into the clip), word, sub, accent}
+// ---------------------------------------------------------------------------
+export const PaperFootage: React.FC<{fields: any}> = ({fields}) => {
+  const frame = useCurrentFrame();
+  const {fps, width} = useVideoConfig();
+  const s = width / 1080;
+  const accent = fields.accent || CB.coral;
+  const inn = spring({frame: frame - 3, fps, config: {damping: 16, stiffness: 105}});
+  const y = interpolate(inn, [0, 1], [width * 0.12, 0]);
+  const rid = 'r' + React.useId().replace(/:/g, '');
+  const rough = `url(#${rid})`;
+  // Gentle one-way idle (matches the rest of the kit): slow float + faint tilt, no
+  // oscillation, so it feels alive without the old bob.
+  const kbC = {extrapolateLeft: 'clamp' as const, extrapolateRight: 'clamp' as const};
+  const idleY = interpolate(frame, [15, 420], [0, -width * 0.015], kbC);
+  const idleRot = interpolate(frame, [15, 420], [-1.4, -0.4], kbC);
+  const matPad = width * 0.028;
+
+  return (
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', flexDirection: 'column'}}>
+      <RoughDefs id={rid} scale={10} freq={0.016} />
+      {fields.word ? (
+        <div style={{textAlign: 'center', marginBottom: width * 0.055}}>
+          <div style={{fontFamily: CB.font, fontWeight: 900, fontSize: width * 0.11, lineHeight: 1, color: accent,
+            textShadow: `0 ${4 * s}px 0 ${darken(accent, 0.6)}`}}>
+            {fields.word}
+          </div>
+          {fields.sub ? (
+            <div style={{fontFamily: CB.font, fontWeight: 700, fontSize: width * 0.04, color: CB.ink,
+              marginTop: width * 0.018, maxWidth: '80%', marginLeft: 'auto', marginRight: 'auto',
+              opacity: interpolate(frame, [10, 22], [0, 1], kbC)}}>
+              {fields.sub}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {fields.video ? (
+        <div style={{
+          position: 'relative', width: '86%', padding: matPad, borderRadius: 18 * s,
+          background: '#fbf6e8', filter: rough, opacity: inn,
+          transform: `translateY(${y + idleY}px) rotate(${idleRot}deg)`,
+          boxShadow: `0 ${5 * s}px 0 ${darken('#fbf6e8', 0.86)}, 0 ${26 * s}px ${44 * s}px rgba(70,52,20,.30)`,
+        }}>
+          <Grain />
+          <div style={{position: 'relative', overflow: 'hidden', borderRadius: 8 * s, lineHeight: 0}}>
+            <OffthreadVideo
+              src={staticFile(fields.video)}
+              startFrom={Math.round((fields.startFrom || 0) * fps)}
+              muted
+              style={{width: '100%', height: 'auto', display: 'block'}}
+            />
+          </div>
+        </div>
       ) : null}
     </AbsoluteFill>
   );

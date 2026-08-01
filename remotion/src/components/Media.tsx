@@ -3,6 +3,7 @@ import {AbsoluteFill, Easing, Img, Video, interpolate, spring, staticFile, useCu
 import rough from 'roughjs';
 import {BRAND} from '../brand';
 import {useInk, PAPER_SHADOW} from '../ink';
+import {PaperSheet, Tape} from './PaperNote';
 
 // --- figure MARKS: hand-drawn circle/arrow/underline/box in the figure's OWN image space,
 // rendered INSIDE the moving/zooming container so the callout TRAVELS with the Ken Burns
@@ -197,9 +198,18 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
       ) : null}
       {/* The artifact frame: a bright white card + deep shadow reads as a lit print on the
           navy stage, but on the cream paper worlds it becomes a glaring white border with a
-          gloomy halo. There the frame is a warm near-cream stock with the paper shadow. */}
+          gloomy halo. There the frame is REAL paper stock (phase 3) — a mount the figure is
+          laid onto. This is the loudest synthetic surface in the system, because a flat white
+          box wrapped around generated paper art puts both materials side by side in one
+          object. Non-paper themes keep the white print card. */}
       {img ? (
-      <div style={{position: 'relative', maxWidth: '76%', background: ink.paper ? '#fffcf5' : '#fff', borderRadius: 26, padding: height * 0.022, boxShadow: ink.paper ? PAPER_SHADOW : '0 40px 120px rgba(0,0,0,.55)', transform: `scale(${scale})`, opacity: imgOpacity, overflow: (tour || autoKen) ? 'hidden' : undefined}}>
+      // Outer wrapper exists ONLY so the tape can hang outside the mount. The mount itself
+      // sets overflow:hidden whenever the figure pans (tour / Ken Burns), and tape is
+      // positioned at negative offsets, so tape placed inside would be clipped away on
+      // exactly the figures that most need it — nearly all of them.
+      <div style={{position: 'relative', maxWidth: '76%', transform: `scale(${scale})`, opacity: imgOpacity}}>
+      <div style={{position: 'relative', background: ink.paper ? undefined : '#fff', borderRadius: 26, padding: height * 0.022, boxShadow: ink.paper ? PAPER_SHADOW : '0 40px 120px rgba(0,0,0,.55)', overflow: (tour || autoKen) ? 'hidden' : undefined}}>
+        {ink.paper ? <PaperSheet id={`mount:${fields.image ?? fields.title ?? ''}`} family="card_index" radius={26} tint="#fffcf5" /> : null}
         {pieces.length ? (
           // assembling: base image hidden; each piece is a clipped copy wiping in on cue
           <div style={{position: 'relative', ...(tour || {})}}>
@@ -227,6 +237,16 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
         )}
         {hl ? (
           <div style={{position: 'absolute', top: `${hl.top ?? 30}%`, left: `${hl.left ?? 6}%`, height: `${hl.height ?? 12}%`, width: `${hlW}%`, background: ink.accentWash, borderRadius: 8}} />
+        ) : null}
+      </div>
+        {/* two torn strips fix the mount to the table. Without them a figure floats, which is
+            exactly what the old white card did. Opposite corners only — tape across the middle
+            would cover the thing the viewer is meant to be reading. */}
+        {ink.paper ? (
+          <>
+            <Tape id={`tape-a:${fields.image ?? ''}`} width={height * 0.16} at="tl" />
+            <Tape id={`tape-b:${fields.image ?? ''}`} width={height * 0.16} at="br" />
+          </>
         ) : null}
       </div>
       ) : null}
