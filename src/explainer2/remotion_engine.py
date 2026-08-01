@@ -245,7 +245,16 @@ def _scene_for(slide, theme=""):
         if cvg:
             return cvg
 
-    if theme in ("nemock-deep-dive", "brg-deep-dive", "wte-guide", "circumvent"):
+    # brg-deep-dive is DELIBERATELY not here (2026-08-01). The Paper* family paints its own
+    # PaperTable ground, and PaperTable's key light bakes a hardcoded near-black surround, so
+    # on a cream BRG world ~13 slides dropped to a navy desk while figures/schematics stayed
+    # cream — two backdrop systems in one video. Retuning PaperTable for a light ground would
+    # touch the FWF/nemock world that is already in use, which the theme-isolation rule
+    # forbids. The classic map keeps every substrate that matters here (Figure's paper mount +
+    # tape, Schematic's PaperNote post-its, StatCounter's paper meter are all classic-map
+    # components gated on ink.paper) and renders them on the cream PaperBackground.
+    # BRG keeps PaperHook (below) and BRGPaperSting.
+    if theme in ("nemock-deep-dive", "wte-guide", "circumvent"):
         pc = _papercraft_scene(slide, t, kicker, accent, headline)
         if pc:
             return pc
