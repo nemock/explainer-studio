@@ -16,12 +16,14 @@ const SubKicker: React.FC<{text?: string; height: number}> = ({text, height}) =>
   ) : null;
 };
 
-const Kicker: React.FC<{text?: string; o: number; height: number}> = ({text, o, height}) =>
-  text ? (
-    <div style={{fontFamily: BRAND.font, color: BRAND.green, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 5, textTransform: 'uppercase', textAlign: 'center', opacity: o, marginBottom: height * 0.018}}>
+const Kicker: React.FC<{text?: string; o: number; height: number}> = ({text, o, height}) => {
+  const ink = useInk();
+  return text ? (
+    <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 5, textTransform: 'uppercase', textAlign: 'center', opacity: o, marginBottom: height * 0.018}}>
       {text}
     </div>
   ) : null;
+};
 
 // Word-by-word reveal that preserves accent coloring + pops the accent words. Keeps text
 // alive instead of one block-fade. (motion-playbook: text cards are the floor, give them life.)
@@ -30,6 +32,7 @@ const RevealWords: React.FC<{text: string; accent?: string[]; accentRed?: string
 ({text, accent, accentRed, startDelay = 0}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
+  const ink = useInk();
   // match colorize.tsx exactly: split multi-word accent phrases into constituent words
   const A = new Set((accent || []).flatMap((s) => s.split(/\s+/)).map(normWord));
   const R = new Set((accentRed || []).flatMap((s) => s.split(/\s+/)).map(normWord));
@@ -45,7 +48,7 @@ const RevealWords: React.FC<{text: string; accent?: string[]; accentRed?: string
         const e = spring({frame: frame - delay, fps, config: {damping: 15, stiffness: 130}});
         const pop = (isA || isR) ? interpolate(e, [0, 1], [1.22, 1], {extrapolateRight: 'clamp'}) : 1;
         return (
-          <span key={i} style={{display: 'inline-block', color: isA ? BRAND.green : isR ? BRAND.red : undefined,
+          <span key={i} style={{display: 'inline-block', color: isA ? ink.accent : isR ? BRAND.red : undefined,
             opacity: e, transform: `translateY(${interpolate(e, [0, 1], [20, 0])}px) scale(${pop})`,
             transformOrigin: 'center bottom'}}>{w}</span>
         );
@@ -92,7 +95,7 @@ export const DefineTerm: React.FC<{fields: any; durationInFrames?: number}> = ({
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 9%', transform: `scale(${live}) translateY(${drift}px)`}}>
       <Kicker text={fields.kicker} o={t} height={height} />
-      <div style={{fontFamily: BRAND.font, color: BRAND.green, fontWeight: 900, fontSize: termSize, lineHeight: 1.1, textAlign: 'center', opacity: t, transform: `translateY(${interpolate(t, [0, 1], [24, 0])}px)`, textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
+      <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 900, fontSize: termSize, lineHeight: 1.1, textAlign: 'center', opacity: t, transform: `translateY(${interpolate(t, [0, 1], [24, 0])}px)`, textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
         {colorize(fields.term, fields.accent, fields.accentRed)}
       </div>
       <div style={{fontFamily: BRAND.font, color: ink.body, fontWeight: 700, fontSize: height * 0.038, lineHeight: 1.3, textAlign: 'center', maxWidth: '85%', marginTop: height * 0.028, opacity: d, transform: `translateY(${interpolate(d, [0, 1], [18, 0])}px)`}}>
@@ -118,7 +121,7 @@ export const Quote: React.FC<{fields: any; durationInFrames?: number}> = ({field
         {fields.quote}
       </div>
       {fields.attribution ? (
-        <div style={{fontFamily: BRAND.font, color: BRAND.green, fontWeight: 800, fontSize: height * 0.028, marginTop: height * 0.03, opacity: at}}>
+        <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: height * 0.028, marginTop: height * 0.03, opacity: at}}>
           — {fields.attribution}
         </div>
       ) : null}
@@ -134,7 +137,7 @@ export const PunchWord: React.FC<{fields: any}> = ({fields}) => {
   const {fps, height} = useVideoConfig();
   const p = spring({frame, fps, config: {damping: 9, stiffness: 140}});
   const ink = useInk();
-  const color = fields.kind === 'good' ? BRAND.green : fields.kind === 'bad' ? BRAND.red : ink.body;
+  const color = fields.kind === 'good' ? ink.accent : fields.kind === 'bad' ? BRAND.red : ink.body;
   const text = fields.word || fields.headline;
   const hasAccent = (fields.accent && fields.accent.length) || (fields.accentRed && fields.accentRed.length);
   return (
@@ -159,7 +162,7 @@ export const Reframe: React.FC<{fields: any}> = ({fields}) => {
       <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.06, color: ink.body, opacity: interpolate(flip, [0, 1], [1, 0.35]), textDecoration: 'line-through', textDecorationColor: BRAND.red, textAlign: 'center'}}>
         {fields.before}
       </div>
-      <div style={{fontFamily: BRAND.font, color: BRAND.green, fontWeight: 900, fontSize: height * 0.04, margin: `${height * 0.02}px 0`, opacity: a}}>↓</div>
+      <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 900, fontSize: height * 0.04, margin: `${height * 0.02}px 0`, opacity: a}}>↓</div>
       <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.078, color: ink.body, textAlign: 'center', opacity: flip, transform: `scale(${interpolate(flip, [0, 1], [0.85, 1])})`, textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
         {fields.after}
       </div>
@@ -191,7 +194,7 @@ export const BuildList: React.FC<{fields: any; durationInFrames: number}> = ({fi
           const e = spring({frame: frame - appear, fps, config: {damping: 18}});
           return (
             <div key={i} style={{display: 'flex', alignItems: 'baseline', gap: height * 0.02, opacity: e, transform: `translateX(${interpolate(e, [0, 1], [-30, 0])}px)`, marginBottom: height * 0.022}}>
-              <span style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.05, color: BRAND.green}}>{i + 1}</span>
+              <span style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.05, color: ink.accent}}>{i + 1}</span>
               <span style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.044, color: ink.body, lineHeight: 1.1}}>{it}</span>
             </div>
           );
@@ -211,12 +214,21 @@ export const SideBySide: React.FC<{fields: any; durationInFrames?: number}> = ({
   // continuous life so the two cards don't sit frozen after they slide in (paper freezedetect)
   const live = interpolate(frame, [0, durationInFrames], [1, 1.028]);
   const drift = interpolate(frame, [0, durationInFrames], [0, -height * 0.01]);
-  const col = (d: any, o: number, dir: number, bad?: boolean) => (
-    <div style={{flex: 1, padding: height * 0.03, borderRadius: 20, background: ink.cardBg, border: `2px solid ${bad ? 'rgba(255,77,77,.5)' : 'rgba(61,220,132,.4)'}`, opacity: o, transform: `translateX(${interpolate(o, [0, 1], [dir * 40, 0])}px)`}}>
-      <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 3, textTransform: 'uppercase', color: bad ? BRAND.red : BRAND.green, marginBottom: height * 0.018}}>{d?.title}</div>
-      <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.044, color: ink.body, lineHeight: 1.12}}>{d?.value}</div>
-    </div>
-  );
+  // The side colours used to be POSITIONAL (left always good, right always bad), which quietly
+  // ignored the deck's own `kind`. #50 has a compare with `bad` on the LEFT, one with `bad` on
+  // BOTH sides, and one with neither — all three rendered wrong. Honour the authored kind when
+  // either side declares one; fall back to the old positional default when neither does, so
+  // every deck written before this keeps its exact previous colouring.
+  const declared = !!(fields.left?.kind || fields.right?.kind);
+  const col = (d: any, o: number, dir: number, positionalBad: boolean) => {
+    const bad = declared ? d?.kind === 'bad' : positionalBad;
+    return (
+      <div style={{flex: 1, padding: height * 0.03, borderRadius: 20, background: ink.cardBg, border: `2px solid ${bad ? 'rgba(255,77,77,.5)' : `${ink.accent}66`}`, opacity: o, transform: `translateX(${interpolate(o, [0, 1], [dir * 40, 0])}px)`}}>
+        <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 3, textTransform: 'uppercase', color: bad ? BRAND.red : ink.accent, marginBottom: height * 0.018}}>{d?.title}</div>
+        <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.044, color: ink.body, lineHeight: 1.12}}>{d?.value}</div>
+      </div>
+    );
+  };
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 7%', transform: `scale(${live}) translateY(${drift}px)`}}>
       <div style={{display: 'flex', gap: height * 0.03, width: '100%', alignItems: 'stretch'}}>

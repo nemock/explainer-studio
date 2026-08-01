@@ -176,7 +176,7 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
       {fields.kicker ? (
         <div style={{position: 'absolute', top: '6%', left: 0, right: 0, textAlign: 'center',
-                     fontFamily: BRAND.font, color: BRAND.green, fontWeight: 800,
+                     fontFamily: BRAND.font, color: ink.accent, fontWeight: 800,
                      fontSize: H * 0.024, letterSpacing: 5, textTransform: 'uppercase',
                      opacity: spring({frame, fps, config: {damping: 18}})}}>
           {fields.kicker}

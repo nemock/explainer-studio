@@ -1,6 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
+import {isPaperTheme, useInk} from '../ink';
 import type {Word} from '../schema';
 
 // Word-synced, PAGED kinetic captions (motion-playbook §2A). Baseline on every scene.
@@ -50,11 +51,18 @@ export const Captions: React.FC<{
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const t = frame / fps;
+  const ink = useInk();
   const cutbond = theme === 'cut-bond';
-  const paper = cutbond || theme === 'nemock-deep-dive';
+  // Was a hand-rolled list that only knew cut-bond and nemock-deep-dive, so the BRG paper
+  // worlds got the NAVY caption treatment (dark pill, white text) burned onto cream stock.
+  // isPaperTheme is the single source of truth for which worlds are paper.
+  const paper = isPaperTheme(theme);
   const pill = paper ? 'rgba(250,245,232,.92)' : 'rgba(7,11,22,.55)';
   const restInk = paper ? '#2a2622' : BRAND.white;
-  const activeInk = accentColor || (cutbond ? '#ff5a4d' : BRAND.green);
+  // The active word is the world's ONE accent. Cut & Bond keeps its coral; every other
+  // theme resolves through ink, so navy/nemock/brg-paper stay BRAND.green exactly as before
+  // and brg-deep-dive finally gets BRG indigo instead of the studio green.
+  const activeInk = accentColor || (cutbond ? '#ff5a4d' : ink.accent);
   const shadow = paper ? '0 2px 6px rgba(120,92,40,.25)' : '0 3px 16px rgba(0,0,0,.8)';
 
   const pages = React.useMemo(() => buildPages(words || []), [words]);
