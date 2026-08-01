@@ -245,6 +245,80 @@ the midroll seam for 8 min+) · 7 Thumbnail direction (§5) · 8 SEO/description
 notes (keywords from finalist tags; chapters; operator CTA block; pinned-
 comment idea) · 9 Risks/notes (incl. authenticity findings from §4).
 
+**Section 6 must show a MECHANISM SPINE, not a stat sequence (added 2026-07-29,
+from a structural teardown of Hannah Fry's explainer videos).** The most common
+failure in our arcs is the **evidence ledger**: stat → concession → reversal →
+stat → stat. Each beat is true and well-sourced, and the middle still feels
+like a list, because nothing *causes* the next thing. The viewer is being told
+in sequence rather than discovering in order.
+
+Before the beats table, write the spine as an explicit causal chain — 5 to 10
+links, each one `X → therefore Y`, ending exactly where the cold open left the
+viewer:
+
+> silence and pauses fill real meetings → silence is what makes transcription
+> models invent text → that transcript feeds the summarizer → summarizers fail
+> mostly by omission → omission is invisible on the page, because everything
+> present is usually true → the industry's automatic quality metrics don't
+> detect omission either → so nothing in the pipeline flags it → and you don't
+> check, because it feels trivial → so a decision made in the room quietly
+> isn't in the record
+
+**Then map beats onto the chain**, one link per beat wherever possible. Each
+piece of evidence enters as *proof of a link*, never as a free-standing finding.
+
+**ONE MECHANISM PER VIDEO. A concession is a BEAT, not a THREAD (added 2026-07-29).**
+This is where the Fry model stops fitting us cleanly and the mismatch is worth understanding
+rather than papering over. She explains one physical phenomenon with one causal chain. We
+review a *body of evidence*, which is inherently plural — eight studies do not form one chain.
+The failure that produces is not a saggy middle; it is **two threads**, and the viewer feels
+the video change subject.
+
+Worked example, #53. It ran a mechanism thread (transcription mishears → summaries omit →
+omission is invisible → nobody checks) AND an evidence thread answering a different question
+(does any of this save time?). Both were good. Together they made the middle drift, and eight
+beats and roughly two and a half minutes went to the time thread. That is a thread, not a
+concession.
+
+The rule: **every video answers ONE question.** If a second genuinely important question needs
+answering for fairness or honesty, it gets **one or two beats and then closes** — a
+concession, stated cleanly and left. If it needs more than two beats to be fair, it is not a
+concession, it is the other video, and it should be scoped as its own episode.
+
+The test at the blueprint: write the video's question as a single sentence. If you need "and
+also whether…", you have two videos. Pick one and let the other become an episode.
+
+**Name the THROUGH-LINE OBJECT above the beats table (added 2026-07-29).** The spine gives
+the arc its *causality*; the through-line gives it its *continuity*, and they are different
+shapes. A chain can be perfectly causal and still feel like a survey if each link introduces
+a new subject. Write one line before the table:
+
+> **Through-line:** the meeting summary you skimmed, and the transcript underneath it.
+
+Then add a **contact column** to the beats table marking every beat where that object is on
+screen or in the sentence. The rule (script-playbook §4.1) is **no run of four or more beats
+without contact** — a gap that long is where the video stops being a story. Design the returns
+deliberately at the act boundaries, the midroll seam, and the close; do not hope they happen.
+
+If you cannot name a single object that survives the whole arc, that is a signal the video is
+covering two topics, not one. Split it or narrow it before writing a word of script.
+
+Rules:
+- **The bulk of the runtime belongs to the mechanism, not the conclusion.**
+  If the arc reaches its answer at 40% and spends the rest supporting it, the
+  spine is inverted — the walk IS the video.
+- **A beat that doesn't advance a link is a candidate for cutting**, however
+  good the stat is. Strong orphan evidence goes in the pinned comment or the
+  article, not the arc. (This is where an over-productive research pass gets
+  disciplined: research yields findings, the spine decides which ones are load-
+  bearing.)
+- **Concessions are links too.** "Where it genuinely wins" should sit in the
+  chain, not beside it.
+- If a topic genuinely has no causal chain (pure ledger comparisons, listicle-
+  shaped material), say so in section 9 and justify the ledger structure — but
+  treat that as the exception, and check first whether a chain is hiding in
+  the material.
+
 `blueprint.json`: machine-readable mirror — schema `blueprint/1`, fields:
 topic, angle, gap[], consensus_beats_required[], title_candidates[],
 hook{draft, open_loops[]}, format{primary, target_duration_s, shorts[]},
@@ -261,3 +335,27 @@ Always propose 3 Shorts cut from the strongest standalone beats.
 Show the operator: the angle + gap statement (3–4 sentences), the #1 title,
 the target length/format, and ONE question if anything material is ambiguous.
 Wait. Do not start the script until approved.
+
+**Blueprint self-QA (run before presenting):**
+
+- [ ] The finalist table is built from real intel rows, strays vetted and discounted.
+- [ ] The gap statement names who's underserved, what's buried, what's missing entirely,
+      and the contrarian truth the comments support.
+- [ ] Titles ranked with the current Learn tiebreakers; #1 is acute + problem-aware, and
+      the packaging pulls a survival or identity tension.
+- [ ] **Section 6 opens with an explicit MECHANISM SPINE (§8)** — 5 to 10 `X → therefore Y`
+      links ending where the cold open left the viewer, with beats mapped onto links. A
+      beats table that is a sequence of findings with no causal chain is an evidence ledger
+      and fails this gate. If the topic genuinely has no chain, justify the ledger in §9.
+- [ ] **The cold open is drafted as a felt moment** (script-playbook §4.1) with its three
+      tests checked, and the escalation lands ON that recognition. Exceptions justified.
+- [ ] **The video answers ONE question**, written as a single sentence with no "and also
+      whether…". Any second question is a concession of **at most two beats**, or it is
+      scoped as its own episode.
+- [ ] **A THROUGH-LINE OBJECT is named above the beats table**, and the table has a contact
+      column with no run of 4+ beats without it. Returns are placed deliberately at the act
+      boundaries, the seam, and the close. If no single object survives the arc, the video
+      is covering two topics — narrow it before scripting.
+- [ ] Every open loop has a named closing beat; the midroll seam is marked for 8 min+.
+- [ ] Orphan evidence (verified but not load-bearing on the spine) is listed as cut, with
+      the strongest replacement candidates named, so nothing good is silently lost.

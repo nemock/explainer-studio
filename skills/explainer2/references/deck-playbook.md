@@ -105,6 +105,13 @@ substrings of the text they accent or nothing highlights.
   optional `sketch: true` (hand-drawn outlines). Nodes/edges assemble stage-by-stage
   AS the narration describes them. 5–9 nodes max. Under `--engine deck` it falls back
   to a plain headline card — don't author schematics for deck-engine projects.
+  **On paper themes the nodes are real generated post-its (2026-07-31), and `w` now
+  chooses the paper's SHAPE.** The engine picks the widest substrate no wider than the
+  text needs and grows the box to that paper's true aspect, so a wide `w` with a short
+  label lands on a torn half-note every time. Vary `w` across a slide, and author
+  `shape: "square"` on the node you want to read as a classic square post-it — otherwise
+  a four-node row comes out as four identical torn strips. The `n.h` override still wins
+  over everything and will squash the paper, so use it only when you mean to.
 
 ### Media slides — REQUIRE a real image on disk (see §4)
 - **`figure`** → `image` (path, **must exist**) + `caption`. A framed still /
@@ -118,7 +125,8 @@ substrings of the text they accent or nothing highlights.
 ## 3. Mapping segment `device` → slide type (a starting heuristic)
 
 `cold_open` → `hook` · `thesis`/`statement` → `statement` · `promise_stack` →
-`list` · `credibility` → `statement` · `re_hook` → `statement`/`highlight`/`punch`
+`list` · ~~`credibility`~~ *(RETIRED 2026-07-29 — no credibility slide; see
+script-playbook §4.3)* · `re_hook` → `statement`/`highlight`/`punch`
 · `midroll_seam` → `punch` or `reframe` (the energy peak) · a cited number →
 `stat`/`statgrid`/`delta` · a verbatim line → `quote` · a named process →
 `steps`/`list` · `payoff` → `highlight`/`payoff` · `cta` → `payoff`.

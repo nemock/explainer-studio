@@ -91,6 +91,17 @@ speaking", "to be real with you". (Bare "honestly," addressed to the VIEWER as a
 candor invitation — "Honestly, what's the one task you won't hand off?" — is fine;
 the ban is on the SPEAKER claiming new honesty about themselves.)
 
+**EXTENDED 2026-07-31 (#53): the ban covers the self-applied ADJECTIVE too**, not
+just the announcing phrases. Dave caught "my honest answer is almost never" and
+rewrote it to "it seems my answer is almost never": *"if you have to identify what
+you're saying right now as honest, then what does that mean about everything else
+you say?"* Also hunt: "my honest answer", "the honest truth", "honest opinion",
+"if I'm honest". Where a hedge is genuinely wanted, reach for UNCERTAINTY instead
+of honesty ("it seems my answer is…", "as best I can tell", "I'd have to say").
+Still legal: describing something other than his own candor as honest ("the authors'
+own explanation is the honest one"), reporting what others were asked to do, and a
+mid-sentence casual "honestly" inside his own aside (VOICE.md §1.10 texture).
+
 ### A2. Written-tell carryover (these also hurt the captions)
 - Curly quotes → straight quotes; em/en dashes → period/comma/colon (captions show them).
 - AI vocabulary: delve, leverage (v.), tapestry, underscore, intricate, pivotal,
@@ -175,9 +186,16 @@ Two tests every cold open must pass:
 - **One idea per breath.** A segment is a breath-paragraph; if you'd run out of
   air or lose the thread reading it aloud, split it.
 - **The operator's register** (see [[dave-delivery-style]] equivalent): warm,
-  over-coffee, conversational. Asides, self-interruptions ("and look—"), and
-  direct second-person are encouraged. Conversational is not rambling; every
-  sentence still earns its place.
+  over-coffee, conversational. Asides and direct second-person are encouraged.
+  Conversational is not rambling; every sentence still earns its place.
+- **Register comes from the thinking, not from tics** (operator directive,
+  2026-07-31). Warmth is built with firm opinions stated without hedging,
+  concrete particulars, and writing to one person. It is NOT built by sprinkling
+  `right?`, `you know`, `I mean`, doubled words, or staged self-corrections into
+  the text. Those land wrong when a checklist places them; the operator adds them
+  himself at the microphone, which is where they belong. If you can delete the
+  tic and the sentence gets clearer, it was never his. Same correction as the
+  `humaner` skill's "style is organic — there is no style store."
 
 ### B3. Concrete over abstract
 - Real numbers, named people and companies, specific scenes. Specific nouns beat
@@ -255,6 +273,12 @@ blocklist = [
     "to be honest", "i have to be honest", "i'll be honest", "let me be honest",
     "i owe you a piece of honesty", "owe you some honesty", "truth be told",
     "in all honesty", "to be real with you",
+    # A1c EXTENDED 2026-07-31 (#53): the self-applied ADJECTIVE carries the same
+    # presupposition. "my honest answer" -> "it seems my answer". Legal: describing
+    # someone ELSE's explanation as "the honest one", or a mid-sentence casual
+    # "honestly" inside his own aside (VOICE.md 1.10 texture).
+    "my honest answer", "the honest truth", "honest opinion", "if i'm honest",
+    "if i am honest", "honestly, my answer",
 ]
 for s in d["segments"]:
     hits = [p for p in blocklist if p in s["text"].lower()]

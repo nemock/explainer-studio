@@ -156,6 +156,50 @@ at ~150 wpm is ~3,750 words, and every one of them still has to earn its seat.
 - Package deliverables are the deep-dive set (meta.json, article.md,
   linkedin.md, A/B thumbnails) — `validate` enforces them per content type.
 
+## 6b. Series ground truth and the continuity ledger (2026-07-29)
+
+Added after the waste-to-fuel Operator's Guide
+(`/Volumes/Casima/claudeCode/WTE_Operators_Guide/`), where the operator's explicit
+requirement was internal consistency *within* each episode AND *across* the series,
+with no invented callbacks to material earlier episodes never covered.
+
+A twelve-episode series is exactly where a model's memory of its own earlier work
+stops being trustworthy. Two artifacts fix that, and both are cheap:
+
+**1. An atomized knowledge base = the series' ground truth.** One markdown file per
+standard / concept / hazard / case, each with frontmatter carrying `sources` (URL +
+access date), a `confidence` rating, and — the load-bearing field — an explicit
+`gaps:` list of what could NOT be verified. The binding rule is:
+
+> Every factual claim in an episode script must trace to a KB node. If a script
+> needs a fact the KB doesn't have, add the node WITH SOURCES first, then script.
+
+The `gaps` field is what makes this more than a filing system. A model asked to
+teach a paywalled standard will otherwise reach for plausible clause numbers; a KB
+that says "we could not verify the PFDavg bands from a free source" converts an
+invented fact into a stated limitation, which is both honest and better teaching.
+Run the gap list before drafting, not after.
+
+Ship a small script beside it (`tools/kb.py` in that project: `index` / `check` /
+`gaps` / `find`). `check` should fail on a node with no sources — that single rule
+is most of the value.
+
+**2. A continuity ledger = the record of what each episode ACTUALLY taught.**
+Appended when an episode's script goes final, one section per episode: concepts
+introduced, running-example state, notable claims, callbacks used, and the forward
+hook opened plus which episode closes it. Then:
+
+> Backward references may cite only what the ledger records. If it isn't in the
+> ledger, it wasn't in the video.
+
+This is what §4.3's "reference backward with a light touch" needs in order to be
+checkable rather than aspirational, and it is the only reliable way to verify §4.4's
+forward hooks actually get closed. It also survives context compaction and session
+boundaries, which memory does not.
+
+Both belong at the series root, and both should be named in the series CLAUDE.md as
+binding — not as documentation.
+
 ## 7. Self-QA (before any episode's script gate)
 
 - [ ] Series outline exists, is approved, and this episode matches its rung
@@ -169,3 +213,7 @@ at ~150 wpm is ~3,750 words, and every one of them still has to earn its seat.
       CLAUDE.md), episode badge on thumbnails
 - [ ] Everything in script-playbook §6 and spoken-humanizer — unchanged and
       mandatory
+- [ ] If the series keeps a knowledge base (§6b): every factual claim traces to a
+      node, and nothing on the gap list is asserted as fact
+- [ ] If the series keeps a ledger (§6b): prior entries read before drafting, and
+      this episode's entry appended before the booth

@@ -66,9 +66,94 @@ to date missed length on the first draft; the rule exists because it bites).
    leans in, the wrong one leaves before hurting average-view-duration. This is
    the story's opening tension, not a demographic label. Same guardrail as the
    blueprint's tension check: name a real pain the video really solves.
+
+   **PREFERRED SHAPE — open on something they've already done, not on the
+   concept (added 2026-07-29, from a structural teardown of Hannah Fry's
+   explainer videos).** The strongest cold open is not a claim, a statistic, or
+   an artifact. It's a **micro-behavior the viewer performed this week without
+   thinking about it**, described concretely enough that they picture themselves
+   doing it. Recognition creates the gap on its own — *there's a reason I do
+   that, and I've never once asked why* — and the gap is what holds them. Only
+   after the recognition lands do you name what the video is about.
+
+   Fry does physical sensations because she does physics ("that slippery feeling
+   when you get bleach on your hands"). Our equivalent is a **working-life
+   micro-behavior**: the thing they skim, the tab they close, the number they
+   quote without checking, the meeting they half-attend.
+
+   **The selection test (all three, or use a different shape):**
+   1. **Involuntary** — they did it without deciding to.
+   2. **Recent and near-universal** — essentially everyone in the target
+      audience did it in the last two weeks. If it needs a job title to qualify
+      ("when you're redlining an MSA…"), it fails; fall back to the
+      artifact/claim opener.
+   3. **It IS the video's subject.** The behavior must be the thing the video
+      explains, not a decorative on-ramp to it. If the opener could be swapped
+      for a different topic's opener, it's decoration.
+
+   **Then escalate, don't restate.** The felt moment earns the right to tell the
+   hard story (the court case, the study, the number). Order is: they recognize
+   themselves → then the evidence lands ON that recognition. The escalation is
+   strongest when the outside world did the thing the viewer didn't
+   (e.g. *"you never checked the summary. In April, a federal judge was handed
+   one as evidence, and she checked."*).
+
+   This does not retire the artifact/claim opener — it outranks it. Use the
+   claim opener when the topic has no daily involuntary behavior attached.
+
+   **THE THROUGH-LINE — the small thing must GROW, not get abandoned (operator
+   directive 2026-07-29).** This is the half of the Fry structure the first pass
+   missed. The felt moment is not a hook you leave behind once the video "really
+   starts". Dave, on why her videos hold him: *"she draws you right in by just
+   mentioning something small that you can quickly connect with. That idea then
+   grows into the larger content of the video."* The shape is **one object
+   examined at increasing depth**, not an opening anecdote followed by a tour of
+   evidence.
+
+   Name ONE concrete object or behavior in the cold open and keep it physically
+   present. It must reappear **at every act boundary (≈ every 4–5 min), at the
+   midroll seam, and in the closing beat.**
+
+   This is NOT a callback, which stays banned (§1.6: no "remember the X from
+   earlier", no motif architecture). The difference is real: a callback
+   re-mentions something you dropped; a through-line never left. Each return
+   shows the *same* object at a new depth, because the viewer now understands
+   more about it than they did last time. Bleach on your hands → what a
+   surfactant is → your skin is becoming soap → go wash your hands. One object,
+   four depths.
+
+   **How evidence enters.** A study, a number, or a case arrives as *something
+   that happened to the object*, never as a new topic. "Here's what a randomized
+   trial found about the thing sitting in your inbox" holds the line; "now let's
+   look at the evidence on time savings" breaks it and turns the video into a
+   lecture.
+
+   **The test:** can the whole video be described as *"one thing, looked at
+   closer"*? If the one-sentence summary needs "…and then it covers…", the
+   through-line broke.
+
+   **Diagnosis:** list the beats and mark each one where the object is on screen
+   or in the sentence. **A run of four or more beats with no contact is where the
+   video stops being a story and becomes a survey.** (Honest scoring of #53: the
+   object — the summary you skimmed and the transcript underneath it — holds
+   through the cold open and act one, then drops out across the email/meetings/
+   microphone stretch before returning at the omission beat. That middle gap is
+   the weakest passage in the video, and it is exactly what this rule exists to
+   catch.)
 2. **Promise stack (by seg 2):** open 2–3 loops explicitly ("here's what
    you're getting…"). Record each in `retention_map.open_loops` with its
    closing segment. EVERY loop opened MUST close; verify ids exist.
+   - **EXCEPTION — when the cold open is a felt moment, do NOT enumerate them
+     (added 2026-07-29; resolves a conflict this playbook was carrying).** An
+     itemized "here's what you're getting" converts *I wonder* into *here's the
+     menu*, and a menu is the opposite of a small thing growing. It also
+     contradicts the sub-rule directly below it, which already forbids topic
+     lists — #53 shipped a three-item table-of-contents slide anyway, because
+     the parent rule invited one. With a felt-moment open: keep the loops in
+     `retention_map` for structural tracking, but narrate **at most ONE**
+     after-state line, folded into the flow rather than set out as a list, and
+     let the recognition itself carry the rest of the tension. Never author a
+     `list` slide for the promise beat in this mode.
    - **Paint the transformation, don't list topics (added 2026-07-06).** At
      least one promise should be the AFTER-STATE — what the viewer can do or
      see differently by the end ("by the end you'll spot this trap in any
@@ -84,24 +169,69 @@ to date missed length on the first draft; the rule exists because it bites).
      manufactured tribalism or drill-sergeant gatekeeping ("this isn't for
      people who make excuses…") — that register is the manipulation this
      brand is the antidote to.
-3. **Credibility is a toll booth** (≤ 1 segment, ≤ 30 words, before the first
-   payoff — never before the hook).
+3. **The credibility beat is RETIRED (operator directive 2026-07-29). Do not
+   author one.** There is no longer a "why you should listen to me" segment.
+   - **Why.** Dave: *"We're teaching people things. It's not about me. It's
+     about the value that I bring. I don't think we need to remind somebody why
+     we're important enough to listen to every single slide. In fact it might
+     actually degrade our credibility to just be constantly referring to it."*
+     He is right, and the mechanism is worth stating: **credibility transfers by
+     demonstration, not assertion.** Every sourced number, every disclosed
+     funder, every openly stated caveat, every "I could not verify this so I am
+     not using it" IS a credibility beat — distributed across the whole video
+     instead of concentrated in a claim about the operator. A person who keeps
+     explaining why they are worth listening to reads as someone who is not
+     sure. With a back catalogue this size, the work is the credential.
+   - **What replaces it: nothing.** Do not relocate it, soften it, or fold a
+     shorter version in elsewhere. Cut it and go straight from the cold open
+     into the material. The runtime it frees belongs to the mechanism (§4.1
+     through-line, blueprint §8 spine).
+   - **Lived experience is still welcome — as a load-bearing clause, never as a
+     credential.** VOICE.md §1.10's *subordinate-clause receipt* is the pattern:
+     the experience arrives spent on the point, not displayed. *"After thirty
+     years of reading what suppliers will and won't warrant, the first thing I
+     check is…"* earns its place because it explains WHY he checks that thing.
+     *"I've shipped forty products and led an FDA de novo"* standing alone does
+     not. Test: delete the experience clause — if the sentence still teaches the
+     same thing, the clause was a credential and should stay deleted.
+   - **These are NOT the credibility beat and they REMAIN MANDATORY.** Do not
+     let this retirement take them with it:
+     - **Honesty disclaimers** ("I'm not a lawyer and this isn't legal advice",
+       and its equivalents). Safety and honesty, not self-promotion. Keep.
+     - **Evidence hygiene**: who funded a study, sample sizes, the caveat that
+       makes a number honest, and openly saying when something could not be
+       verified. Keep, and deliver per the riding rule below.
+   - **The not-paywalled line is now OPTIONAL and never its own beat.** It was
+     doing real work against the affiliate-funnel niche, but by Dave's own
+     argument, having to *say* you're not running a funnel is weaker than simply
+     not running one and letting the single clean CTA prove it. Use it only when
+     a video genuinely contrasts itself with gated material, and then as one
+     clause in flow — never a segment, never a slide of its own.
+   - **OBLIGATIONS RIDE THE THROUGH-LINE; they do not interrupt it (added
+     2026-07-29).** Fry carries no disclosures and no CTA, so nothing ever stops
+     her growth. We still carry the mandatory ones above, and each is a full
+     halt if authored as its own topic. Deliver them **while still touching the
+     object**:
+     - *Interrupting:* a standalone beat that leaves the story to explain that
+       the answer isn't paywalled.
+     - *Riding:* the same promise said with the object still on screen and in
+       the sentence — "I'll tell you who paid for every study I cite, because
+       on **this** the funding is the whole game."
+     - *Interrupting:* a separate card announcing that three of four researchers
+       worked for the vendor.
+     - *Riding:* that fact spoken inside the sentence that delivers the finding,
+       so the caveat and the evidence arrive together.
+     Same rule for the mandatory caveats: a caveat folded into the claim's own
+     sentence is honest AND keeps the line; a caveat given its own beat reads as
+     a disclaimer break. Check the contact column (§4.1) — obligation beats are
+     the ones most likely to show up as a gap.
    - **Honesty rule — never claim "nothing to sell" (operator directive
-     2026-06-22).** The operator DOES have things to sell: the book, the site,
-     and *The Build* newsletter (which bundles masterclasses), named once in the
-     CTA. So "I've got nothing to sell you / no course, no affiliate link" is
-     literally false and corrodes the exact trust the credibility beat exists to
-     build — the moment the viewer reaches the CTA, the claim is exposed. Frame
-     the *real, defensible* thing instead: **the answer isn't paywalled.** The
-     honest, warmer version — *"I'm not burying the actual answer inside a
-     membership site or a course you have to buy your way into. I'm giving it to
-     you right here, because I genuinely want you to benefit — to level up your
-     own game. I've got a book and a newsletter; I'll name them once at the very
-     end, but you don't need either one to walk away with the whole answer."*
-     This is the standard credibility-beat framing now. It applies anywhere the
-     script contrasts itself with the affiliate-funnel niche, and a blueprint's
-     "differentiation" should be written as *ungated / not-paywalled + genuine
-     generosity*, never as *nothing-to-sell*.
+     2026-06-22, still binding wherever the paywall line is used at all).** The
+     operator DOES have things to sell: the book, the site, and *The Build*
+     newsletter, named once in the CTA. "I've got nothing to sell you / no
+     course, no affiliate link" is literally false and is exposed the moment the
+     viewer reaches the CTA. If the not-paywalled idea is used, the framing is
+     **the answer isn't gated**, never *nothing-to-sell*.
 4. **Re-hooks:** a curiosity reset every 25–40 s of script time (≈ every 4–6
    segments): a named trap, a counterintuitive rule, "here's where it gets
    interesting". List their segment ids in `retention_map.re_hooks`.
@@ -119,6 +249,20 @@ to date missed length on the first draft; the rule exists because it bites).
    bleeds end-retention AND halves the end-screen suggested-video click. You've
    already taught the lesson and shown the payoff — trust it. Go straight from
    the last substantive beat into the comment-CTA, then ONE clean CTA, and stop.
+   - **Land SMALLER than you started (added 2026-07-29, same source as §4.1).**
+     The last substantive beat — the one right before the comment-CTA — must get
+     *smaller*, not bigger. No forced inspirational takeaway, no zooming out to
+     what this says about work or technology or the future. Land on one small,
+     practical, almost throwaway thing the viewer can do, or a dry observation.
+     *"Open the transcript once. Not every time. Just once, on a meeting where
+     something actually got decided, and see whether it made it in."*
+     The scale-up ending ("and that's really what this is all about…") is the
+     single most common failure in our closing beats: it reads as a wind-down,
+     which §4.7 already forbids, and it wastes the one slot where a concrete
+     action would actually stick. **Our format constraint:** unlike the source
+     material we can't simply get out of the way — the comment-CTA and the
+     single CTA still follow. So "end smaller" governs the *last teaching beat*,
+     and the CTA stays crisp and confident per the rules below.
    - **Comment-CTA (next-to-last slide, standard since 2026-06-19, video #08).**
      This beat EARNS its end placement: a genuine open question makes an engaged
      viewer linger to reply — the dwell + engagement we actually want. Make it an
@@ -152,9 +296,10 @@ to date missed length on the first draft; the rule exists because it bites).
      buy dwell — but drop the trailing homework imperative.)
      - **No false modesty AT the CTA (operator directive 2026-06-25, #14).** The
        "not-paywalled / you don't need it to get the whole answer" generosity line
-       (§4.3) belongs ONLY in the EARLY credibility beat, where it builds trust
-       before the value is delivered. Do NOT repeat it at the closing CTA. The CTA
-       is the moment of the *ask*; tacking on "but you don't really need it" right
+       (§4.3) must NEVER appear at the closing CTA. (It used to live in the early
+       credibility beat; that beat is retired as of 2026-07-29, so in most videos
+       the line simply does not appear at all.) The CTA is the moment of the *ask*;
+       tacking on "but you don't really need it" right
        there talks the viewer out of the exact thing you just asked them to buy.
        Dave: "that's the wrong time to suggest it's not important that they get it."
        So the CTA = name the book + site + newsletter, then the single subscribe
@@ -167,14 +312,18 @@ to date missed length on the first draft; the rule exists because it bites).
        you're there, sign up for my newsletter, The Build."* You may add ONE genuinely
        current teaser only when it's true (e.g. new books landing this year) — kept
        truthful, never invented. Confident and generous is the register, not apologetic.
-   - **Medium note — this is a VIDEO rule, not a universal one.** "Don't recap,
-     don't signal the end" exists because a *watcher* who hears "let's recap"
-     leaves, costing watch-time and the suggested-video click. The written
-     [[article-playbook]] deliberately KEEPS a short recap — an article has no
-     dwell algorithm, a recap is a useful skim artifact, and it signals the essay
-     isn't just a transcript of the video. Each format follows its own best
-     practices (operator directive 2026-06-21); don't flatten one ruleset across
-     video, article, and short.
+   - **Medium note — UPDATED 2026-07-31: the no-recap rule is now UNIVERSAL.**
+     It began as a video-only rule, because a *watcher* who hears "let's recap"
+     leaves, costing watch-time and the suggested-video click, and the written
+     [[article-playbook]] used to KEEP a short recap as a skim artifact. **That
+     exception is reversed.** The `humaner` skill's CRAFT layer (rewritten
+     2026-07-31 from Zinsser) bans the summary ending in every format, including
+     bulleted "the short version" recaps: the reader hears the cranking, and it
+     carries an implied insult that they were too dumb to get it the first time.
+     When the point is made, find the nearest exit. `article-playbook` §"NO end
+     recap" and `humaner`/FORMATS.md now agree; the skim-artifact job is served by
+     the boxed artifacts instead. Formats still differ elsewhere (spoken texture,
+     length, CTA register) — don't flatten those.
 8. **Chapters** = the `beat` labels; every beat boundary is a chapter.
 9. **Define terms as you use them — comprehension IS retention (operator directive
    2026-07-14).** An undefined term the viewer doesn't know blocks them from
@@ -192,6 +341,24 @@ to date missed length on the first draft; the rule exists because it bites).
    while experts think "I've never heard it put that clearly." GUARDRAIL: define,
    don't condescend. One clean observable definition, then move on; don't stop to
    re-explain terms the whole audience already owns.
+10. **Engineer the click — validate AND reframe, both halves (added 2026-07-29,
+    same source as §4.1).** The video's central reveal has a specific shape:
+    **what you thought was happening isn't what's happening — but you weren't
+    imagining it either.** Most reveals we write do only the second half, which
+    lands as *correction*: you believed a wrong thing, here's the right thing.
+    Correction makes the viewer defensive. The click makes them feel smart.
+
+    - **Validate first.** Name the true part of what they already believed.
+      *"The summary isn't lying to you. Everything in it usually did happen."*
+    - **Then reframe.** Move the explanation, not the observation.
+      *"You were right that it feels accurate. What's wrong with it isn't in
+      there to notice."*
+
+    The test: after the reveal, could the viewer say *"so I wasn't wrong, I was
+    looking at the wrong thing"*? If instead they'd say *"so I was wrong,"* the
+    reveal is a correction and needs the validating half written back in.
+    Applies to the main reversal at the midroll seam and to any beat that
+    overturns a belief the audience arrived with.
 
 ## 5. Voice rules (conversational, spoken, the operator's)
 
@@ -200,8 +367,8 @@ to date missed length on the first draft; the rule exists because it bites).
   teleprompter-to-lens juggling — and is at his best in flowing, emotive,
   over-coffee delivery. So: let thoughts run. Mix long connective sentences
   with short punch lines instead of defaulting to staccato one-liners.
-  Asides, self-interruptions ("and look—"), and direct second-person warmth
-  are encouraged. Segments may run 60–90 words when the thought is genuinely
+  Asides and direct second-person warmth are encouraged (but see the next
+  rule on written-in tics). Segments may run 60–90 words when the thought is genuinely
   continuous; the 30–60 guidance applies to TTS-tier scripts. Conversational
   is not rambling: every sentence still earns its place.
 - **Storyteller register (operator directive, 2026-06-12): these are stories
@@ -217,6 +384,17 @@ to date missed length on the first draft; the rule exists because it bites).
   airable fact — verify or cut. The CTA stack stays (book, site, mailing
   list, subscribe), but it rides on generosity of narrative; the goal is
   videos that endure for years, not funnels that convert this week.
+- **Write the text clean; let the booth add the inflection** (operator
+  directive, 2026-07-31). Do NOT write in verbal tics to make the script sound
+  human: no inserted `right?`, `you know`, `I mean`, doubled words, or staged
+  self-corrections. Those inflections are welcome in the *delivery* — the
+  operator adds them naturally at the microphone and they do make the listener
+  hear a person — but a tic that arrives because a checklist put it there lands
+  in the wrong place and reads as a costume. Zinsser: style is organic, and
+  adding it is a toupee. This mirrors the `humaner` skill's 2026-07-31
+  correction (VOICE.md Part 1 mechanics are recognition evidence, never a
+  generation target) and is why craft now outranks voice. Practical test: if
+  you can delete the tic and the sentence gets clearer, it was never his.
 - Contractions always. Direct address ("you") throughout. No hype words
   (game-changer, insane, secret weapon).
 - **Spell out ALL numbers as words** ("five hundred", "fifteen percent") —
@@ -243,6 +421,36 @@ to date missed length on the first draft; the rule exists because it bites).
 - [ ] Re-hook spacing ≤ 6 segments everywhere
 - [ ] Visual mode changes per the interrupt rule (mark `device` accordingly)
 - [ ] Seg 0 passes the cold-open FORBIDDEN list; ending passes rule 7
+- [ ] **Cold open: felt moment, or a justified exception (§4.1).** Seg 0 opens on a
+      micro-behavior the viewer performed this week, and it passes all three tests
+      (involuntary · recent and near-universal · it IS the video's subject). If the topic
+      genuinely has no daily involuntary behavior attached, the artifact/claim opener is
+      correct — say so in one line at the gate rather than defaulting to it silently.
+- [ ] **The through-line holds (§4.1).** The cold open's object is present at every act
+      boundary, at the midroll seam, and in the closing beat. Mark each beat for contact:
+      **no run of 4+ beats without it.** Evidence enters as something that happened to the
+      object, not as a new topic. Test: does "one thing, looked at closer" describe the
+      whole video without an "…and then it covers…"?
+- [ ] **No enumerated promise stack under a felt-moment open (§4.2).** At most one
+      after-state line, folded into the flow; no `list` slide for the promise beat.
+- [ ] **NO credibility beat anywhere (§4.3, retired 2026-07-29).** No "why listen to me"
+      segment, no relocated shorter version. Any lived experience present is a load-bearing
+      clause that explains WHY — delete-test it: if the sentence still teaches the same
+      thing without the experience, it was a credential and stays deleted.
+- [ ] **The mandatory obligations survived the retirement:** honesty disclaimers (not a
+      lawyer / not medical advice) present where required, and evidence hygiene (funder,
+      sample size, the caveat that makes a number honest, "could not verify") delivered
+      inside the claim's own sentence rather than as its own beat.
+- [ ] **The click has both halves (§4.10).** The central reveal validates before it
+      reframes. Test: after it, would the viewer say *"I wasn't wrong, I was looking at the
+      wrong thing"*? If they'd say *"I was wrong"*, the validating half is missing.
+- [ ] **The last teaching beat lands SMALLER (§4.7).** One small practical action or dry
+      observation, not a zoom-out. If the beat before the comment-CTA summarizes or reaches
+      for significance, rewrite it.
+- [ ] **No written-in verbal tics (§5, 2026-07-31).** Grep the draft for `right?`,
+      `you know`, `I mean`, doubled words, and staged self-corrections. Each hit gets
+      the delete test: if cutting it makes the sentence clearer, cut it. The operator
+      supplies that texture live at the microphone; the script does not fake it.
 - [ ] All numbers spelled out; no unsourced stats; talk-time rules honored
 - [ ] Title promise(s) each map to a specific segment
 - [ ] Every topic-specific term a newcomer might not know is defined observably on

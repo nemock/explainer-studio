@@ -117,6 +117,30 @@ Each entry: **what · when · spec fields · motion · don't.**
   as **hand-drawn navy Sharpie lines** — the old cream cards + near-white dashed edges had
   no contrast on the cream page. No authoring change needed; it keys off the theme
   (`ink.paper`) so the midnight brand is untouched. Engine: `Schematic.tsx`.
+  **Notes auto-size to their text (2026-07-28, Dave, #52).** Node height used to be a
+  fixed formula that ignored text length, so any label/sub that wrapped past two lines
+  **overflowed the note** (caught on #52's "It matches them against a playbook" + its
+  sub). Height is now computed from the estimated wrapped-line count at the node's own
+  width, so long labels simply get a taller note. Two new optional fields:
+  - **`h`** — explicit height override, frame-height fraction. Wins over everything.
+  - **`shape: "square"`** — a chunky, real-post-it square note (height forced to at
+    least the node's width). Real post-its are square; there is usually plenty of empty
+    canvas, so **when a node carries a lot of text, prefer a BIGGER note over shrinking
+    the text**. Dave's directive: "we've got plenty of blank space… we're not in any
+    danger of having larger objects for putting text into."
+  Authoring guidance: widen `w` generously (0.22–0.30 is fine) and spread nodes across
+  the canvas rather than crowding them into one band. If a schematic looks empty in the
+  middle, that is a sign the notes are too small, not that you need more nodes.
+  **`sketch: true` DEFEATS the post-it treatment on paper themes (caught 2026-07-29, #53).**
+  `Schematic.tsx` computes `const note = ink.paper && !fields.sketch`, so setting `sketch`
+  forces `background: 'rgba(9,13,28,.72)'` — a dark translucent card with white text, which
+  on a cream page is off-brand and reads like the midnight theme leaked in. It renders, the
+  census passes, nothing warns. **On the paper themes, do not set `sketch`.** It remains
+  valid on `midnight`. (#52's schematics were right precisely because they never set it.)
+  **Keep the bottom row clear of the caption band.** Captions occupy roughly y 0.78–0.87 in
+  16:9, so a node centred below ~y 0.70 gets its `sub` line covered by the caption chip.
+  Put lower nodes at **y ≤ 0.65** and check a late-in-segment still, not just an early one —
+  an early frame hides the problem because the bottom node has not revealed yet.
 - **StepFlow** — the linear pipeline (idea→MVP→launch→scale); now lands each node on
   its narration cue automatically (auto item-sync, §5).
 - **Funnel** — stages narrowing; great for sales/customer math (auto item-synced).
@@ -144,6 +168,26 @@ words (set `cue` to the phrase being said); keep labels ≥ caption size; on `fi
 slides prefer the figure's own image-space `moves`/`highlight` for document work and
 frame-space annotations for editorial arrows.
 
+**Figure `title` ALWAYS renders (fixed 2026-07-28).** A figure's `title` used to render
+*only* when `imageFromFrac` was also set; authored without it, the headline was silently
+discarded — no warning, census still passed, render still succeeded, the line just never
+appeared. It cost real editorial copy on several videos (7 of 9 image slides on #52,
+including that video's central claim) before a still-check caught it. Now:
+- **`title` + `imageFromFrac`** → *phased*: the title holds the frame alone, then the image
+  reveals under it. Use when the title is a **claim** and the image is its **evidence**.
+- **`title` alone** → a persistent header between the kicker and the image, for the whole
+  scene. Reading order: **kicker → title → image → caption**.
+Both are legitimate; pick by whether the line is a claim to state first or a label to sit above.
+
+**Overlay-occlusion rule (operator-caught 2026-07-28, #52).** Anything drawn OVER an image —
+the hook's headline banner, `marks`, a `moves` zoom — must be checked against **what is actually
+underneath it**, by opening the image, not by guessing coordinates. Two failures in one video:
+a hook whose only meaningful element (a question mark) sat exactly where the banner is pinned,
+and a zoom+circle aimed at decorative line-art with no text to mark. Specifically: **`hook`
+slides render the image full-bleed with the label block pinned at ~7% from the top, so the
+image's meaningful content must live BELOW roughly the top 28%** — pick art whose top band is
+texture, not meaning.
+
 **Image-space figure `marks` (IMPLEMENTED 2026-07-17) — callouts that RIDE the Ken Burns.**
 `annotations` are a FRAME-space overlay: they sit over the whole scene and do NOT move
 with a `figure`/`footage` Ken Burns, so a frame-space circle on a panning/zooming subject
@@ -159,6 +203,27 @@ Rule of thumb: **anything you'd circle/point-at ON the art → `marks`; editoria
 stable text (a headline, a caption) → frame-space `annotations`.** `marks` count toward the
 §4b annotation-coverage floor. Engine: `FigureMarks` in `remotion/src/components/Media.tsx`,
 cue-resolved in `remotion_engine.py` (like `moves`).
+
+**`underline`/`strike` need a LINEAR SUBJECT that exists in the art (operator-caught
+2026-07-29, #53 — the fourth repeat of this class of error).** Underline is a *text* device.
+Our generated paper art contains **no text by construction**: the STYLE.md recipe ends with
+"no text, no words, no logos". So an underline on a generated figure usually has nothing to
+underline and renders as a red or green bar floating on blank paper. Two consequences:
+- **Default to `circle`, `box` and `arrow` on generated art.** Those point at *objects*, and
+  objects are what the art contains. Reach for `underline` only when the image genuinely has
+  a linear element to trace (a drawn highlighter stroke, a ruled line you mean to single out,
+  a wire). #53's one valid underline rides an actual green marker stroke.
+- **A mark can never reach the caption or the title.** Those are engine-drawn in FRAME space,
+  outside the image container; image-space `marks` live inside it and cannot touch them. If
+  the point you want to make is about the caption text, make it with `accent` colouring on the
+  title instead.
+- **Don't add a second mark just to look thorough.** One focal mark that lands beats two where
+  the second has no subject. The annotation-coverage floor counts *slides*, not marks, so
+  dropping a bogus second mark costs nothing.
+
+**The standing check before any figure ships:** for each mark, name out loud the thing in the
+image it sits on. If the answer is "the empty area below X" or "roughly where the text is",
+it is wrong. Open the PNG and look.
 
 ### D. Document & evidence (the #38 lane, generalized)
 - **DocReveal** — scroll a real page/screenshot.

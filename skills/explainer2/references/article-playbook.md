@@ -108,13 +108,21 @@ Everything below layers on top of that voice source.
   same scope. (If the operator asks for an expanded or condensed variant, note
   it — default is faithful companion.)
 - Headline · dek · lede (the hook, rewritten for a reader) · the acts as
-  subheaded sections · the boxed artifact(s) · a short recap · CTA outro.
-  - **The recap stays (intentional, 2026-06-21).** The video script-playbook
-    forbids an end recap because it signals a *watcher* to leave; an article is
-    different — no dwell algorithm, the recap is a useful skim artifact, and it
-    signals the essay is its own thing, not a transcript of the video. Don't
-    carry the video's "no recap" rule over to the article. Each medium gets its
-    own best practices.
+  subheaded sections · the boxed artifact(s) · CTA outro.
+  - **NO end recap (reversed 2026-07-31, Dave's instruction).** The article
+    previously ended with a "short version" recap, kept deliberately on
+    2026-06-21 on the reasoning that an article has no dwell algorithm and the
+    recap is a useful skim artifact. That reasoning is overruled by the craft
+    source: Zinsser, ch. 9, holds that readers leave the moment the end is in
+    sight, that a summary repeats in compressed form what was already said in
+    detail, and that it carries an implied insult that the reader was too dumb
+    to get it the first time. When the point is made, find the nearest exit and
+    end on a line worth ending on. See
+    `make_money/concepts/zinsser-unity-and-the-lead`.
+  - The skim-artifact job the recap was doing is better served by the boxed
+    artifact mid-piece (the test, the checklist, the rule), which is already in
+    the structure above and which readers can find without being re-taught the
+    article at the end.
 - Front-matter block at the top of `article.md`:
   ```
   ---
