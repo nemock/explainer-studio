@@ -37,8 +37,15 @@ const FAMILIES: {family: NoteFamily; aspect: number; takes: number}[] = [
 // Pastels, in Dave's four (2026-07-31). Pulled warm and slightly desaturated from stock
 // office-supply colours so they read as post-its without fighting the cream/navy/green
 // world. Multiplied over near-white paper, so these ARE the resulting surface colour.
+// yellow deepened 2026-08-01 (#ffe8a3 -> #f7d271). Schematic is a classic-map component, so
+// its notes always land on the CREAM PaperBackground, never on a dark table — and a pale
+// yellow note on cream had a luminance ratio of 1.07 on the BRG ground and 1.028 on the FWF
+// ground, where the note edge effectively disappeared (that cream is itself yellow-tinted).
+// The other three sat at 1.12-1.25. This brings yellow to 1.29/1.24, in family with blue,
+// while staying a desaturated post-it rather than the hot gold a pure lightness drop gives.
+// Ink on the note stays 10.3:1. No published video uses these yet, so nothing re-renders.
 export const NOTE_PASTEL = {
-  yellow: '#ffe8a3',
+  yellow: '#f7d271',
   pink: '#ffd2d8',
   blue: '#c3dcf0',
   green: '#cbe8c8',
