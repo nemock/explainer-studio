@@ -3,6 +3,7 @@ import {AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, use
 import {BRAND} from '../brand';
 import {useInk} from '../ink';
 import {useWorld} from './PaperWorld';
+import {PaperSheet} from './PaperNote';
 
 // Paper cold-open hook (2026-07-14) — REPLACES the rotating 3D "buckyball" (Hero3D) as the
 // default open. A full-bleed paper illustration (this video's visual theme) with a gentle
@@ -65,8 +66,16 @@ export const PaperHook: React.FC<{fields: any}> = ({fields}) => {
             {fields.kicker}
           </div>
         ) : null}
-        <div style={{background: '#fbf6e8', borderRadius: 24, padding: `${height * 0.032}px ${width * 0.045}px`, boxShadow: '0 24px 60px rgba(0,0,0,.30)', border: '3px solid rgba(44,30,78,.10)', margin: '0 auto', maxWidth: '100%'}}>
-          <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.072, lineHeight: 1.06, color: INK, textAlign: 'center'}}>
+        {/* The headline card is real paper stock (2026-08-01). It was the last CSS-drawn
+            surface left in the hook: a flat #fbf6e8 rounded rectangle with a border, which
+            read as an engine artifact on the very first frame of the video, next to the
+            papercraft everything after it. A card is a RECTANGLE, so per the substrate plan
+            it needs no new generation — PaperSheet with a tint. */}
+        <div style={{position: 'relative', borderRadius: 24, padding: `${height * 0.032}px ${width * 0.045}px`, margin: '0 auto', maxWidth: '100%',
+                     filter: `drop-shadow(0 ${height * 0.014}px ${height * 0.032}px rgba(120,92,40,.28))`}}>
+          {ink.typeOnPaper ? <PaperSheet id={`hook:${fields.headline ?? ''}`} family="card" radius={24} tint="#fffdf6" />
+                            : <div style={{position: 'absolute', inset: 0, borderRadius: 24, background: '#fbf6e8', border: '3px solid rgba(44,30,78,.10)'}} />}
+          <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.072, lineHeight: 1.06, color: INK, textAlign: 'center'}}>
             {colorize(fields.headline || '', fields.accent, ink.accent)}
           </div>
         </div>

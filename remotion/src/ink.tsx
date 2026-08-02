@@ -20,6 +20,13 @@ export type Ink = {
   accent: string;  // the ONE accent (kicker + highlighted words). Default = the studio green.
   accentWash: string; // translucent accent for marker-wipe highlights laid OVER artwork
   paper: boolean;  // true on the paper worlds — gate dark drop-shadows off
+  // Headline type sits on real paper stock in this world: statement posters, the hook card,
+  // compare trays, and the opt-in PaperStage scenes. Scoped to the two DEEP-DIVE channels
+  // (nemock-deep-dive, brg-deep-dive) by operator directive 2026-08-01 — deliberately NOT
+  // every paper world. cut-bond is portrait shorts, brg-paper backs an already-produced
+  // cohort promo, wte-guide is its own channel, and circumvent has its own scene family
+  // where the paper IS the slide. Adding a world here is a per-channel decision.
+  typeOnPaper: boolean;
 };
 
 const NAVY: Ink = {
@@ -31,6 +38,7 @@ const NAVY: Ink = {
   accent: BRAND.green,
   accentWash: 'rgba(61,220,132,.42)',  // the exact prior Figure highlight => zero regression
   paper: false,
+  typeOnPaper: false,
 };
 
 // Deep ink for the cream world — matches the PaperHook headline ink (#2c1e4e).
@@ -43,6 +51,7 @@ const PAPER: Ink = {
   accent: BRAND.green,
   accentWash: 'rgba(61,220,132,.42)',
   paper: true,
+  typeOnPaper: false,
 };
 
 // Base Reality Group paper world — exact BRG navy ink on cream (kept separate from the
@@ -58,6 +67,7 @@ const PAPER_BRG: Ink = {
   accent: BRAND.green,
   accentWash: 'rgba(61,220,132,.42)',
   paper: true,
+  typeOnPaper: false,
 };
 
 // BRG DEEP-DIVE paper world (2026-07-26) — the fractional-CPO/product series' own palette.
@@ -75,6 +85,7 @@ const PAPER_BRG_DEEP: Ink = {
   accent: '#7b5bff',
   accentWash: 'rgba(123,91,255,.34)',
   paper: true,
+  typeOnPaper: true,
 };
 
 // WASTE-TO-FUEL Operator's Guide paper world (2026-07-29) — the process-safety series'
@@ -92,6 +103,7 @@ const PAPER_WTE: Ink = {
   accent: '#0d7377',
   accentWash: 'rgba(13,115,119,.30)',
   paper: true,
+  typeOnPaper: false,   // its own channel — not a deep-dive world
 };
 
 // CIRCUMVENT GLOBAL paper world (2026-07-30) — the Circumvent marketing/explainer program.
@@ -112,6 +124,7 @@ const PAPER_CIRCUMVENT: Ink = {
   accent: '#c89b3c',
   accentWash: 'rgba(200,155,60,.34)',
   paper: true,
+  typeOnPaper: false,   // its own channel — not a deep-dive world
 };
 
 // Soft warm shadow for headlines on paper (the heavy dark blur smudges on off-white).
@@ -119,7 +132,13 @@ export const PAPER_SHADOW = '0 4px 14px rgba(120,92,40,.16)';
 
 const InkContext = createContext<Ink>(NAVY);
 
+// nemock-deep-dive shares PAPER's colours but opts INTO type-on-paper; cut-bond keeps
+// PAPER as-is. Without this split the two could not differ, since both fall through
+// isPaperTheme to the same object.
+const PAPER_NEMOCK: Ink = {...PAPER, typeOnPaper: true};
+
 const INK_BY_THEME: Record<string, Ink> = {
+  'nemock-deep-dive': PAPER_NEMOCK,
   'brg-paper': PAPER_BRG,
   'brg-deep-dive': PAPER_BRG_DEEP,
   'wte-guide': PAPER_WTE,

@@ -2,6 +2,7 @@ import React from 'react';
 import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
 import {useInk, PAPER_SHADOW} from '../ink';
+import {PaperSheet} from './PaperNote';
 import {colorizeText} from './colorize';
 
 const colorize = (text: string, accent: string[] = [], red: string[] = []) =>
@@ -61,9 +62,10 @@ const RevealWords: React.FC<{text: string; accent?: string[]; accentRed?: string
 // never sits frozen. fields: {kicker, headline, accent, accentRed, subkicker}
 export const KineticHeadline: React.FC<{fields: any; durationInFrames?: number}> = ({fields, durationInFrames = 300}) => {
   const frame = useCurrentFrame();
-  const {fps, height} = useVideoConfig();
+  const {fps, height, width} = useVideoConfig();
   const s = spring({frame, fps, config: {damping: 18, stiffness: 90}});
   const ink = useInk();
+
   // slow continuous life: a gentle push-in + upward drift across the whole scene (clears the
   // freezedetect dead-air the old one-shot fade left; premium, not jittery).
   const live = interpolate(frame, [0, durationInFrames], [1, 1.035]);
@@ -72,8 +74,18 @@ export const KineticHeadline: React.FC<{fields: any; durationInFrames?: number}>
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 8%', color: ink.body}}>
       <div style={{transform: `scale(${live}) translateY(${drift}px)`, display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
         <Kicker text={fields.kicker} o={s} height={height} />
-        <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.07, lineHeight: 1.07, textAlign: 'center', textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
-          <RevealWords text={fields.headline} accent={fields.accent} accentRed={fields.accentRed} startDelay={4} />
+        {/* On the paper worlds the headline sits on a real poster instead of floating as bare
+            type on the ground (operator-caught on #50). Statement is the most-used slide type
+            in the catalogue, so this is where "type on paper" is most visible — and a poster
+            is a RECTANGLE, so it is a tinted PaperSheet rather than a generated asset. The
+            navy worlds keep bare type, which is correct there: there is no paper to sit on. */}
+        <div style={{position: 'relative', maxWidth: '100%',
+                     padding: ink.typeOnPaper ? `${height * 0.036}px ${height * 0.055}px` : undefined,
+                     filter: ink.typeOnPaper ? `drop-shadow(0 ${height * 0.013}px ${height * 0.03}px rgba(120,92,40,.24))` : undefined}}>
+          {ink.typeOnPaper ? <PaperSheet id={`stmt:${fields.headline ?? ''}`} family="card" radius={22} tint="#fffdf6" /> : null}
+          <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.07, lineHeight: 1.07, textAlign: 'center', textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
+            <RevealWords text={fields.headline} accent={fields.accent} accentRed={fields.accentRed} startDelay={4} />
+          </div>
         </div>
         <SubKicker text={fields.subkicker} height={height} />
       </div>
@@ -220,12 +232,27 @@ export const SideBySide: React.FC<{fields: any; durationInFrames?: number}> = ({
   // either side declares one; fall back to the old positional default when neither does, so
   // every deck written before this keeps its exact previous colouring.
   const declared = !!(fields.left?.kind || fields.right?.kind);
+  // On the paper worlds each side is a real card from the substrate library — two posters
+  // laid side by side — instead of the CSS tray, which read as an engine artifact next to
+  // the papercraft figures and post-its (operator-caught on #50). A compare tray is a plain
+  // RECTANGLE, so per the substrate plan it needs no new generation: PaperSheet plus a tint.
+  // The bad side takes a blush stock, echoing how Schematic gives a bad node a coral note,
+  // so the contrast survives losing the coloured border. Navy is untouched.
   const col = (d: any, o: number, dir: number, positionalBad: boolean) => {
     const bad = declared ? d?.kind === 'bad' : positionalBad;
+    const paper = ink.typeOnPaper;
     return (
-      <div style={{flex: 1, padding: height * 0.03, borderRadius: 20, background: ink.cardBg, border: `2px solid ${bad ? 'rgba(255,77,77,.5)' : `${ink.accent}66`}`, opacity: o, transform: `translateX(${interpolate(o, [0, 1], [dir * 40, 0])}px)`}}>
-        <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 3, textTransform: 'uppercase', color: bad ? BRAND.red : ink.accent, marginBottom: height * 0.018}}>{d?.title}</div>
-        <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.044, color: ink.body, lineHeight: 1.12}}>{d?.value}</div>
+      <div style={{flex: 1, position: 'relative', padding: height * 0.03, borderRadius: 20,
+                   background: paper ? undefined : ink.cardBg,
+                   border: paper ? undefined : `2px solid ${bad ? 'rgba(255,77,77,.5)' : `${ink.accent}66`}`,
+                   filter: paper ? `drop-shadow(0 ${height * 0.012}px ${height * 0.028}px rgba(120,92,40,.22))` : undefined,
+                   opacity: o,
+                   // a hair of opposing tilt so the two read as laid-down paper, not as a grid
+                   transform: `translateX(${interpolate(o, [0, 1], [dir * 40, 0])}px)${paper ? ` rotate(${dir * 0.5}deg)` : ''}`}}>
+        {paper ? <PaperSheet id={`cmp:${d?.title ?? ''}:${d?.value ?? ''}`} family="card"
+                             radius={20} tint={bad ? '#f6e0dc' : '#fffcf5'} /> : null}
+        <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 3, textTransform: 'uppercase', color: bad ? BRAND.red : ink.accent, marginBottom: height * 0.018}}>{d?.title}</div>
+        <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.044, color: ink.body, lineHeight: 1.12}}>{d?.value}</div>
       </div>
     );
   };
