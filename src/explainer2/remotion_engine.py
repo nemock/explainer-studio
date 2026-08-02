@@ -267,7 +267,9 @@ def _scene_for(slide, theme=""):
         # make PaperHook unconditional again: it leaks the paper rebrand into the midnight series.
         if theme in ("cut-bond", "nemock-deep-dive", "brg-deep-dive", "wte-guide", "circumvent"):
             return "PaperHook", {"image": slide.get("image"), "kicker": kicker,
-                                 "headline": headline, "accent": accent}
+                                 "headline": headline, "accent": accent,
+                                 # `stage` is the fallback when a hook has no bespoke art
+                                 "stage": slide.get("stage")}
         return "Hero3D", {"kicker": kicker, "headline": headline,
                           "accent": accent, "accentRed": accent2}
     if t in ("payoff", "cta"):
@@ -354,7 +356,10 @@ def _scene_for(slide, theme=""):
         return "KineticHeadline", {"kicker": kicker, "headline": headline,
                                    "accent": slide.get("mark") or accent}
     return "KineticHeadline", {"kicker": kicker, "headline": headline, "accent": accent,
-                               "accentRed": accent2, "subkicker": slide.get("subkicker", "")}
+                               "accentRed": accent2, "subkicker": slide.get("subkicker", ""),
+                               # opt-in papercraft stage scene (PaperStage): whiteboard /
+                               # projector / presentation / easel. Absent -> the poster card.
+                               "stage": slide.get("stage")}
 
 
 def build_spec(sp):
@@ -727,7 +732,7 @@ def render(sp, log=print, frames=None, out=None):
     # these are never named in a deck — components pick a substrate internally — so they
     # must be staged unconditionally or PaperNote renders nothing.
     for _lib in ("papercraft-notes", "papercraft-cards", "papercraft-fixings",
-                 "papercraft-grounds"):
+                 "papercraft-grounds", "papercraft-stages"):
         _sub = REMOTION_DIR / "public" / _lib
         if _sub.exists():
             shutil.copytree(_sub, public / _lib, dirs_exist_ok=True)

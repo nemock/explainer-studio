@@ -4,6 +4,7 @@ import {BRAND} from '../brand';
 import {useInk} from '../ink';
 import {useWorld} from './PaperWorld';
 import {PaperSheet} from './PaperNote';
+import {PaperStage, isStageName, stageZonePx, fitStageText} from './PaperStage';
 
 // Paper cold-open hook (2026-07-14) — REPLACES the rotating 3D "buckyball" (Hero3D) as the
 // default open. A full-bleed paper illustration (this video's visual theme) with a gentle
@@ -39,6 +40,23 @@ export const PaperHook: React.FC<{fields: any}> = ({fields}) => {
   const world = useWorld();
   const CREAM = world.hookSheet;
   const INK = world.hookInk;
+
+  // A hook can name one of the shared stage scenes instead of supplying its own
+  // illustration (deck field `stage`). The headline renders into that scene's measured
+  // zone. `image` still wins when a video has bespoke cold-open art, which is stronger
+  // when the art IS the video's object.
+  if (!fields.image && isStageName(fields.stage)) {
+    const zone = stageZonePx(fields.stage, width, height);
+    const size = fitStageText(fields.headline || '', zone.w, zone.h);
+    return (
+      <PaperStage stage={fields.stage}>
+        <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: size, lineHeight: 1.1,
+                     color: INK, textAlign: 'center', width: '100%'}}>
+          {colorize(fields.headline || '', fields.accent, ink.accent)}
+        </div>
+      </PaperStage>
+    );
+  }
 
   const kb = interpolate(frame, [0, 150], [1.05, 1.12], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const headIn = spring({frame: frame - 6, fps, config: {damping: 16, stiffness: 120}});

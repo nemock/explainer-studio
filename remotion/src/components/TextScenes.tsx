@@ -3,6 +3,7 @@ import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from
 import {BRAND} from '../brand';
 import {useInk, PAPER_SHADOW} from '../ink';
 import {PaperSheet} from './PaperNote';
+import {PaperStage, isStageName, stageZonePx, fitStageText} from './PaperStage';
 import {colorizeText} from './colorize';
 
 const colorize = (text: string, accent: string[] = [], red: string[] = []) =>
@@ -66,6 +67,21 @@ export const KineticHeadline: React.FC<{fields: any; durationInFrames?: number}>
   const s = spring({frame, fps, config: {damping: 18, stiffness: 90}});
   const ink = useInk();
 
+  // OPT-IN stage scene (deck field `stage`). Deliberately not automatic: statement is the
+  // most-used slide type, and putting every one of them in the same room would be its own
+  // kind of monotony. The deck author picks the handful that earn a scene.
+  if (isStageName(fields.stage)) {
+    const zone = stageZonePx(fields.stage, width, height);
+    const size = fitStageText(fields.headline || '', zone.w, zone.h);
+    return (
+      <PaperStage stage={fields.stage} durationInFrames={durationInFrames}>
+        <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: size, lineHeight: 1.12,
+                     color: ink.body, textAlign: 'center', width: '100%'}}>
+          <RevealWords text={fields.headline} accent={fields.accent} accentRed={fields.accentRed} startDelay={6} />
+        </div>
+      </PaperStage>
+    );
+  }
   // slow continuous life: a gentle push-in + upward drift across the whole scene (clears the
   // freezedetect dead-air the old one-shot fade left; premium, not jittery).
   const live = interpolate(frame, [0, durationInFrames], [1, 1.035]);
