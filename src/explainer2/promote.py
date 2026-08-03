@@ -84,8 +84,12 @@ def _shorts_of(proj):
     plan = sdir / "plan.json"
     if plan.exists():
         try:
-            for c in json.loads(plan.read_text()):
-                titles[c.get("slug")] = c.get("title")
+            data = json.loads(plan.read_text())
+            # plan.json is either a bare list of cuts (legacy) or {schema, cuts:[...]}
+            cuts = data.get("cuts", []) if isinstance(data, dict) else data
+            for c in cuts:
+                if isinstance(c, dict):
+                    titles[c.get("slug")] = c.get("title")
         except json.JSONDecodeError:
             pass
     order = list(titles) if titles else None
