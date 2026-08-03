@@ -414,8 +414,16 @@ video (e.g. the core idea / a contrarian hook / "the proof, not the pep talk").
 Rules:
 - **Hook-first.** The first line is all that shows before "see more," so lead
   with the sharpest line, not setup.
-- **Short.** A few short paragraphs per option, then the video URL on its own
-  line, then ~3 hashtags (LinkedIn ~3 is plenty; trim for other platforms).
+- **Short.** A few short paragraphs per option, then the video URL, then **3 to 5
+  hashtags** (operator directive 2026-08-03, raised from ~3; trim for other
+  platforms). This overrides the HumanER LinkedIn dial's "0-3, if any" — that
+  dial describes his organic commentary posts, where a hashtag pile reads as
+  reach-chasing; a share post for a published video is a different job and 3 to 5
+  is the working range.
+- **ALL THREE options carry the URL.** Each one is a standalone paste, so each
+  needs the link inside it. Do not write "link in the comments" and do not put
+  the URL only in the header: the header line is a convenience for the operator,
+  not part of what gets pasted.
 - **The live URL goes in inline.** If the video isn't public yet, leave a clear
   `<URL>` placeholder and note it; backfill the real link once it's live.
 - **Operator voice, not hustle-bro.** Measured, honest, the adult-in-the-room
