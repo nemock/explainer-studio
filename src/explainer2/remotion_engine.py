@@ -712,8 +712,14 @@ def render(sp, log=print, frames=None, out=None):
     # BRGPaperSting's mark (brg-deep-dive world) — BRG's own logo, staged from the PROJECT's
     # brand dir so each BRG project stays self-contained. Missing -> the sting still renders
     # (wordmark only), never a broken image.
-    _brg_mark = sp.dir / "brand" / "brg-sting-mark.png"
-    if _brg_mark.exists():
+    # Shorts render as sub-projects under <parent>/shorts/<slug>/, which have no brand dir of
+    # their own, so a project-dir-only lookup silently dropped BRG's mark from every Short and
+    # the sting fell back to wordmark-only (caught on #50's Shorts). Walk the same roots
+    # _stage_images uses: the project, then the shorts parent.
+    _brg_mark = next((r / "brand" / "brg-sting-mark.png"
+                      for r in (sp.dir, sp.dir.parent.parent, sp.dir.parent)
+                      if (r / "brand" / "brg-sting-mark.png").exists()), None)
+    if _brg_mark:
         shutil.copy(_brg_mark, public / "brg_sting_mark.png")
     elif sp.data.get("theme") == "brg-deep-dive":
         log("remotion: WARNING brg-deep-dive sting mark missing "
