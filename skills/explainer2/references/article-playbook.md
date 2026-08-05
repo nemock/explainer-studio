@@ -30,6 +30,31 @@ VOICE.md wins conflicts. Everything below layers on top of that voice source.
 
 ## 0. The contract (read once)
 
+> **The article is a PERFORMANCE IN ITS OWN MEDIUM, not a transcript with headings
+> bolted on (operator directive, 2026-08-05).** Dave's words: *"make sure it's a
+> well-written article. It doesn't need to just be basically a regurgitation of the
+> transcript with bold headings. That's not good writing... we can easily embellish on
+> details, bring more color into the writing... let's make sure that these two different
+> performances, the video and the article, are doing the right job in their particular
+> mediums."*
+>
+> What that changes in practice. The video and the essay share an argument, not a
+> wording. **Follow the video's flow roughly, not slavishly** — a beat that needed three
+> short spoken segments to land may be one tight paragraph on the page, and a beat the
+> voice had to keep moving past can breathe, because a reader can stop and re-read. Reach
+> for what print can do and speech cannot: a real opening scene, a sentence that rewards
+> a second look, an aside in parentheses, a line of white space used for timing.
+> **Embellish the WRITING — the color, the texture, the depth of explanation.** Do not
+> embellish the EVIDENCE: the fabrication guardrail below is untouched by this, and
+> "more color" never means a new number, source, anecdote, or quote. If a paragraph
+> wants a fact the script didn't earn, that is a research prompt, not a flourish.
+>
+> The failure this exists to prevent is the article that is legibly the script with the
+> spoken bits filed off and `##` headings inserted every 200 words. If a reader who
+> watched the video learns nothing new from the *reading experience*, the article did
+> not do its job. Structure it as an essay, with an argument that builds in written
+> paragraphs, not as a set of captioned sections mirroring the slide list.
+
 - **Same content, same facts, same arc — different medium.** The article covers
   exactly what the video covers, in the same order of argument. It does NOT add
   a claim, number, story, or quote the video didn't earn. Every fact still
