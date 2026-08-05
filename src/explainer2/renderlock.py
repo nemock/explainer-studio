@@ -59,7 +59,7 @@ Usage:
   - to start a render that survives the session: `<cli> render <proj>`
     (cmd_render → launch_detached). `<cli> render-status` → status().
 """
-import fcntl, json, os, re, subprocess, sys, time
+import fcntl, json, os, re, signal, subprocess, sys, time
 
 LOCKFILE = "/tmp/explainer-render.lock"   # SHARED across codebases — do not change per-repo
 POLL_SECS = 15
@@ -144,29 +144,56 @@ def _wait_for_foreign_encodes(log=print):
         waited += POLL_SECS
 
 
+def _blocking_flock(fd, timeout_secs):
+    """Wait in the kernel for the lock instead of polling for it.
+
+    Why (2026-08-05, #55): the original loop polled every POLL_SECS. A project
+    running a long BATCH of short encodes releases and immediately re-acquires,
+    so a 15-second poller loses that race essentially every time. #55 sat queued
+    for 55 minutes without rendering a frame while daily_beats worked through a
+    ~50-clip catalog rebuild, cycling the lock past us repeatedly.
+
+    flock() has no FIFO guarantee, but a waiter blocked IN the call is woken by
+    the kernel the moment the holder releases, which beats a poller that will not
+    look again for another 15 seconds. This is a one-sided fix: it changes only
+    how WE wait, needs no cooperation from the other projects, and leaves the
+    semantics of the lock itself untouched.
+    """
+    def _timed_out(_signum, _frame):
+        raise TimeoutError("render lock wait timed out")
+
+    old = signal.signal(signal.SIGALRM, _timed_out)
+    signal.alarm(max(1, int(timeout_secs)))
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, old)
+
+
 def acquire(proj=None, label=None, log=print):
     """Block until the render engine is free, then return the held lock fd.
     Pass the result to release() after mux."""
     label = label or (os.path.basename(str(getattr(proj, "dir", ""))) or "render")
     fd = open(LOCKFILE, "a+")
-    waited, announced = 0, False
-    while True:
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
         try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            break
-        except OSError:
-            try:
-                fd.seek(0); held = fd.read().strip()
-            except Exception:
-                held = ""
-            if not announced:
-                log(f"render-lock: engine busy ({held or 'another project'}) — queued, waiting…")
-                announced = True
-            if waited >= MAX_WAIT_SECS:
-                try: fd.close()
-                except Exception: pass
-                raise TimeoutError(f"render lock not acquired after {MAX_WAIT_SECS // 60} min ({held})")
-            time.sleep(POLL_SECS); waited += POLL_SECS
+            fd.seek(0); held = fd.read().strip()
+        except Exception:
+            held = ""
+        log(f"render-lock: engine busy ({held or 'another project'}) — queued, waiting…")
+        try:
+            _blocking_flock(fd, MAX_WAIT_SECS)
+        except TimeoutError:
+            try: fd.close()
+            except Exception: pass
+            raise TimeoutError(
+                f"render lock not acquired after {MAX_WAIT_SECS // 60} min ({held})")
+        announced = True
+    else:
+        announced = False
     try:
         fd.seek(0); fd.truncate()
         fd.write(json.dumps({"pid": os.getpid(), "label": label, "since": time.strftime("%H:%M:%S")}))
