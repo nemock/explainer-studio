@@ -473,7 +473,7 @@ def main(argv=None):
     m.add_argument("project_dir")
     m.add_argument("--only", default=None, help="comma list: narrate,align,deck,render,mux,manifest")
     m.add_argument("--engine", default="remotion", choices=["deck", "remotion"],
-                   help="deck = JS deck engine (default); remotion = motion-graphics engine (skips deck/mux)")
+                   help="remotion = motion-graphics engine (DEFAULT, skips deck/mux); deck = JS deck engine (fallback)")
     m.set_defaults(func=cmd_media)
 
     rn = sub.add_parser("render", help="launch render→mux→manifest→qa DETACHED (survives session "
@@ -482,7 +482,7 @@ def main(argv=None):
     rn.add_argument("--only", default=None,
                     help=f"stage list to run detached (default: {renderlock.DEFAULT_STAGES})")
     rn.add_argument("--engine", default="remotion", choices=["deck", "remotion"],
-                    help="deck = JS deck engine (default); remotion = motion-graphics engine (motion-playbook.md)")
+                    help="remotion = motion-graphics engine (DEFAULT, motion-playbook.md); deck = JS deck engine (fallback)")
     rn.set_defaults(func=cmd_render)
 
     rs = sub.add_parser("render-status", help="show the render-lock holder + every live render on this Mac")
@@ -531,7 +531,7 @@ def main(argv=None):
     sh.add_argument("--plan", default=None, help="path to plan.json (default <project>/shorts/plan.json)")
     sh.add_argument("--only", default=None, dest="only_slug", help="render just one cut by slug")
     sh.add_argument("--engine", default="remotion", choices=["deck", "remotion"],
-                    help="deck = the JS deck engine (default); remotion = the motion-graphics engine (motion-playbook.md)")
+                    help="remotion = the motion-graphics engine (DEFAULT, motion-playbook.md); deck = the JS deck engine (fallback)")
     sh.set_defaults(func=cmd_shorts)
 
     ass = sub.add_parser("assets", help="Adobe Stock assist: open suggested searches / ingest the inbox / status")
