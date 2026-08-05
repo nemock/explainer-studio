@@ -381,6 +381,21 @@ NOT need re-rendering for a caption-only fix — **unless the fixed segment is u
 in a Short, in which case re-cut that Short.**
 
 ### 8. Package
+
+**RUN THE `humaner` SKILL FIRST, and write ALL reader-facing text inside that one
+invocation** (operator directive, restated 2026-08-04). It is a hard requirement with no
+exceptions, and never an approximation from memory of CRAFT/VOICE/LINT. The point is not
+dodging AI detectors; it is writing better text.
+
+What must go through it: **`article.md`, `linkedin.md`, the `meta.json` `description`, the
+`meta.json` `pinned_comment`**, the spoken script, shorts hook/outro lines, and thumbnail
+headline words. What need not: tags, chapter titles, slugs, internal notes.
+
+The `description` is the one that gets missed, because `meta.json` looks like metadata. It
+is prose on a public page. On #54 the article and linkedin got the pass and the description
+and pinned comment did not, purely because meta.json was authored first. **Order fixes it:
+invoke the skill, then write every reader-facing artifact in that pass.**
+
 Write titles/description/chapters per blueprint §8 into `meta.json` (the
 manifest merges it). **Thumbnails: read `references/thumbnail-playbook.md`, then
 build A/B 1280×720 cards (cutout → brand template → `tools/html2png.py`) into
