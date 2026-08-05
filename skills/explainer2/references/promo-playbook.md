@@ -130,7 +130,8 @@ Selling is where trust is spent fastest, so the standing rules bind hardest:
   something today" is the honest register — say it with a straight back.
   (The "answer isn't paywalled" credibility beat belongs to teaching videos;
   a promo doesn't apologize for having a price.)
-- **Humanizer + spoken-humanizer passes: mandatory**, same as every script.
+- **The `humaner` skill's LINT.md pass + spoken-humanizer passes: mandatory**,
+  same as every script.
 
 ## 5. Visual and motion deltas
 

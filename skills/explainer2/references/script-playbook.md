@@ -407,11 +407,12 @@ to date missed length on the first draft; the rule exists because it bites).
   real numbers on this") — it's both honest and a proven performance pattern.
 - If comment mining found density-praise: cut 10% of words after drafting.
 - **Spoken-cliché ban + compelling-speech craft → `references/spoken-humanizer.md`
-  (operator directive, 2026-06-19).** The `humanizer` skill is tuned for *written*
-  tells and lets **spoken** clichés through (the operator caught several on the
-  teleprompter mid-record on #34). The spoken-humanizer playbook is the single
-  source of truth for BOTH halves: **CUT** (the spoken-cliché blocklist) and
-  **COMPEL** (hooks, rhythm, concreteness, momentum, register). Read it alongside
+  (operator directive, 2026-06-19).** The `humaner` skill's LINT.md pass is tuned
+  for *written* tells and lets **spoken** clichés through (the operator caught
+  several on the teleprompter mid-record on #34). The spoken-humanizer playbook
+  is the source of truth for the spoken-specific cliché blocklist and for
+  **COMPEL** (hooks, rhythm, concreteness, momentum, register); general AI-tell
+  removal is LINT.md's job, not this playbook's. Read spoken-humanizer alongside
   this playbook before drafting; run it as a pass before the booth (see §6).
 
 ## 6. Self-QA checklist (run before presenting the gate)
@@ -464,8 +465,9 @@ to date missed length on the first draft; the rule exists because it bites).
       ("the company Square acquired"-style compressions, stacked clauses). This
       MUST pass before the operator is given the booth — the operator should never
       be the one catching a cliché or a flat line on the teleprompter. (The
-      written `humanizer` skill is still ground truth for the article; it does NOT
-      catch spoken tells, which is why this pass exists.)
+      `humaner` skill's LINT.md pass is still ground truth for general AI-tell
+      removal and for the article; it does NOT catch spoken tells, which is why
+      this pass exists.)
 
 Present to the operator: title, read-time estimate, the retention map table,
 and the full script. Wait for approval before recording/narrating.

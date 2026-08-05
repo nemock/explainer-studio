@@ -22,9 +22,9 @@ seven architecture tells in `~/.claude/skills/humaner/SKILL.md` are the failure
 modes that got this exact article type flagged 100% AI-generated (2026-07-25):
 max one landed line per piece, no coined frameworks or callback motifs, uneven
 paragraph rhythm, at least one parked digression, hedged recalled numbers vs
-exact cited ones, verified stories only, no manufactured intimacy. The stock
-`humanizer` skill runs AFTER drafting as a lint pass; VOICE.md wins conflicts.
-Everything below layers on top of that voice source.
+exact cited ones, verified stories only, no manufactured intimacy. The `humaner`
+skill's LINT.md pass runs AFTER drafting as the mechanical AI-tell lint;
+VOICE.md wins conflicts. Everything below layers on top of that voice source.
 
 ---
 
@@ -43,9 +43,9 @@ Everything below layers on top of that voice source.
 - **The operator's voice survives the move to the page.** First person,
   contractions, the storyteller-coffee register, the anti-Barnum daily-user
   stance, the lived Lucent story. Warm and direct — just on paper now.
-- **Mandatory Humanizer pass (§5) is the step's gate.** After drafting, the full
-  article goes through the operator's `humanizer` skill before it is presented.
-  Not a self-check against your own rules — the actual skill. It is ground truth
+- **Mandatory LINT.md pass (§5) is the step's gate.** After drafting, the full
+  article goes through the `humaner` skill's LINT.md pass before it is presented.
+  Not a self-check against your own rules — the actual pass. It is ground truth
   and is updated regularly.
 
 ---
@@ -140,7 +140,7 @@ Everything below layers on top of that voice source.
 - Storyteller-coffee register, first person, contractions throughout. Direct
   second-person address ("you", "your business") stays.
 - No hype words (game-changer, insane, secret weapon). No em-dash overuse —
-  the Humanizer pass will catch it, but don't manufacture work for it.
+  the LINT.md pass will catch it, but don't manufacture work for it.
 - Keep the narrative generosity: when the piece names a company or person
   (Lucent, Argenti, Goldman), give the real context the script gave. Same hard
   rule — every piece of backstory color must be verifiable; no plausible-sounding
@@ -149,17 +149,17 @@ Everything below layers on top of that voice source.
   Review, OpenAI's benchmark, the reported $500M bill) — honest and good for
   discoverability.
 
-## 5. Mandatory Humanizer pass (the gate)
+## 5. Mandatory LINT.md pass (the gate)
 
-After the draft is complete, run the **full article** through the operator's
-`humanizer` skill. This is non-negotiable and is the step's gate.
+After the draft is complete, run the **full article** through the `humaner`
+skill's LINT.md pass. This is non-negotiable and is the step's gate.
 
-- Invoke the actual skill — do NOT substitute your own from-memory checklist for
-  it. The skill is ground truth for human-readable output and is updated
+- Invoke the actual pass — do NOT substitute your own from-memory checklist for
+  it. LINT.md is ground truth for human-readable output and is updated
   regularly; your shorthand is not.
 - Apply the edits it returns to `article.md`, then set `humanized: true` in the
   front matter.
-- If the skill flags something the playbook or the source facts forbid changing
+- If the pass flags something the playbook or the source facts forbid changing
   (e.g. it wants to soften a verbatim quote, or cut an attribution), keep the
   fact correct and note the conflict for the operator — facts and verbatim
   quotes win over stylistic smoothing.
@@ -175,10 +175,10 @@ After the draft is complete, run the **full article** through the operator's
 - [ ] Verbatim quotes still verbatim and attributed by name
 - [ ] CTA outro uses the real links from `meta.json`; same offers as the video
 - [ ] Word count in the ~1,800–2,500 band (faithful companion)
-- [ ] **`humanizer` skill run on the full draft and its edits applied**;
-      `humanized: true` set
+- [ ] **`humaner` skill's LINT.md pass run on the full draft and its edits
+      applied**; `humanized: true` set
 - [ ] Front-matter block present and filled
 
 Output: `package/article.md`. Present the operator the headline, the word count,
-and a note that the Humanizer pass ran. No separate render gate — the article is
+and a note that the LINT.md pass ran. No separate render gate — the article is
 text, reviewed in place.

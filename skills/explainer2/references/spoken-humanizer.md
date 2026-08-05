@@ -1,10 +1,13 @@
-# Spoken Humanizer — make a script clean AND compelling for the ear
+# Spoken/COMPEL Pass — make a script compelling for the ear
 
-The spoken counterpart to the operator's written `humanizer` skill. The written
-humanizer is mostly **subtractive** (strip AI tells). A *spoken* script needs a
-second, **generative** half: it has to actually pull a listener and sound like a
-real person talking. Removal alone gives you clean-but-flat, which is its own
-failure. So this pass has two halves — **CUT** and **COMPEL** — plus a process.
+The spoken counterpart to the `humaner` skill's LINT.md pass. LINT.md is
+mostly **subtractive** (strip general AI tells: em dashes, AI vocabulary,
+rule of three, negative parallelism, staccato runs, nominalizations — run it,
+don't re-derive it here). A *spoken* script needs a second, **generative**
+half on top of that: it has to actually pull a listener and sound like a real
+person talking. Removal alone gives you clean-but-flat, which is its own
+failure. So this pass is mostly **COMPEL**, plus a short CUT list of clichés
+that are specific to spoken hooks (not general AI vocabulary), plus a process.
 
 These videos are read aloud by the operator from a teleprompter booth. The bar:
 the operator must NEVER be the one catching a cliché or a flat line on the
@@ -102,19 +105,20 @@ Still legal: describing something other than his own candor as honest ("the auth
 own explanation is the honest one"), reporting what others were asked to do, and a
 mid-sentence casual "honestly" inside his own aside (VOICE.md §1.10 texture).
 
-### A2. Written-tell carryover (these also hurt the captions)
-- Curly quotes → straight quotes; em/en dashes → period/comma/colon (captions show them).
-- AI vocabulary: delve, leverage (v.), tapestry, underscore, intricate, pivotal,
-  testament, vibrant, realm, navigate (fig.), foster, robust, seamless.
+### A2. Written-tell carryover — now covered by LINT.md
+General AI-tell removal (em/en dashes, curly quotes, AI vocabulary like delve,
+leverage, tapestry, underscore, intricate, pivotal, testament, vibrant, realm,
+navigate (fig.), foster, robust, seamless) is the `humaner` skill's LINT.md
+pass — run it, don't re-derive it here. One caption-specific reason to still
+care: dashes and curly quotes render LITERALLY in captions, so after LINT.md
+runs, re-check the caption text specifically (not just the script prose) for
+any straggler the pass missed.
 
-### A3. Overused structures
-- **Negative parallelism** ("it's not just X, it's Y", "this isn't about X, it's
-  about Y"): at most one in a script, and only when earned.
-- **Rule of three / mirrored slogans:** don't force ideas into triples to sound
-  complete. Two is fine. Four is fine.
-- **Staccato drama runs:** a run of 3+ short fragments to manufacture momentum
-  reads as engineered. One short punch line for emphasis is good; a stack is not.
-- **Nominalizations / passive voice:** prefer active verbs and a named actor.
+### A3. Overused structures — now covered by LINT.md
+Negative parallelism, forced rule-of-three/mirrored slogans, staccato drama
+runs, and nominalizations/passive voice are general AI-tell patterns — the
+`humaner` skill's LINT.md pass catches these too. Run it rather than
+eyeballing this list by hand.
 
 ### A4. Conversational fidelity — write the contraction, always (operator directive 2026-07-24)
 The operator reads every line aloud, and his delivery — the emotion, emphasis,
@@ -144,9 +148,9 @@ class of error for text.
 
 ## B. COMPEL — make the speech pull the listener
 
-This is the half the written humanizer doesn't have. Clean is necessary, not
-sufficient. The opening especially must compel — but the *lazy* way to compel is
-the §A1 cliché list. Earn the same pull with substance.
+This is the half LINT.md doesn't have. Clean is necessary, not sufficient. The
+opening especially must compel — but the *lazy* way to compel is the §A1
+cliché list. Earn the same pull with substance.
 
 ### B1. Hook craft (the cold open) — the paradox, resolved
 We need an opening that compels people to keep watching, without sounding like
@@ -213,8 +217,8 @@ Two tests every cold open must pass:
 
 ### B6. A point of view
 - Have an opinion and let stakes show. Acknowledge tension or mixed feelings where
-  they're real. This is the "soul" of the written humanizer, aimed at the ear —
-  neutral reporting is forgettable; a clear, honest stance is not.
+  they're real. This is the "soul" CRAFT.md and VOICE.md ask for in writing,
+  aimed at the ear — neutral reporting is forgettable; a clear, honest stance is not.
 
 ---
 
@@ -222,8 +226,10 @@ Two tests every cold open must pass:
 
 1. Draft per the script- and blueprint-playbooks (hook craft from B1 informs the
    cold open as you write).
-2. **CUT pass:** grep the A1 blocklist over every segment's `text`; rewrite every
-   hit. Scan A2/A3 by eye.
+2. **CUT pass:** grep the A1 blocklist (spoken clichés) over every segment's
+   `text`; rewrite every hit. General AI-tell removal (old A2/A3) is the
+   `humaner` skill's LINT.md pass — run it separately (SKILL.md wires this into
+   the pre-booth gate).
 3. **COMPEL pass:** run the B checklist. Rewrite flat openers, even cadence,
    abstract nouns, and any segment that doesn't earn its next line. Apply the two
    hook tests to seg 0.
@@ -287,9 +293,10 @@ for s in d["segments"]:
 ```
 
 ## Quick checklist (run before the gate)
-- [ ] CUT scanner returns clean (no blocklist hits).
-- [ ] No written-tell carryover (curly quotes, AI vocab, stray dashes).
-- [ ] No forced triples, no negative-parallelism pile-up, no staccato runs.
+- [ ] CUT scanner returns clean (no A1 spoken-cliché blocklist hits).
+- [ ] `humaner` skill's LINT.md pass run — covers general AI-tell (em dashes,
+      curly quotes, AI vocabulary, forced triples, negative parallelism,
+      staccato runs, nominalizations/passive voice; old A2/A3).
 - [ ] Cold open passes the specificity test AND the substance test.
 - [ ] Sentence length genuinely varies; no even mid-length drone.
 - [ ] Concrete nouns / real numbers / named people, not abstractions.

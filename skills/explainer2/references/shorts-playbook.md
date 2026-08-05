@@ -72,7 +72,19 @@ fine (cut the promise stack out, jump to the payoff).
 
 ## 3. plan.json schema (authored at the Script stage)
 
-`shorts/plan.json` is an array of cuts. Per cut:
+`shorts/plan.json` is an array of cuts — **the JSON root is a bare `[ ... ]`, not an object
+with a `cuts:` key.** This shape is READ BY CODE, not just documentation: `recorder.py`
+iterates the root directly and reads `hook` / `outro` off each cut to build the booth's
+native hook and outro cards. Deviate and one of two things happens, the second being worse:
+
+- Wrong root (an object) → the booth **crashes** on launch with
+  `'str' object has no attribute 'get'`. Loud, and therefore harmless.
+- Right root but renamed keys (e.g. `native_hook` instead of `hook`) → it loads fine and
+  **silently produces zero hook/outro cards.** The operator records the whole script,
+  finishes, and only discovers the missing native hooks when the shorts are cut. That is a
+  re-record. (Both were hit on #54, 2026-08-04.)
+
+Copy the field names below exactly. Per cut:
 ```json
 {
   "slug": "never-said-it",

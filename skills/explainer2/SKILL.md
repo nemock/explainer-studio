@@ -4,11 +4,12 @@ description: >
   Produce a YouTube-intelligence-driven, retention-engineered explainer video
   (deep dive, Shorts, a masterclass/Operator's-Guide series episode, or a
   promotional video) end-to-end on this Mac: intel sweep → Blueprint → script →
-  operator recording (or Kokoro) → align → render → package. Use when the user
-  says "/explainer-studio <topic>", "make a video about", "run the studio
+  operator recording (or Kokoro) → align → render → package → publish. Use when the
+  user says "/explainer-studio <topic>", "make a video about", "run the studio
   pipeline", or asks for a Blueprint on a topic. Local/free only; the single
   allowed subscription is the operator's stock.adobe.com membership,
-  human-in-the-loop. This skill NEVER posts to social platforms.
+  human-in-the-loop. Nothing auto-posts: `publish` (YouTube) and `promote`
+  (Blotato re-shares) run only when the operator asks. See hard rule 3.
 ---
 
 # /explainer-studio — Explainer Studio pipeline
@@ -23,8 +24,9 @@ method lives in four reference files you MUST read at the step that needs them:
 - `references/blueprint-playbook.md` — read BEFORE synthesizing any Blueprint.
 - `references/script-playbook.md` — read BEFORE writing any script.
 - `references/spoken-humanizer.md` — read BEFORE drafting any operator-voiced
-  script, and RUN as a mandatory pass before the booth (CUT clichés + COMPEL the
-  speech). The spoken counterpart to the written `humanizer` skill.
+  script, and RUN as a mandatory pass before the booth (COMPEL the speech for
+  the ear — hook craft, cadence, momentum; general AI-tell removal is the
+  `humaner` skill's LINT.md pass).
 - `references/deck-playbook.md` — read BEFORE authoring any `deck.json`.
 - `references/motion-playbook.md` — the Remotion motion-graphics vocabulary (animated
   successor to the deck-playbook); read BEFORE authoring a motion spec. Engine is a
@@ -47,7 +49,18 @@ conflict for the operator. Do not skip steps because they seem obvious.
    human-in-the-loop flow (you suggest searches; the operator downloads).
 2. **Operator gates are real.** STOP and wait for approval at: Blueprint,
    Script, and Package. Never auto-proceed past a gate.
-3. **Never post anywhere.** Output ends at the project dir + manifest.json.
+3. **The GENERATION pipeline never posts to social platforms.** Producing a video ends at
+   the project dir + manifest.json. **Two declared exceptions, both operator-invoked and
+   both long-standing — this rule does NOT block them** (clarified 2026-08-04, because the
+   old flat "never post anywhere" wording contradicted a month of normal practice):
+   - **`explainer2 publish`** uploads the finished video to YouTube (OAuth, channel
+     `nemock`). Default privacy is `private`; we normally ship `--privacy unlisted` for
+     the operator's review. This is standard for every deep dive, not an exception to argue
+     about. Altered-content and the pinned comment remain manual browser steps.
+   - **`explainer2 promote`** re-shares already-published Shorts via Blotato (PRD N1).
+
+   The rule that still binds: nothing auto-posts, and neither command runs without the
+   operator asking for it.
 4. **Talk-time rules:** quote `quotes.md` verbatim; adapt positions/anecdotes;
    NEVER fabricate a take, story, or statistic not in the library or the wiki.
 5. **Sourced facts only.** Every factual claim in a script traces to the intel
@@ -164,8 +177,8 @@ VOICE.md wins. Stories only from VOICE.md Part 3 or talk_time, flags honored.
 script must pass all four checks: (1) grammar clean; (2) every segment/card is a
 complete thought (nothing ends mid-clause or depends on the previous card to
 parse); (3) the read-aloud test — read every line aloud, rewrite anything that
-trips the tongue, forces a mid-clause breath, or sounds "written"; (4) the stock
-`humanizer` skill has run as lint on the full script (VOICE.md wins conflicts).
+trips the tongue, forces a mid-clause breath, or sounds "written"; (4) the
+`humaner` skill's LINT.md pass has run on the full script (VOICE.md wins conflicts).
 A script failing any check does not open the booth. Pull operator takes:
 ```
 bin/explainer2 talktime --library /Volumes/Casima/claudeCode/make_money/talk_time \
@@ -372,7 +385,20 @@ Write titles/description/chapters per blueprint §8 into `meta.json` (the
 manifest merges it). **Thumbnails: read `references/thumbnail-playbook.md`, then
 build A/B 1280×720 cards (cutout → brand template → `tools/html2png.py`) into
 `package/thumbnails/`.**
-**GATE: present the package. Wait. Then STOP — never post.**
+**GATE: present the package. Wait for the operator.**
+
+**ORDER IS LOAD-BEARING: Package must be COMPLETE before `publish` runs.** `publish.py`
+attaches `package/thumbnails/thumb_a.png` to the upload itself (see `_thumb_for_upload`) —
+nobody does it by hand. It can only attach a file that exists at upload time, so:
+
+> render → shorts → **package (meta + thumbnails + article + linkedin)** → `validate` →
+> `publish --fire --privacy unlisted`
+
+Publishing first strands the video with no thumbnail and the dry-run reports
+`thumbnail_A: null`. That happened on #54 (2026-08-04). If a package deliverable looks
+impossible to produce, **re-read its playbook before reordering the pipeline around it** —
+the reorder there was caused by wrongly believing the thumbnail base had to come from the
+operator (see thumbnail-playbook §2d).
 
 **Shorts (their own medium — read `references/shorts-playbook.md`).** Shorts are
 NOT clips of the long-form: each cut reuses the long-form body audio but gets a
@@ -398,8 +424,8 @@ what got flagged 100% AI on 2026-07-25):** before drafting, read
 + the Substack dial in `FORMATS.md`, and draft in voice from the start — watch
 the seven architecture tells (max one landed line, no coined frameworks or
 callbacks, uneven paragraph rhythm, a parked digression, hedged recalled
-numbers, verified stories only, no manufactured intimacy). **Then the
-`humanizer` skill runs as the mandatory LINT pass — the actual skill, not a
+numbers, verified stories only, no manufactured intimacy). **Then run the
+`humaner` skill's LINT.md pass as the mandatory lint — the actual pass, not a
 from-memory self-check — and apply its edits except where they conflict with
 the voice profile; VOICE.md wins conflicts.** Set `humanized: true` in the
 front matter once done. No render gate — the article is text, reviewed in place.
@@ -431,7 +457,7 @@ Rules:
   numbers the video didn't earn.
 - **Draft via the HumanER LinkedIn dial** (`~/.claude/skills/humaner/FORMATS.md`;
   clean register, affirm-then-deposit is for comments — posts open on the hook),
-  **then run the `humanizer` skill as lint** (no em dashes, no clichés, no AI
+  **then run the `humaner` skill's LINT.md pass** (no em dashes, no clichés, no AI
   tells) — VOICE.md wins conflicts.
 End with a one-line *Voice note* describing the register, for the operator's
 reference. No render gate — it's text, reviewed in place. (Mirror the format of

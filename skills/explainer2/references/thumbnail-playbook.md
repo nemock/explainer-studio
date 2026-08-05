@@ -123,10 +123,15 @@ next best, and the plain cutout is the fallback.
    give the operator 2-3 thumbnail CONCEPT ideas: the scene, who/what is in it,
    the headline words, the font feel (era/topic-appropriate where it fits), and
    any logos/icons/pictures to graft in. The operator reacts and picks.
-2. **The operator generates the base image** in an external AI image tool —
-   Gemini "nano banana" (used for Barnum) or ChatGPT image generation. This is an
-   operator step; Claude does not generate the base scene. The operator drops the
-   result into `package/thumbnails/` (e.g. `base.png`).
+2. **The base image gets generated.** ⚠️ **SUPERSEDED as the default 2026-08-04 — go to
+   §2d.** Claude now generates the base itself via Magnific on every video, and has done
+   for over a month. The historical operator route below (Gemini "nano banana" or ChatGPT,
+   used on Barnum, operator drops the result into `package/thumbnails/`) remains valid ONLY
+   as a fallback when the Magnific MCP is unreachable.
+
+   The old wording here said flatly "Claude does not generate the base scene." Read cold,
+   after a restart, that sentence stops the package dead. It is what broke #54. If you find
+   yourself concluding you cannot build a thumbnail, you have read this step instead of §2d.
 3. **Claude composes on top of the base image:** add the brand headline (red
    bands / green accent, or an era-appropriate type treatment when the concept
    calls for it), and **graft in logos, icons, or small pictures** to make it
@@ -139,13 +144,36 @@ next best, and the plain cutout is the fallback.
 When in doubt, ask the operator which path a given video should take; lean toward
 the illustrative path for story-driven / special-edition deep dives.
 
-## 2d. Optional: generate the base with Magnific image-gen (proven 2026-07-14)
+## 2d. THE DEFAULT: Claude generates the base with Magnific image-gen
 
-An **optional** capability: when the Magnific MCP is connected (`mcp__magnific__*`
-tools present — resolve via ToolSearch "magnific"), Claude can generate the illustrative
-base itself instead of waiting on the operator to paste prompts into an external tool.
-**It is never required** — if the tools aren't present, fall back to the §2c workflow
-(operator generates the base) unchanged. Full flow + guardrails:
+**Promoted from "optional" to the standard path 2026-08-04.** This has been the actual
+workflow for well over a month and every recent video used it. The section previously read
+"an optional capability… it is never required… fall back to the operator generating the
+base," which is how a cold session (post-restart, no conversation history) concluded that
+the operator supplies the base and that the package therefore could not be finished. That
+happened on #54 and cost a wrong upload order. Do not re-demote this section.
+
+**Claude builds the thumbnail end to end.** Concept → pick a selfie from `dave_selfies/` →
+Magnific → bring the base down → overlay the headline in `thumb_*.html` → screenshot to PNG.
+The operator does not paste prompts into an external tool and does not hand over a base.
+
+Two ways to fix the likeness, and **the wardrobe decides which**:
+
+- **Selfie-as-base (preferred, and required whenever wardrobe matters).** Upload a
+  `dave_selfies/*_clean.png` and pass it as `references:[{type:"image", identifier}]`, with
+  a prompt that says *"use the reference for the man's face AND his wardrobe."* Sequence:
+  `creations_request_upload {mimeType:"image/png"}` → `python3 tools/imagegen.py put <selfie>
+  "<proxyUploadUrl>"` → `creations_finalize_upload {path}` → `images_generate`.
+- **Library character `self` (id 2046066)** fixes the face with no upload, but **defaults him
+  into a polo shirt**, which is the wrong look (see below). Use it only when the outfit is
+  irrelevant to the shot.
+
+**Wardrobe rule (operator, 2026-08-04): sweatshirt or hoodie, never a polo.** A casual polo
+"makes me look a little bit old, a little stuffy." Reference selfies:
+`dave_cream_shirt_1_clean.png`, `dave_cream_shirt_2_clean.png`, or the `dave_*_hoodie_*` set.
+
+Fallback only if the Magnific MCP is genuinely absent (tools not resolvable via ToolSearch):
+the §2c operator-generated route still works. Full flow + guardrails:
 [docs/magnific-imagegen-plan.md](../../../docs/magnific-imagegen-plan.md).
 
 - **Model = `gpt-2` (GPT 2), the default** — best composition/likeness at **15 credits**
