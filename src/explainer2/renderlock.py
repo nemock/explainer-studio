@@ -19,22 +19,129 @@ Two concerns, two mechanisms:
    the lock — is what kept killing #10/#36/medtech (the render was a child of
    the session). caffeinate blocks OS idle-sleep but NOT task termination.
 
+3. FOREIGN-ENCODE GUARD (added 2026-08-05, after #55) — the flock is
+   COOPERATIVE and therefore only covers codebases that import this module.
+   Projects on this Mac that render without it (waveform-studio, daily_beats)
+   are invisible to the queue: they never take the lock, so nothing holds them
+   back and nothing tells us they are running. On 2026-08-05 #55 rendered for
+   37 minutes alongside waveform-studio's 8-hour 1440p encode and a daily_beats
+   Remotion render, with load average above 90 and ~113 MB free, and produced a
+   structurally complete but corrupt h264 bitstream: right duration, right frame
+   count, wrong colors, unseekable, NAL errors from the first second. That is
+   the PRD's "serialize memory-heavy stages" constraint being broken by projects
+   the lock was never wired into.
+
+   So after taking the flock we also wait for any VIDEO ENCODE running outside
+   our session to finish. **This is deliberately not the check that was removed
+   on 2026-06-21** (see below): that one matched `chrome-headless-shell`, which
+   an idle MCP browser also has, so a parked LinkedIn/patchright session looked
+   identical to a render and deadlocked the queue. This one matches an ffmpeg
+   command line that names a video ENCODER (h264_videotoolbox, libx264, …),
+   which only exists while an encode is actually running and which no idle
+   browser has. Own-session encodes are excluded by session id, so our own mux
+   never blocks us.
+
+   Escape hatches, because a guard that cannot be turned off is its own outage:
+   `EXPLAINER_FOREIGN_ENCODE_GUARD=0` disables it, and
+   `EXPLAINER_FOREIGN_ENCODE_MAX_WAIT=<seconds>` changes the ceiling. On timeout
+   it raises with the offending commands named, rather than rendering anyway --
+   a loud failure costs one re-run, a silent one costs a corrupt master nobody
+   notices until QA.
+
 NOTE: an earlier version also sniffed for a "foreign render" via `pgrep
 chrome-headless-shell` — that false-positived on persistent MCP headless
 browsers (LinkedIn/patchright) and deadlocked the queue. Removed 2026-06-21.
-The cooperative flock is sufficient now that both codebases hold it.
+The cooperative flock is sufficient for codebases that hold it; concern 3 is
+what covers the ones that do not.
 
 Usage:
   - media stage loop: acquire() before `render`, release() after `mux`.
   - to start a render that survives the session: `<cli> render <proj>`
     (cmd_render → launch_detached). `<cli> render-status` → status().
 """
-import fcntl, json, os, subprocess, sys, time
+import fcntl, json, os, re, subprocess, sys, time
 
 LOCKFILE = "/tmp/explainer-render.lock"   # SHARED across codebases — do not change per-repo
 POLL_SECS = 15
 MAX_WAIT_SECS = 3 * 60 * 60               # 3h ceiling — wait long, but never forever
 DEFAULT_STAGES = "render,mux,manifest,qa" # what a detached `render` runs (deck/narrate/align cached)
+
+# --- foreign-encode guard (concern 3 in the module docstring) ---------------
+# Names of actual video ENCODERS. Present only while an encode is running, and
+# absent from an idle headless browser — which is precisely why this does not
+# repeat the 2026-06-21 false positive.
+_ENCODER_RE = re.compile(
+    r"\b(h264_videotoolbox|hevc_videotoolbox|prores_videotoolbox|libx264|libx265|libsvtav1|libvpx-vp9)\b")
+FOREIGN_GUARD = os.environ.get("EXPLAINER_FOREIGN_ENCODE_GUARD", "1") != "0"
+FOREIGN_MAX_WAIT_SECS = int(os.environ.get("EXPLAINER_FOREIGN_ENCODE_MAX_WAIT", 90 * 60))
+
+
+def foreign_encodes():
+    """Video encodes running OUTSIDE this process's session.
+
+    Own-session processes are excluded, so our own render/mux never blocks us:
+    `launch_detached` starts the render with start_new_session=True, and every
+    ffmpeg it spawns inherits that session id.
+    """
+    try:
+        out = subprocess.run(["ps", "-Ao", "pid=,sid=,command="],
+                             capture_output=True, text=True, timeout=30).stdout
+    except Exception:
+        return []          # never let a failed probe block a render
+    try:
+        mine = os.getsid(0)
+    except Exception:
+        mine = None
+    found = []
+    for line in out.splitlines():
+        parts = line.strip().split(None, 2)
+        if len(parts) < 3:
+            continue
+        pid, sid, cmd = parts
+        if not _ENCODER_RE.search(cmd):
+            continue
+        try:
+            if mine is not None and int(sid) == mine:
+                continue   # our own pipeline
+            if int(pid) == os.getpid():
+                continue
+        except ValueError:
+            pass
+        found.append((pid, cmd))
+    return found
+
+
+def _wait_for_foreign_encodes(log=print):
+    """Hold here until no foreign encode is running. Raises on timeout rather
+    than rendering into contention, because the failure mode we are avoiding is
+    a corrupt master that looks complete."""
+    if not FOREIGN_GUARD:
+        return
+    waited, announced = 0, False
+    while True:
+        found = foreign_encodes()
+        if not found:
+            if announced:
+                log("render-lock: foreign encodes finished — starting render")
+            return
+        if not announced:
+            try:
+                load = f"{os.getloadavg()[0]:.0f}"
+            except Exception:
+                load = "?"
+            log(f"render-lock: {len(found)} video encode(s) running outside the lock "
+                f"(load {load}) — waiting so we don't corrupt the master")
+            for _pid, cmd in found[:3]:
+                log(f"render-lock:   pid {_pid}: {cmd[:110]}")
+            announced = True
+        if waited >= FOREIGN_MAX_WAIT_SECS:
+            names = "; ".join(f"pid {p}: {c[:70]}" for p, c in found[:3])
+            raise TimeoutError(
+                f"foreign video encode still running after {FOREIGN_MAX_WAIT_SECS // 60} min "
+                f"({names}). Rendering now risks a corrupt master (see #55, 2026-08-05). "
+                f"Wait for it, or set EXPLAINER_FOREIGN_ENCODE_GUARD=0 to override.")
+        time.sleep(POLL_SECS)
+        waited += POLL_SECS
 
 
 def acquire(proj=None, label=None, log=print):
@@ -67,7 +174,14 @@ def acquire(proj=None, label=None, log=print):
     except Exception:
         pass
     if announced:
-        log("render-lock: engine free — acquired, starting render")
+        log("render-lock: engine free — acquired")
+    # Hold the flock while we wait, so other explainer renders queue behind us
+    # rather than racing into the same contention.
+    try:
+        _wait_for_foreign_encodes(log=log)
+    except Exception:
+        release(fd)
+        raise
     return fd
 
 
