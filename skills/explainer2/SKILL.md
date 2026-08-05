@@ -400,6 +400,22 @@ Write titles/description/chapters per blueprint §8 into `meta.json` (the
 manifest merges it). **Thumbnails: read `references/thumbnail-playbook.md`, then
 build A/B 1280×720 cards (cutout → brand template → `tools/html2png.py`) into
 `package/thumbnails/`.**
+
+> **Two keys `publish` actually reads, and neither is the obvious one (2026-08-05).**
+> `meta.json` MUST carry:
+> ```json
+> "category_id": "28",
+> "thumbnails": { "a": "thumbnails/thumb_a.png", "b": "thumbnails/thumb_b.png" }
+> ```
+> `publish.py` reads `meta["category_id"]` and `meta["thumbnails"]["a"]`. It does **not**
+> read `"category": "Science & Technology"` — that string is decorative, and a meta.json
+> carrying only it uploads into the default category with no custom thumbnail. **#55
+> shipped exactly that way**: `thumb_a.png` was built, validated and never sent, and the
+> `warnings` array came back empty because the missing-thumbnail check only fired when a
+> thumbnail was *declared and absent*, not when none was declared. Paths are relative to
+> `package/`. `category_id` is **28 = Science & Technology**, the channel-wide setting as
+> of the 2026-08-05 sweep. `publish` now warns on the no-key case, but the warning is a
+> backstop — write the keys.
 **GATE: present the package. Wait for the operator.**
 
 **ORDER IS LOAD-BEARING: Package must be COMPLETE before `publish` runs.** `publish.py`
