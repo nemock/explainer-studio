@@ -98,6 +98,18 @@ def build_plan(proj, channel, privacy="private", when=None):
                          f"to a <2MB JPEG at upload")
     elif thumb_a:
         warnings.append(f"thumbnail A not found: {thumb_a_path}")
+    else:
+        # No `thumbnails` key at all. This used to fall through in SILENCE and ship a
+        # video with YouTube's auto-generated frame, which is exactly what happened to
+        # #55 on 2026-08-05: package/thumbnails/thumb_a.png existed and was never sent,
+        # `warnings` came back empty, and nothing said so. A built thumbnail sitting on
+        # disk unused is a defect, so say it out loud.
+        built = (proj.dir / "package" / "thumbnails" / "thumb_a.png")
+        warnings.append(
+            "no `thumbnails` key in meta.json — uploading with NO custom thumbnail"
+            + (f", even though {built.name} exists on disk. Add "
+               '"thumbnails": {"a": "thumbnails/thumb_a.png", "b": "thumbnails/thumb_b.png"}'
+               if built.exists() else ""))
 
     body = {
         "snippet": {
