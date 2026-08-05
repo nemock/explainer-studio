@@ -62,9 +62,111 @@ Usage:
 import fcntl, json, os, re, signal, subprocess, sys, time
 
 LOCKFILE = "/tmp/explainer-render.lock"   # SHARED across codebases — do not change per-repo
+TICKETFILE = "/tmp/explainer-render.tickets"   # SHARED — FIFO fairness, see take_a_ticket()
 POLL_SECS = 15
+TICKET_POLL_SECS = 1.0                    # cheap: a JSON read + pid liveness check
 MAX_WAIT_SECS = 3 * 60 * 60               # 3h ceiling — wait long, but never forever
 DEFAULT_STAGES = "render,mux,manifest,qa" # what a detached `render` runs (deck/narrate/align cached)
+
+
+# ---- FIFO fairness ------------------------------------------------------------
+# flock has no fairness guarantee: on release, whichever waiter the kernel happens
+# to wake wins. That is fine when every participant runs one long job, and it is
+# NOT fine here. A project rendering a BATCH of short clips releases and
+# re-acquires continuously, so it can hold the encoder almost permanently while a
+# single long job never gets a turn. On 2026-08-05 #55 sat queued 55 minutes
+# behind a ~50-clip daily_beats rebuild without rendering a frame.
+#
+# So: take a numbered ticket before queueing, and only contend for the flock when
+# your ticket is the lowest one still alive. Arrival order, not luck.
+#
+# DEGRADES SAFELY. The ticket file is advisory and sits BESIDE the flock, which
+# remains the actual mutual exclusion. A participant that has not been updated
+# still takes the flock and still renders correctly; it simply doesn't queue, so
+# it can jump ahead. Updated participants stop starving EACH OTHER regardless.
+# That matters because v1 explainer-system is frozen and may not be updatable.
+#
+# Dead holders cannot wedge the queue: every pass prunes tickets whose pid is
+# gone, which covers a crashed or SIGKILLed render exactly as flock does.
+
+def _read_tickets():
+    try:
+        with open(TICKETFILE) as fh:
+            return json.load(fh)
+    except Exception:
+        return []
+
+
+def _pid_alive(pid):
+    try:
+        os.kill(int(pid), 0)
+    except (OSError, ValueError):
+        return False
+    return True
+
+
+def _rewrite_tickets(mutate):
+    """Read-modify-write the ticket list under its own short-lived exclusive lock,
+    pruning dead pids on the way through. `mutate(tickets) -> tickets`."""
+    fd = open(TICKETFILE + ".guard", "a+")
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        tickets = [t for t in _read_tickets() if _pid_alive(t.get("pid"))]
+        tickets = mutate(tickets)
+        tmp = TICKETFILE + ".tmp"
+        with open(tmp, "w") as fh:
+            json.dump(tickets, fh)
+        os.replace(tmp, TICKETFILE)      # atomic: a reader never sees a partial file
+        return tickets
+    finally:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            fd.close()
+        except Exception:
+            pass
+
+
+def take_a_ticket(label):
+    """Join the queue. Returns our ticket number."""
+    mine = {}
+
+    def _add(tickets):
+        seq = max([t.get("seq", 0) for t in tickets] or [0]) + 1
+        mine.update({"seq": seq, "pid": os.getpid(), "label": label,
+                     "since": time.strftime("%H:%M:%S")})
+        return tickets + [mine]
+
+    _rewrite_tickets(_add)
+    return mine["seq"]
+
+
+def drop_ticket(seq):
+    if seq is None:
+        return
+    try:
+        _rewrite_tickets(lambda ts: [t for t in ts if t.get("seq") != seq])
+    except Exception:
+        pass                              # never let queue bookkeeping break a render
+
+
+def _wait_for_turn(seq, log, deadline):
+    """Block until our ticket is the lowest live one."""
+    announced = False
+    while True:
+        tickets = _rewrite_tickets(lambda ts: ts)     # prunes dead pids
+        ahead = [t for t in tickets if t.get("seq", 0) < seq]
+        if not ahead:
+            if announced:
+                log("render-lock: our turn")
+            return
+        if not announced:
+            nxt = min(ahead, key=lambda t: t.get("seq", 0))
+            log(f"render-lock: queued at ticket #{seq}, {len(ahead)} ahead "
+                f"(next: {nxt.get('label')} #{nxt.get('seq')})")
+            announced = True
+        if time.time() >= deadline:
+            raise TimeoutError(f"waited behind {len(ahead)} ticket(s) past the ceiling")
+        time.sleep(TICKET_POLL_SECS)
 
 # --- foreign-encode guard (concern 3 in the module docstring) ---------------
 # Names of actual video ENCODERS. Present only while an encode is running, and
@@ -176,6 +278,21 @@ def acquire(proj=None, label=None, log=print):
     Pass the result to release() after mux."""
     label = label or (os.path.basename(str(getattr(proj, "dir", ""))) or "render")
     fd = open(LOCKFILE, "a+")
+
+    # Join the FIFO queue and wait for our turn before contending for the flock,
+    # so arrival order decides rather than which waiter the kernel happens to wake.
+    seq = None
+    try:
+        seq = take_a_ticket(label)
+        _wait_for_turn(seq, log, time.time() + MAX_WAIT_SECS)
+    except TimeoutError:
+        drop_ticket(seq)
+        try: fd.close()
+        except Exception: pass
+        raise
+    except Exception:
+        seq = None            # queue bookkeeping must never block a render
+
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
@@ -187,6 +304,7 @@ def acquire(proj=None, label=None, log=print):
         try:
             _blocking_flock(fd, MAX_WAIT_SECS)
         except TimeoutError:
+            drop_ticket(seq)
             try: fd.close()
             except Exception: pass
             raise TimeoutError(
@@ -194,6 +312,10 @@ def acquire(proj=None, label=None, log=print):
         announced = True
     else:
         announced = False
+    # We hold the real lock now, so leave the queue. Dropping here rather than at
+    # release() means a render that dies mid-encode cannot leave a ticket wedging
+    # everyone behind it — the flock is the exclusion, the ticket was only the turn.
+    drop_ticket(seq)
     try:
         fd.seek(0); fd.truncate()
         fd.write(json.dumps({"pid": os.getpid(), "label": label, "since": time.strftime("%H:%M:%S")}))
