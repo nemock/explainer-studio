@@ -13,7 +13,22 @@
 
 A local-first **explainer-video studio**: YouTube competitive intelligence → retention-engineered script → operator voice → layered visuals → deep dive + Shorts → monetization-ready package. **`PRD.md` is the source of truth.** If this file and the PRD disagree, the PRD wins — and flag it.
 
-**This is NOT v1.** The production v1 lives at `/Volumes/Casima/claudeCode/explainer-system` and is **frozen from this project's perspective: never import from it, never write into it.** Its proven media core was vendored once into `src/explainer2/` (headers say `VENDORED_FROM` + the v1 commit); divergence here is expected and fine.
+**This is NOT v1.** The production v1 lives at `/Volumes/Casima/claudeCode/explainer-system` and is **frozen from this project's perspective: never import from it, never write into it.**
+
+> **One declared exception, operator-approved 2026-08-05: `renderlock.py`.** The
+> machine-global render lock is a *shared contract*, not v1 code — every rendering
+> codebase on this Mac holds the same `fcntl.flock` on the same fixed path, and a
+> participant running an older version of the protocol is exactly how #55 got a corrupt
+> master and then starved for 55 minutes. So when the lock protocol changes, v1's copy at
+> `explainer-system/src/explainer/renderlock.py` is updated too, along with
+> `waveform-studio/renderlock.py` and `daily_beats/capture/renderlock.py`.
+> **Port the lock logic surgically; never copy the file wholesale.** v1's
+> `launch_detached()` builds its own command line without this repo's engine arguments,
+> and overwriting it would break the recording watcher's Phase 1 render for all five booth
+> shows plus Circumvent. Replace `acquire()` and the helpers above it; leave
+> `launch_detached`, `status`, `_media_pid_for` and `release` alone, then diff
+> `launch_detached` against the original to prove it is untouched. The freeze still binds
+> everywhere else in that repo. Its proven media core was vendored once into `src/explainer2/` (headers say `VENDORED_FROM` + the v1 commit); divergence here is expected and fine.
 
 **`projects/`, `channel/`, and `research/` are symlinks into a separate private repo.** This repo (`explainer-studio` on GitHub) is **public**. The actual operator content — project dirs, `channel/CATALOG.md`, `promotions.json`/`PROMOTIONS.md`, the research wiki — lives in a private sibling repo, `/Volumes/Casima/claudeCode/explainer-content` (its own independent git repo), and is symlinked in at those three paths (see `.gitignore`'s comment above `/projects`, `/channel`, `/research`). explainer2 is the code; explainer-content is the data. Read/write through the symlinked paths as normal — they resolve transparently, and `bin/explainer2 scaffold --outdir <repo>/projects` already lands in the right place — but never conclude a project doesn't exist just because a fresh clone of explainer2 shows `projects/` as empty or a broken symlink; check `explainer-content` directly.
 
