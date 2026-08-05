@@ -225,6 +225,17 @@ underline and renders as a red or green bar floating on blank paper. Two consequ
 image it sits on. If the answer is "the empty area below X" or "roughly where the text is",
 it is wrong. Open the PNG and look.
 
+**Do the check as a contact sheet, not a coordinate argument (added 2026-08-05, #55).** Draw
+every authored mark onto its own art at its real 0-1 position, tile the results into one
+labelled grid, and read that single image. It answers "does this land on a thing?" directly
+instead of by reasoning about numbers, and it scales: #55 checked 17 figures in one look.
+On that deck **six of seventeen marks were on blank cream paper on the first pass** — one
+circling open sky beside a bridge rather than the point where the bridge stops — and every
+one of them had felt like a sensible coordinate when authored. Re-render the sheet after
+fixing and look again; the second pass caught a mark that was still 0.12 off. A reusable
+builder is ~30 lines of PIL (crop each figure, draw the ellipse + a crosshair, paste into a
+grid, label with the slide id and `at`).
+
 ### D. Document & evidence (the #38 lane, generalized)
 - **DocReveal** — scroll a real page/screenshot.
 - **DocZoomAnnotate** — pan/zoom to a line + highlight-wipe / underline / circle / redact.
