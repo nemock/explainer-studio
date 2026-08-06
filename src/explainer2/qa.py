@@ -6,6 +6,28 @@ pacing (over-long shots, uniform cut rhythm). Non-fatal: reports warnings."""
 import json, re, subprocess, statistics
 
 
+def decode_check(video_path, seconds=90):
+    """Decode the first `seconds` of a rendered file and return any decode errors.
+
+    Added 2026-08-05, after #55. A render can finish, report success, write the
+    right duration and the right frame count, and still contain a corrupt h264
+    bitstream: wrong colors, unseekable, NAL errors from the first second. That
+    exact file was produced under encoder contention and NOTHING in the pipeline
+    noticed — it surfaced only because the music mux happened to choke trying to
+    decode it. Without that accident it would have gone to packaging looking
+    finished.
+
+    A returncode of 0 from the encoder is not evidence of a good file. Decoding it
+    is. This is deliberately cheap (a null-muxer pass over the head of the file,
+    a second or two) so it can run on every render rather than on suspicion.
+    """
+    import subprocess
+    r = subprocess.run(
+        ["ffmpeg", "-v", "error", "-i", str(video_path), "-t", str(seconds), "-f", "null", "-"],
+        capture_output=True, text=True)
+    return [ln for ln in r.stderr.splitlines() if ln.strip()]
+
+
 def _freeze_spans(video_path, min_seconds=0.6, noise_db=-60):
     """Return [(start, end)] of frozen (static) video segments via ffmpeg."""
     cmd = ["ffmpeg", "-hide_banner", "-i", str(video_path),
