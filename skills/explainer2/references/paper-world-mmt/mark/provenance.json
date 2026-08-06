@@ -1,0 +1,15 @@
+{
+  "asset": "mmt_stethoscope_mark",
+  "world": "Monday MedTech (tangerine paper world, paper-world-mmt/STYLE.md).",
+  "role": "Show mark (memetic logo) for thumbnails, title cards, and stings. Locked by the operator 2026-08-06 from a 4-take proof (take 1).",
+  "generated": "2026-08-06",
+  "generator": "Magnific, model gpt-2 (15 cr), style-anchored to u5F4C0TQLD, then images_remove_background (3 cr).",
+  "prompt": "Layered cut-paper collage illustration, handmade papercraft style with visibly torn and cleanly-cut paper edges and soft drop shadows between stacked paper layers. Subject: a coiled paper stethoscope, its tube looping in a clean circle with the chest piece resting at the center, an emblem-like centered composition. Plain empty deep tangerine-orange paper background, no desk. Editorial explainer / storybook aesthetic, flat and clean. Color palette strictly: deep tangerine-orange paper background (#C25012), warm cream paper for the tubing and linework (#FFF2E5), and a single soft aqua paper accent (#7FD9CF) used sparingly. Generous negative space, calm composition, no text, no words, no logos.",
+  "magnific_library": {"name": "mmt-stethoscope-mark", "type": "product", "id": 2138937, "identifier": "ichwF3uKdQ"},
+  "assets": [
+    {"file": "mmt_stethoscope_mark.png", "creation": "xSlnIsYjfW", "source_creation": "O69dBMwynm", "px": [1024, 1024], "mode": "RGBA"},
+    {"file": "mmt_stethoscope_mark_source.png", "creation": "O69dBMwynm", "px": [1024, 1024], "mode": "RGB"}
+  ],
+  "rejected_takes": ["w4yDeTR7EI", "4RioIdm9Aa", "WDVHbuScXe"],
+  "disclosure": "Stylized non-photoreal art: ai_generated_visuals true, synthetic false."
+}

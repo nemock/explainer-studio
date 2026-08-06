@@ -1,0 +1,16 @@
+{
+  "asset": "wsc_check_mark",
+  "world": "Who Signs The Check (goldenrod paper world, paper-world-wsc/STYLE.md).",
+  "role": "Show mark (memetic logo) for thumbnails, title cards, and stings. Locked by the operator 2026-08-06 from a 4-take proof (take 3).",
+  "generated": "2026-08-06",
+  "generator": "Magnific, model gpt-2 (15 cr), style-anchored to u5F4C0TQLD, then images_remove_background (3 cr).",
+  "prompt": "Layered cut-paper collage illustration, handmade papercraft style with visibly torn and cleanly-cut paper edges and soft drop shadows between stacked paper layers. Subject: a blank paper bank check lying at a slight angle with a fountain pen resting across it, an emblem-like centered composition. Plain empty goldenrod-yellow paper background, no desk. Editorial explainer / storybook aesthetic, flat and clean. Color palette strictly: goldenrod-yellow paper background (#F2C94C), warm white paper for the check, deep ledger-green paper for the fountain pen and linework (#1F3D2E), and a single copper paper accent (#A4551E) used sparingly for the pen nib. Generous negative space, calm composition, no text, no words, no writing, no signatures, no numbers, no logos.",
+  "prompt_note": "Blank ruled lines rendered on the check despite the no-writing clause; kept deliberately — they are what makes it read as a check.",
+  "magnific_library": {"name": "wsc-check-mark", "type": "product", "id": 2138939, "identifier": "mq7D3hJQAg"},
+  "assets": [
+    {"file": "wsc_check_mark.png", "creation": "KLx2XN5kqp", "source_creation": "8ahgUPJIrU", "px": [1024, 1024], "mode": "RGBA"},
+    {"file": "wsc_check_mark_source.png", "creation": "8ahgUPJIrU", "px": [1024, 1024], "mode": "RGB"}
+  ],
+  "rejected_takes": ["SyJVDBSUb8", "dt8js7FXSL", "3zAhaFrREY"],
+  "disclosure": "Stylized non-photoreal art: ai_generated_visuals true, synthetic false."
+}

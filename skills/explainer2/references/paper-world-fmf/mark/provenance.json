@@ -1,0 +1,15 @@
+{
+  "asset": "fmf_triangle_mark",
+  "world": "Failure Modes Friday (brick-red paper world, paper-world-fmf/STYLE.md).",
+  "role": "Show mark (memetic logo) for thumbnails, title cards, and stings. Locked by the operator 2026-08-06 from a 4-take proof (take 3).",
+  "generated": "2026-08-06",
+  "generator": "Magnific, model gpt-2 (15 cr), style-anchored to u5F4C0TQLD, then images_remove_background (3 cr).",
+  "prompt": "Layered cut-paper collage illustration, handmade papercraft style with visibly torn and cleanly-cut paper edges and soft drop shadows between stacked paper layers. Subject: a warning triangle of layered paper with visibly torn edges and a bold paper exclamation mark at its center, an emblem-like centered composition. Plain empty deep brick-red paper background, no desk. Editorial explainer / storybook aesthetic, flat and clean. Color palette strictly: deep brick-red paper background (#9E1B1B), warm chalk-white paper for the triangle and linework (#FBEFE8), and a single caution-yellow paper accent (#F5C518) used sparingly. Generous negative space, calm composition, no text, no words, no logos.",
+  "magnific_library": {"name": "fmf-triangle-mark", "type": "product", "id": 2138942, "identifier": "rJnuBxtcFH"},
+  "assets": [
+    {"file": "fmf_triangle_mark.png", "creation": "lJw0vBhgv9", "source_creation": "UPOMpQjwny", "px": [1024, 1024], "mode": "RGBA"},
+    {"file": "fmf_triangle_mark_source.png", "creation": "UPOMpQjwny", "px": [1024, 1024], "mode": "RGB"}
+  ],
+  "rejected_takes": ["bx1R2BU5Y2", "MBdkrNsDCm", "cpMq5Po0eP"],
+  "disclosure": "Stylized non-photoreal art: ai_generated_visuals true, synthetic false."
+}

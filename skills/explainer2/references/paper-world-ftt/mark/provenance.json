@@ -1,0 +1,15 @@
+{
+  "asset": "ftt_lightbulb_mark",
+  "world": "Founder Tip Tuesday (steel-blue paper world, paper-world-ftt/STYLE.md).",
+  "role": "Show mark (memetic logo) for thumbnails, title cards, and stings. Locked by the operator 2026-08-06 from a 4-take proof (take 1).",
+  "generated": "2026-08-06",
+  "generator": "Magnific, model gpt-2 (15 cr), style-anchored to u5F4C0TQLD, then images_remove_background (3 cr).",
+  "prompt": "Layered cut-paper collage illustration, handmade papercraft style with visibly torn and cleanly-cut paper edges and soft drop shadows between stacked paper layers. Subject: a single paper lightbulb, its round bulb cut from layered parchment paper with a small brass paper filament glowing inside, an emblem-like centered composition. Plain empty deep steel-blue paper background, no desk. Editorial explainer / storybook aesthetic, flat and clean. Color palette strictly: deep steel-blue paper background (#1D3557), warm parchment paper for the bulb and linework (#F0E8D2), and a single brass-gold paper accent (#C9A24A) used sparingly for the filament. Generous negative space, calm composition, no text, no words, no logos.",
+  "magnific_library": {"name": "ftt-lightbulb-mark", "type": "product", "id": 2138938, "identifier": "s40qBl8e2G"},
+  "assets": [
+    {"file": "ftt_lightbulb_mark.png", "creation": "9Z385YVNYZ", "source_creation": "CqFP99ZEEy", "px": [1024, 1024], "mode": "RGBA"},
+    {"file": "ftt_lightbulb_mark_source.png", "creation": "CqFP99ZEEy", "px": [1024, 1024], "mode": "RGB"}
+  ],
+  "rejected_takes": ["BhtsggYoQR", "u5q966CQLD", "Tdp5k1vVNR"],
+  "disclosure": "Stylized non-photoreal art: ai_generated_visuals true, synthetic false."
+}

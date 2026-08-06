@@ -1,0 +1,15 @@
+{
+  "asset": "ttd_exploded_mark",
+  "world": "The Teardown (indigo paper world, paper-world-ttd/STYLE.md).",
+  "role": "Show mark (memetic logo) for thumbnails, title cards, and stings. Locked by the operator 2026-08-06 from a 4-take proof (take 2).",
+  "generated": "2026-08-06",
+  "generator": "Magnific, model gpt-2 (15 cr), style-anchored to u5F4C0TQLD, then images_remove_background (3 cr).",
+  "prompt": "Layered cut-paper collage illustration, handmade papercraft style with visibly torn and cleanly-cut paper edges and soft drop shadows between stacked paper layers. Subject: an exploded-view diagram of a simple paper device, its layered components hovering apart in a vertical stack with thin paper connector lines between them, an emblem-like centered composition. Plain empty deep electric-indigo paper background, no desk. Editorial explainer / storybook aesthetic, flat and clean. Color palette strictly: deep electric-indigo paper background (#2E33A0), near-white paper for the components and linework (#EDF0FF), and a single safety-orange paper accent (#F2762E) used sparingly. Generous negative space, calm composition, no text, no words, no logos.",
+  "magnific_library": {"name": "ttd-exploded-mark", "type": "product", "id": 2138941, "identifier": "pvxzyehwnQ"},
+  "assets": [
+    {"file": "ttd_exploded_mark.png", "creation": "s7UchT6l8e", "source_creation": "0eDbKU0TfW", "px": [1024, 1024], "mode": "RGBA"},
+    {"file": "ttd_exploded_mark_source.png", "creation": "0eDbKU0TfW", "px": [1024, 1024], "mode": "RGB"}
+  ],
+  "rejected_takes": ["yiNXourPW9", "ksjAzd916B", "JN4eXEIOq4"],
+  "disclosure": "Stylized non-photoreal art: ai_generated_visuals true, synthetic false."
+}
