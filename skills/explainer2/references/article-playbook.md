@@ -55,6 +55,31 @@ VOICE.md wins conflicts. Everything below layers on top of that voice source.
 > not do its job. Structure it as an essay, with an argument that builds in written
 > paragraphs, not as a set of captioned sections mirroring the slide list.
 
+> **Two mechanical checks before presenting, both learned the hard way on #55.**
+>
+> **1. A heading resets the reader, so no section may open on a bare pronoun.**
+> The script pass already tests this — every segment is recorded cold, so none may
+> start on *Which* or *Because* — and the same logic applies to prose the moment a
+> `##` breaks the flow. #55 shipped a section headed "What you took on" whose first
+> line was *"You didn't take on writing it."* Writing **what**? The antecedent was
+> three paragraphs back, behind a heading, past a block of comments about other
+> people's videos. Dave's verdict: *"a pronoun at the start of a section, hanging in
+> space… lazy writing I'd expect from a 9th grader."* Name the noun. Check the first
+> sentence after every heading, and while you are there, kill any expletive opener
+> (*It would be convenient to…*) — the active form is stronger anyway.
+>
+> **2. Count the short paragraphs. Do not celebrate the spread.**
+> FORMATS.md: *"a short paragraph installed to satisfy a rule reads as a drumroll,
+> and the short paragraph only lands because it is rare."* #55's first draft ran 12
+> of 64 paragraphs at 12 words or fewer, and the offenders were pure announcements —
+> *"Here's the moment everything turns on."* *"Here's where the Saturday left you."*
+> Those are throat-clearing set to look like emphasis. Worse, the draft was presented
+> as good BECAUSE the lengths varied from 1 to 81 words, which is optimizing for the
+> measurement instead of the writing. **A short paragraph earns its place only when
+> the thought genuinely ended there.** One or two per piece. The rewrite ran 23
+> paragraphs at a median of 91 words with exactly one short one, and it reads as an
+> essay instead of a slide deck.
+
 - **Same content, same facts, same arc — different medium.** The article covers
   exactly what the video covers, in the same order of argument. It does NOT add
   a claim, number, story, or quote the video didn't earn. Every fact still
