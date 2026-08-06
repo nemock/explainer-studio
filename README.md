@@ -159,7 +159,7 @@ The analytical methodology is documented as a **skill + playbooks** so the pipel
 - [skills/explainer2/SKILL.md](skills/explainer2/SKILL.md) — the pipeline procedure, gates, and hard rules
 - [skills/explainer2/references/blueprint-playbook.md](skills/explainer2/references/blueprint-playbook.md) — intel sweep → Blueprint
 - [skills/explainer2/references/script-playbook.md](skills/explainer2/references/script-playbook.md) — retention engineering + voice rules
-- [skills/explainer2/references/spoken-humanizer.md](skills/explainer2/references/spoken-humanizer.md) — the pre-booth spoken-language pass
+- [skills/explainer2/references/spoken-humanizer.md](skills/explainer2/references/spoken-humanizer.md) — the pre-booth spoken/COMPEL pass (general AI-tell lint is `humaner`'s LINT.md)
 - [skills/explainer2/references/motion-playbook.md](skills/explainer2/references/motion-playbook.md) — the Remotion motion engine
 - [skills/explainer2/references/deck-playbook.md](skills/explainer2/references/deck-playbook.md) — the legacy deck engine
 - [skills/explainer2/references/thumbnail-playbook.md](skills/explainer2/references/thumbnail-playbook.md) · [article-playbook.md](skills/explainer2/references/article-playbook.md) · [shorts-playbook.md](skills/explainer2/references/shorts-playbook.md) — packaging

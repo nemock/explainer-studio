@@ -4,12 +4,25 @@ alignment.json + narration.wav) into a Remotion motion spec and renders the fina
 mp4 via the shared `remotion/` component library. Claude authors specs, not React.
 """
 import json
+import os
 import re
 import shutil
 import subprocess
 from pathlib import Path
 
 REMOTION_DIR = Path(__file__).resolve().parents[2] / "remotion"
+
+# Chibi presenter library (the operator's cartoon stand-in; locked into the brand system
+# 2026-08-06 — make_money/routine_changes/2026-08-06-video-brand-system-palettes-locked.md).
+# The library lives OUTSIDE this public repo and is staged per-reference at render time,
+# same doctrine as library/doodles: private media — use, don't redistribute, never commit
+# poses here. Deck refs are "chibi/<pose>" (pose = a filename in the library, ".png"
+# optional), normally on a Cutout/props image so the presenter sits in a bottom corner at
+# 18–22% frame height with pose cuts on scene changes. Personal shows only — never
+# Circumvent. Override the root with $EXPLAINER_CHIBI_DIR (e.g. to point at a future v3).
+CHIBI_DIR = Path(os.environ.get(
+    "EXPLAINER_CHIBI_DIR",
+    "/Volumes/Casima/claudeCode/dave_chibi_character/v2/poses_normalized_tight"))
 
 
 def _parse_stat(value):
@@ -579,7 +592,9 @@ def _stage_images(sp, spec, public):
     ASSET_FIELDS = ("image", "bottomImage", "set", "video")
 
     def _stage_one(img):
-        if not img or str(img).startswith(("papercraft/", "papercraft-circumvent/")):
+        # chibi/ refs are staged from the private pose library by _stage_chibi (which runs
+        # after this pass) — leave them untouched here or they'd be dropped as missing.
+        if not img or str(img).startswith(("papercraft/", "papercraft-circumvent/", "chibi/")):
             return img
         src = next((r / img for r in roots if (r / img).exists()), None)
         if src is None:
@@ -631,6 +646,34 @@ def _stage_doodles(spec, public, log):
                 shutil.copy(src, public / dst)
             kept.append({**a, "file": dst, "aspect": a.get("aspect") or aspects.get(name, 1.0)})
         scene["annotations"] = kept
+
+
+def _stage_chibi(spec, public, log):
+    """Stage chibi presenter poses (deck refs "chibi/<pose>") from the operator's private
+    pose library into the render's public dir, rebasing each ref to its staged basename.
+    See the CHIBI_DIR note at the top of this module. Missing pose -> ref dropped with a
+    warning, never a broken render (matches the doodle library's degrade)."""
+    def _one(ref):
+        name = str(ref)[len("chibi/"):]
+        if name.endswith(".png"):
+            name = name[:-4]
+        src = CHIBI_DIR / f"{name}.png"
+        if not src.exists():
+            log(f"remotion: chibi pose missing, ref dropped: {name} (looked in {CHIBI_DIR})")
+            return None
+        dst = "chibi__" + name.replace("/", "_") + ".png"
+        if not (public / dst).exists():
+            shutil.copy(src, public / dst)
+        return dst
+
+    for scene in spec["scenes"]:
+        fields = scene.get("fields") or {}
+        for key in ("image", "bottomImage"):
+            if str(fields.get(key) or "").startswith("chibi/"):
+                fields[key] = _one(fields[key])
+        for prop in (fields.get("props") or []):
+            if isinstance(prop, dict) and str(prop.get("image") or "").startswith("chibi/"):
+                prop["image"] = _one(prop["image"])
 
 
 def _apply_music(sp, out, log):
@@ -744,6 +787,7 @@ def render(sp, log=print, frames=None, out=None):
             shutil.copytree(_sub, public / _lib, dirs_exist_ok=True)
     _stage_images(sp, spec, public)
     _stage_doodles(spec, public, log)
+    _stage_chibi(spec, public, log)
     # CTA scenes show the brand book cover unless the project opts out with
     # "cta_book": false in project.json (e.g. masterclass modules use no book cover).
     # wte-guide never shows the book: like-and-subscribe is its only CTA (2026-07-29).

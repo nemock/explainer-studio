@@ -1,0 +1,35 @@
+{
+  "asset": "fwf_book_mark",
+  "world": "FWF daily founder tip (violet paper world, paper-world-fwf/STYLE.md).",
+  "role": "Show mark (memetic logo) for thumbnails, title cards, and stings. Locked by the operator 2026-08-06 from a 4-take proof (take 1).",
+  "generated": "2026-08-06",
+  "generator": "Magnific, model gpt-2 (15 cr), style-anchored to u5F4C0TQLD, then images_remove_background (3 cr).",
+  "prompt": "Layered cut-paper collage illustration, handmade papercraft style with visibly torn and cleanly-cut paper edges and soft drop shadows between stacked paper layers. Subject: a single open book standing upright with its pages fanned in layered white and pale-violet paper, seen three-quarter on, an emblem-like centered composition. Plain empty deep violet paper background, no desk. Editorial explainer / storybook aesthetic, flat and clean. Color palette strictly: deep violet paper background (#36185B), white paper for the pages and linework (#FFFFFF), and a single soft indigo paper accent (#757BBD) used sparingly. Generous negative space, calm composition, no text, no words, no logos.",
+  "magnific_library": {
+    "name": "fwf-book-mark",
+    "type": "product",
+    "id": 2138879,
+    "identifier": "pvxGOehwnQ",
+    "note": "Pass references:[{type:'product', identifier:'2138879'}] to re-pose the mark consistently."
+  },
+  "assets": [
+    {
+      "file": "fwf_book_mark.png",
+      "creation": "aFuOU6WfSh",
+      "source_creation": "N2R8h9T6D9",
+      "px": [1024, 1024],
+      "mode": "RGBA",
+      "note": "Transparent cutout for overlays/stings."
+    },
+    {
+      "file": "fwf_book_mark_source.png",
+      "creation": "N2R8h9T6D9",
+      "px": [1024, 1024],
+      "mode": "RGB",
+      "note": "Original render on the violet ground; thumbnail-ready as-is."
+    }
+  ],
+  "rejected_takes": ["dt8xleNXSL", "jUgn0xELD0", "aFuJ4aEfSh"],
+  "scene_anchors": ["s7UWMJUl8e", "xSlz0UNjfW"],
+  "disclosure": "Stylized non-photoreal art: ai_generated_visuals true, synthetic false (per docs/magnific-imagegen-plan.md policy)."
+}

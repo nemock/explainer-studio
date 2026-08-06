@@ -81,6 +81,36 @@ THEMES = {
     #   accent2 #2f7d4f — field green, for process/positive/growth marks.
     "circumvent": {"bg": "#f2ede0", "fg": "#1c3a29", "accent": "#c89b3c", "accent2": "#2f7d4f",
                    "motion": "fade", "fonts": {"display": "Fraunces", "body": "Inter"}},
+    # --- Hue-assigned weekly-show palettes (locked 2026-08-06; see
+    # make_money/routine_changes/2026-08-06-video-brand-system-palettes-locked.md). Background
+    # hue is the show identifier in a feed grid: tangerine Mon, steel-blue Tue, goldenrod Wed,
+    # indigo Thu, brick-red Fri (the daily keeps `fwf` violet; Circumvent keeps `circumvent`).
+    # These REPLACE medtech/founder/paper/midnight/mono for new renders per show, but the old
+    # keys stay untouched for the v1 back catalog. NOTE (blast radius, same doctrine as
+    # wte-guide): engine pairing (papercraft ink tokens + scene family) and each palette's
+    # Magnific substrate set are pre-render TODOs — do not render a show on its new key before
+    # both ship.
+    # mmt-tangerine = Monday MedTech. Clinical teal brightened to aqua so it pops on orange;
+    # apricot for secondary marks.
+    "mmt-tangerine": {"bg": "#C25012", "fg": "#FFF2E5", "accent": "#7FD9CF", "accent2": "#F2B279",
+                      "motion": "fade"},
+    # ftt-study = Founder Tip Tuesday. The founder den moved from forest to a steel-blue study;
+    # brass/parchment/clay carry over intact. Grayer + lighter than ttd-indigo on purpose.
+    "ftt-study": {"bg": "#1D3557", "fg": "#F0E8D2", "accent": "#C9A24A", "accent2": "#B5654A",
+                  "motion": "fade", "fonts": {"display": "Fraunces", "body": "Inter"}},
+    # wsc-goldenrod = Who Signs The Check. File-folder/ledger-jacket yellow, ledger-green ink,
+    # copper (coin/pen), "sign here" red reserved for each episode's one flag.
+    "wsc-goldenrod": {"bg": "#F2C94C", "fg": "#1F3D2E", "accent": "#A4551E", "accent2": "#B3271D",
+                      "motion": "fade"},
+    # ttd-indigo = The Teardown. Blueprint world on electric indigo — deliberately vivid and
+    # blue-leaning so it never blurs with fwf's red-leaning violet or ftt-study's gray blue.
+    # Safety orange annotates; periwinkle for quiet secondary marks.
+    "ttd-indigo": {"bg": "#2E33A0", "fg": "#EDF0FF", "accent": "#F2762E", "accent2": "#9BA8F5",
+                   "motion": "fade"},
+    # fmf-alarm = Failure Modes Friday. Brick red (deep, not fire-engine, so long text stays
+    # comfortable), caution yellow kept from mono, ash gray for secondary marks.
+    "fmf-alarm": {"bg": "#9E1B1B", "fg": "#FBEFE8", "accent": "#F5C518", "accent2": "#C9CDD2",
+                  "motion": "fade"},
 }
 DEFAULT = "midnight"
 VALID_MOTION = {"rise", "fade", "pop", "slide"}
