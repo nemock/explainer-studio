@@ -301,14 +301,30 @@ def set_privacy(video_id=None, project_dir=None, channel=None, privacy="private"
 
 
 def _backfill_meta(proj, url):
-    """Close the loop: write youtube_url + posted date into package/meta.json."""
+    """Close the loop: write youtube_url + posted date into package/meta.json,
+    and replace the `<URL>` placeholders in linkedin.md with the live link.
+
+    linkedin.md was added here 2026-08-05. SKILL 8c has always said to write a
+    clear `<URL>` placeholder when the video isn't live yet and backfill it once
+    it is — but the backfill was a step someone had to remember, and on #55 it was
+    missed: the post was written, hashtagged, reviewed, and still carried four
+    literal `<URL>` markers after upload. A placeholder only works if something
+    replaces it, so the same call that knows the URL now does."""
     import datetime
     p = proj.dir / "package" / "meta.json"
     meta = json.loads(p.read_text())
     meta["youtube_url"] = url
     meta["posted"] = datetime.date.today().isoformat()
     p.write_text(json.dumps(meta, indent=2))
-    return str(p)
+    touched = [str(p)]
+
+    li = proj.dir / "package" / "linkedin.md"
+    if li.exists():
+        t = li.read_text()
+        if "<URL>" in t:
+            li.write_text(t.replace("`<URL>`", url).replace("<URL>", url))
+            touched.append(str(li))
+    return touched
 
 
 def _channel_of(yt):
