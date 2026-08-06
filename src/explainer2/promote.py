@@ -192,8 +192,12 @@ def select(projects_dir, video=None, short=None):
         "times_video_promoted": len(by_video.get(chosen["slug"], [])),
         "times_short_promoted": len(short_recs),
         "prior_captions": [r.get("caption") for r in short_recs if r.get("caption")],
+        "short_duration_s": probe_duration(pick["mp4"]),
         "note": "Reword the caption so it differs from prior_captions; keep the URL "
-                "as a reply-comment on X/Threads/Bluesky and in the YT description.",
+                "as a reply-comment on X/Threads and in the YT description. Bluesky is "
+                "LINK-ONLY (no video) and Twitter drops to link-only over "
+                f"{TWITTER_VIDEO_MAX_S}s — `promote post` applies both automatically, so "
+                "write those captions to read well with the URL inlined at the end.",
     }
 
 
@@ -275,6 +279,29 @@ DEFAULT_ACCOUNTS = {
 DEFAULT_FACEBOOK_PAGE_ID = "1216556091535160"
 # Platforms that support a threaded reply (used to attach the clickable URL).
 THREAD_REPLY = {"twitter", "bluesky", "threads"}
+# Platforms we NEVER attach video to — the link goes in the post body instead.
+# Bluesky's Blotato video path failed 21 times between 2026-05 and 2026-08 (100s
+# upload timeouts, Conflict, Bad Gateway). It is a Blotato-side problem we can't
+# fix from here, and every failure was silent, so we stopped attempting it
+# (operator decision 2026-08-03).
+LINK_ONLY = {"bluesky"}
+# X/Twitter free-account native-video cap on this account. Over this, the Short
+# is replaced by a text post carrying the video URL.
+TWITTER_VIDEO_MAX_S = 120
+
+
+def probe_duration(path):
+    """Video length in seconds via ffprobe, or None if unreadable."""
+    import subprocess
+    try:
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+             "-of", "csv=p=0", str(path)],
+            capture_output=True, text=True, timeout=60,
+        )
+        return float(out.stdout.strip()) if out.returncode == 0 and out.stdout.strip() else None
+    except (ValueError, OSError, subprocess.SubprocessError):
+        return None
 
 
 def _api_key():
@@ -323,12 +350,28 @@ def upload_media(local_path):
     return pres["publicUrl"]
 
 
-def _build_post_body(entry, media_urls, scheduled):
+def _build_post_body(entry, media_urls, scheduled, duration_s=None):
     """Construct the POST /v2/posts body for one platform entry.
-    entry: {platform, account_id?, caption, url_comment?, extra?{...}}."""
+    entry: {platform, account_id?, caption, url_comment?, extra?{...}}.
+
+    LINK FALLBACK: platforms in LINK_ONLY, and Twitter when the Short runs past
+    TWITTER_VIDEO_MAX_S, get NO media — the video URL is inlined in the post body
+    instead. Both used to be left to the operator/LLM to notice, which meant they
+    never happened: Blotato accepts the post and the platform rejects it minutes
+    later, after the run has ended."""
     platform = entry["platform"]
-    content = {"text": entry["caption"], "mediaUrls": media_urls, "platform": platform}
-    if entry.get("url_comment") and platform in THREAD_REPLY:
+    link_only = platform in LINK_ONLY or (
+        platform == "twitter" and duration_s is not None and duration_s > TWITTER_VIDEO_MAX_S
+    )
+    text = entry["caption"]
+    if link_only:
+        url = entry.get("url_comment") or ""
+        if url and url not in text:
+            text = f"{text}\n\n{url}" if text else url
+    content = {"text": text,
+               "mediaUrls": [] if link_only else media_urls,
+               "platform": platform}
+    if not link_only and entry.get("url_comment") and platform in THREAD_REPLY:
         content["additionalPosts"] = [{"text": entry["url_comment"], "mediaUrls": []}]
     target = {"targetType": platform}
     # platform-specific fields. Blotato wants routing/required metadata on target
@@ -361,14 +404,17 @@ def post_plan(projects_dir, plan, dry_run=True):
     scheduled = plan.get("scheduled", "next_free_slot")
     results = []
     media_urls = []
+    duration_s = probe_duration(plan["short_mp4"])
     if not dry_run:
         media_urls = [upload_media(plan["short_mp4"])]
     else:
         media_urls = ["<uploaded at fire time>"]
     for entry in plan["posts"]:
-        body = _build_post_body(entry, media_urls, scheduled)
+        body = _build_post_body(entry, media_urls, scheduled, duration_s)
         if dry_run:
-            results.append({"platform": entry["platform"], "dry_run": True, "body": body})
+            results.append({"platform": entry["platform"], "dry_run": True,
+                            "link_only": body["post"]["content"]["mediaUrls"] == [],
+                            "duration_s": duration_s, "body": body})
             continue
         try:
             status, resp = _http("POST", "/posts", body)
