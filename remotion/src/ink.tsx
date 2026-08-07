@@ -8,7 +8,9 @@ import {BRAND} from './brand';
 // and are unchanged. Non-paper resolves to today's exact values => ZERO regression for the
 // midnight masterclass and every legacy deck.
 
-export const PAPER_THEMES = ['nemock-deep-dive', 'cut-bond', 'brg-paper', 'brg-deep-dive', 'wte-guide', 'circumvent'];
+export const PAPER_THEMES = ['nemock-deep-dive', 'cut-bond', 'brg-paper', 'brg-deep-dive', 'wte-guide', 'circumvent',
+  // The six personal-show worlds (2026-08-06 brand system) — all render the Cvg family.
+  'fwf', 'mmt-tangerine', 'ftt-study', 'wsc-goldenrod', 'ttd-indigo', 'fmf-alarm'];
 export const isPaperTheme = (t?: string): boolean => !!t && PAPER_THEMES.includes(t);
 
 export type Ink = {
@@ -137,12 +139,26 @@ const InkContext = createContext<Ink>(NAVY);
 // isPaperTheme to the same object.
 const PAPER_NEMOCK: Ink = {...PAPER, typeOnPaper: true};
 
+// The six personal-show worlds (2026-08-06). They render through the Cvg scene family
+// (world tokens in brands/papercraft.ts do the heavy lifting), so these Ink entries
+// mostly serve captions and any classic component that sneaks in. Each is its show's
+// dark ink + accent; per the standing rule these are new entries, nothing repainted.
+const mkShowInk = (body: string, accent: string, wash: string): Ink => ({
+  body, soft: `${body}99`, cardBg: `${body}0F`, track: `${body}24`, neutral: `${body}80`,
+  accent, accentWash: wash, paper: true, typeOnPaper: false,
+});
 const INK_BY_THEME: Record<string, Ink> = {
   'nemock-deep-dive': PAPER_NEMOCK,
   'brg-paper': PAPER_BRG,
   'brg-deep-dive': PAPER_BRG_DEEP,
   'wte-guide': PAPER_WTE,
   'circumvent': PAPER_CIRCUMVENT,
+  'fwf': mkShowInk('#2A1142', '#757BBD', 'rgba(117,123,189,.34)'),
+  'mmt-tangerine': mkShowInk('#5F2508', '#0F7E75', 'rgba(15,126,117,.30)'),
+  'ftt-study': mkShowInk('#1D3557', '#A8822F', 'rgba(201,162,74,.32)'),
+  'wsc-goldenrod': mkShowInk('#1F3D2E', '#A4551E', 'rgba(164,85,30,.32)'),
+  'ttd-indigo': mkShowInk('#1D2170', '#E2661F', 'rgba(242,118,46,.32)'),
+  'fmf-alarm': mkShowInk('#5A1010', '#A87E00', 'rgba(245,197,24,.34)'),
 };
 
 export const InkProvider: React.FC<{theme?: string; children: React.ReactNode}> = ({theme, children}) => (

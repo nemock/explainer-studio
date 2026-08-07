@@ -67,12 +67,17 @@ const Set: React.FC<{src?: string; anchor?: string}> = ({src, anchor}) => {
 // `size` is a fraction of frame height, so props and people share one scale space.
 const Cutout: React.FC<{
   src: string; at: number; place: number; size: number; flip?: boolean; baseline?: number;
-}> = ({src, at, place, size, flip, baseline = 0.92}) => {
+}> = ({src, at, place: placeRaw, size, flip, baseline = 0.92}) => {
   const frame = useCurrentFrame();
   const {fps, width, height} = useVideoConfig();
   const s = spring({frame: frame - at, fps, config: {damping: 13, stiffness: 200}});
   const W = useWorld();
   const h = height * size;
+  // Portrait re-centering (operator direction 2026-08-06): decks are composed for 16:9,
+  // and on a 4:5/9:16 render the same `place` fraction crowds the type block or the
+  // frame edge. Compress horizontal placement toward center on narrow frames so the
+  // composition stays center-weighted without per-aspect deck authoring.
+  const place = width < height ? 0.5 + (placeRaw - 0.5) * 0.72 : placeRaw;
   return (
     <div style={{
       position: 'absolute', left: `${place * 100}%`, top: height * baseline,
@@ -101,6 +106,15 @@ const Cutouts: React.FC<{items?: any[]}> = ({items}) => (
 
 // Type printed on the scene. A soft directional scrim keeps it legible over busy
 // art without drawing a box around it.
+// The world's `paper` tone as an "r,g,b" triplet for scrim gradients. The scrims were
+// hardcoded to Circumvent's kraft (#F2EDE0) until 2026-08-06, when the Cvg family became
+// the shared renderer for all six personal-show worlds — each world's scrim is now its
+// own paper stock.
+const paperRgb = (hex: string): string => {
+  const h = hex.replace('#', '');
+  return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)).join(',');
+};
+
 const SceneType: React.FC<{
   kicker?: string; headline?: string; accent?: string[]; sub?: string;
   align?: 'left' | 'center'; at?: number; hit?: number | null; band?: 'top' | 'middle';
@@ -111,12 +125,13 @@ const SceneType: React.FC<{
   const e = ease(frame, at);
   const scale = hit != null ? flick(frame, hit) : 1;
   const long = (headline || '').length > 48;
+  const P = paperRgb(W.paper);
   return (
     <>
       <AbsoluteFill style={{
         background: band === 'top'
-          ? `linear-gradient(180deg, rgba(242,237,224,.90) 0%, rgba(242,237,224,.62) 30%, rgba(242,237,224,0) 56%)`
-          : `linear-gradient(180deg, rgba(242,237,224,0) 0%, rgba(242,237,224,.74) 26%, rgba(242,237,224,.74) 74%, rgba(242,237,224,0) 100%)`,
+          ? `linear-gradient(180deg, rgba(${P},.90) 0%, rgba(${P},.62) 30%, rgba(${P},0) 56%)`
+          : `linear-gradient(180deg, rgba(${P},0) 0%, rgba(${P},.74) 26%, rgba(${P},.74) 74%, rgba(${P},0) 100%)`,
         opacity: 0.98,
       }} />
       <AbsoluteFill style={{
@@ -169,6 +184,67 @@ export const CvgScene: React.FC<{fields: any}> = ({fields}) => {
   );
 };
 
+// cta -> the end card (operator layout direction 2026-08-06): everything centered in
+// BOTH aspects — kicker (the site URL), a ONE-LINE headline (font fit to width so
+// "Like & follow Circumvent Global" never wraps at 4:5), subkicker, and the paper brand
+// mark centered beneath the type with clear air between them. No set: the card sits on
+// the world's paper ground so the mark owns the frame.
+export const CvgCta: React.FC<{fields: any}> = ({fields}) => {
+  const W = useWorld();
+  const frame = useCurrentFrame();
+  const {fps, width, height} = useVideoConfig();
+  const cf = fields.cueFrames || {};
+  const at = cf.in ?? 3;
+  const e = ease(frame, at);
+  const s = spring({frame: frame - at - 6, fps, config: {damping: 13, stiffness: 170}});
+  const headline = fields.headline || '';
+  // One line, always: width-fit (900-weight glyphs run ~0.52em) capped by a height-based
+  // ceiling so short headlines don't balloon.
+  const fit = (width * 0.88) / Math.max(1, headline.length * 0.52);
+  const hSize = Math.min(height * 0.062, fit);
+  const markH = Math.min(width, height) * 0.34;
+  return (
+    <AbsoluteFill>
+      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
+        <div style={{
+          textAlign: 'center', transform: `translateY(${(1 - e) * 24}px)`, opacity: e,
+          marginBottom: height * 0.045,
+        }}>
+          {fields.kicker ? (
+            <div style={{
+              fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.022, letterSpacing: 5,
+              textTransform: 'uppercase', color: W.accent, marginBottom: height * 0.02,
+            }}>{fields.kicker}</div>
+          ) : null}
+          <div style={{
+            fontFamily: BRAND.font, fontWeight: 900, fontSize: hSize, lineHeight: 1.04,
+            color: W.ink, letterSpacing: -0.5, whiteSpace: 'nowrap',
+          }}>{colorize(headline, fields.accent, W.accent)}</div>
+          {fields.subkicker ? (
+            <div style={{
+              fontFamily: BRAND.font, fontWeight: 700, fontSize: height * 0.024, color: W.accent,
+              marginTop: height * 0.016,
+            }}>{fields.subkicker}</div>
+          ) : null}
+        </div>
+        {fields.mark ? (
+          <div style={{
+            height: markH, transform: `translateY(${(1 - s) * 30}px) scale(${0.92 + s * 0.08})`,
+            opacity: s, position: 'relative',
+          }}>
+            <div style={{
+              position: 'absolute', left: '50%', bottom: -markH * 0.06, width: markH * 0.7,
+              height: markH * 0.07, transform: 'translateX(-50%)', background: W.shadow,
+              borderRadius: '50%', filter: 'blur(12px)', opacity: 0.4 * s,
+            }} />
+            <Img src={staticFile(fields.mark)} style={{height: '100%', width: 'auto', display: 'block'}} />
+          </div>
+        ) : null}
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
 // punch -> one enormous word straight on the paper, no tag, no card
 export const CvgPunch: React.FC<{fields: any}> = ({fields}) => {
   const W = useWorld();
@@ -185,7 +261,7 @@ export const CvgPunch: React.FC<{fields: any}> = ({fields}) => {
     <AbsoluteFill>
       <Set src={fields.set} anchor={fields.anchor} />
       <Cutouts items={fields.props} />
-      <AbsoluteFill style={{background: 'radial-gradient(120% 80% at 50% 50%, rgba(242,237,224,.88) 0%, rgba(242,237,224,.62) 55%, rgba(242,237,224,.28) 100%)'}} />
+      <AbsoluteFill style={{background: `radial-gradient(120% 80% at 50% 50%, rgba(${paperRgb(W.paper)},.88) 0%, rgba(${paperRgb(W.paper)},.62) 55%, rgba(${paperRgb(W.paper)},.28) 100%)`}} />
       <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
         <div style={{textAlign: 'center', transform: `scale(${0.9 + s * 0.1})`, opacity: s}}>
           {fields.kicker ? (

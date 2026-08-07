@@ -3,7 +3,23 @@
 filled here; Claude-authored summary / per-platform captions / sources are merged
 from an optional meta.json the skill writes. Handles multi-aspect + min-length."""
 import json
+import subprocess
 from . import __version__
+
+
+def _probe_duration(path):
+    """Video length via ffprobe, or None. Remotion-engine projects skip the mux stage,
+    so metrics_mux.json (the v1 duration source) never exists for them — without this
+    fallback duration_s stayed null and the min-length gate silently never fired
+    (caught 2026-08-06 during the booth-show cutover compatibility check)."""
+    try:
+        r = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+             "-of", "csv=p=0", str(path)],
+            capture_output=True, text=True, timeout=60)
+        return round(float(r.stdout.strip()), 2) if r.returncode == 0 and r.stdout.strip() else None
+    except (ValueError, OSError, subprocess.SubprocessError):
+        return None
 
 
 def run(proj):
@@ -21,7 +37,8 @@ def run(proj):
         if (proj.dir / rel).exists():
             video[aspect] = rel
             per_aspect[aspect] = "ok"
-            duration = mux.get(aspect, {}).get("duration_s", duration)
+            duration = mux.get(aspect, {}).get("duration_s") \
+                or _probe_duration(proj.dir / rel) or duration
         else:
             per_aspect[aspect] = "missing"
 
@@ -46,7 +63,8 @@ def run(proj):
         "voice": proj.voice,
         "aspects": proj.aspects,
         "duration_s": duration,
-        "deck": "deck/index.html",
+        # Remotion projects have no HTML deck; a stale path here misleads consumers.
+        "deck": "deck/index.html" if (proj.dir / "deck" / "index.html").exists() else None,
         "video": video,
         "captions": {"srt": "captions/captions.srt", "vtt": "captions/captions.vtt"},
         "status": {"ready_for_post": ready, "per_aspect": per_aspect, "length_warning": length_warning},

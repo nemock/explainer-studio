@@ -187,6 +187,12 @@ def _papercraft_scene(slide, t, kicker, accent, headline):
     return None
 
 
+# Themes rendered by the Cvg scene family (set-driven, type on the world's paper scrim).
+# circumvent pioneered it (2026-07-30); the six personal-show worlds joined 2026-08-06.
+_CVG_STYLE_THEMES = ("circumvent", "fwf", "mmt-tangerine", "ftt-study",
+                     "wsc-goldenrod", "ttd-indigo", "fmf-alarm")
+
+
 def _circumvent_scene(slide, t, kicker, accent, headline):
     """CIRCUMVENT style map. Every deck type resolves to a Cvg* scene so no slide can
     fall through to a card. `set`, `props`, `anchor`, `band` and `align` pass straight
@@ -221,6 +227,13 @@ def _circumvent_scene(slide, t, kicker, accent, headline):
     if t == "quote":
         return "CvgScene", {**common, "headline": slide.get("quote") or headline,
                             "attrib": slide.get("attribution") or slide.get("source", "")}
+    if t == "cta":
+        # Centered end card (operator layout direction 2026-08-06): one-line headline,
+        # brand mark centered beneath, correct in BOTH aspects. `mark` may come from a
+        # dedicated deck field or the first props image (older decks).
+        mark = slide.get("mark") or next(
+            (p.get("image") for p in (slide.get("props") or []) if isinstance(p, dict) and p.get("image")), None)
+        return "CvgCta", {**common, "props": [], "mark": mark}
     # statement / hook / payoff / highlight / anything else: type on the set.
     return "CvgScene", common
 
@@ -252,8 +265,12 @@ def _scene_for(slide, theme=""):
     # print every line on a rounded cream card over a gradient table, which reads as a UI
     # panel pasted onto the generated paper art. Cvg* scenes drop the card: the set fills
     # the frame, cut-outs stand in it, type sits on the paper. Checked BEFORE the shared
-    # papercraft map so it wins for this theme only.
-    if theme == "circumvent":
+    # papercraft map so it wins for these themes only.
+    # 2026-08-06: the Cvg family is now the SHARED renderer for all six personal-show
+    # worlds (video brand system cutover) — world tokens in brands/papercraft.ts +
+    # ink.tsx carry each show's palette; the scene code is common. Adding a show =
+    # tokens + a theme key, never a new scene family.
+    if theme in _CVG_STYLE_THEMES:
         cvg = _circumvent_scene(slide, t, kicker, accent, headline)
         if cvg:
             return cvg
@@ -512,7 +529,9 @@ def build_spec(sp):
     # Without this guard it fell through to the legacy `else` below and stamped FOUNDERS WHO
     # FINISH / davesaunders.net onto the end of a Circumvent film — the same cross-brand leak
     # this block already guards wte-guide against.
-    _NO_STING = ("wte-guide", "circumvent")
+    # The six personal-show worlds likewise end on their own CTA card (brand system
+    # 2026-08-06); the legacy BrandSting would stamp the wrong brand on five of them.
+    _NO_STING = ("wte-guide",) + _CVG_STYLE_THEMES
     if sp.data.get("theme") not in _NO_STING and sp.data.get("sting", width >= height):
         # The sting is THEME-KEYED (branding isolation, operator direction 2026-07-15).
         # Each channel owns its brand; nothing here is a global default.
@@ -589,7 +608,7 @@ def _stage_images(sp, spec, public):
     # `set` = Papercraft Motion backdrop (papercraft-motion-spec.md §8). Paths under
     # papercraft/ are shared brand set dressing staged wholesale by render() — leave
     # them un-rebased so staticFile('papercraft/...') resolves.
-    ASSET_FIELDS = ("image", "bottomImage", "set", "video")
+    ASSET_FIELDS = ("image", "bottomImage", "set", "video", "mark")
 
     def _stage_one(img):
         # chibi/ refs are staged from the private pose library by _stage_chibi (which runs
@@ -733,6 +752,35 @@ def _copy_music_license(mp, proj_dir, log):
 
 
 def render(sp, log=print, frames=None, out=None):
+    """Render every aspect listed in project.json `aspects` (falling back to the primary
+    `aspect`), one final muxed mp4 per aspect. The `aspects` list was a deck-engine
+    feature this engine silently ignored — the CVG pilot (2026-08-06) shipped its 4:5 by
+    hand-flipping project.json, which this loop retires. A `frames` slice or explicit
+    `out` path constrains the pass to the primary aspect only (previews don't need every
+    cut). sp.data is restored even on failure so a crashed pass can't leave the project
+    file's dims flipped on disk-reload paths."""
+    aspects = list(sp.data.get("aspects") or [sp.data.get("aspect", "9:16")])
+    if frames or out:
+        aspects = [sp.data.get("aspect", "9:16")]
+    orig = {k: sp.data.get(k) for k in ("aspect", "width", "height")}
+    from .project import ASPECTS as _DIMS
+    results = []
+    try:
+        for a in aspects:
+            w, h = _DIMS.get(a, (orig["width"], orig["height"]))
+            sp.data.update({"aspect": a, "width": w, "height": h})
+            results.append(_render_one(sp, log=log, frames=frames, out=out))
+    finally:
+        sp.data.update({k: v for k, v in orig.items() if v is not None})
+    if len(results) == 1:
+        return results[0]
+    combined = dict(results[0])
+    combined["video"] = [r["video"] for r in results]
+    combined["aspects_rendered"] = aspects
+    return combined
+
+
+def _render_one(sp, log=print, frames=None, out=None):
     """Render `sp` via Remotion -> the final muxed mp4. `frames` (e.g. '0-2400') renders a
     range for fast preview. The heavy headless render should be wrapped by the render-lock."""
     if not (REMOTION_DIR / "node_modules").exists():
@@ -772,11 +820,24 @@ def render(sp, log=print, frames=None, out=None):
     _pcraft = REMOTION_DIR / "public" / "papercraft"
     if _pcraft.exists():
         shutil.copytree(_pcraft, public / "papercraft", dirs_exist_ok=True)
-    # Circumvent's own library (sequestered from the FWF world, 2026-07-30). Staged the
-    # same way so deck refs like "papercraft-circumvent/sets/set_ranch.png" resolve.
-    _cvg = REMOTION_DIR / "public" / "papercraft-circumvent"
-    if _cvg.exists():
-        shutil.copytree(_cvg, public / "papercraft-circumvent", dirs_exist_ok=True)
+    # Per-show papercraft libraries (papercraft-circumvent since 2026-07-30; the six
+    # personal-show libraries since 2026-08-06). Staged wholesale, but ONLY the libraries
+    # this deck actually references — copying all of them into every render's public dir
+    # would grow with each new show for no benefit.
+    _lib_refs = set()
+    for _scene in spec["scenes"]:
+        _f = _scene.get("fields") or {}
+        for _v in [_f.get(k) for k in ("image", "bottomImage", "set", "video", "mark")] + \
+                  [p.get("image") for p in (_f.get("props") or []) if isinstance(p, dict)]:
+            if isinstance(_v, str) and _v.startswith("papercraft-"):
+                _lib_refs.add(_v.split("/", 1)[0])
+    for _lib_name in sorted(_lib_refs):
+        _lib_dir = REMOTION_DIR / "public" / _lib_name
+        if _lib_dir.exists():
+            shutil.copytree(_lib_dir, public / _lib_name, dirs_exist_ok=True)
+        else:
+            log(f"remotion: WARNING deck references {_lib_name}/ but "
+                f"remotion/public/{_lib_name} does not exist — those refs will 404")
     # Blank paper substrates (papercraft-substrate-plan.md). Unlike the two libraries above
     # these are never named in a deck — components pick a substrate internally — so they
     # must be staged unconditionally or PaperNote renders nothing.
