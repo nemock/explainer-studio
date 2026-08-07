@@ -47,7 +47,13 @@ export const Captions: React.FC<{
   fontSize: number;
   theme?: string;
   accentColor?: string;
-}> = ({words, bottomPx, fontSize, theme, accentColor}) => {
+  // Width reserved on the right for the chibi presenter (0 when he is off). The block is
+  // narrowed AND re-centred into the remaining area, so a long caption can never grow
+  // sideways under him — the operator's "subtitles never land on the chibi" rule needs
+  // horizontal separation as well as the vertical margin, because captions are anchored
+  // to the bottom and wrap UPWARD into his band.
+  reserveRightPx?: number;
+}> = ({words, bottomPx, fontSize, theme, accentColor, reserveRightPx = 0}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const t = frame / fps;
@@ -83,7 +89,7 @@ export const Captions: React.FC<{
   const page = pages.find((p) => active >= p.startIdx && active <= p.endIdx) || pages[0];
 
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'flex-end', paddingBottom: bottomPx}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'flex-end', paddingBottom: bottomPx, paddingRight: reserveRightPx}}>
       <div
         style={{
           display: 'flex',

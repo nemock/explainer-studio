@@ -147,6 +147,38 @@ Each entry: **what · when · spec fields · motion · don't.**
 - **Timeline** — events appear along a line in time (auto item-synced).
 *Rule:* build in sync with the explanation; never reveal the whole diagram at once.
 
+### G2. The chibi presenter (IMPLEMENTED 2026-08-07 — on EVERY scene, automatic)
+
+Dave's cartoon stand-in stands beside the content on **every slide** of a landscape
+personal-show render. This is automatic — the engine assigns a pose to every scene, so a
+deck needs no authoring at all to get it. Operator directive: *"if the chibis are only on
+one or two slides, then they don't actually make sense at all."*
+
+- **You may author `"chibi": "<pose-filename>"` on any slide** to pick that scene's pose
+  (no `chibi/` prefix needed, `.png` optional). Everything you don't author takes the
+  engine's neutral rotation. Optional `"chibiFlip": true` mirrors him.
+- **Author a pose where the beat has a specific attitude** — thumbs-up on a concession,
+  counting-three on a three-part definition, weighing-options at a which-half turn. Leave
+  the rest alone: the rotation is deliberately neutral because a pose that contradicts the
+  line is worse than a calm one.
+- **Poses that point must point at the content.** He stands at the frame's RIGHT, so an
+  asymmetric pose has to gesture toward the viewer's LEFT. Don't trust the filenames — the
+  character model mirrors handedness freely (its own README says so). Look at a contact
+  sheet before picking one.
+- **He is the top layer**, above the scene, the annotations and the captions: the viewer
+  reads him as Dave presenting, not as scene furniture.
+- **He can never cover anything**, because the content layer is scaled out of his lane and
+  the captions reserve it too. That is a layout guarantee, so you do not need to design
+  around him — but note every slide's content is ~19% narrower than the full frame, which
+  is why schematics should still spread across the canvas rather than crowd the right.
+- **Per project:** `"presenter": {"enabled": false}` in `project.json` opts out;
+  `"charHeightFrac"` (0.18–0.22, default 0.22) tunes his size.
+- **Never on Circumvent** (separate brand, hard rule) and **skipped on portrait** — a 9:16
+  lane would eat a third of the frame, so Shorts are unaffected.
+
+Engine: `ChibiPresenter.tsx` + `_assign_chibi` in `remotion_engine.py`. Full rationale in
+`make_money/routine_changes/2026-08-07-chibi-presenter-on-every-slide.md`.
+
 ### H. The annotation layer (IMPLEMENTED 2026-07-04 — hand-drawn, narration-cued)
 Any slide can carry `annotations: [...]` — an overlay ON TOP of the scene, drawn in
 0-1 FULL-FRAME space, each element firing on a spoken cue. Two families, freely mixed:

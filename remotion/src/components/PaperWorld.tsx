@@ -101,6 +101,28 @@ export const placeStyle = (frame: number, fps: number, height: number, at: numbe
   };
 };
 
+// --- portrait layout (2026-08-07) -------------------------------------------
+// The papercraft family was authored for 16:9 and sizes everything off frame HEIGHT. In
+// portrait, height is the LONG side, so type came out ~1.8x too big and side-by-side
+// layouts crushed into columns too narrow to hold their own words. The Cvg* family hit
+// exactly this and fixed it three ways (2026-08-07); this hook is the same three moves,
+// shared, so the paper components read one source of truth:
+//
+//   M        the MIN dimension — what type and spacing should track. In landscape
+//            M === height, so every landscape render is pixel-identical to before.
+//   portrait switch for layouts that must stack rather than sit side by side.
+//   reserve  px of the frame bottom the burned-in captions own (portrait only). These
+//            components paint their own full-bleed table, so Video.tsx skips them in its
+//            content inset (FULL_BLEED) and they hold the band back themselves — as
+//            padding on their content, with the table still running edge to edge.
+//
+// 0.30: captions sit at 0.16h with a block ~0.10h tall, so content clears at ~0.72.
+export const usePaperLayout = () => {
+  const {width, height} = useVideoConfig();
+  const portrait = height > width;
+  return {portrait, M: Math.min(width, height), reserve: portrait ? height * 0.3 : 0};
+};
+
 // Pure (non-hook) popup physics — for hinged elements created in loops (stairs, trays).
 export const popupStyle = (frame: number, fps: number, at: number): React.CSSProperties => {
   const e = spring({frame: frame - at, fps, config: HINGE});
@@ -109,6 +131,77 @@ export const popupStyle = (frame: number, fps: number, at: number): React.CSSPro
     transform: `perspective(1200px) rotateX(${(85 * (1 - e)).toFixed(2)}deg)`,
     transformOrigin: '50% 100%',
   };
+};
+
+// --- the prop layer (2026-08-07) --------------------------------------------
+// Bottom-corner cut-out props for EVERY Paper* scene. PaperSetHook stages its own props
+// inside the set's parallax planes; no other Paper* type had a props layer at all, so a
+// deck's `props` were silently dropped everywhere except the hook (found building #56).
+// Props here STAND on a baseline in a corner, clear of both the centred content card and
+// the burned-in caption band. Deterministic (placeStyle physics), like the rest of the world.
+//
+// This is SET DRESSING — a tag, a magnifier, a generated object. It is NOT the presenter:
+// the chibi is a global layer (ChibiPresenter, mounted by Video.tsx above everything, one
+// pose per scene) and needs no deck authoring. Props still land clear of him without doing
+// anything, because Video.tsx scales the whole content layer out of his right-hand lane.
+//
+// item: {image, place?, h?, w?, baseline?, flip?, at?|cueFrame?}
+//   place     0..1 x centre. Default alternates left (0.13) then right (0.85) — the
+//             corners a centred card (max ~0.66w) never reaches. Left goes first because
+//             the right side is where the presenter stands.
+//   h         height as a fraction of FRAME height (default 0.18). `w` (fraction of frame
+//             width) is accepted for parity with the hook's prop shape; `h` wins if both.
+//   baseline  0..1 foot line, in FRAME space. The default clears the caption block: a
+//             two-line landscape page starts ~0.76 down, so feet land at 0.74; portrait
+//             captions are set larger (0.032h) and start ~0.74, so feet land at 0.72.
+//             Frame space is right for this family: Video.tsx's portrait caption reserve
+//             is skipped for the papercraft table components (they own the full frame), so
+//             their box IS the frame. An explicit baseline wins and owns its collisions.
+//   at        cue frame (number). An [x, y] ARRAY — the hook's positional shape — is read
+//             for its x only: props here stand on the baseline, they never float.
+//
+// Landscape is the case this layer is for. Portrait keeps no free corner (wide card,
+// captions in the lower third), so build_spec drops mapped props there with a run.log
+// warning; anything that still reaches here on a portrait frame renders as authored.
+export const PaperProps: React.FC<{items?: any[]}> = ({items}) => {
+  const W = useWorld();
+  const frame = useCurrentFrame();
+  const {fps, width, height} = useVideoConfig();
+  if (!items || !items.length) return null;
+  const portrait = height > width;
+  return (
+    <>
+      {items.map((p: any, i: number) => {
+        if (!p || !p.image) return null;
+        const at = typeof p.at === 'number' ? p.at : (p.cueFrame ?? 3 + i * 5);
+        const x = p.place ?? (Array.isArray(p.at) ? p.at[0] : i % 2 === 0 ? 0.13 : 0.85);
+        const size: React.CSSProperties = p.h ? {height: height * p.h}
+          : p.w ? {width: width * p.w}
+          : {height: height * 0.18};
+        const base = p.baseline ?? (portrait ? 0.72 : 0.74);
+        return (
+          // zIndex 3: props are objects standing in the set — in front of the placed
+          // cards, the same depth rule PaperSetHook uses for its stage props.
+          <div key={i} style={{position: 'absolute', zIndex: 3, pointerEvents: 'none',
+                               left: `${(x * 100).toFixed(2)}%`, bottom: height * (1 - base),
+                               transform: 'translateX(-50%)', ...size}}>
+            <div style={{position: 'relative', height: '100%',
+                         ...placeStyle(frame, fps, height, at)}}>
+              {/* contact shadow so the cut-out sits ON the table rather than floating */}
+              <div style={{position: 'absolute', left: '50%', bottom: -height * 0.006, width: '52%',
+                           height: height * 0.022, transform: 'translateX(-50%)', background: W.shadow,
+                           borderRadius: '50%', filter: 'blur(9px)',
+                           opacity: interpolate(frame, [at + 3, at + 7], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})}} />
+              <Img src={staticFile(p.image)}
+                   style={{height: size.height ? '100%' : 'auto', width: size.width ? '100%' : 'auto',
+                           display: 'block', position: 'relative',
+                           transform: p.flip ? 'scaleX(-1)' : undefined}} />
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
 };
 
 // --- tear transition (spec §4) ----------------------------------------------
@@ -190,9 +283,12 @@ export const PaperTable: React.FC<{
                    transform: `rotate(${(-2 + r3 * 5).toFixed(2)}deg)`, boxShadow: sheetShadow}} />
       {/* vignette toward groundDeep */}
       <AbsoluteFill style={{background: `radial-gradient(120% 105% at 50% 42%, transparent 45%, ${world.groundDeep} 100%)`}} />
-      {/* key light: wide + soft by default; tightens on cue */}
+      {/* key light: wide + soft by default; tightens on cue. The two colours are world
+          tokens with the original values as defaults, so a LIGHT ground can fall off to
+          warm kraft instead of near-black — on cream the ink surround read as grey dirt
+          in the corners (2026-08-07). Dark worlds are unchanged. */}
       <AbsoluteFill style={{
-        background: `radial-gradient(${radius}% ${radius * 0.85}% at 50% 40%, rgba(255,246,230,${(0.10 + 0.06 * tight).toFixed(3)}) 0%, rgba(255,246,230,0) 62%, rgba(10,3,20,${surround.toFixed(3)}) 100%)`,
+        background: `radial-gradient(${radius}% ${radius * 0.85}% at 50% 40%, rgba(${world.lightTint ?? '255,246,230'},${(0.10 + 0.06 * tight).toFixed(3)}) 0%, rgba(${world.lightTint ?? '255,246,230'},0) 62%, rgba(${world.lightSurround ?? '10,3,20'},${surround.toFixed(3)}) 100%)`,
       }} />
     </AbsoluteFill>
   );

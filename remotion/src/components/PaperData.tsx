@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
-import {useWorld, CameraMove, PLANE, Plane, PaperTable, PaperCard, resolveCamera, usePlace, popupStyle, placeStyle, flick} from './PaperWorld';
+import {useWorld, CameraMove, PLANE, Plane, PaperTable, PaperCard, PaperProps, usePaperLayout, resolveCamera, usePlace, popupStyle, placeStyle, flick} from './PaperWorld';
 import {PaperSheet} from './PaperNote';
 
 // Papercraft Motion — data & structure family (papercraft-motion-spec.md §7).
@@ -11,12 +11,17 @@ import {PaperSheet} from './PaperNote';
 // W now comes from the world context (per component, below) so each paper
 // channel keeps its own ground; see PaperWorld.WorldProvider (2026-07-26).
 
+// `height` is the type scale (the MIN dimension since the portrait pass — frame height in
+// landscape, so nothing moves there); `top` is a real vertical position and stays in frame
+// units, pulled up a little in portrait where the frame is much taller than it is wide.
 const Kicker: React.FC<{text?: string; height: number}> = ({text, height}) => {
   const W = useWorld();
+  const {portrait} = usePaperLayout();
+  const {height: frameH} = useVideoConfig();
   return text ? (
-    <div style={{position: 'absolute', top: height * 0.12, left: 0, right: 0, textAlign: 'center',
+    <div style={{position: 'absolute', top: frameH * (portrait ? 0.08 : 0.12), left: 0, right: 0, textAlign: 'center',
                  fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.026, letterSpacing: 5,
-                 textTransform: 'uppercase', color: W.accentSoft}}>{text}</div>
+                 textTransform: 'uppercase', color: W.kicker ?? W.accentSoft}}>{text}</div>
   ) : null;
 };
 
@@ -28,7 +33,10 @@ const Kicker: React.FC<{text?: string; height: number}> = ({text, height}) => {
 export const PaperStairs: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
   const W = useWorld();
   const frame = useCurrentFrame();
-  const {fps, width, height} = useVideoConfig();
+  const {fps, width, height: frameH} = useVideoConfig();
+  // Type/step metrics track the min dimension; the staircase's own floor and height are
+  // frame-vertical, so they get portrait numbers that keep it clear of the caption band.
+  const {portrait, M: height} = usePaperLayout();
   const raw: number[] = (fields.points || []).map((p: any) => (typeof p === 'number' ? p : p?.value ?? 0));
   const pts = raw.slice(0, 8);
   const n = Math.max(2, pts.length);
@@ -42,10 +50,12 @@ export const PaperStairs: React.FC<{fields: any; durationInFrames: number}> = ({
   const GAP = Math.max(7, Math.round((lastAt - durationInFrames * 0.12) / Math.max(1, n - 1)));
   const stepAt = (i: number) => lastAt - (n - 1 - i) * GAP;
 
-  const areaW = width * 0.6, stepW = areaW / n;
-  const baseY = height * 0.78, maxH = height * 0.4;
-  const topY = (i: number) => baseY - (height * 0.09 + norm(pts[i]) * maxH);
-  const x = (i: number) => width * 0.2 + i * stepW;
+  const areaW = width * (portrait ? 0.84 : 0.6), stepW = areaW / n;
+  // Portrait: floor at 0.66 (clear of the caption band) and a shorter rise, so the whole
+  // staircase plus its end tag fits between the kicker and the captions.
+  const baseY = frameH * (portrait ? 0.66 : 0.78), maxH = frameH * (portrait ? 0.3 : 0.4);
+  const topY = (i: number) => baseY - (frameH * (portrait ? 0.07 : 0.09) + norm(pts[i]) * maxH);
+  const x = (i: number) => width * (portrait ? 0.08 : 0.2) + i * stepW;
 
   // the pawn climbs: piecewise ease to each newly-popped step top (tiny hop arc)
   let px = x(0) + stepW / 2, py = topY(0);
@@ -54,12 +64,13 @@ export const PaperStairs: React.FC<{fields: any; durationInFrames: number}> = ({
     px += (x(i) + stepW / 2 - px) * t;
     py += (topY(i) - py) * t - Math.sin(Math.PI * t) * height * 0.045;
   }
-  const pawnW = width * 0.045;
+  const pawnW = width * (portrait ? 0.07 : 0.045);
   const pawnIn = usePlace(stepAt(0) + 2);
 
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <PaperTable seed={fields.endLabel || 'stairs'} tightenAt={lastAt} mood={fields.kind === 'bad' ? 'hard' : 'soft'} />
+      <PaperProps items={fields.props} />
       <Kicker text={fields.kicker} height={height} />
       {pts.map((_, i) => {
         const st = popupStyle(frame, fps, stepAt(i));
@@ -79,7 +90,7 @@ export const PaperStairs: React.FC<{fields: any; durationInFrames: number}> = ({
              filter: `drop-shadow(0 ${height * 0.01}px ${height * 0.018}px ${W.shadow})`}} />
       </div>
       {fields.endLabel ? (
-        <div style={{position: 'absolute', left: Math.min(x(n - 1) + stepW * 0.1, width * 0.78), top: topY(n - 1) - height * 0.26,
+        <div style={{position: 'absolute', left: Math.min(x(n - 1) + stepW * 0.1, width * (portrait ? 0.5 : 0.78)), top: topY(n - 1) - height * 0.26,
                      ...placeStyle(frame, fps, height, lastAt + 8)}}>
           <PaperCard id={`stairlbl:${fields.end_label ?? ''}`} family="card_tag" style={{display: 'inline-block', padding: `${height * 0.012}px ${width * 0.016}px`, borderRadius: 10, transform: 'rotate(1.4deg)'}}>
             <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.03, color: W.accent, whiteSpace: 'nowrap'}}>{fields.endLabel}</div>
@@ -97,14 +108,18 @@ export const PaperStairs: React.FC<{fields: any; durationInFrames: number}> = ({
 export const PaperCompare: React.FC<{fields: any}> = ({fields}) => {
   const W = useWorld();
   const frame = useCurrentFrame();
-  const {fps, width, height} = useVideoConfig();
+  const {fps, width} = useVideoConfig();
+  // Portrait stacks the two trays top/bottom — the same collision CvgCompare fixed: two
+  // columns in a 1080-wide frame are too narrow to hold a tray's own words.
+  const {portrait, M: height, reserve} = usePaperLayout();
   const cf = fields.cueFrames || {};
   const lAt = cf.l ?? 8, rAt = cf.r ?? 20;
   const tray = (d: any, at: number) => {
     const bad = d?.kind === 'bad';
     const st = popupStyle(frame, fps, at);
     return (
-      <div style={{flex: 1, position: 'relative', maxWidth: width * 0.36}}>
+      <div style={{flex: portrait ? '0 0 auto' : 1, position: 'relative',
+                   width: portrait ? width * 0.78 : undefined, maxWidth: portrait ? undefined : width * 0.36}}>
         <div style={{position: 'absolute', left: '50%', bottom: -height * 0.018, width: '86%', height: height * 0.036,
                      transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%',
                      filter: `blur(${bad ? 12 : 8}px)`, opacity: frame >= at ? (bad ? 1 : 0.75) : 0}} />
@@ -127,9 +142,12 @@ export const PaperCompare: React.FC<{fields: any}> = ({fields}) => {
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <PaperTable seed={(fields.left?.title || '') + 'vs'} />
+      <PaperProps items={fields.props} />
       <Kicker text={fields.kicker} height={height} />
-      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
-        <div style={{display: 'flex', gap: width * 0.05, width: '100%', justifyContent: 'center', alignItems: 'stretch'}}>
+      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve}}>
+        <div style={{display: 'flex', flexDirection: portrait ? 'column' : 'row',
+                     gap: portrait ? height * 0.05 : width * 0.05, width: '100%',
+                     justifyContent: 'center', alignItems: portrait ? 'center' : 'stretch'}}>
           {tray(fields.left, lAt)}
           {tray(fields.right, rAt)}
         </div>
@@ -146,17 +164,23 @@ export const PaperCompare: React.FC<{fields: any}> = ({fields}) => {
 export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
   const W = useWorld();
   const frame = useCurrentFrame();
-  const {fps, width, height} = useVideoConfig();
+  const {fps, width, height: frameH} = useVideoConfig();
+  // Portrait runs the flow DOWN the frame instead of across it (CvgSteps' fix): a row of
+  // cards in a 1080-wide frame gives each step a column narrower than its own label.
+  const {portrait, M: height, reserve} = usePaperLayout();
   const steps: string[] = (fields.steps || []).map((s: any) => (typeof s === 'string' ? s : s?.title || ''));
   const n = Math.max(1, steps.length);
   const itemTimes: (number | null)[] = fields.itemTimes || [];
   const per = durationInFrames / (n + 1);
   const at = (i: number) => (itemTimes[i] != null ? (itemTimes[i] as number) : Math.round((i + 0.5) * per));
 
-  const areaW = width * 0.86, cardW = Math.min(width * 0.24, areaW / n - width * 0.02);
-  const cx = (i: number) => width * 0.07 + (areaW / n) * (i + 0.5);
+  const areaW = width * 0.86, cardW = portrait ? width * 0.72 : Math.min(width * 0.24, areaW / n - width * 0.02);
+  const cx = (i: number) => (portrait ? width * 0.5 : width * 0.07 + (areaW / n) * (i + 0.5));
+  // vertical lane for the portrait stack: below the kicker, above the caption reserve
+  const areaTop = frameH * 0.17, areaH = frameH - areaTop - reserve;
+  const cy = (i: number) => areaTop + (areaH / n) * (i + 0.5);
 
-  const moves: CameraMove[] = n > 3
+  const moves: CameraMove[] = n > 3 && !portrait
     ? steps.slice(1).map((_, i) => ({at: at(i + 1), to: {x: 0.5 + (cx(i + 1) / width - 0.5) * 0.3, zoom: 1.05}}))
     : [];
   const cam = resolveCamera(frame, fps, moves);
@@ -164,6 +188,9 @@ export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({f
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <Plane cam={cam} factor={PLANE.table}><PaperTable seed={steps[0] || 'steps'} /></Plane>
+      {/* props sit OUTSIDE the camera planes: they stand at the frame's corners, so they
+          must not ride the lateral camera step that tracks the active flow card */}
+      <PaperProps items={fields.props} />
       <Plane cam={cam} factor={PLANE.stage}>
         <Kicker text={fields.kicker} height={height} />
         {steps.map((s, i) => {
@@ -172,15 +199,25 @@ export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({f
           return (
             <React.Fragment key={i}>
               {i > 0 ? (
-                // the connector between stages is a laid paper strip, not a drawn bar
-                <div style={{position: 'absolute', left: cx(i - 1), top: height * 0.545, width: cx(i) - cx(i - 1),
-                             height: height * 0.014, borderRadius: 6,
-                             transform: `scaleX(${stripT})`, transformOrigin: 'left center',
-                             boxShadow: `0 ${height * 0.006}px ${height * 0.014}px ${W.shadow}`}}>
+                // the connector between stages is a laid paper strip, not a drawn bar —
+                // horizontal between columns at 16:9, vertical between rows in portrait
+                <div style={portrait
+                  // sits in the GAP between two stacked cards, centred on the midpoint —
+                  // a strip spanning card-centre to card-centre paints across their labels
+                  ? {position: 'absolute', left: cx(i) - height * 0.007,
+                     top: (cy(i - 1) + cy(i)) / 2 - height * 0.025, width: height * 0.014,
+                     height: height * 0.05, borderRadius: 6,
+                     transform: `scaleY(${stripT})`, transformOrigin: 'center top',
+                     boxShadow: `0 ${height * 0.006}px ${height * 0.014}px ${W.shadow}`}
+                  : {position: 'absolute', left: cx(i - 1), top: frameH * 0.545, width: cx(i) - cx(i - 1),
+                     height: height * 0.014, borderRadius: 6,
+                     transform: `scaleX(${stripT})`, transformOrigin: 'left center',
+                     boxShadow: `0 ${height * 0.006}px ${height * 0.014}px ${W.shadow}`}}>
                   <PaperSheet id={`strip:${i}`} family="card_tag" radius={6} edge={5} tint={W.sheetAlt} />
                 </div>
               ) : null}
-              <div style={{position: 'absolute', left: cx(i) - cardW / 2, top: height * 0.42, width: cardW}}>
+              <div style={{position: 'absolute', left: cx(i) - cardW / 2,
+                           top: portrait ? cy(i) - height * 0.06 : frameH * 0.42, width: cardW}}>
                 <div style={{position: 'absolute', left: '50%', bottom: -height * 0.014, width: '82%', height: height * 0.028,
                              transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(7px)',
                              opacity: frame >= at(i) ? 1 : 0}} />
@@ -206,7 +243,8 @@ export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({f
 export const PaperList: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
   const W = useWorld();
   const frame = useCurrentFrame();
-  const {fps, width, height} = useVideoConfig();
+  const {fps, width} = useVideoConfig();
+  const {M: height, reserve} = usePaperLayout();
   const items: string[] = fields.items || [];
   const itemTimes: (number | null)[] = fields.itemTimes || [];
   const per = durationInFrames / Math.max(1, items.length + 1);
@@ -214,8 +252,9 @@ export const PaperList: React.FC<{fields: any; durationInFrames: number}> = ({fi
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <PaperTable seed={fields.title || fields.kicker || 'list'} />
+      <PaperProps items={fields.props} />
       <Kicker text={fields.kicker} height={height} />
-      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
+      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve}}>
         <div>
           {fields.title ? (
             <div style={{...placeStyle(frame, fps, height, 4), marginBottom: height * 0.024}}>
@@ -254,15 +293,21 @@ export const PaperList: React.FC<{fields: any; durationInFrames: number}> = ({fi
 export const PaperBookCTA: React.FC<{fields: any}> = ({fields}) => {
   const W = useWorld();
   const frame = useCurrentFrame();
-  const {width, height} = useVideoConfig();
+  const {width} = useVideoConfig();
+  // Portrait stands the book ABOVE the offer card rather than beside it — side by side,
+  // neither the cover nor the headline gets a usable width in a 1080-wide frame.
+  const {portrait, M: height, reserve} = usePaperLayout();
   const book = usePlace(6);
   const card = usePlace(16);
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <PaperTable seed={fields.headline || 'cta'} />
-      <AbsoluteFill style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: width * 0.05, padding: '0 6%'}}>
+      <PaperProps items={fields.props} />
+      <AbsoluteFill style={{flexDirection: portrait ? 'column' : 'row', alignItems: 'center', justifyContent: 'center',
+                            gap: portrait ? height * 0.04 : width * 0.05,
+                            padding: portrait ? `0 6% ${reserve}px` : '0 6%'}}>
         {fields.image ? (
-          <div style={{position: 'relative', width: width * 0.24}}>
+          <div style={{position: 'relative', width: width * (portrait ? 0.42 : 0.24)}}>
             <div style={{position: 'absolute', left: '50%', bottom: -height * 0.022, width: '92%', height: height * 0.04,
                          transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(11px)', opacity: book.shadowOpacity}} />
             <div style={book.object}>
@@ -271,7 +316,7 @@ export const PaperBookCTA: React.FC<{fields: any}> = ({fields}) => {
             </div>
           </div>
         ) : null}
-        <div style={{position: 'relative', maxWidth: width * 0.44}}>
+        <div style={{position: 'relative', maxWidth: width * (portrait ? 0.86 : 0.44)}}>
           <div style={{position: 'absolute', left: '50%', bottom: -height * 0.016, width: '88%', height: height * 0.03,
                        transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(9px)', opacity: card.shadowOpacity}} />
           <PaperCard id={`ctacard:${fields.headline ?? ''}`} style={{...card.object, padding: `${height * 0.03}px ${width * 0.028}px`, borderRadius: 20}}>

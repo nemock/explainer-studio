@@ -20,6 +20,18 @@ export type PaperWorldTokens = {
   // channels already rendering with the originals (2026-07-29).
   hookSheet: string;
   hookInk: string;
+  // Key-light colours as bare "r,g,b" triples; PaperTable composes the alpha. Optional,
+  // and both default to the original hardcoded values, so every world that predates this
+  // renders byte-identically. They exist because a LIGHT ground needs a warm falloff:
+  // the original near-black surround (10,3,20) is invisible on a dark table and reads as
+  // grey dirt on cream (2026-08-07).
+  lightTint?: string;
+  lightSurround?: string;
+  // Kicker TEXT colour. Defaults to accentSoft, which is what every dark world has always
+  // used. It needs its own token because accentSoft does double duty — kicker text AND
+  // chip/band fills — and on a LIGHT ground one value cannot do both: a fill light enough
+  // for navy text on it is far too pale to read as text on cream (2026-08-07).
+  kicker?: string;
 };
 
 // FWF / davesaunders.net (the nemock-deep-dive channel)
@@ -169,9 +181,44 @@ export const PAPER_FMF: PaperWorldTokens = {
   hookSheet: '#FBEFE8', hookInk: '#5A1010',
 };
 
-// Theme -> world. Every paper channel owns its ground; anything unmapped keeps FWF
-// (zero regression for nemock-deep-dive and every deck that predates this).
+// nemock-deep-dive — Dave's deep dives. THE CREAM WORLD (2026-08-07).
+//
+// Every other paper channel was given its own world and this one never was, so it fell
+// through to PAPER_FWF and rendered its Paper* scenes on FWF's violet table — while the
+// channel's own locked spec (skills/explainer2/references/paper-world/STYLE.md) says the
+// base sheet is cream #f4ecd6 with navy ink and ONE green accent, and while its Magnific
+// scene art is generated on exactly that cream. The result was a half-and-half deck: the
+// Paper* text/data scenes dark violet, the Figure/Schematic/StatGrid scenes cream. This
+// is the missing world, not a repaint — PAPER_FWF is untouched and the `fwf` show keeps
+// its violet (papercraft-motion-migration.md §5's "plan one video fully papercraft").
+//
+// Here the PAGE is the table: ground is the same cream the art is drawn on, so a figure
+// sits on the sheet rather than on a panel floating over it. Cards are brighter than the
+// page so they still lift off it, and the vignette/shadow run warm kraft rather than ink.
+export const PAPER_NEMOCK: PaperWorldTokens = {
+  ground: '#f4ecd6',
+  groundDeep: '#e3d4b0',
+  sheet: '#eee1c2',
+  sheetAlt: '#e7d8b6',
+  paper: '#fdfaf3',
+  paperShade: '#e0d3b8',
+  ink: '#2c1e4e',
+  accent: '#3ddc84',
+  accentSoft: '#a9e7c6',
+  shadow: 'rgba(120,92,40,.30)',
+  hookSheet: '#f4ecd6',
+  hookInk: '#2c1e4e',
+  lightTint: '255,252,240',
+  lightSurround: '150,120,70',
+  // Exactly the green the CLASSIC components already use on this channel (ink.tsx ->
+  // BRAND.green). The whole point of this world is that a Paper* kicker and a Schematic
+  // kicker are the same colour on the same page.
+  kicker: '#3ddc84',
+};
+
+// Theme -> world. Every paper channel owns its ground; anything unmapped keeps FWF.
 const WORLD_BY_THEME: Record<string, PaperWorldTokens> = {
+  'nemock-deep-dive': PAPER_NEMOCK,
   'brg-deep-dive': PAPER_BRG_DEEP,
   'brg-paper': PAPER_BRG,
   'wte-guide': PAPER_WTE,

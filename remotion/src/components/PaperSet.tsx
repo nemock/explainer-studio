@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
-import {useWorld, Camera, CameraMove, PLANE, Plane, PaperTable, PaperCard, resolveCamera, usePlace, usePopup, flick, placeStyle} from './PaperWorld';
+import {useWorld, Camera, CameraMove, PLANE, Plane, PaperTable, PaperCard, PaperProps, usePaperLayout, resolveCamera, usePlace, usePopup, flick, placeStyle} from './PaperWorld';
 
 // Papercraft Motion — prototype scene components (papercraft-motion-spec.md §7).
 // PaperSetHook: multi-plane cold open. PaperPopCard: keep-card popup on the table.
@@ -54,7 +54,10 @@ const Placed: React.FC<{at: number; style?: React.CSSProperties; shadowW?: strin
 export const PaperSetHook: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
   const W = useWorld();
   const frame = useCurrentFrame();
-  const {width, height} = useVideoConfig();
+  const {width, height: frameH} = useVideoConfig();
+  // Beat cards stack in portrait (a row of three has no width at 1080) and the promise
+  // card sits above the caption band; type tracks the min dimension.
+  const {portrait, M: height, reserve} = usePaperLayout();
   const cf = fields.cueFrames || {};
   const beats: string[] = fields.beats || [];
   const beatAt = (i: number) => cf[`b${i + 1}`] ?? Math.round(((i + 1) / (beats.length + 2)) * durationInFrames * 0.5);
@@ -81,9 +84,10 @@ export const PaperSetHook: React.FC<{fields: any; durationInFrames: number}> = (
             <Placed at={p.cueFrame ?? 2}><Img src={staticFile(p.image)} style={{width: '100%', display: 'block'}} /></Placed>
           </div>
         ))}
-        {/* beat cards — place WITH the spoken beats, in a row */}
-        <div style={{position: 'absolute', left: 0, right: 0, top: height * 0.14, display: 'flex',
-                     justifyContent: 'center', gap: width * 0.02}}>
+        {/* beat cards — place WITH the spoken beats: a row at 16:9, a column in portrait */}
+        <div style={{position: 'absolute', left: 0, right: 0, top: frameH * (portrait ? 0.1 : 0.14), display: 'flex',
+                     flexDirection: portrait ? 'column' : 'row', alignItems: 'center',
+                     justifyContent: 'center', gap: portrait ? height * 0.018 : width * 0.02}}>
           {beats.map((b, i) => (
             <Placed key={i} at={beatAt(i)}>
               <PaperCard id={`beat:${i}:${b}`} family="card_tag" style={{transform: `rotate(${(i % 2 ? 1.6 : -1.4)}deg) scale(${flick(frame, beatAt(i))})`}}>
@@ -93,7 +97,8 @@ export const PaperSetHook: React.FC<{fields: any; durationInFrames: number}> = (
           ))}
         </div>
         {/* the promise headline — lands with the camera push */}
-        <div style={{position: 'absolute', left: '50%', top: height * 0.4, transform: 'translateX(-50%)', maxWidth: width * 0.62}}>
+        <div style={{position: 'absolute', left: '50%', top: portrait ? frameH * 0.46 : frameH * 0.4,
+                     transform: 'translateX(-50%)', maxWidth: width * (portrait ? 0.86 : 0.62)}}>
           <div style={{opacity: frame >= pushAt + 4 ? 1 : 0}}>
             <div style={{position: 'absolute', left: '50%', bottom: -height * 0.016, width: '88%', height: height * 0.034,
                          transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(8px)', opacity: head.shadowOpacity}} />
@@ -118,26 +123,35 @@ export const PaperSetHook: React.FC<{fields: any; durationInFrames: number}> = (
 export const PaperPopCard: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
   const W = useWorld();
   const frame = useCurrentFrame();
-  const {fps, width, height} = useVideoConfig();
+  const {fps, width, height: frameH} = useVideoConfig();
+  const {portrait, M: height} = usePaperLayout();
   const cf = fields.cueFrames || {};
   const popAt = cf.pop ?? 4;
   const inAt = cf.in ?? Math.round(durationInFrames * 0.45);
   const pop = usePopup(popAt);
   const cam = resolveCamera(frame, fps, [{at: inAt, to: {zoom: 1.1, y: 0.47}}]);
   // 16:9 caption band lives in the lower ~18%: keep the card (and its on-card sub-line)
-  // fully above it (the same lower-third lesson as the Shorts thirds layout).
-  const cardH = height * 0.64;
+  // fully above it (the same lower-third lesson as the Shorts thirds layout). Portrait
+  // captions take a deeper band, so the card shrinks and rides higher to clear it.
+  const cardH = portrait ? frameH * 0.44 : frameH * 0.64;
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <Plane cam={cam} factor={PLANE.table}><PaperTable seed={fields.label || 'card'} tightenAt={inAt} /></Plane>
+      {/* outside the planes: corner props stand still while the camera pushes in */}
+      <PaperProps items={fields.props} />
       <Plane cam={cam} factor={PLANE.stage}>
-        <div style={{position: 'absolute', left: '50%', top: '45%', transform: 'translate(-50%, -50%)'}}>
+        <div style={{position: 'absolute', left: '50%', top: portrait ? '36%' : '45%', transform: 'translate(-50%, -50%)'}}>
           {/* contact shadow grows as the card rises */}
           <div style={{position: 'absolute', left: '50%', bottom: -height * 0.02, width: '80%', height: height * 0.05,
                        transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(10px)', ...pop.shadow}} />
           <div style={{...pop.object, height: cardH}}>
             {fields.image ? (
-              <Img src={staticFile(fields.image)} style={{height: '100%', display: 'block'}} />
+              // maxWidth guard: a wide keep-card sized by HEIGHT alone runs off the frame
+              // (a 1.6:1 card at 0.44 of a 1920-tall portrait frame is wider than 1080).
+              // Only binds when the art would overflow, so normal card-shaped art is
+              // unchanged in either aspect.
+              <Img src={staticFile(fields.image)}
+                   style={{height: '100%', maxWidth: width * 0.92, objectFit: 'contain', display: 'block'}} />
             ) : null}
             <div style={{position: 'absolute', left: 0, right: 0, top: '64%', textAlign: 'center'}}>
               <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: cardH * 0.082, letterSpacing: 1, color: W.ink,
@@ -163,7 +177,10 @@ export const PaperPopCard: React.FC<{fields: any; durationInFrames: number}> = (
 export const PaperCounter: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
   const W = useWorld();
   const frame = useCurrentFrame();
-  const {fps, width, height} = useVideoConfig();
+  const {fps, width, height: frameH} = useVideoConfig();
+  // Portrait puts the number ABOVE its chip stack instead of beside it — side by side,
+  // a 1080-wide frame leaves the number tag hanging off the right edge.
+  const {portrait, M: height} = usePaperLayout();
   const value = fields.value ?? 0;
   const cf = fields.cueFrames || {};
   const land = cf.land ?? Math.round(durationInFrames * 0.55);
@@ -171,19 +188,21 @@ export const PaperCounter: React.FC<{fields: any; durationInFrames: number}> = (
   const chipAt = (i: number) => land - (nChips - 1 - i) * 6;
   const landed = Array.from({length: nChips}, (_, i) => frame >= chipAt(i)).filter(Boolean).length;
   const shown = Math.round(value * (landed / nChips));
-  const chipW = width * 0.2, chipH = height * 0.062;
+  const chipW = width * (portrait ? 0.34 : 0.2), chipH = height * 0.062;
 
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <PaperTable seed={fields.label || 'stat'} tightenAt={land} />
+      <PaperProps items={fields.props} />
       {fields.kicker ? (
-        <div style={{position: 'absolute', top: height * 0.14, left: 0, right: 0, textAlign: 'center', fontFamily: BRAND.font,
-                     fontWeight: 800, fontSize: height * 0.026, letterSpacing: 5, textTransform: 'uppercase', color: W.accentSoft}}>
+        <div style={{position: 'absolute', top: frameH * (portrait ? 0.09 : 0.14), left: 0, right: 0, textAlign: 'center', fontFamily: BRAND.font,
+                     fontWeight: 800, fontSize: height * 0.026, letterSpacing: 5, textTransform: 'uppercase', color: W.kicker ?? W.accentSoft}}>
           {fields.kicker}
         </div>
       ) : null}
       {/* the chip stack (grows upward from the table line) */}
-      <div style={{position: 'absolute', left: width * 0.33 - chipW / 2, bottom: height * 0.24, width: chipW}}>
+      <div style={{position: 'absolute', left: width * (portrait ? 0.5 : 0.33) - chipW / 2,
+                   bottom: frameH * (portrait ? 0.34 : 0.24), width: chipW}}>
         {Array.from({length: nChips}, (_, i) => {
           const p = placeStyle(frame, fps, height, chipAt(i));
           // seeded per-chip jitter (x + tilt) so the stack reads chip-by-chip, hand-placed
@@ -201,7 +220,10 @@ export const PaperCounter: React.FC<{fields: any; durationInFrames: number}> = (
                      opacity: interpolate(frame, [chipAt(0) + 3, chipAt(0) + 8], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})}} />
       </div>
       {/* the number tag */}
-      <div style={{position: 'absolute', left: width * 0.52, top: '50%', transform: `translateY(-50%) scale(${flick(frame, land)})`}}>
+      <div style={portrait
+        ? {position: 'absolute', left: '50%', top: frameH * 0.2, textAlign: 'center',
+           transform: `translateX(-50%) scale(${flick(frame, land)})`}
+        : {position: 'absolute', left: width * 0.52, top: '50%', transform: `translateY(-50%) scale(${flick(frame, land)})`}}>
         <PaperCard id={`num:${fields.label ?? fields.value ?? ''}`} style={{padding: `${height * 0.025}px ${width * 0.03}px`, borderRadius: 22,
                            boxShadow: `0 ${height * 0.02}px ${height * 0.045}px ${W.shadow}`}}>
           <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.15, lineHeight: 1, color: W.ink, fontVariantNumeric: 'tabular-nums'}}>

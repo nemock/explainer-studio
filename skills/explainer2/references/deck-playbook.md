@@ -218,6 +218,29 @@ motion-playbook §5/§2H). What you author in `deck.json`:
   `assemble{pieces[]{clip:[x,y,w,h], cue}}` builds the image in cued pieces;
   `highlight{..., cue}` wipes the marker on the phrase.
 
+## 4c-ii. `props` — corner set dressing on paper slides (2026-08-07)
+
+On the paper themes (`nemock-deep-dive` and the rest of the Paper\* family), **any**
+slide may carry `props` — small cut-out objects that stand in the frame's bottom
+corners beside the content:
+
+```jsonc
+"props": [{"image": "papercraft/elements/el_tag.png"},
+          {"image": "assets/imagegen/compass.png", "place": 0.85, "h": 0.2, "flip": true}]
+```
+
+- `place` 0–1 x centre (default: first prop left at 0.13, second right at 0.85),
+  `h` height as a fraction of frame height (default 0.18), `w` width fraction as an
+  alternative, `flip` mirrors, `baseline` 0–1 foot line (default clears the captions —
+  override it and you own the collision), `at` a cue frame number.
+- Props place with the house paper physics and a contact shadow, and they stay clear of
+  the caption band and the centred content card by default. **Landscape only:** in
+  portrait there is no free corner, so the engine drops them with a `run.log` warning.
+- Until 2026-08-07 only `hook` slides forwarded `props`; everywhere else they were
+  silently dropped. All paper types now carry them.
+- **Props are objects, not people.** The presenter is a separate automatic layer that
+  needs no deck authoring (motion-playbook §G2). Never author a `chibi/...` ref as a prop.
+
 ## 4d. Optional: generate STYLIZED elements with Magnific image-gen (proven 2026-07-14)
 
 An **optional** capability: when the Magnific MCP is connected (`mcp__magnific__*`

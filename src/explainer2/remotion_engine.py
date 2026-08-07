@@ -17,12 +17,109 @@ REMOTION_DIR = Path(__file__).resolve().parents[2] / "remotion"
 # The library lives OUTSIDE this public repo and is staged per-reference at render time,
 # same doctrine as library/doodles: private media — use, don't redistribute, never commit
 # poses here. Deck refs are "chibi/<pose>" (pose = a filename in the library, ".png"
-# optional), normally on a Cutout/props image so the presenter sits in a bottom corner at
-# 18–22% frame height with pose cuts on scene changes. Personal shows only — never
-# Circumvent. Override the root with $EXPLAINER_CHIBI_DIR (e.g. to point at a future v3).
+# optional). Since 2026-08-07 the presenter is a LAYER on every scene rather than a prop
+# on a few: author `chibi` on a deck slide to pick that scene's pose, otherwise the engine
+# rotates one in (_assign_chibi). Personal shows only — never Circumvent. Override the
+# root with $EXPLAINER_CHIBI_DIR (e.g. to point at a future v3).
 CHIBI_DIR = Path(os.environ.get(
     "EXPLAINER_CHIBI_DIR",
     "/Volumes/Casima/claudeCode/dave_chibi_character/v2/poses_normalized_tight"))
+
+# Presenter rotation (operator directive 2026-08-07). Dave's vision is a chibi on EVERY
+# slide, not a cameo on one or two: "if the chibis are only on one or two slides, then they
+# don't actually make sense at all." So the engine assigns a pose to every scene — an
+# authored `chibi` on the deck slide wins, otherwise it rotates this pool.
+#
+# The pool is deliberately NEUTRAL. An emotional pose that contradicts the beat is worse
+# than a calm one, so joy/anger/despair stay opt-in per slide; these read as "presenting,
+# listening, thinking" and sit under any line. He stands at the RIGHT of the frame, so
+# asymmetric poses here are the ones that gesture toward the content (viewer's left) or
+# read symmetrically — the library's other pointing poses aim the wrong way from that side
+# (the character library's own README warns that this model mirrors handedness freely).
+CHIBI_ROTATION = (
+    "01-presenting-right",      # open palm toward the content
+    "36-talking-hands",
+    "05-thinking",
+    "29-leaning-on-edge",
+    "08-presenting-both-hands",
+    "43-deadpan",
+    "27-holding-coffee-mug",
+    "54-signature-brow",
+    "12-counting-one",
+    "04-arms-crossed",
+)
+
+# Personal shows carry the presenter by default. Cut & Bond and the navy ISO world are
+# other looks entirely, so they are simply not on this list and a project may opt in.
+CHIBI_THEMES = ("nemock-deep-dive", "fwf", "mmt-tangerine", "ftt-study",
+                "wsc-goldenrod", "ttd-indigo", "fmf-alarm")
+
+# Circumvent is a SEPARATE BRAND and never carries Dave's stand-in (2026-08-06 brand
+# lock). That is a hard rule, not a default: a project file cannot switch it on.
+CHIBI_NEVER = ("circumvent",)
+
+
+def _assign_chibi(scenes, slides_by_id, seg_slides, data, log):
+    """Put a presenter pose on every scene. Returns the `presenter` spec block (or None).
+
+    Opt out per project with "presenter": {"enabled": false} in project.json; tune the
+    size with "charHeightFrac" (brand spec 0.18-0.22 of frame height, the CHARACTER's
+    height rather than the pose canvas, which carries transparent padding).
+    """
+    cfg = dict(data.get("presenter") or {})
+    theme = data.get("theme", "")
+    if theme in CHIBI_NEVER:
+        if cfg.get("enabled"):
+            log(f"remotion: the chibi presenter is not available on the {theme} brand — skipped")
+        return None
+    portrait = data["height"] > data["width"]
+    default_on = theme in CHIBI_THEMES and not portrait
+    enabled = bool(cfg.get("enabled", default_on))
+    if not enabled:
+        return None
+    if portrait:
+        # 9:16 has no width to give away; the lane would eat a third of the frame.
+        log("remotion: chibi presenter requested on a portrait render — skipped")
+        return None
+
+    # Resolve authored poses FIRST so the rotation can dodge its neighbours on both
+    # sides. Without the look-ahead, a rotated pose can land on the same pose the next
+    # slide authored, and a pose held across a cut reads as a frozen frame rather than
+    # as a presenter who moved.
+    authored = []
+    for i in range(len(scenes)):
+        slide = slides_by_id.get(seg_slides[i], {}) if i < len(seg_slides) else {}
+        pose = slide.get("chibi")
+        if pose:
+            pose = str(pose)
+            if pose.startswith("chibi/"):
+                pose = pose[len("chibi/"):]
+        authored.append(pose or None)
+
+    rot = 0
+    prev = None
+    for i, scene in enumerate(scenes):
+        pose = authored[i]
+        if not pose:
+            nxt = authored[i + 1] if i + 1 < len(authored) else None
+            for _ in range(len(CHIBI_ROTATION)):
+                cand = CHIBI_ROTATION[rot % len(CHIBI_ROTATION)]
+                rot += 1
+                if cand != prev and cand != nxt:
+                    pose = cand
+                    break
+            else:  # pool too small to dodge both — take the next rather than stall
+                pose = CHIBI_ROTATION[rot % len(CHIBI_ROTATION)]
+                rot += 1
+        scene["chibi"] = "chibi/" + pose
+        slide = slides_by_id.get(seg_slides[i], {}) if i < len(seg_slides) else {}
+        if slide.get("chibiFlip"):
+            scene["chibiFlip"] = True
+        prev = pose
+    # 0.22 = the top of the brand spec's 18-22%. At 0.18 he reads as a sticker in a
+    # 16:9 frame rather than a person presenting, and these decks carry enough empty
+    # cream that the content has the width to give.
+    return {"enabled": True, "charHeightFrac": float(cfg.get("charHeightFrac", 0.22))}
 
 
 def _parse_stat(value):
@@ -142,7 +239,24 @@ def _papercraft_scene(slide, t, kicker, accent, headline):
     """The PAPERCRAFT style map (papercraft-motion-spec.md §7 / migration note §3):
     deck TYPES render as the Paper* family on the nemock-deep-dive theme. Returns
     None for types not yet migrated — they fall through to the classic map, so
-    decks never break mid-migration."""
+    decks never break mid-migration.
+
+    `props` pass through on EVERY paper type (2026-08-07). Until then only the map's
+    "hook" branch forwarded them, so a prop authored on any other slide was silently
+    dropped — the deck looked right and rendered without it. Every Paper* component now
+    renders them through PaperProps (bottom-corner cut-outs); the Cvg* family has taken
+    props on every type since it was written, and this brings the paper family level.
+    Set dressing only — the chibi presenter is a separate global layer (_assign_chibi)."""
+    comp = _papercraft_component(slide, t, kicker, accent, headline)
+    if not comp:
+        return None
+    name, fields = comp
+    fields.setdefault("props", slide.get("props") or [])
+    return name, fields
+
+
+def _papercraft_component(slide, t, kicker, accent, headline):
+    """deck type -> (Paper* component, fields). See _papercraft_scene, its only caller."""
     if t in ("statement", "highlight"):
         return "PaperStatement", {"kicker": kicker, "headline": headline, "accent": accent,
                                   "subkicker": slide.get("subkicker", "")}
@@ -424,6 +538,23 @@ def build_spec(sp):
     # Every resolved frame is SCENE-relative, so the sting shift below (which only
     # moves sc["from"]) never invalidates them.
     warnings = []
+    # Paper* corner props are a LANDSCAPE affordance. In portrait the content card fills
+    # the width and the captions own the lower third, so there is no corner left to stand
+    # in — a prop lands on the slide's own text (verified with 9:16 stills, 2026-08-07).
+    # Drop them with a warning rather than paint over the content; the hook keeps its own
+    # (it positions props inside the set planes), and Cvg* scenes compose portrait
+    # themselves. Runs while scenes are still 1:1 with segments.
+    if height > width:
+        for i, sc in enumerate(scenes):
+            if (sc["component"].startswith("Paper") and sc["component"] != "PaperSetHook"
+                    and sc["fields"].get("props")):
+                sc["fields"].pop("props")
+                warnings.append(f"{segs[i]['slide']}: props dropped — the Paper* corner prop "
+                                f"layer is landscape-only (portrait has no free corner)")
+    # Presenter poses, assigned while scenes are still 1:1 with segments — the sting
+    # scenes are inserted further down and would break the index alignment.
+    presenter = _assign_chibi(scenes, slides_by_id, [s["slide"] for s in segs],
+                              sp.data, warnings.append)
     # which field each staggered component syncs (label list -> fields.itemTimes)
     _ITEM_FIELDS = {"BuildList": ("items", lambda f: f.get("items") or []),
                     "StepFlow": ("steps", lambda f: [s.get("title") if isinstance(s, dict) else s
@@ -595,6 +726,8 @@ def build_spec(sp):
         "theme": sp.data.get("theme", ""),
         # Optional caption active-word color (e.g. an element's category accent).
         "captionAccent": sp.data.get("captionAccent", ""),
+        # Chibi presenter layer (None when off) — see _assign_chibi.
+        **({"presenter": presenter} if presenter else {}),
         "_warnings": warnings,
     }
 
@@ -697,6 +830,13 @@ def _stage_chibi(spec, public, log):
         for prop in (fields.get("props") or []):
             if isinstance(prop, dict) and str(prop.get("image") or "").startswith("chibi/"):
                 prop["image"] = _one(prop["image"])
+        # scene-level presenter pose (every scene carries one; see _assign_chibi)
+        if str(scene.get("chibi") or "").startswith("chibi/"):
+            staged = _one(scene["chibi"])
+            if staged:
+                scene["chibi"] = staged
+            else:
+                scene.pop("chibi", None)
 
 
 def _apply_music(sp, out, log):

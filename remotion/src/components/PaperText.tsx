@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
-import {useWorld, PaperTable, PaperCard, usePlace, usePopup, flick} from './PaperWorld';
+import {useWorld, PaperTable, PaperCard, PaperProps, usePaperLayout, usePlace, usePopup, flick} from './PaperWorld';
 
 // Papercraft Motion — text family (papercraft-motion-spec.md §7). Text is always
 // printed ON paper that physically exists in the set: statements/quotes/punches/
@@ -29,6 +29,8 @@ const colorize = (text: string, accent: string[] = [], accentColor: string) => {
   return parts;
 };
 
+// `height` is the caller's type scale — the MIN dimension since the portrait pass
+// (usePaperLayout), which is the frame height in landscape, so nothing there moves.
 const Kicker: React.FC<{text?: string; height: number}> = ({text, height}) => {
   const W = useWorld();
   return text ? (
@@ -44,7 +46,10 @@ const Kicker: React.FC<{text?: string; height: number}> = ({text, height}) => {
 export const PaperStatement: React.FC<{fields: any}> = ({fields}) => {
   const W = useWorld();
   const frame = useCurrentFrame();
-  const {width, height} = useVideoConfig();
+  const {width} = useVideoConfig();
+  // Type + card metrics track the MIN dimension and the captions get their band back in
+  // portrait (usePaperLayout). Landscape: M === height and reserve === 0, so identical.
+  const {portrait, M: height, reserve} = usePaperLayout();
   const cf = fields.cueFrames || {};
   const at = cf.in ?? 3;
   const hit = cf.hit ?? null;
@@ -52,8 +57,9 @@ export const PaperStatement: React.FC<{fields: any}> = ({fields}) => {
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <PaperTable seed={fields.headline || 'statement'} tightenAt={hit} />
-      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
-        <div style={{position: 'relative', maxWidth: width * 0.66, transform: `scale(${hit != null ? flick(frame, hit) : 1})`}}>
+      <PaperProps items={fields.props} />
+      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve}}>
+        <div style={{position: 'relative', maxWidth: width * (portrait ? 0.88 : 0.66), transform: `scale(${hit != null ? flick(frame, hit) : 1})`}}>
           <div style={{position: 'absolute', left: '50%', bottom: -height * 0.016, width: '88%', height: height * 0.034,
                        transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(9px)', opacity: p.shadowOpacity}} />
           <PaperCard id={`punch:${fields.headline ?? ''}`} style={{...p.object, padding: `${height * 0.034}px ${width * 0.032}px`, borderRadius: 20}}>
@@ -80,7 +86,8 @@ export const PaperStatement: React.FC<{fields: any}> = ({fields}) => {
 export const PaperDefine: React.FC<{fields: any}> = ({fields}) => {
   const W = useWorld();
   const frame = useCurrentFrame();
-  const {fps, width, height} = useVideoConfig();
+  const {width} = useVideoConfig();
+  const {portrait, M: height, reserve} = usePaperLayout();
   const cf = fields.cueFrames || {};
   const termAt = cf.term ?? 5;
   const defAt = termAt + 10;
@@ -92,7 +99,8 @@ export const PaperDefine: React.FC<{fields: any}> = ({fields}) => {
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <PaperTable seed={fields.term || 'define'} tightenAt={termAt} />
-      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
+      <PaperProps items={fields.props} />
+      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve}}>
         <div style={{position: 'relative'}}>
           <div style={{position: 'absolute', left: '50%', bottom: -height * 0.016, width: '86%', height: height * 0.032,
                        transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(9px)', opacity: p.shadowOpacity}} />
@@ -102,7 +110,7 @@ export const PaperDefine: React.FC<{fields: any}> = ({fields}) => {
                          color: W.ink, textAlign: 'center'}}>{fields.term}</div>
           </PaperCard>
           <div style={{clipPath: `inset(0 0 ${(100 - open * 100).toFixed(1)}% 0)`, marginTop: height * 0.02, position: 'relative'}}>
-            <PaperCard id={`def:${fields.term ?? ''}`} family="card_index" style={{padding: `${height * 0.02}px ${width * 0.026}px`, borderRadius: 14, maxWidth: width * 0.5}}>
+            <PaperCard id={`def:${fields.term ?? ''}`} family="card_index" style={{padding: `${height * 0.02}px ${width * 0.026}px`, borderRadius: 14, maxWidth: width * (portrait ? 0.84 : 0.5)}}>
               <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: height * 0.034, lineHeight: 1.3,
                            color: W.ink, textAlign: 'center'}}>{fields.definition}</div>
             </PaperCard>
@@ -120,7 +128,8 @@ export const PaperDefine: React.FC<{fields: any}> = ({fields}) => {
 export const PaperPunch: React.FC<{fields: any}> = ({fields}) => {
   const W = useWorld();
   const frame = useCurrentFrame();
-  const {width, height} = useVideoConfig();
+  const {width} = useVideoConfig();
+  const {M: height, reserve} = usePaperLayout();
   const cf = fields.cueFrames || {};
   const hit = cf.hit ?? 5;
   const p = usePlace(hit);
@@ -129,13 +138,20 @@ export const PaperPunch: React.FC<{fields: any}> = ({fields}) => {
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <PaperTable seed={fields.word || 'punch'} tightenAt={hit} mood={bad ? 'hard' : 'soft'} />
-      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
+      <PaperProps items={fields.props} />
+      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve}}>
         <div style={{position: 'relative', transform: `scale(${flick(frame, hit)})`}}>
           <div style={{position: 'absolute', left: '50%', bottom: -height * 0.02, width: '92%', height: height * 0.04,
                        transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(11px)', opacity: p.shadowOpacity}} />
           <PaperCard id={`stmt:${fields.headline ?? fields.text ?? ''}`} style={{...p.object, padding: `${height * 0.03}px ${width * 0.04}px`, borderRadius: 24}}>
             {fields.kicker ? <Kicker text={fields.kicker} height={height} /> : null}
-            <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.16, lineHeight: 1.02,
+            {/* One word, always on one line. The height-only size ran a long word past the
+                card edge (the same overflow the Cvg punch had to cap); 900-weight glyphs
+                run ~0.58em, so cap to the card's inner width. At 16:9 the cap only binds
+                past ~15 characters — where it used to overflow anyway. */}
+            <div style={{fontFamily: BRAND.font, fontWeight: 900,
+                         fontSize: Math.min(height * 0.16, (width * 0.82) / Math.max(1, (fields.word || '').length * 0.58)),
+                         lineHeight: 1.02,
                          color: W.ink, textTransform: 'uppercase', textAlign: 'center', whiteSpace: 'pre-line',
                          // embossed stamp: paper pressed by the letters
                          textShadow: `0 2px 0 rgba(255,255,255,.7), 0 -1px 1px rgba(42,17,66,.28)`}}>

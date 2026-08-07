@@ -14,6 +14,11 @@ export const sceneSchema = z.object({
   from: z.number(), // start frame
   durationInFrames: z.number(),
   fields: z.any().default({}),
+  // Chibi presenter pose for this scene: the staged filename in the public dir. The
+  // engine assigns one to EVERY scene (authored `chibi` on the deck slide, else the
+  // neutral rotation) — see remotion_engine._assign_chibi.
+  chibi: z.string().optional(),
+  chibiFlip: z.boolean().optional(),
 });
 
 // The whole motion spec. The Python engine writes this as the Remotion props file.
@@ -34,6 +39,15 @@ export const videoSchema = z.object({
   // Optional caption active-word color (e.g. the element's category accent). Empty ->
   // the theme default (navy: green, paper: coral).
   captionAccent: z.string().default(''),
+  // Chibi presenter layer (operator directive 2026-08-07). charHeightFrac is the
+  // CHARACTER's height as a fraction of frame height (brand spec: 0.18-0.22), not the
+  // pose canvas — the canvas carries transparent padding and a common foot baseline.
+  presenter: z
+    .object({
+      enabled: z.boolean().default(false),
+      charHeightFrac: z.number().default(0.18),
+    })
+    .optional(),
 });
 
 export type VideoProps = z.infer<typeof videoSchema>;

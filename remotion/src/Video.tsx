@@ -30,6 +30,7 @@ import {ReactiveStrip, Waveform} from './components/Audio';
 import {PaperAtom, ElementStat, DiscoveryCard, PeriodicSlot, PaperWord, PaperFire, PaperProp, PaperFootage, PaperCTA, PaperMolecule} from './components/Chem';
 import {InkProvider, isPaperTheme} from './ink';
 import {WorldProvider} from './components/PaperWorld';
+import {ChibiPresenter, laneFrac} from './components/ChibiPresenter';
 
 // the component catalog (motion-playbook §2). Unknown -> TalkingScene (captions-led).
 const REGISTRY: Record<string, React.FC<any>> = {
@@ -128,6 +129,29 @@ const SceneWrap: React.FC<{durationInFrames: number; paper?: boolean; tear?: str
   );
 };
 
+// Components that own the WHOLE FRAME — they paint their own full-bleed background (or are
+// full-bleed art), and several already compose portrait themselves. The portrait caption
+// reserve below is skipped for these: shrinking their box would crop the art or cut their
+// background off in a hard line across the lower frame, and for the self-composing ones it
+// would double-reserve space they already hold back.
+//
+//  - brand bumpers + full-bleed art/media: BrandSting, PaperSting, BRGPaperSting, PaperHook,
+//    PaperSetHook, Hero3D, Footage
+//  - self-composed portrait layouts: the Cvg* family (caption padding + stacked layouts),
+//    KeepCard (shrinks and centres its own card in portrait)
+//  - the papercraft table family: PaperTable IS their frame, so it must run edge to edge.
+//    They hold the caption band back inside themselves instead — usePaperLayout's `reserve`,
+//    plus min-dimension type and stacked portrait layouts (the pass they got 2026-08-07).
+//
+// Everything else (the Cut & Bond chemistry kit, figures, text scenes, data viz) lays content
+// out on the page and lifts cleanly.
+const FULL_BLEED = new Set([
+  'BrandSting', 'PaperSting', 'BRGPaperSting', 'PaperHook', 'Hero3D', 'Footage', 'KeepCard',
+  'CvgScene', 'CvgPunch', 'CvgCta', 'CvgList', 'CvgCompare', 'CvgSteps', 'CvgDefine',
+  'PaperSetHook', 'PaperPopCard', 'PaperCounter', 'PaperStatement', 'PaperDefine',
+  'PaperPunch', 'PaperStairs', 'PaperCompare', 'PaperSteps', 'PaperList', 'PaperBookCTA',
+]);
+
 // Paper worlds whose sheet is BRG's cooler cream (#f5f0eb) rather than the FWF/nemock
 // warm sheet (#f4ecd6). Additive list — a new BRG-palette series joins it, nothing moves.
 const BRG_CREAM_THEMES = ['brg-deep-dive', 'wte-guide'];
@@ -135,7 +159,7 @@ const BRG_CREAM_THEMES = ['brg-deep-dive', 'wte-guide'];
 const CIRCUMVENT_CREAM = '#f2ede0';
 
 export const Video: React.FC<VideoProps> = (props) => {
-  const {audio, words, scenes, captionBottomPx, captionFontSize, audioFrom, width, height, theme, captionAccent} = props;
+  const {audio, words, scenes, captionBottomPx, captionFontSize, audioFrom, width, height, theme, captionAccent, presenter} = props;
   // Paper worlds: 'nemock-deep-dive' (Dave's deep dives) and 'cut-bond' (Cut & Bond).
   // Everything else ('midnight', the ISO 14971 series) keeps the navy brand.
   const paper = isPaperTheme(theme);
@@ -148,6 +172,18 @@ export const Video: React.FC<VideoProps> = (props) => {
   // in the upper two-thirds, so a single element settles around the top-third line instead of
   // being pinned high with a dead middle (operator direction 2026-07-16). Landscape = 0.
   const contentBottom = height > width ? Math.round(height * (theme === 'cut-bond' ? 0.36 : 0.34)) : 0;
+  // Chibi presenter (operator directive 2026-08-07): Dave stands beside the content on
+  // EVERY scene, above everything, and never over the content or under the captions.
+  // The lane he occupies is taken out of the content layer by a scale transform rather
+  // than an inset, because components position from useVideoConfig() (the full frame)
+  // instead of from their container — an inset would clip them, a transform preserves
+  // every component's internal pixel math exactly. See ChibiPresenter.tsx.
+  const chibiOn = Boolean(presenter?.enabled && scenes.some((s) => (s as any).chibi));
+  const charH = presenter?.charHeightFrac || 0.18;
+  const lane = chibiOn ? laneFrac(charH, width, height) : 0;
+  const contentScale = 1 - lane;
+  // Distance from the frame BOTTOM to the top of the caption block, allowing two lines.
+  const captionTopPx = captionBottomPx + captionFontSize * 2.9;
   return (
     <InkProvider theme={theme}>
     <WorldProvider theme={theme}>
@@ -157,21 +193,55 @@ export const Video: React.FC<VideoProps> = (props) => {
       {paper ? <PaperBackground /> : <Background />}
       {scenes.map((scene, i) => {
         const Comp = REGISTRY[scene.component] || TalkingScene;
+        const inset = FULL_BLEED.has(scene.component) ? 0 : contentBottom;
         return (
           <Sequence key={i} from={scene.from} durationInFrames={scene.durationInFrames} layout="none">
             <SceneWrap durationInFrames={scene.durationInFrames} paper={paper} tear={(scene as any).tear ? `tear${i}` : null}>
-              <AbsoluteFill style={{bottom: contentBottom}}>
+              {/* Content layer. With the presenter on, this whole layer is scaled into the
+                  area left of his lane, which is what guarantees no slide ever paints
+                  under him. Annotations ride INSIDE the transform: they are frame-space
+                  marks aimed at the content, so they must move with it or they drift off
+                  their subject (the #55 class of error, in a new place). */}
+              <AbsoluteFill style={{
+                bottom: inset,
+                // `height: 'auto'` is what makes the inset REAL. AbsoluteFill's own defaults
+                // include height:100%, and CSS drops `bottom` when top+height are both set —
+                // so from the day this line was written (2026-07-16) until 2026-08-07 the
+                // portrait reserve silently did nothing and every 9:16 render kept its
+                // content centred in the full frame. Letting the top/bottom pair size the
+                // box is the fix.
+                ...(inset ? {height: 'auto'} : {}),
+                ...(lane ? {transform: `scale(${contentScale})`, transformOrigin: '0% 50%'} : {}),
+              }}>
                 <Comp fields={scene.fields || {}} durationInFrames={scene.durationInFrames} sceneFrom={scene.from} audioFrom={audioFrom} />
+                {/* narration-cued hand-drawn annotations (motion-playbook §2H) — full-frame
+                    coordinate space, on top of the scene, under the captions */}
+                {(scene as any).annotations?.length ? <AnnotateOverlay annotations={(scene as any).annotations} /> : null}
               </AbsoluteFill>
-              {/* narration-cued hand-drawn annotations (motion-playbook §2H) — full-frame
-                  coordinate space, on top of the scene, under the captions */}
-              {(scene as any).annotations?.length ? <AnnotateOverlay annotations={(scene as any).annotations} /> : null}
             </SceneWrap>
           </Sequence>
         );
       })}
       {audio && !paper ? <ReactiveStrip audio={audio} audioFrom={audioFrom || 0} /> : null}
-      <Captions words={words} bottomPx={captionBottomPx} fontSize={captionFontSize} theme={theme} accentColor={captionAccent} />
+      <Captions words={words} bottomPx={captionBottomPx} fontSize={captionFontSize} theme={theme} accentColor={captionAccent} reserveRightPx={lane * width} />
+      {/* The presenter mounts LAST so he is above the scene, the annotations AND the
+          captions: the viewer reads him as Dave presenting, not as scene furniture
+          (operator directive 2026-08-07). He cannot collide with either, because the
+          content is scaled out of his lane and the captions reserve it too. */}
+      {chibiOn
+        ? scenes.map((scene, i) =>
+            (scene as any).chibi ? (
+              <Sequence key={`chibi${i}`} from={scene.from} durationInFrames={scene.durationInFrames} layout="none">
+                <ChibiPresenter
+                  pose={(scene as any).chibi}
+                  charHeightFrac={charH}
+                  captionTopPx={captionTopPx}
+                  flip={(scene as any).chibiFlip}
+                />
+              </Sequence>
+            ) : null
+          )
+        : null}
       {audio ? (
         <Sequence from={audioFrom || 0} layout="none">
           <Audio src={staticFile(audio)} />
