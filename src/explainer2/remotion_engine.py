@@ -873,7 +873,12 @@ def _render_one(sp, log=print, frames=None, out=None):
     outdir.mkdir(exist_ok=True)
     out = Path(out) if out else outdir / f"explainer_{aspect}.mp4"
 
-    npx = shutil.which("npx") or "npx"
+    # Resolve npx robustly: under launchd (the recording watcher's Phase-1 renders) the
+    # minimal PATH carries neither Homebrew nor /usr/local, and a bare "npx" crashed every
+    # watcher render on 2026-08-07 (crashloop starved FMF for 3 hours). PATH first, then
+    # the two standard install locations.
+    npx = shutil.which("npx") or next(
+        (p for p in ("/usr/local/bin/npx", "/opt/homebrew/bin/npx") if Path(p).exists()), "npx")
     cmd = [npx, "remotion", "render", "src/index.ts", "Video", str(out),
            f"--props={props}", f"--public-dir={public}", "--log=error",
            "--timeout=300000"]  # generous delayRender timeout (slow disk I/O tolerance)
