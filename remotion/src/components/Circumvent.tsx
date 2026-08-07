@@ -67,11 +67,16 @@ const Set: React.FC<{src?: string; anchor?: string}> = ({src, anchor}) => {
 // `size` is a fraction of frame height, so props and people share one scale space.
 const Cutout: React.FC<{
   src: string; at: number; place: number; size: number; flip?: boolean; baseline?: number;
-}> = ({src, at, place: placeRaw, size, flip, baseline = 0.92}) => {
+}> = ({src, at, place: placeRaw, size, flip, baseline}) => {
   const frame = useCurrentFrame();
   const {fps, width, height} = useVideoConfig();
   const s = spring({frame: frame - at, fps, config: {damping: 13, stiffness: 200}});
   const W = useWorld();
+  // Default baseline clears the caption band on portrait (operator report 2026-08-07:
+  // the caption pill landed ON the chibi presenter at 4:5). Portrait captions occupy
+  // the lower ~16%, so cutouts default to feet at 0.80 there; landscape keeps 0.92.
+  // An explicit deck `baseline` always wins.
+  const base = baseline ?? (height > width ? 0.80 : 0.92);
   const h = height * size;
   // Portrait re-centering (operator direction 2026-08-06): decks are composed for 16:9,
   // and on a 4:5/9:16 render the same `place` fraction crowds the type block or the
@@ -141,7 +146,11 @@ const SceneType: React.FC<{
       <AbsoluteFill style={{
         alignItems: align === 'center' ? 'center' : 'flex-start',
         justifyContent: band === 'top' ? 'flex-start' : 'center',
-        padding: `${height * 0.085}px ${width * 0.075}px`,
+        // Portrait: reserve the caption band (lower ~16%) so a centered block can never
+        // run under the caption pill (operator report 2026-08-07).
+        padding: portrait
+          ? `${height * 0.085}px ${width * 0.075}px ${height * 0.18}px`
+          : `${height * 0.085}px ${width * 0.075}px`,
       }}>
         <div style={{
           maxWidth: width * (portrait ? 0.85 : 0.62),
@@ -259,10 +268,13 @@ export const CvgPunch: React.FC<{fields: any}> = ({fields}) => {
   const s = spring({frame: frame - at, fps, config: {damping: 11, stiffness: 190}});
   const word = fields.word || fields.headline || '';
   // Long words (a full domain on the end card) need an extra step down or they run
-  // past the safe area at 16:9. Sized off the min dimension (2026-08-07 portrait pass)
-  // so a punch word can't outgrow a narrow frame; landscape identical.
+  // past the safe area at 16:9. Sized off the min dimension (2026-08-07 portrait pass),
+  // then HARD-CAPPED to the frame width the way CvgCta fits its headline — the length
+  // steps alone let "Irreversible" (12 chars) bleed past a 1080px-wide frame edge to
+  // edge (operator screenshot, FMF 4:5). 900-weight glyphs run ~0.52em.
   const M = Math.min(width, height);
-  const size = M * (word.length > 16 ? 0.105 : word.length > 12 ? 0.15 : word.length > 7 ? 0.2 : 0.26);
+  const stepped = M * (word.length > 16 ? 0.105 : word.length > 12 ? 0.15 : word.length > 7 ? 0.2 : 0.26);
+  const size = Math.min(stepped, (width * 0.9) / Math.max(1, word.length * 0.52));
   return (
     <AbsoluteFill>
       <Set src={fields.set} anchor={fields.anchor} />
@@ -307,7 +319,10 @@ export const CvgList: React.FC<{fields: any}> = ({fields}) => {
       <AbsoluteFill style={{
         background: 'linear-gradient(90deg, rgba(242,237,224,.92) 0%, rgba(242,237,224,.70) 34%, rgba(242,237,224,0) 62%)',
       }} />
-      <AbsoluteFill style={{justifyContent: 'center', padding: `0 ${width * 0.075}px`}}>
+      <AbsoluteFill style={{justifyContent: 'center',
+                            padding: width < height
+                              ? `0 ${width * 0.075}px ${height * 0.18}px`
+                              : `0 ${width * 0.075}px`}}>
         {fields.kicker ? (
           <div style={{
             fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.021, letterSpacing: 5,
@@ -362,7 +377,9 @@ export const CvgCompare: React.FC<{fields: any}> = ({fields}) => {
         textTransform: 'uppercase', color: d.kind === 'bad' ? W.neutral : W.accent, marginBottom: M * 0.018,
       }}>{d.title || ''}</div>
       <div style={{
-        fontFamily: BRAND.font, fontWeight: 900, fontSize: M * 0.072, lineHeight: 1.05,
+        // Portrait halves are short AND sit above the caption band — 0.072 wrapped long
+        // values into the captions (operator screenshot, FMF 4:5). Step down on portrait.
+        fontFamily: BRAND.font, fontWeight: 900, fontSize: M * (portrait ? 0.054 : 0.072), lineHeight: 1.08,
         color: W.ink, textAlign: 'center', opacity: d.kind === 'bad' ? 0.62 : 1,
       }}>{d.value || ''}</div>
       <div style={{
@@ -384,7 +401,10 @@ export const CvgCompare: React.FC<{fields: any}> = ({fields}) => {
         </AbsoluteFill>
       ) : null}
       <AbsoluteFill style={{flexDirection: portrait ? 'column' : 'row', alignItems: 'center',
-                            justifyContent: 'center', padding: portrait ? `${height * 0.14}px 0` : 0}}>
+                            justifyContent: 'center',
+                            // Bottom padding clears the caption band on portrait (the pill
+                            // sits in the lower ~16% and ate the second side's last line).
+                            padding: portrait ? `${height * 0.12}px 0 ${height * 0.2}px` : 0}}>
         <Side d={L} e={eL} side="l" />
         <div style={portrait
           ? {height: 3, width: '38%', background: W.accent, opacity: 0.5}
@@ -425,7 +445,8 @@ export const CvgSteps: React.FC<{fields: any}> = ({fields}) => {
         </AbsoluteFill>
       ) : null}
       <AbsoluteFill style={portrait
-        ? {flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: height * 0.012}
+        ? {flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: height * 0.012,
+           paddingBottom: height * 0.18}
         : {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: width * 0.012}}>
         {steps.map((s: any, i: number) => {
           const e = ease(frame, cues[i] ?? 6 + i * 18, 12);
@@ -475,7 +496,10 @@ export const CvgDefine: React.FC<{fields: any}> = ({fields}) => {
       <Set src={fields.set} anchor={fields.anchor} />
       <Cutouts items={fields.props} />
       <AbsoluteFill style={{background: 'linear-gradient(90deg, rgba(242,237,224,.92) 0%, rgba(242,237,224,.74) 46%, rgba(242,237,224,.20) 100%)'}} />
-      <AbsoluteFill style={{alignItems: 'flex-start', justifyContent: 'center', padding: `0 ${width * 0.09}px`}}>
+      <AbsoluteFill style={{alignItems: 'flex-start', justifyContent: 'center',
+                            padding: portrait
+                              ? `0 ${width * 0.09}px ${height * 0.18}px`
+                              : `0 ${width * 0.09}px`}}>
         {fields.kicker ? (
           <div style={{
             fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.021, letterSpacing: 5,
