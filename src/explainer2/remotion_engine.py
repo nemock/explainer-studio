@@ -613,7 +613,11 @@ def _stage_images(sp, spec, public):
     def _stage_one(img):
         # chibi/ refs are staged from the private pose library by _stage_chibi (which runs
         # after this pass) — leave them untouched here or they'd be dropped as missing.
-        if not img or str(img).startswith(("papercraft/", "papercraft-circumvent/", "chibi/")):
+        # "papercraft-" covers EVERY per-show library (papercraft-circumvent and the six
+        # 2026-08-06 show worlds), which render() stages wholesale when referenced —
+        # matching only the circumvent library here nulled every papercraft-<show> ref
+        # and crashed Cutout with staticFile(null) (caught by the cutover smoke tests).
+        if not img or str(img).startswith(("papercraft/", "papercraft-", "chibi/")):
             return img
         src = next((r / img for r in roots if (r / img).exists()), None)
         if src is None:
