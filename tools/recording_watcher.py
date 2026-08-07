@@ -44,6 +44,14 @@ from pathlib import Path
 
 DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})_")
 
+# Phase-1 crashloop guard: a render that dies in seconds gets relaunched every
+# cycle and, being first in the shows list, hogs the one-job-per-cycle slot and
+# starves every other show (2026-08-07 npx-PATH incident). After this many
+# consecutive launches with no work/render_complete.json, skip the project so
+# other shows get the slot, and only retry it after the backoff.
+CRASHLOOP_AFTER = 3
+CRASHLOOP_RETRY_SECS = 30 * 60  # ~every 6th 5-minute cycle
+
 
 def pid_alive(pid):
     """True if a process with this pid currently exists."""
@@ -73,6 +81,24 @@ def write_lock(proj, pid):
 
 def render_done(proj):
     return (Path(proj) / "work" / "render_complete.json").exists()
+
+
+def attempts_path(proj):
+    return Path(proj) / "work" / "render_attempts.json"
+
+
+def read_attempts(proj):
+    try:
+        return json.loads(attempts_path(proj).read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def clear_attempts(proj):
+    try:
+        attempts_path(proj).unlink()
+    except OSError:
+        pass
 
 
 def log(cfg, msg):
@@ -177,6 +203,9 @@ def launch_render(cfg, show, proj):
         cwd=cfg["claude_cwd"], env=env, start_new_session=True,
         stdout=render_log.open("w"), stderr=subprocess.STDOUT)
     write_lock(proj, child.pid)  # hold the claim for the render's lifetime
+    att = read_attempts(proj)
+    attempts_path(proj).write_text(
+        json.dumps({"count": att.get("count", 0) + 1, "ts": time.time()}))
     log(cfg, f"RENDER (phase 1) launched for {show['id']}: {proj} "
              f"(pid {child.pid}, log {render_log})")
     return child.pid
@@ -233,6 +262,7 @@ def run(cfg, dry):
                              f"{lk.get('pid')} still active — backing off")
                     break
                 if render_done(proj):
+                    clear_attempts(proj)  # render completed; crashloop counter is stale
                     # Phase 2: render finished; publish. Guard against re-posting if a
                     # prior publish got partway (uploads.json written, README not yet).
                     if (proj / "uploads.json").exists():
@@ -249,6 +279,14 @@ def run(cfg, dry):
                 else:
                     # Phase 1: no render yet (or a prior render died before completing);
                     # launch the detached render. launch_render writes the lock.
+                    att = read_attempts(proj)
+                    if (att.get("count", 0) >= CRASHLOOP_AFTER
+                            and time.time() - att.get("ts", 0) < CRASHLOOP_RETRY_SECS):
+                        log(cfg, f"RENDER-CRASHLOOP {show['id']}: {proj.name} phase-1 "
+                                 f"launched {att['count']}x with no render_complete.json "
+                                 f"— skipping so other shows get this cycle's slot; "
+                                 f"retrying after backoff")
+                        continue
                     if dry:
                         log(cfg, f"[DRY-RUN] {show['id']}: {proj.name} DONE, no render "
                                  f"yet — would launch RENDER (phase 1)")
