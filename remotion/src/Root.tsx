@@ -6,7 +6,7 @@ import {Thumbnail, thumbnailSchema} from './Thumbnail';
 import {PaperSting} from './components/PaperSting';
 import {KeepCard} from './components/KeepCard';
 import {PaperHook} from './components/PaperHook';
-import {LogoAtom} from './components/Chem';
+import {LogoAtom, PaperThumb} from './components/Chem';
 
 // Single parametric composition. The Python engine passes the whole motion spec as
 // props (--props=spec.json) and dimensions/duration come from those props.
@@ -93,6 +93,16 @@ export const RemotionRoot: React.FC = () => {
       width={1080}
       height={1080}
       defaultProps={{}}
+    />
+    {/* Cut & Bond YouTube thumbnail (16:9). Render per video with `remotion still`. */}
+    <Composition
+      id="PaperThumb"
+      component={PaperThumb}
+      durationInFrames={1}
+      fps={30}
+      width={1280}
+      height={720}
+      defaultProps={{fields: {word: 'NOBODY HAS SEEN IT', sub: 'the most reactive metal on the table', symbol: 'Fr', number: 87, accent: '#ff5a4d'}}}
     />
     </>
   );

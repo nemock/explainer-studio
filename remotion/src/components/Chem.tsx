@@ -480,6 +480,85 @@ export const PaperProp: React.FC<{fields: any}> = ({fields}) => {
 };
 
 // ---------------------------------------------------------------------------
+// PaperThumb — the Cut & Bond YouTube thumbnail (16:9, 1280x720). Rendered from the
+// SAME paper kit as the videos so every thumbnail is automatically on-brand, free, and
+// reproducible (no per-video hand generation). Render with:
+//   npx remotion still src/index.ts PaperThumb out.png --props='{"fields":{...}}'
+// Shorts largely ignore custom thumbnails in-feed, but they DO show in search and on the
+// channel page, so they are worth having.
+// Layout: big punch word + sub on the left, hero prop image on the right, element tile
+// in the corner. Text is sized to stay readable at small sizes.
+// fields: {word, sub, symbol, number, accent, image}
+// ---------------------------------------------------------------------------
+export const PaperThumb: React.FC<{fields: any}> = ({fields}) => {
+  const {width, height} = useVideoConfig();
+  const s = width / 1280;
+  const accent = fields.accent || CB.coral;
+  const rid = 'r' + React.useId().replace(/:/g, '');
+  const rough = `url(#${rid})`;
+  const hasImg = Boolean(fields.image);
+
+  return (
+    <AbsoluteFill style={{background: CB.paper, overflow: 'hidden'}}>
+      <RoughDefs id={rid} scale={9} freq={0.018} />
+      <Grain />
+      {/* soft paper light, mirrors PaperBackground so the thumb matches the video */}
+      <div style={{position: 'absolute', inset: 0,
+        background: `radial-gradient(60% 55% at 50% 38%, rgba(255,255,255,.5), rgba(255,255,255,0) 70%)`}} />
+
+      <div style={{position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+        padding: `${44 * s}px ${56 * s}px`, gap: 32 * s}}>
+        {/* left column: tile, punch word, sub — all in normal flow so nothing can collide
+            or overflow. Keep `word` under ~18 chars and `sub` under ~48 for best results. */}
+        <div style={{flex: hasImg ? 1.2 : 1, minWidth: 0, display: 'flex', flexDirection: 'column',
+          justifyContent: 'center', gap: 16 * s, maxHeight: '100%', overflow: 'hidden'}}>
+          {fields.symbol ? (
+            <div style={{position: 'relative', width: 88 * s, height: 88 * s, borderRadius: 14 * s,
+              background: accent, flexShrink: 0,
+              boxShadow: thick(accent, Math.round(5 * s), 8 * s, 14 * s, 0.3), filter: rough,
+              display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+              <Grain />
+              <div style={{fontFamily: CB.font, fontWeight: 900, fontSize: 44 * s, color: '#2a2622',
+                lineHeight: 1, position: 'relative'}}>{fields.symbol}</div>
+              {fields.number != null ? (
+                <div style={{position: 'absolute', top: 6 * s, left: 10 * s, fontFamily: CB.font,
+                  fontWeight: 800, fontSize: 17 * s, color: 'rgba(42,38,34,.75)'}}>{fields.number}</div>
+              ) : null}
+            </div>
+          ) : null}
+          <div style={{fontFamily: CB.font, fontWeight: 900, color: accent,
+            fontSize: width * ((fields.word || '').length > 18 ? 0.072
+              : (fields.word || '').length > 11 ? 0.094 : 0.125),
+            lineHeight: 0.96, letterSpacing: -1 * s,
+            textShadow: `0 ${5 * s}px 0 ${darken(accent, 0.6)}, 0 ${16 * s}px ${16 * s}px rgba(70,52,20,.20)`}}>
+            {fields.word}
+          </div>
+          {fields.sub ? (
+            <div style={{fontFamily: CB.font, fontWeight: 800, color: CB.ink,
+              fontSize: width * 0.034, lineHeight: 1.18, maxWidth: '96%'}}>
+              {fields.sub}
+            </div>
+          ) : null}
+        </div>
+
+        {/* right: hero prop */}
+        {hasImg ? (
+          <div style={{flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            height: '100%', minWidth: 0}}>
+            <Img src={staticFile(fields.image)} style={{
+              maxWidth: '100%', maxHeight: '86%', objectFit: 'contain',
+              filter: 'drop-shadow(0 20px 26px rgba(70,52,20,.26))',
+              transform: 'rotate(-2deg)',
+            }} />
+          </div>
+        ) : null}
+      </div>
+      {void height}
+    </AbsoluteFill>
+  );
+};
+
+// ---------------------------------------------------------------------------
 // PaperFootage — REAL reference footage taped into the paper world. A landscape video
 // window sits on a torn-paper mat with a cast shadow and a slight tilt, so live-action
 // reads as a clipping pinned to the cut-paper background rather than breaking the style.
