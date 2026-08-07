@@ -527,8 +527,17 @@ export const PaperThumb: React.FC<{fields: any}> = ({fields}) => {
             </div>
           ) : null}
           <div style={{fontFamily: CB.font, fontWeight: 900, color: accent,
-            fontSize: width * ((fields.word || '').length > 18 ? 0.072
-              : (fields.word || '').length > 11 ? 0.094 : 0.125),
+            // Size on TWO limits, because either can overflow. Total length sets the
+            // headline tier, but a single long word cannot wrap, so it also has to fit
+            // the column on its own — that is what clipped "ISOTOPES" on the first pass.
+            fontSize: width * (() => {
+              const w = String(fields.word || '');
+              const byTotal = w.length > 18 ? 0.072 : w.length > 11 ? 0.094 : 0.125;
+              const longest = w.split(/\s+/).reduce((m, t) => Math.max(m, t.length), 0) || 1;
+              const colFrac = hasImg ? 0.52 : 0.86;   // share of frame width the text gets
+              const byWord = colFrac / (longest * 0.72); // 0.72 ~= cap glyph width / font size
+              return Math.min(byTotal, byWord);
+            })(),
             lineHeight: 0.96, letterSpacing: -1 * s,
             textShadow: `0 ${5 * s}px 0 ${darken(accent, 0.6)}, 0 ${16 * s}px ${16 * s}px rgba(70,52,20,.20)`}}>
             {fields.word}
