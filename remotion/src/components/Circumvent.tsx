@@ -85,7 +85,7 @@ const Cutout: React.FC<{
   const place = width < height ? 0.5 + (placeRaw - 0.5) * 0.72 : placeRaw;
   return (
     <div style={{
-      position: 'absolute', left: `${place * 100}%`, top: height * baseline,
+      position: 'absolute', left: `${place * 100}%`, top: height * base,
       transform: `translate(-50%, -100%) translateY(${(1 - s) * 26}px) scale(${0.94 + s * 0.06}) ${flip ? 'scaleX(-1)' : ''}`,
       opacity: s, height: h,
     }}>
