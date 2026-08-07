@@ -126,6 +126,10 @@ const SceneType: React.FC<{
   const scale = hit != null ? flick(frame, hit) : 1;
   const long = (headline || '').length > 48;
   const P = paperRgb(W.paper);
+  // Portrait pass 2026-08-07: type tracks the min dimension (landscape identical), and
+  // the text block widens on narrow frames — 62% of a portrait width wastes the room.
+  const portrait = height > width;
+  const M = Math.min(width, height);
   return (
     <>
       <AbsoluteFill style={{
@@ -140,26 +144,26 @@ const SceneType: React.FC<{
         padding: `${height * 0.085}px ${width * 0.075}px`,
       }}>
         <div style={{
-          maxWidth: width * 0.62,
+          maxWidth: width * (portrait ? 0.85 : 0.62),
           transform: `translateY(${(1 - e) * 22}px) scale(${scale})`, opacity: e,
           textAlign: align,
         }}>
           {kicker ? (
             <div style={{
-              fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.021, letterSpacing: 5,
-              textTransform: 'uppercase', color: W.accent, marginBottom: height * 0.016,
+              fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.021, letterSpacing: 5,
+              textTransform: 'uppercase', color: W.accent, marginBottom: M * 0.016,
             }}>{kicker}</div>
           ) : null}
           {headline ? (
             <div style={{
-              fontFamily: BRAND.font, fontWeight: 900, fontSize: height * (long ? 0.062 : 0.078),
+              fontFamily: BRAND.font, fontWeight: 900, fontSize: M * (long ? 0.062 : 0.078),
               lineHeight: 1.06, color: W.ink, letterSpacing: -0.5,
             }}>{colorize(headline, accent, W.accent)}</div>
           ) : null}
           {sub ? (
             <div style={{
-              fontFamily: BRAND.font, fontWeight: 700, fontSize: height * 0.026, color: W.accent,
-              marginTop: height * 0.02,
+              fontFamily: BRAND.font, fontWeight: 700, fontSize: M * 0.026, color: W.accent,
+              marginTop: M * 0.02,
             }}>{sub}</div>
           ) : null}
         </div>
@@ -255,8 +259,10 @@ export const CvgPunch: React.FC<{fields: any}> = ({fields}) => {
   const s = spring({frame: frame - at, fps, config: {damping: 11, stiffness: 190}});
   const word = fields.word || fields.headline || '';
   // Long words (a full domain on the end card) need an extra step down or they run
-  // past the safe area at 16:9.
-  const size = height * (word.length > 16 ? 0.105 : word.length > 12 ? 0.15 : word.length > 7 ? 0.2 : 0.26);
+  // past the safe area at 16:9. Sized off the min dimension (2026-08-07 portrait pass)
+  // so a punch word can't outgrow a narrow frame; landscape identical.
+  const M = Math.min(width, height);
+  const size = M * (word.length > 16 ? 0.105 : word.length > 12 ? 0.15 : word.length > 7 ? 0.2 : 0.26);
   return (
     <AbsoluteFill>
       <Set src={fields.set} anchor={fields.anchor} />
@@ -291,6 +297,9 @@ export const CvgList: React.FC<{fields: any}> = ({fields}) => {
   const {fps, width, height} = useVideoConfig();
   const items = fields.items || [];
   const cues = fields.itemFrames || items.map((_: any, i: number) => 8 + i * 16);
+  // Type tracks the min dimension (2026-08-07 portrait pass): landscape identical, and
+  // portrait labels scale to the narrow width instead of the tall height.
+  const M = Math.min(width, height);
   return (
     <AbsoluteFill>
       <Set src={fields.set} anchor={fields.anchor} />
@@ -301,8 +310,8 @@ export const CvgList: React.FC<{fields: any}> = ({fields}) => {
       <AbsoluteFill style={{justifyContent: 'center', padding: `0 ${width * 0.075}px`}}>
         {fields.kicker ? (
           <div style={{
-            fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.021, letterSpacing: 5,
-            textTransform: 'uppercase', color: W.accent, marginBottom: height * 0.028,
+            fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.021, letterSpacing: 5,
+            textTransform: 'uppercase', color: W.accent, marginBottom: M * 0.028,
           }}>{fields.kicker}</div>
         ) : null}
         {items.map((it: any, i: number) => {
@@ -312,16 +321,16 @@ export const CvgList: React.FC<{fields: any}> = ({fields}) => {
             <div key={i} style={{
               display: 'flex', alignItems: 'center', gap: width * 0.016,
               transform: `translateX(${(1 - e) * -30}px)`, opacity: e,
-              marginBottom: height * 0.024,
+              marginBottom: M * 0.024,
             }}>
               <div style={{
-                width: height * 0.052, height: height * 0.052, background: W.accent,
+                width: M * 0.052, height: M * 0.052, background: W.accent,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.026, color: W.paper,
+                fontFamily: BRAND.font, fontWeight: 900, fontSize: M * 0.026, color: W.paper,
                 transform: `rotate(${i % 2 ? 1.6 : -1.4}deg)`,
               }}>{i + 1}</div>
               <div style={{
-                fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.058, color: W.ink, lineHeight: 1.1,
+                fontFamily: BRAND.font, fontWeight: 900, fontSize: M * 0.058, color: W.ink, lineHeight: 1.1,
               }}>{label}</div>
             </div>
           );
@@ -338,21 +347,26 @@ export const CvgCompare: React.FC<{fields: any}> = ({fields}) => {
   const {height, width} = useVideoConfig();
   const L = fields.left || {}, R = fields.right || {};
   const eL = ease(frame, 5, 14), eR = ease(frame, 15, 14);
+  // Portrait: the two sides stack top/bottom with a horizontal divider (same collision
+  // class as CvgSteps, fixed 2026-08-07); type tracks the min dimension so landscape is
+  // pixel-identical (min == height there).
+  const portrait = height > width;
+  const M = Math.min(width, height);
   const Side: React.FC<{d: any; e: number; side: 'l' | 'r'}> = ({d, e, side}) => (
     <div style={{
       flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       transform: `translateY(${(1 - e) * 24}px)`, opacity: e, padding: `0 ${width * 0.03}px`,
     }}>
       <div style={{
-        fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.022, letterSpacing: 4,
-        textTransform: 'uppercase', color: d.kind === 'bad' ? W.neutral : W.accent, marginBottom: height * 0.018,
+        fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.022, letterSpacing: 4,
+        textTransform: 'uppercase', color: d.kind === 'bad' ? W.neutral : W.accent, marginBottom: M * 0.018,
       }}>{d.title || ''}</div>
       <div style={{
-        fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.072, lineHeight: 1.05,
+        fontFamily: BRAND.font, fontWeight: 900, fontSize: M * 0.072, lineHeight: 1.05,
         color: W.ink, textAlign: 'center', opacity: d.kind === 'bad' ? 0.62 : 1,
       }}>{d.value || ''}</div>
       <div style={{
-        marginTop: height * 0.026, width: '46%', height: height * 0.011,
+        marginTop: M * 0.026, width: '46%', height: M * 0.011,
         background: d.kind === 'bad' ? W.neutral : W.accent, transform: `scaleX(${e})`,
       }} />
     </div>
@@ -364,14 +378,17 @@ export const CvgCompare: React.FC<{fields: any}> = ({fields}) => {
       {fields.kicker ? (
         <AbsoluteFill style={{alignItems: 'center', justifyContent: 'flex-start', paddingTop: height * 0.1}}>
           <div style={{
-            fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.021, letterSpacing: 5,
+            fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.021, letterSpacing: 5,
             textTransform: 'uppercase', color: W.accent,
           }}>{fields.kicker}</div>
         </AbsoluteFill>
       ) : null}
-      <AbsoluteFill style={{flexDirection: 'row', alignItems: 'center'}}>
+      <AbsoluteFill style={{flexDirection: portrait ? 'column' : 'row', alignItems: 'center',
+                            justifyContent: 'center', padding: portrait ? `${height * 0.14}px 0` : 0}}>
         <Side d={L} e={eL} side="l" />
-        <div style={{width: 3, height: '46%', background: W.accent, opacity: 0.5}} />
+        <div style={portrait
+          ? {height: 3, width: '38%', background: W.accent, opacity: 0.5}
+          : {width: 3, height: '46%', background: W.accent, opacity: 0.5}} />
         <Side d={R} e={eR} side="r" />
       </AbsoluteFill>
     </AbsoluteFill>
@@ -386,6 +403,13 @@ export const CvgSteps: React.FC<{fields: any}> = ({fields}) => {
   const steps = fields.steps || [];
   const cues = fields.stepFrames || steps.map((_: any, i: number) => 6 + i * 18);
   const n = Math.max(steps.length, 1);
+  // Portrait fix (operator report 2026-08-07: columns collided on the first FMF episode's
+  // 4:5/9:16 renders). The row layout shrank column WIDTH with the frame while the label
+  // font tracked HEIGHT, so portrait exploded the ratio. On portrait frames the steps now
+  // stack VERTICALLY (that's where portrait's room is) with downward connectors, and all
+  // type tracks the min dimension — landscape output is pixel-identical (min == height).
+  const portrait = height > width;
+  const M = Math.min(width, height);
   return (
     <AbsoluteFill>
       <Set src={fields.set} anchor={fields.anchor} />
@@ -395,12 +419,14 @@ export const CvgSteps: React.FC<{fields: any}> = ({fields}) => {
       {fields.kicker ? (
         <AbsoluteFill style={{alignItems: 'center', justifyContent: 'flex-start', paddingTop: height * 0.09}}>
           <div style={{
-            fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.021, letterSpacing: 5,
+            fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.021, letterSpacing: 5,
             textTransform: 'uppercase', color: W.accent,
           }}>{fields.kicker}</div>
         </AbsoluteFill>
       ) : null}
-      <AbsoluteFill style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: width * 0.012}}>
+      <AbsoluteFill style={portrait
+        ? {flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: height * 0.012}
+        : {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: width * 0.012}}>
         {steps.map((s: any, i: number) => {
           const e = ease(frame, cues[i] ?? 6 + i * 18, 12);
           const label = typeof s === 'string' ? s : (s.title || '');
@@ -408,21 +434,22 @@ export const CvgSteps: React.FC<{fields: any}> = ({fields}) => {
           return (
             <React.Fragment key={i}>
               {i > 0 ? (
-                <div style={{
-                  width: width * 0.026, height: 3, background: W.accent,
-                  transform: `scaleX(${ease(frame, (cues[i] ?? 0) - 6, 10)})`, transformOrigin: 'left',
-                }} />
+                <div style={portrait
+                  ? {width: 3, height: height * 0.022, background: W.accent,
+                     transform: `scaleY(${ease(frame, (cues[i] ?? 0) - 6, 10)})`, transformOrigin: 'top'}
+                  : {width: width * 0.026, height: 3, background: W.accent,
+                     transform: `scaleX(${ease(frame, (cues[i] ?? 0) - 6, 10)})`, transformOrigin: 'left'}} />
               ) : null}
               <div style={{
-                width: `${72 / n}%`, textAlign: 'center',
+                width: portrait ? '84%' : `${72 / n}%`, textAlign: 'center',
                 transform: `translateY(${(1 - e) * 20}px)`, opacity: e,
               }}>
                 {img ? (
-                  <Img src={staticFile(img)} style={{height: height * 0.26, width: 'auto', display: 'block', margin: '0 auto'}} />
+                  <Img src={staticFile(img)} style={{height: M * (portrait ? 0.16 : 0.26), width: 'auto', display: 'block', margin: '0 auto'}} />
                 ) : null}
                 <div style={{
-                  fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.036, color: W.ink,
-                  lineHeight: 1.12, marginTop: height * 0.016,
+                  fontFamily: BRAND.font, fontWeight: 900, fontSize: M * 0.036, color: W.ink,
+                  lineHeight: 1.12, marginTop: M * 0.016,
                 }}>{label}</div>
               </div>
             </React.Fragment>
@@ -439,6 +466,10 @@ export const CvgDefine: React.FC<{fields: any}> = ({fields}) => {
   const frame = useCurrentFrame();
   const {height, width} = useVideoConfig();
   const e1 = ease(frame, 4, 14), e2 = ease(frame, 16, 16);
+  // 2026-08-07 portrait pass: type off the min dimension; definition block widens on
+  // narrow frames. Landscape identical (min == height).
+  const portrait = height > width;
+  const M = Math.min(width, height);
   return (
     <AbsoluteFill>
       <Set src={fields.set} anchor={fields.anchor} />
@@ -447,21 +478,21 @@ export const CvgDefine: React.FC<{fields: any}> = ({fields}) => {
       <AbsoluteFill style={{alignItems: 'flex-start', justifyContent: 'center', padding: `0 ${width * 0.09}px`}}>
         {fields.kicker ? (
           <div style={{
-            fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.021, letterSpacing: 5,
-            textTransform: 'uppercase', color: W.accent, marginBottom: height * 0.02, opacity: e1,
+            fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.021, letterSpacing: 5,
+            textTransform: 'uppercase', color: W.accent, marginBottom: M * 0.02, opacity: e1,
           }}>{fields.kicker}</div>
         ) : null}
         <div style={{
-          fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.11, lineHeight: 1, color: W.ink,
+          fontFamily: BRAND.font, fontWeight: 900, fontSize: M * 0.11, lineHeight: 1, color: W.ink,
           transform: `translateY(${(1 - e1) * 22}px)`, opacity: e1, letterSpacing: -2,
         }}>{fields.term || ''}</div>
         <div style={{
-          height: height * 0.012, width: '34%', background: W.accent, margin: `${height * 0.028}px 0`,
+          height: M * 0.012, width: '34%', background: W.accent, margin: `${M * 0.028}px 0`,
           transform: `scaleX(${e1})`, transformOrigin: 'left',
         }} />
         <div style={{
-          fontFamily: BRAND.font, fontWeight: 700, fontSize: height * 0.04, lineHeight: 1.3,
-          color: W.ink, maxWidth: width * 0.62, opacity: e2, transform: `translateY(${(1 - e2) * 16}px)`,
+          fontFamily: BRAND.font, fontWeight: 700, fontSize: M * 0.04, lineHeight: 1.3,
+          color: W.ink, maxWidth: width * (portrait ? 0.85 : 0.62), opacity: e2, transform: `translateY(${(1 - e2) * 16}px)`,
         }}>{fields.definition || ''}</div>
       </AbsoluteFill>
     </AbsoluteFill>
