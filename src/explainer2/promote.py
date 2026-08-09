@@ -396,6 +396,74 @@ def _build_post_body(entry, media_urls, scheduled, duration_s=None):
     return body
 
 
+POSTQ = "/Volumes/Casima/claudeCode/make_money/post_queue/postq.py"
+
+
+def enqueue_plan(projects_dir, plan, dry_run=True):
+    """Hand a promotion plan to the LOCAL post queue instead of posting it.
+
+    Blotato stopped being the system of record on 2026-08-08 — its 200-post workspace cap
+    is shared across every brand and repeatedly cost whole fan-outs. The local queue owns
+    the schedule now and tops Blotato up a few hours at a time. See
+    make_money/post_queue/ENQUEUE.md.
+
+    This does NOT upload, schedule, or post. It writes a spec and makes one call; the
+    dispatcher uploads from media_local and places each post, and reconcile records the
+    live URLs. Link-only and over-length handling stay declarative here, exactly as
+    _build_post_body computed them, so nothing about the caption rules changes."""
+    import subprocess, tempfile
+
+    duration_s = probe_duration(plan["short_mp4"])
+    posts = []
+    for entry in plan["posts"]:
+        platform = entry["platform"]
+        link_only = platform in LINK_ONLY or (
+            platform == "twitter" and duration_s is not None and duration_s > TWITTER_VIDEO_MAX_S
+        )
+        post = {"platform": platform, "text": entry["caption"]}
+        if link_only:
+            url = entry.get("url_comment") or ""
+            if url and url not in post["text"]:
+                post["text"] = f"{post['text']}\n\n{url}" if post["text"] else url
+        else:
+            post["media_local"] = [plan["short_mp4"]]
+            if entry.get("url_comment") and platform in THREAD_REPLY:
+                post["additional_posts"] = [{"text": entry["url_comment"], "mediaUrls": []}]
+        extra = dict(entry.get("extra", {}))
+        extra.pop("pageId", None)      # resolved from brand by the queue
+        if extra:
+            post["target"] = extra
+        # YouTube needs no route override: the queue's default for this account is
+        # `youtube_direct`, which the dispatcher now implements. Direct is preferred over
+        # the transport regardless of length — it returns the watch URL immediately, which
+        # is what the X link fallback and the link-only Bluesky post are waiting on.
+        posts.append(post)
+
+    spec = {"routine": "explainer2-promote-daily",
+            "episode": plan.get("short_slug") or plan.get("video_slug"),
+            "source_asset": plan["short_mp4"],
+            "posts": posts}
+
+    if dry_run:
+        return {"dry_run": True, "spec": spec, "duration_s": duration_s}
+
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
+        json.dump(spec, fh)
+        spec_path = fh.name
+    out = subprocess.run(["python3", POSTQ, "enqueue", "--spec", spec_path],
+                         capture_output=True, text=True)
+    ok = out.returncode == 0
+    if ok:
+        log(projects_dir, {
+            "video_slug": plan["video_slug"], "short_slug": plan["short_slug"],
+            "video_url": plan.get("video_url"),
+            "platforms": [e["platform"] for e in plan["posts"]],
+            "caption": plan["posts"][0]["caption"] if plan["posts"] else "",
+            "scheduled_time": "local-queue", "blotato_post_ids": {},
+        })
+    return {"enqueued": ok, "stdout": out.stdout, "stderr": out.stderr, "spec": spec}
+
+
 def post_plan(projects_dir, plan, dry_run=True):
     """Fire a promotion plan. plan = {video_slug, short_slug, video_url, short_mp4,
     scheduled, posts:[{platform, caption, url_comment?, account_id?, extra?}]}.
@@ -447,5 +515,11 @@ def run(projects_dir, action, video=None, short=None, record=None, plan=None, fi
     if action == "post":
         if not plan:
             raise ValueError("post needs --plan <json file>")
+        # Since the 2026-08-08 cutover this hands the plan to the local queue rather than
+        # posting to Blotato directly. post_plan() is kept for manual/emergency use.
+        return enqueue_plan(projects_dir, json.loads(Path(plan).read_text()), dry_run=not fire)
+    if action == "post-direct":
+        if not plan:
+            raise ValueError("post-direct needs --plan <json file>")
         return post_plan(projects_dir, json.loads(Path(plan).read_text()), dry_run=not fire)
     raise ValueError(f"unknown action {action!r}")
