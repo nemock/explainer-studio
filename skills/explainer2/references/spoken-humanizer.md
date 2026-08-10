@@ -51,6 +51,23 @@ When spoken, these read as AI throat-clearing. Hunt them and their cousins:
   works ("one thing I always check first") — just ground it in the operator's
   practice, not in everyone-else-is-blind. Reaching for secret-knowledge framing is
   the flat-earther register; we are the opposite of that.
+- **The groundless prevalence claim (operator directive 2026-08-05):** "most
+  founders have never heard of X", "most people don't realize", "few companies
+  know", "you've probably never heard of". This is the secret-knowledge move's
+  quieter cousin, and it slips past a blocklist aimed at the phrases above because
+  it names no "nobody" and sounds like a fact. **It IS a fact claim** — about what
+  a population knows — and we have not measured it. Dave, catching it in #50's
+  script after upload: *"They're typically disingenuous unless we have real data
+  showing that something is in fact overlooked... this is usually why people will
+  look at articles and immediately assume it's AI-generated."* On this channel the
+  cost is sharper than usual: the audience are practitioners, so a wrong claim
+  about what they know is falsified by the viewer's own experience mid-video.
+  **The repair is a downgrade from ignorance to judgment**, and it is nearly always
+  available: not "the committee most founders have never heard of" but "the
+  committee you underestimate, because winning the surgeon felt like the hard
+  part." That version is defensible, it does argumentative work, and it follows
+  from the beat before it instead of arriving as trivia. Full treatment in the
+  `humaner` skill's LINT.md §4b.
 - **Manufactured drama beats:** "let that sink in", "sit with that", "and that,
   right there, is…", "plot twist", "but here's the twist", "and the twist?".
 - **Stock closers:** "at the end of the day", "the bottom line is", "so there you
@@ -236,7 +253,43 @@ Two tests every cold open must pass:
 4. **COHERENCE pass (mandatory — operator directive 2026-07-24).** We have shipped
    several cards with a verb dropped, a word missing, or an entire sentence that
    simply doesn't parse. These are tiny, human-readable strings — trivial to catch,
-   embarrassing to miss, and they wreck a live read. Go card by card and check:
+   embarrassing to miss, and they wreck a live read.
+
+   **Run the checker FIRST — it is not optional and reading the cards is not a
+   substitute (added 2026-08-07, #56).** This step used to say only "go card by card and
+   check", and on #56 that eye-pass shipped eight verbless noun-stacks and two bare
+   numerals to the booth. Dave caught the first one on card one and called it caveman
+   talk. They are invisible to every other pass: not short enough for the staccato rule,
+   no banned words for the blocklist. They need a parser.
+   ```
+   python3 tools/script_coherence.py <project_dir>
+   ```
+   It flags verbless sentences, a count standing in for a noun ("deal with these
+   forty" — forty *what*), cards opening on a bare pronoun or connective, sentences over
+   23 words, and mid-sentence colons. Exit 1 means fix before the booth; exit 2 means the
+   check could not run (install spaCy — never proceed on a skipped coherence gate).
+
+   **It covers EVERY card the booth will show — the script AND each Short's hook and
+   outro** (its card numbers are the booth's, so a hit is findable where the operator
+   sees it). The first version read `script.json` only, and a defective Short hook walked
+   straight past it (#56 card 88). Dave's ruling: *"It should apply to all writing.
+   Putting an intro and an outro on a portion of the script to construct a short doesn't
+   eliminate the need to write well."* Anything read aloud gets the same gate.
+
+   **What it cannot catch, so the passes below still matter.** Card 88's real faults were
+   a wrong idiom ("overstates its evidence"), a subject held across an embedded clause,
+   and a referent — "the sales camp" — that a Short introduces cold with nothing behind
+   it. None is mechanical. A late-main-verb check was built and REJECTED: on that hook the
+   verb arrived at word six, earlier than nine lines of perfectly good script, so it would
+   have missed the defect and flagged good prose. The parser buys you completeness, not
+   sense.
+
+   Expect one or two false positives in the verbless list: the tagger reads the odd verb
+   as a noun ("The projects **span** five fields", "One video **promises** to…"). Read
+   each hit. **Do not add an auto-filter** — every filter tried during the build also hid
+   real fragments, which is worse than the noise.
+
+   Then go card by card, with the ear, for what the parser cannot see:
    - **Every sentence is complete.** Subject + verb, no dropped words, no half
      sentence, no two sentences fused into nonsense. (You build massive code
      flawlessly; hold these few hundred words of English to the same bar.)
@@ -304,6 +357,10 @@ for s in d["segments"]:
 - [ ] Every segment earns the next; open loops + re-hooks honored.
 - [ ] **Contractions everywhere natural (A4);** written-out "do not / I am / cannot"
       only for deliberate emphasis.
+- [ ] **`python3 tools/script_coherence.py <project_dir>` exits 0** — no verbless
+      noun-stacks, no bare numerals, no card opening on a pronoun/connective, nothing
+      over 23 words, no mid-sentence colons. An eye-pass does not substitute for this
+      (#56); exit 2 means the gate did not run, which is not a pass.
 - [ ] **Coherence: every sentence complete + parses on first read** — no dropped
       verbs, missing words, or broken/fused sentences.
 - [ ] Read aloud — nothing the operator would stumble on cold.
