@@ -64,8 +64,14 @@ CHIBI_THEMES = ("nemock-deep-dive",)
 #   circumvent           — a SEPARATE BRAND (2026-08-06 brand lock). Permanent.
 #   the six show worlds  — PAUSED 2026-08-10 pending a portrait design (see above).
 #                          To re-enable one, move it back into CHIBI_THEMES.
+#   plg-guide            — the Product Leadership Operator's Guide. Operator, 2026-08-11:
+#                          "keep the chibi characters out of this video project." A hard
+#                          block rather than mere absence from CHIBI_THEMES, because
+#                          absence is a default and this is a decision — twelve modules
+#                          built across many sessions is exactly where a default gets
+#                          flipped by someone who did not know it was deliberate.
 CHIBI_NEVER = ("circumvent", "fwf", "mmt-tangerine", "ftt-study",
-               "wsc-goldenrod", "ttd-indigo", "fmf-alarm")
+               "wsc-goldenrod", "ttd-indigo", "fmf-alarm", "plg-guide")
 
 # Which way a pose GESTURES, in viewer terms — only poses with confirmed visual evidence
 # (the operator's #56 screenshot, the contact sheet, rendered stills). Everything absent
