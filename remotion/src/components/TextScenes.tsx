@@ -21,7 +21,10 @@ const SubKicker: React.FC<{text?: string; height: number}> = ({text, height}) =>
 const Kicker: React.FC<{text?: string; o: number; height: number}> = ({text, o, height}) => {
   const ink = useInk();
   return text ? (
-    <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 5, textTransform: 'uppercase', textAlign: 'center', opacity: o, marginBottom: height * 0.018}}>
+    // 0.024 -> 0.030 (2026-08-11, operator): at 1080 the kicker was 26px, which is ~5pt on a
+    // phone — legible on a desktop preview, a squint in the feed where most of this is watched.
+    // Letter-spacing eased 5 -> 4 because tracking that wide at the larger size eats the line.
+    <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: height * 0.030, letterSpacing: 4, textTransform: 'uppercase', textAlign: 'center', opacity: o, marginBottom: height * 0.020}}>
       {text}
     </div>
   ) : null;
@@ -82,6 +85,20 @@ export const KineticHeadline: React.FC<{fields: any; durationInFrames?: number}>
       </PaperStage>
     );
   }
+  // Headline type FILLS the frame instead of defaulting to one thin line (operator, 2026-08-11:
+  // "break that headline into two lines and make the font larger... we're trying to minimize
+  // font size to preserve space that doesn't need to be preserved"). The old fixed height*0.07
+  // set one 76px line across the middle of an otherwise empty 1080 frame — fine on a desktop
+  // preview, small on the phone where most of this is watched.
+  //
+  // fitStageText grows the type until the string genuinely needs the box, so a short headline
+  // gets big and a long one wraps to two or three lines rather than shrinking to a strip.
+  // FLOORED at the previous 0.07 so no headline that reads well today can come out smaller —
+  // this change can only ever increase type size.
+  const HEADLINE_BOX = {w: width * 0.84, h: height * 0.42};
+  const headlineSize = Math.max(height * 0.07,
+                                fitStageText(fields.headline || '', HEADLINE_BOX.w, HEADLINE_BOX.h));
+
   // slow continuous life: a gentle push-in + upward drift across the whole scene (clears the
   // freezedetect dead-air the old one-shot fade left; premium, not jittery).
   const live = interpolate(frame, [0, durationInFrames], [1, 1.035]);
@@ -99,7 +116,7 @@ export const KineticHeadline: React.FC<{fields: any; durationInFrames?: number}>
                      padding: ink.typeOnPaper ? `${height * 0.036}px ${height * 0.055}px` : undefined,
                      filter: ink.typeOnPaper ? `drop-shadow(0 ${height * 0.013}px ${height * 0.03}px rgba(120,92,40,.24))` : undefined}}>
           {ink.typeOnPaper ? <PaperSheet id={`stmt:${fields.headline ?? ''}`} family="card" radius={22} tint="#fffdf6" /> : null}
-          <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.07, lineHeight: 1.07, textAlign: 'center', textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
+          <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 900, fontSize: headlineSize, maxWidth: HEADLINE_BOX.w, lineHeight: 1.07, textAlign: 'center', textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
             <RevealWords text={fields.headline} accent={fields.accent} accentRed={fields.accentRed} startDelay={4} />
           </div>
         </div>

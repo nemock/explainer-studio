@@ -179,8 +179,12 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
   ) : null;
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 6%'}}>
+      {/* Kicker marginBottom 0.025 -> 0.07 (2026-08-11): at the larger size the kicker reached
+          the mount's top-left tape, which draws over it and ate the first characters ("SERIES"
+          rendered as "ERIES"). The tape overhangs the corner by roughly height*0.06, so the
+          kicker has to clear the TAPE, not just the mount edge. */}
       {fields.kicker ? (
-        <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 4, textTransform: 'uppercase', opacity: kIntro, marginBottom: height * 0.025}}>
+        <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: height * 0.030, letterSpacing: 4, textTransform: 'uppercase', opacity: kIntro, marginBottom: height * 0.07}}>
           {fields.kicker}
         </div>
       ) : null}
@@ -250,8 +254,14 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
         ) : null}
       </div>
       ) : null}
+      {/* Caption (2026-08-11, operator): was 24px with a 27px gap — small, and the mount's
+          bottom-right tape strip ran into it. Now 30px, centred, capped at 62% measure so a
+          long caption breaks to two lines instead of one thin full-width run, and pushed down
+          to 0.055 so it clears the tape rather than sharing space with it. */}
       {fields.caption ? (
-        <div style={{fontFamily: BRAND.font, color: ink.body, opacity: 0.75 * imgOpacity, fontSize: height * 0.022, marginTop: height * 0.025}}>
+        <div style={{fontFamily: BRAND.font, color: ink.body, opacity: 0.75 * imgOpacity,
+                     fontSize: height * 0.028, lineHeight: 1.35, textAlign: 'center',
+                     maxWidth: '62%', marginTop: height * 0.055}}>
           {fields.caption}
         </div>
       ) : null}
