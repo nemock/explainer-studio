@@ -198,6 +198,11 @@ export const PaperMolecule: React.FC<{fields: any}> = ({fields}) => {
   const atoms: any[] = fields.atoms || [];
   const R = fields.atomR ?? width * 0.185;
   const bondColor = fields.bondColor || (atoms[0] && atoms[0].accent) || CB.teal;
+  // How many paper bars to draw between neighbouring atoms. Defaults to 2 because the
+  // first user of this component was O2, which really is a double bond — but a molecule
+  // with a SINGLE bond (chloramine's N-Cl) drew a double bond and taught the wrong
+  // chemistry, caught in frame QA on the chlorine short 2026-08-07. Set `bonds: 1`.
+  const bondCount = Math.max(1, Math.min(3, fields.bonds ?? 2));
   const inn = spring({frame: frame - 10, fps, config: {damping: 16, stiffness: 110}});
 
   return (
@@ -222,10 +227,10 @@ export const PaperMolecule: React.FC<{fields: any}> = ({fields}) => {
             {i > 0 ? (
               <div style={{display: 'flex', flexDirection: 'column', gap: 12 * s, margin: `0 ${-R * 0.16}px`, zIndex: 3,
                 transform: `scaleX(${inn})`, opacity: inn}}>
-                <div style={{width: R * 0.55, height: 13 * s, borderRadius: 9 * s, background: darken(bondColor, 0.85),
-                  boxShadow: thick(bondColor, Math.round(4 * s), 5 * s, 8 * s, 0.2)}} />
-                <div style={{width: R * 0.55, height: 13 * s, borderRadius: 9 * s, background: darken(bondColor, 0.85),
-                  boxShadow: thick(bondColor, Math.round(4 * s), 5 * s, 8 * s, 0.2)}} />
+                {Array.from({length: bondCount}).map((_, b) => (
+                  <div key={b} style={{width: R * 0.55, height: 13 * s, borderRadius: 9 * s, background: darken(bondColor, 0.85),
+                    boxShadow: thick(bondColor, Math.round(4 * s), 5 * s, 8 * s, 0.2)}} />
+                ))}
               </div>
             ) : null}
             <AtomGlyph protons={a.protons} neutrons={a.neutrons} shells={Array.isArray(a.shells) ? a.shells : [1]}
@@ -252,9 +257,18 @@ export const ElementStat: React.FC<{fields: any}> = ({fields}) => {
   const dot = width * 0.06;
   const rid = 'r' + React.useId().replace(/:/g, '');
   const rough = `url(#${rid})`;
+  // Gentle one-way idle, matching PaperWord/PaperProp/PeriodicSlot. ElementStat was the
+  // only slide component in the kit without one, so a long stat card sat perfectly still
+  // and read as dead air (sulfur QA, 2026-08-07: 12.3s across 12 spans). No zoom — big
+  // numerals stay crisp — and one-way, never an oscillation.
+  const kbC = {extrapolateLeft: 'clamp' as const, extrapolateRight: 'clamp' as const};
+  const idleY = interpolate(frame, [15, 420], [0, -width * 0.018], kbC);
+  const idleRot = interpolate(frame, [15, 420], [0, -0.6], kbC);
+  const idle = `translateY(${idleY}px) rotate(${idleRot}deg)`;
 
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', flexDirection: 'column'}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', flexDirection: 'column',
+      transform: idle}}>
       <RoughDefs id={rid} scale={9} freq={0.016} />
       {total > 0 ? (
         <div style={{display: 'flex', gap: width * 0.02, marginBottom: width * 0.055, maxWidth: '84%',
