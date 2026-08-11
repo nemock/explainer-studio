@@ -9,6 +9,7 @@ import {BRAND} from './brand';
 // midnight masterclass and every legacy deck.
 
 export const PAPER_THEMES = ['nemock-deep-dive', 'cut-bond', 'brg-paper', 'brg-deep-dive', 'wte-guide', 'circumvent',
+  'plg-guide',
   // The six personal-show worlds (2026-08-06 brand system) — all render the Cvg family.
   'fwf', 'mmt-tangerine', 'ftt-study', 'wsc-goldenrod', 'ttd-indigo', 'fmf-alarm'];
 export const isPaperTheme = (t?: string): boolean => !!t && PAPER_THEMES.includes(t);
@@ -108,6 +109,30 @@ const PAPER_WTE: Ink = {
   typeOnPaper: false,   // its own channel — not a deep-dive world
 };
 
+// PRODUCT LEADERSHIP Operator's Guide paper world (2026-08-11) — the twelve-part
+// head-of-product / CPO teaching series on Dave's personal channel. Navy-on-cream like its
+// paper siblings; the accent is RUST/TERRACOTTA (#a8481f, operator's choice).
+//
+// The accent choice is load-bearing, not decorative. This series teaches the SAME subject
+// matter as the BRG deep-dive series (#39/#40/#50) but is a different product: free,
+// ungated, like-and-subscribe, outside the sales funnel. Sharing BRG indigo (#7b5bff)
+// would make two different things read as one in a thumbnail grid — exactly the confusion
+// the theme-isolation rule exists to prevent. Rust also sits furthest from its neighbours:
+// indigo (#7b5bff), WTE teal (#0d7377), Circumvent gold (#c89b3c), studio green.
+// Contrast on the cream ground (#f5f0eb) is ~5.1:1, so it carries accent TEXT, not just
+// fills. Its own entry, never a retune of a shipping palette.
+const PAPER_PLG: Ink = {
+  body: '#1b2b4b',
+  soft: '#5b6577',
+  cardBg: 'rgba(27,43,75,.06)',
+  track: 'rgba(27,43,75,.14)',
+  neutral: 'rgba(27,43,75,.5)',
+  accent: '#a8481f',
+  accentWash: 'rgba(168,72,31,.30)',
+  paper: true,
+  typeOnPaper: false,   // its own series world — not a deep-dive world
+};
+
 // CIRCUMVENT GLOBAL paper world (2026-07-30) — the Circumvent marketing/explainer program.
 // The only paper world with GREEN ink rather than navy or purple, which is what makes it
 // legible as a different brand at a glance. Deep forest body ink (#1c3a29) extends the
@@ -152,6 +177,7 @@ const INK_BY_THEME: Record<string, Ink> = {
   'brg-paper': PAPER_BRG,
   'brg-deep-dive': PAPER_BRG_DEEP,
   'wte-guide': PAPER_WTE,
+  'plg-guide': PAPER_PLG,
   'circumvent': PAPER_CIRCUMVENT,
   'fwf': mkShowInk('#2A1142', '#757BBD', 'rgba(117,123,189,.34)'),
   'mmt-tangerine': mkShowInk('#5F2508', '#0F7E75', 'rgba(15,126,117,.30)'),

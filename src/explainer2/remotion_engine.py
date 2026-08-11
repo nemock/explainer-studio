@@ -781,7 +781,12 @@ def build_spec(sp):
     # this block already guards wte-guide against.
     # The six personal-show worlds likewise end on their own CTA card (brand system
     # 2026-08-06); the legacy BrandSting would stamp the wrong brand on five of them.
-    _NO_STING = ("wte-guide",) + _CVG_STYLE_THEMES
+    # plg-guide joins wte-guide here (2026-08-11). Both are like-and-subscribe-only
+    # Operator's Guide series on the personal channel with no spoken site CTA, so neither
+    # wants a wordmark bumper. Without this entry plg-guide falls to the legacy `else`
+    # below and gets FOUNDERS WHO FINISH / davesaunders.net stamped on a series that is
+    # explicitly not the book brand — the same cross-brand leak guarded against above.
+    _NO_STING = ("wte-guide", "plg-guide") + _CVG_STYLE_THEMES
     if sp.data.get("theme") not in _NO_STING and sp.data.get("sting", width >= height):
         # The sting is THEME-KEYED (branding isolation, operator direction 2026-07-15).
         # Each channel owns its brand; nothing here is a global default.

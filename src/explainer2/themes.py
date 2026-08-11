@@ -63,6 +63,16 @@ THEMES = {
     # tracked in that project's CLAUDE.md — do not render wte-guide before it ships.
     "wte-guide": {"bg": "#f5f0eb", "fg": "#1b2b4b", "accent": "#0d7377", "accent2": "#c2410c",
                   "motion": "fade", "fonts": {"display": "Fraunces", "body": "Inter"}},
+    # plg-guide = The Operator's Guide to Product Leadership (twelve-part head-of-product /
+    # CPO teaching series, /Volumes/Casima/claudeCode/Product_Leadership_Operators_Guide).
+    # BRG cream+navy paper like its siblings; accent is RUST/TERRACOTTA (#a8481f, operator
+    # 2026-08-11). Its own key for a reason worth restating: this series teaches the SAME
+    # subject as the BRG deep-dive series but is a different product — free, ungated,
+    # like-and-subscribe, outside the sales funnel. Sharing brg-deep-dive's indigo would
+    # make two different things read as one. accent2 == accent so no off-brand colour can
+    # leak (same trick as `fwf`). CTA is like-and-subscribe ONLY: no book, no spoken site.
+    "plg-guide": {"bg": "#f5f0eb", "fg": "#1b2b4b", "accent": "#a8481f", "accent2": "#a8481f",
+                  "motion": "fade", "fonts": {"display": "Fraunces", "body": "Inter"}},
     # circumvent = Circumvent Global marketing + explainer videos (circumventglobal.com).
     # NOT part of Dave's personal brand and NOT a BRG property: its own key so the Circumvent
     # program can be papercraft without repainting any neighbour. Added 2026-07-30 per the
