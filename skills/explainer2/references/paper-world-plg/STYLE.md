@@ -114,7 +114,12 @@ and should stay — do not erode them away chasing a perfectly flat silhouette.
 **Do not bake an episode number into the mark.** The badge number is Remotion/compositor
 typography over the mark, for the same reason the cards stay blank.
 
-## 6. The presenter
+## 6. The presenter — BLOCKED, not merely off
 
-OFF for this world, matching the show-world decision of 2026-08-10, unless the operator
-asks otherwise.
+Operator, 2026-08-11: *"keep the chibi characters out of this video project."*
+
+`plg-guide` is in `CHIBI_NEVER` (remotion_engine.py), not just absent from `CHIBI_THEMES`.
+The denylist is checked **before** the project-file opt-in, so `"presenter": {"enabled":
+true}` cannot switch it on, and the skip is logged. This is a decision, not a default —
+across twelve modules and many sessions, a default is exactly what gets flipped by someone
+who doesn't know it was deliberate.
