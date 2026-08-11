@@ -49,14 +49,57 @@ CHIBI_ROTATION = (
     "04-arms-crossed",
 )
 
-# Personal shows carry the presenter by default. Cut & Bond and the navy ISO world are
-# other looks entirely, so they are simply not on this list and a project may opt in.
-CHIBI_THEMES = ("nemock-deep-dive", "fwf", "mmt-tangerine", "ftt-study",
-                "wsc-goldenrod", "ttd-indigo", "fmf-alarm")
+# DEEP DIVES ONLY (operator decision 2026-08-10). The presenter shipped 2026-08-07 for
+# the six personal shows as well, but every one of them renders portrait-only
+# (9:16 + 4:5), where the presenter is skipped — so it never actually appeared on any of
+# them, and the docs telling authors to place it were writing dead JSON. Rather than
+# leave that as an accident of geometry, the six worlds are blocked outright until the
+# operator settles how a stand-in should work in a vertical frame ("still experimenting
+# with their use; restrict to the deep dives for now"). Cut & Bond and the navy ISO world
+# are other looks entirely and were never on this list; a project may opt those in.
+CHIBI_THEMES = ("nemock-deep-dive",)
 
-# Circumvent is a SEPARATE BRAND and never carries Dave's stand-in (2026-08-06 brand
-# lock). That is a hard rule, not a default: a project file cannot switch it on.
-CHIBI_NEVER = ("circumvent",)
+# Themes that never carry Dave's stand-in. A hard rule, not a default: a project file
+# cannot switch these on with "presenter": {"enabled": true}.
+#   circumvent           — a SEPARATE BRAND (2026-08-06 brand lock). Permanent.
+#   the six show worlds  — PAUSED 2026-08-10 pending a portrait design (see above).
+#                          To re-enable one, move it back into CHIBI_THEMES.
+CHIBI_NEVER = ("circumvent", "fwf", "mmt-tangerine", "ftt-study",
+               "wsc-goldenrod", "ttd-indigo", "fmf-alarm")
+
+# Which way a pose GESTURES, in viewer terms — only poses with confirmed visual evidence
+# (the operator's #56 screenshot, the contact sheet, rendered stills). Everything absent
+# is neutral and never flipped. Do NOT infer facing from a filename: the pose model
+# mirrors handedness freely and the library README warns "presenting-right" may present
+# left. The operator's rule this serves (2026-08-07): the presenter must be part of the
+# action — a pose pointing off-frame "just looks randomly chosen". So a directional pose
+# is seated on the side that aims its gesture AT the content, or mirrored so it does.
+CHIBI_FACING = {
+    "01-presenting-right": "left",     # open palm sweeps to the viewer's left (stills)
+    "07-presenting-left": "right",
+    "11-pointing-side": "right",       # points viewer-right (operator screenshot, #56)
+    "26-carrying-heavy-box": "left",   # walks/leans viewer-left (contact sheet + still)
+    "28-walking-side": "left",
+    "29-leaning-on-edge": "left",      # the ledge he leans on is at his viewer-left
+}
+
+
+def _chibi_side(slide):
+    """Pick the emptier bottom corner for the presenter, per scene. Only schematics put
+    authored content low enough to collide (nodes reach y 0.65); everything else keeps
+    its lower corners quiet by composition, so the default corner is fine."""
+    if slide.get("type") != "schematic":
+        return None
+    left = right = 0.0
+    for n in slide.get("nodes", []):
+        if n.get("y", 0) < 0.42:      # above the presenter's band entirely
+            continue
+        x, w = n.get("x", 0.5), n.get("w", 0.2)
+        left += max(0.0, min(x + w / 2, 0.32) - (x - w / 2))
+        right += max(0.0, (x + w / 2) - max(x - w / 2, 0.68))
+    if left == right:
+        return None
+    return "left" if left < right else "right"
 
 
 def _assign_chibi(scenes, slides_by_id, seg_slides, data, log):
@@ -70,7 +113,8 @@ def _assign_chibi(scenes, slides_by_id, seg_slides, data, log):
     theme = data.get("theme", "")
     if theme in CHIBI_NEVER:
         if cfg.get("enabled"):
-            log(f"remotion: the chibi presenter is not available on the {theme} brand — skipped")
+            log(f"remotion: the chibi presenter is not available on the {theme} theme — skipped "
+                f"(deep dives only; see CHIBI_NEVER)")
         return None
     portrait = data["height"] > data["width"]
     default_on = theme in CHIBI_THEMES and not portrait
@@ -113,7 +157,24 @@ def _assign_chibi(scenes, slides_by_id, seg_slides, data, log):
                 rot += 1
         scene["chibi"] = "chibi/" + pose
         slide = slides_by_id.get(seg_slides[i], {}) if i < len(seg_slides) else {}
-        if slide.get("chibiFlip"):
+
+        # Corner + facing (operator directive 2026-08-07 v2): authored side wins, then
+        # the emptier corner, then — for a directional pose — the side that aims its
+        # gesture at the content. Seating beats mirroring (no mirrored hair/wardrobe),
+        # so flip only when the density choice forces the pose onto its off-side.
+        facing = CHIBI_FACING.get(pose)
+        side = slide.get("chibiSide") or _chibi_side(slide)
+        if not side:
+            side = ("left" if facing == "right" else "right") if facing else "right"
+        scene["chibiSide"] = side
+        # Schematics fill their corners with auto-sized post-its, so the presenter drops
+        # to the bottom of the brand size range there; still-checked 2026-08-07.
+        if slide.get("type") == "schematic":
+            scene["chibiH"] = 0.17
+        if "chibiFlip" in slide:
+            if slide["chibiFlip"]:
+                scene["chibiFlip"] = True
+        elif facing == side:  # gesture aims off-frame from this corner — mirror it
             scene["chibiFlip"] = True
         prev = pose
     # 0.22 = the top of the brand spec's 18-22%. At 0.18 he reads as a sticker in a
@@ -306,6 +367,38 @@ def _papercraft_component(slide, t, kicker, accent, headline):
 _CVG_STYLE_THEMES = ("circumvent", "fwf", "mmt-tangerine", "ftt-study",
                      "wsc-goldenrod", "ttd-indigo", "fmf-alarm")
 
+# Per-theme closing wordmark, used ONLY as the last-resort fill for a content-less
+# `cta`/`payoff` slide (see _cta_fallback). Same brand-per-theme mapping the outro sting
+# uses below — kept in step with it, never a global default (branding-isolation rule).
+_CTA_WORDMARK = {
+    "brg-deep-dive": "baserealitygroup.com",
+    "brg-paper": "baserealitygroup.com",
+    "nemock-deep-dive": "davesaunders.net",
+    "fwf": "davesaunders.net",
+    "circumvent": "circumventglobal.com",
+}
+
+
+def _cta_fallback(theme, log=None):
+    """Headline for a `cta`/`payoff` slide that carries no text of its own.
+
+    The deck-playbook documents `cta` as "brand-driven (pulls DECK.brand.cta.*)", which is
+    true of the LEGACY deck engine. Remotion has no such plumbing: it maps cta -> CTA /
+    PaperBookCTA, both of which print `fields.headline` and render an EMPTY card when it is
+    blank. #50 shipped that way — a field-less `cta` closed the video with ~25s of bare
+    background, past deck-census, past validate, past publish, because nothing on the
+    Remotion path ever asserted the closing card had content. This makes the type behave the
+    way the playbook already promises, so an under-specified close degrades to a branded end
+    card instead of dead air. It is a NET, not a licence to omit the fields: deck_census
+    fails the deck outright (see _empty_cta_slides there), and the fill is logged.
+    """
+    wm = _CTA_WORDMARK.get(theme or "", "")
+    headline = wm or "Subscribe."
+    if log:
+        log(f"[cta] closing slide had no headline — filled with {headline!r} "
+            f"(theme={theme or 'default'!r}). Author a headline on the cta/payoff slide.")
+    return headline
+
 
 def _circumvent_scene(slide, t, kicker, accent, headline):
     """CIRCUMVENT style map. Every deck type resolves to a Cvg* scene so no slide can
@@ -352,7 +445,7 @@ def _circumvent_scene(slide, t, kicker, accent, headline):
     return "CvgScene", common
 
 
-def _scene_for(slide, theme=""):
+def _scene_for(slide, theme="", warn=None):
     """Map a deck slide -> (component, fields) per the motion-playbook §6 migration table.
     Unknown -> KineticHeadline (a clean animated headline). `image` fields stay as the
     deck's source path; render() stages them into the public dir.
@@ -369,6 +462,13 @@ def _scene_for(slide, theme=""):
     accent = slide.get("accent", []) or []
     accent2 = slide.get("accent2", []) or []
     headline = slide.get("headline") or slide.get("title") or slide.get("word") or ""
+
+    # A closing card with nothing to print renders an EMPTY frame on every Remotion path
+    # (CTA, PaperBookCTA and CvgCta all just print fields.headline). Fill it here — above the
+    # Cvg / papercraft / classic dispatch — so no route can emit a blank close. See
+    # _cta_fallback for why the type is under-specified in the first place.
+    if t in ("cta", "payoff") and not headline:
+        headline = _cta_fallback(theme, log=warn)
 
     # Papercraft style map. nemock-deep-dive (Dave's book/davesaunders.net deep dives) and
     # brg-deep-dive (the Base Reality Group series, added 2026-07-26) both render the Paper*
@@ -514,12 +614,17 @@ def build_spec(sp):
     segs = seg["segments"]
     slides_by_id = {s["id"]: s for s in json.loads(sp.deck_json.read_text())["slides"]}
 
+    # Declared before the scene loop so _scene_for can report a fallback it had to apply
+    # (e.g. a content-less closing card). Surfaced as spec["_warnings"] and logged by
+    # _render_one, same as every sync warning collected below.
+    warnings = []
     scenes = []
     for i, s in enumerate(segs):
         start = s["start"]
         end = segs[i + 1]["start"] if i + 1 < len(segs) else duration
         slide = slides_by_id.get(s["slide"], {})
-        comp, fields = _scene_for(slide, theme=sp.data.get("theme", ""))
+        comp, fields = _scene_for(slide, theme=sp.data.get("theme", ""),
+                                  warn=warnings.append)
         sc = {"component": comp, "from": int(round(start * fps)),
               "durationInFrames": max(1, int(round((end - start) * fps))), "fields": fields}
         # act-boundary tear (papercraft-motion-spec.md §4): the scene reveals behind a
@@ -537,7 +642,6 @@ def build_spec(sp):
     # --- narration sync: cues, item times, annotations (motion-playbook §5) ---
     # Every resolved frame is SCENE-relative, so the sting shift below (which only
     # moves sc["from"]) never invalidates them.
-    warnings = []
     # Paper* corner props are a LANDSCAPE affordance. In portrait the content card fills
     # the width and the captions own the lower third, so there is no corner left to stand
     # in — a prop lands on the slide's own text (verified with 9:16 stills, 2026-08-07).
@@ -644,6 +748,21 @@ def build_spec(sp):
                 a2["cueFrame"] = f if f is not None else int(round(dur * (ai + 1) / (n + 1)))
                 resolved.append(a2)
             sc["annotations"] = resolved
+            # NARRATIVE-ORDER GUARD (operator-caught, #56): a circle drawn before the
+            # thing it circles exists reads as nonsense. On a schematic, nothing exists
+            # before the first stage reveals, so any annotation resolving earlier is a
+            # defect by construction. (An annotation can still fire before its SPECIFIC
+            # target's later stage — this guard only catches the unambiguous case.)
+            if slide.get("type") == "schematic" and slide.get("stages"):
+                first_cue = slide["stages"][0].get("cue", "")
+                f0 = _resolve_phrase(first_cue, segw, s0, fps) if first_cue else None
+                if f0 is not None:
+                    for a2 in resolved:
+                        if a2["cueFrame"] < f0:
+                            warnings.append(
+                                f"{sid}: annotation fires at frame {a2['cueFrame']} but the "
+                                f"schematic's first reveal is at {f0} — it draws on empty "
+                                f"canvas. Recue it after its subject appears.")
 
     # Bookend long-form with the brand sting (motion-playbook §2F). On by default for
     # landscape (deep dives), off for portrait shorts (the hook must open instantly).
@@ -824,12 +943,30 @@ def _stage_chibi(spec, public, log):
 
     for scene in spec["scenes"]:
         fields = scene.get("fields") or {}
+        # The presenter layer (_assign_chibi -> scene["chibi"]) is the ONLY legitimate
+        # route for a pose. A chibi ref authored as set dressing — in `props` or as a
+        # slide `image` — is dropped here (deck-playbook §4c-ii: "Never author a
+        # `chibi/...` ref as a prop"). Enforced in the engine 2026-08-10: until then
+        # this path still staged them, so decks written against the pre-2026-08-07 docs
+        # rendered Dave as a PROP, at prop scale and prop baseline, standing in the set
+        # as furniture. That is how the stand-in kept shipping on the portrait shows
+        # even though the presenter layer skips portrait (5 decks: FMF 08-07 and four
+        # FWF dailies 08-07..08-10). Dropping is safe — the scene renders without it.
         for key in ("image", "bottomImage"):
             if str(fields.get(key) or "").startswith("chibi/"):
-                fields[key] = _one(fields[key])
-        for prop in (fields.get("props") or []):
-            if isinstance(prop, dict) and str(prop.get("image") or "").startswith("chibi/"):
-                prop["image"] = _one(prop["image"])
+                log(f"remotion: chibi ref dropped from `{key}` — the presenter is an "
+                    f"automatic layer, never set dressing ({fields[key]})")
+                fields[key] = None
+        props = fields.get("props")
+        if props:
+            kept = []
+            for prop in props:
+                if isinstance(prop, dict) and str(prop.get("image") or "").startswith("chibi/"):
+                    log(f"remotion: chibi ref dropped from `props` — the presenter is an "
+                        f"automatic layer, never a prop ({prop['image']})")
+                    continue
+                kept.append(prop)
+            fields["props"] = kept
         # scene-level presenter pose (every scene carries one; see _assign_chibi)
         if str(scene.get("chibi") or "").startswith("chibi/"):
             staged = _one(scene["chibi"])
@@ -1026,7 +1163,12 @@ def _render_one(sp, log=print, frames=None, out=None):
         cmd.append(f"--frames={frames}")
     log(f"remotion: rendering {sp.dir.name} ({len(spec['scenes'])} scenes, {spec['durationInFrames']}f"
         + (f", slice {frames}" if frames else "") + ")")
-    r = subprocess.run(cmd, cwd=str(REMOTION_DIR), capture_output=True, text=True)
+    # Own process group (childproc): `npm exec remotion render` forks node and a whole
+    # chrome-headless-shell tree, and on 2026-08-10 that tree survived its parent being
+    # killed and kept rendering as an orphan. One killable group instead.
+    from . import childproc
+    r = childproc.run(cmd, label=f"remotion:{sp.dir.name}", cwd=str(REMOTION_DIR),
+                      capture_output=True, text=True)
     if r.returncode != 0:
         raise RuntimeError(f"remotion render failed:\n{r.stdout[-1800:]}\n{r.stderr[-1800:]}")
     # Remotion bakes narration-only audio; mix the channel music bed under it (no

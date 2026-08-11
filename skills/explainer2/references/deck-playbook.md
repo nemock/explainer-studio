@@ -118,9 +118,17 @@ substrings of the text they accent or nothing highlights.
   artifact (a screenshot of an authored HTML artifact, a chart, etc.).
 - **`footage`** → `image` (path, **must exist**) + `headline`/`accent` overlay.
   Full-bleed licensed B-roll with deterministic Ken Burns drift.
-- **`cta`** → brand-driven (pulls `DECK.brand.product/logo/cta.*`); needs brand
-  config. **For a normal closing card use `payoff`, not `cta`,** unless a brand
-  with a `cta` block is wired up.
+- **`cta`** → **`headline` is REQUIRED, on every engine.** The "brand-driven, pulls
+  `DECK.brand.cta.*`" behavior is the LEGACY deck engine only. Remotion (the default)
+  maps `cta`/`payoff` straight to `CTA` / `PaperBookCTA` / `CvgCta`, all of which print
+  `fields.headline` and nothing else — so a `cta` slide authored with no fields renders
+  an **empty frame**. That shipped publicly on #39 and #50: the last ~25 seconds were
+  bare background with only the caption strip, because the closing card had nothing on
+  it. (#40 survived only because its book cover happened to fill the frame.)
+  Since 2026-08-10 the engine fills a per-theme wordmark as a last resort and logs
+  `[cta] closing slide had no headline`, and `deck_census.py` **fails the deck** for any
+  text-bearing slide with no text — but the fallback is a net, not a licence to omit it.
+  **For a normal closing card prefer `payoff`,** and give it a real headline either way.
 
 ## 3. Mapping segment `device` → slide type (a starting heuristic)
 
@@ -239,7 +247,12 @@ corners beside the content:
 - Until 2026-08-07 only `hook` slides forwarded `props`; everywhere else they were
   silently dropped. All paper types now carry them.
 - **Props are objects, not people.** The presenter is a separate automatic layer that
-  needs no deck authoring (motion-playbook §G2). Never author a `chibi/...` ref as a prop.
+  needs no deck authoring (motion-playbook §G2). Never author a `chibi/...` ref as a prop
+  — **engine-enforced since 2026-08-10**: `_stage_chibi` drops chibi refs found in
+  `props` or in a slide `image`, with a `run.log` warning.
+- **Scope note (2026-08-10):** this section is the **`Paper*`** family. The **`Cvg*`**
+  family (circumvent + the six show worlds) has its own prop renderer — it takes `size`
+  rather than `h`/`w`, and it **renders props in portrait** rather than dropping them.
 
 ## 4d. Optional: generate STYLIZED elements with Magnific image-gen (proven 2026-07-14)
 
@@ -288,8 +301,10 @@ every `accent`/`accent2`/`mark` token is a substring of its headline/title; no
 
 - [ ] One slide per script segment; ids contiguous `s01…sNN` and matched to the
       script in order.
-- [ ] Slide 0 = `hook` (the cold open); closing card = `payoff` (or `cta` only
-      if brand is wired).
+- [ ] Slide 0 = `hook` (the cold open); closing card = `payoff` (or `cta`).
+      **The closing card MUST have a `headline`** — a field-less one renders an empty
+      frame on Remotion and closed #39 and #50 on bare background (§2). `deck_census.py`
+      now fails the deck for this, so a green census is the check.
 - [ ] **No recap `list` slide in the final 2–3** (don't signal the end — see
       script-playbook §4.7, 2026-06-21). Ending sequence = `comment_prompt` (a
       real open question) → a single closing `payoff`/`cta`, then stop. No

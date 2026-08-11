@@ -49,6 +49,37 @@ def slide_has_cues(s):
     return False
 
 
+# Types whose ENTIRE frame is the text they are given. A figure/schematic/stat slide draws
+# something without a headline; these do not — an empty one renders a blank card.
+TEXT_BEARING_TYPES = {"statement", "highlight", "punch", "quote", "reframe",
+                      "cta", "payoff"}
+
+
+def _contentless_slides(slides):
+    """Slide ids that would render with nothing printed on them.
+
+    #50 closed on a `cta` slide authored with NO fields. Every Remotion closing component
+    prints fields.headline and nothing else, so the video ended on ~25 seconds of bare
+    background — and it went out publicly, because the census only ever measured the MIX of
+    slide types, never whether a slide had anything to say. The engine now fills a branded
+    fallback (remotion_engine._cta_fallback) so the frame is never blank; this check is the
+    half that makes the author fix it properly instead of shipping the fallback.
+    """
+    bad = []
+    for s in slides:
+        if s.get("component"):        # direct-component escape hatch: fields are its own
+            continue
+        if s.get("type") not in TEXT_BEARING_TYPES:
+            continue
+        if s.get("headline") or s.get("title") or s.get("word") or s.get("quote"):
+            continue
+        # reframe prints before/after rather than a headline
+        if s.get("type") == "reframe" and (s.get("before") or s.get("after")):
+            continue
+        bad.append(f"{s.get('id', '?')} ({s.get('type')})")
+    return bad
+
+
 def main():
     if len(sys.argv) != 2:
         sys.exit(__doc__.strip())
@@ -81,6 +112,7 @@ def main():
     has_hook = slides[0].get("type") == "hook" if slides else False
     has_punch = types.get("punch", 0) > 0
     teaching_needed = max(1, round(n / 18))
+    blank = _contentless_slides(slides)
 
     # Advisory: segments that speak a number while their slide is typography-only.
     number_offenders = []
@@ -103,6 +135,7 @@ def main():
         (f"hero cold open (first slide type=hook): {has_hook}; midroll punch present: {has_punch}", has_hook and has_punch),
         (f"annotated slides {annotated}/{n} (need ≥ 1/3)", annotated * 3 >= n),
         (f"slides with authored narration cues {cued} (need ≥ 1; 0 = failed deck)", cued >= 1),
+        (f"slides that would render blank: {', '.join(blank) if blank else 'none'}", not blank),
     ]
     ok = True
     for label, passed in checks:
