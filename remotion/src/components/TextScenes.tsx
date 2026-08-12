@@ -6,8 +6,9 @@ import {PaperSheet} from './PaperNote';
 import {PaperStage, isStageName, stageZonePx, fitStageText} from './PaperStage';
 import {colorizeText} from './colorize';
 
-const colorize = (text: string, accent: string[] = [], red: string[] = []) =>
-  colorizeText(text, accent, red);
+const colorize = (text: string, accent: string[] = [], red: string[] = [],
+                 accentColor?: string) =>
+  colorizeText(text, accent, red, accentColor);
 
 const SubKicker: React.FC<{text?: string; height: number}> = ({text, height}) => {
   const ink = useInk();
@@ -141,7 +142,7 @@ export const DefineTerm: React.FC<{fields: any; durationInFrames?: number}> = ({
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 9%', transform: `scale(${live}) translateY(${drift}px)`}}>
       <Kicker text={fields.kicker} o={t} height={height} />
       <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 900, fontSize: termSize, lineHeight: 1.1, textAlign: 'center', opacity: t, transform: `translateY(${interpolate(t, [0, 1], [24, 0])}px)`, textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
-        {colorize(fields.term, fields.accent, fields.accentRed)}
+        {colorize(fields.term, fields.accent, fields.accentRed, ink.accent)}
       </div>
       <div style={{fontFamily: BRAND.font, color: ink.body, fontWeight: 700, fontSize: height * 0.038, lineHeight: 1.3, textAlign: 'center', maxWidth: '85%', marginTop: height * 0.028, opacity: d, transform: `translateY(${interpolate(d, [0, 1], [18, 0])}px)`}}>
         {fields.definition}
@@ -189,7 +190,7 @@ export const PunchWord: React.FC<{fields: any}> = ({fields}) => {
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 6%'}}>
       <Kicker text={fields.kicker} o={interpolate(p, [0, 1], [0, 1])} height={height} />
       <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.2, lineHeight: 1.02, color, textTransform: 'uppercase', transform: `scale(${p})`, textShadow: ink.paper ? PAPER_SHADOW : '0 16px 70px rgba(0,0,0,.6)', textAlign: 'center', maxWidth: '92%', whiteSpace: 'pre-line', textWrap: 'balance' as any}}>
-        {hasAccent ? colorize(text, fields.accent, fields.accentRed) : text}
+        {hasAccent ? colorize(text, fields.accent, fields.accentRed, ink.accent) : text}
       </div>
     </AbsoluteFill>
   );
@@ -230,7 +231,7 @@ export const BuildList: React.FC<{fields: any; durationInFrames: number}> = ({fi
         <Kicker text={fields.kicker} o={spring({frame, fps, config: {damping: 18}})} height={height} />
         {fields.title ? (
           <div style={{fontFamily: BRAND.font, color: ink.body, fontWeight: 800, fontSize: height * 0.036, lineHeight: 1.2, opacity: titleO, marginBottom: height * 0.024, transform: `translateY(${interpolate(titleO, [0, 1], [16, 0])}px)`}}>
-            {colorize(fields.title, fields.accent, fields.accentRed)}
+            {colorize(fields.title, fields.accent, fields.accentRed, ink.accent)}
           </div>
         ) : null}
         {items.map((it, i) => {

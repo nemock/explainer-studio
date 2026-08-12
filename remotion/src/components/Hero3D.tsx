@@ -3,6 +3,7 @@ import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from
 import {ThreeCanvas} from '@remotion/three';
 import {BRAND} from '../brand';
 import {colorizeText} from './colorize';
+import {useInk} from '../ink';
 
 // motion-playbook §2G — 3D hero (cold opens / seam / payoff). A slowly rotating brand
 // wireframe solid behind a 2D kinetic headline. Rotation is frame-driven (deterministic).
@@ -31,6 +32,7 @@ const Solid: React.FC<{shape: string}> = ({shape}) => {
 };
 
 export const Hero3D: React.FC<{fields: any}> = ({fields}) => {
+  const ink = useInk();
   const frame = useCurrentFrame();
   const {fps, width, height} = useVideoConfig();
   const headIn = spring({frame: frame - 10, fps, config: {damping: 16, stiffness: 110}});
@@ -61,7 +63,7 @@ export const Hero3D: React.FC<{fields: any}> = ({fields}) => {
             textShadow: '0 12px 60px rgba(0,0,0,.8)',
           }}
         >
-          {colorizeText(fields.headline, fields.accent, fields.accentRed)}
+          {colorizeText(fields.headline, fields.accent, fields.accentRed, ink.accent)}
         </div>
       </AbsoluteFill>
     </AbsoluteFill>

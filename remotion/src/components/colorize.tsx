@@ -12,17 +12,25 @@ import {BRAND} from '../brand';
 // multi-word key can never equal a single-word token, so nothing would ever highlight.
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9']/g, '');
 
+// `accentColor` is the THEME's accent (ink.accent), not a fixed green. ink.ts defines
+// accent as "the ONE accent (kicker + highlighted words)", but this function hardcoded
+// BRAND.green, so on every theme whose accent is not green — plg-guide rust, wte-guide
+// gold, cut-bond teal, BRG indigo, the six show worlds — a headline's accent words came
+// out studio green while the kicker directly above them rendered the real accent. Caught
+// on plg-guide module 1's closing card, 2026-08-12. Defaults to green so any call site
+// that does not pass a color behaves exactly as before.
 export const colorizeText = (
   text: string | undefined,
   accent: string[] = [],
-  accent2: string[] = []
+  accent2: string[] = [],
+  accentColor: string = BRAND.green
 ): React.ReactNode => {
   const a = new Set((accent || []).flatMap((s) => s.split(/\s+/)).map(norm));
   const a2 = new Set((accent2 || []).flatMap((s) => s.split(/\s+/)).map(norm));
   const parts = String(text || '').split(/(\s+)/);
   return parts.map((tok, i) => {
     const key = norm(tok);
-    if (key && a.has(key)) return <span key={i} style={{color: BRAND.green}}>{tok}</span>;
+    if (key && a.has(key)) return <span key={i} style={{color: accentColor}}>{tok}</span>;
     if (key && a2.has(key)) return <span key={i} style={{color: BRAND.red}}>{tok}</span>;
     return tok;
   });
