@@ -656,6 +656,19 @@ def build_spec(sp):
                                   warn=warnings.append)
         sc = {"component": comp, "from": int(round(start * fps)),
               "durationInFrames": max(1, int(round((end - start) * fps))), "fields": fields}
+
+        # UNIVERSAL CITATION PASSTHROUGH (operator directive 2026-08-12: "we cite our
+        # sources, so URLs… we'll put them at the bottom of the screen").
+        #
+        # Before this, `source` was mapped by exactly ONE slide type (statgrid) and
+        # `source_url` by none at all. A `figure`, `quote` or `compare` slide could carry
+        # a citation in deck.json and it was silently dropped at spec-build — the deck
+        # author would never know. Both fields now ride through for every type, and
+        # components/SourceLine.tsx renders them once at the Video level, capped so a long
+        # URL cannot climb into the caption band.
+        for _k in ("source", "source_url"):
+            if slide.get(_k):
+                sc["fields"].setdefault(_k, slide[_k])
         # act-boundary tear (papercraft-motion-spec.md §4): the scene reveals behind a
         # parting torn seam instead of the cross-fade. Author: "transition": "tear".
         if slide.get("transition") == "tear":

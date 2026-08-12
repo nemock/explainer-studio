@@ -43,12 +43,10 @@ export const StatGrid: React.FC<{fields: any; durationInFrames: number}> = ({fie
           );
         })}
       </div>
-      {fields.source ? (
-        <div style={{position: 'absolute', bottom: height * 0.05, left: 0, right: 0, textAlign: 'center',
-          fontFamily: BRAND.font, fontSize: height * 0.018, color: ink.soft}}>
-          {fields.source}
-        </div>
-      ) : null}
+      {/* The source footer moved to components/SourceLine.tsx, mounted once at the
+          Video level (operator 2026-08-12). Drawing it here as well would double it,
+          and this component was the ONLY one that ever drew it - every other slide
+          type silently dropped fields.source. */}
     </AbsoluteFill>
   );
 };

@@ -4,6 +4,7 @@ import type {VideoProps} from './schema';
 import {Background} from './components/Background';
 import {PaperBackground} from './components/PaperBackground';
 import {Captions} from './components/Captions';
+import {SourceLines} from './components/SourceLine';
 import {KineticHook} from './components/KineticHook';
 import {StatCounter} from './components/StatCounter';
 import {StatGrid} from './components/StatGrid';
@@ -222,6 +223,10 @@ export const Video: React.FC<VideoProps> = (props) => {
       })}
       {audio && !paper ? <ReactiveStrip audio={audio} audioFrom={audioFrom || 0} /> : null}
       <Captions words={words} bottomPx={captionBottomPx} fontSize={captionFontSize} theme={theme} accentColor={captionAccent} />
+      {/* On-screen source citations (operator 2026-08-12). Mounted here, NOT per
+          component, so every slide type is covered and the caption clearance is
+          reasoned about in one place. See components/SourceLine.tsx. */}
+      <SourceLines scenes={scenes} captionBottomPx={captionBottomPx} />
       {/* The presenter mounts LAST so he is above the scene, the annotations AND the
           captions: the viewer reads him as Dave presenting, not as scene furniture
           (operator directive 2026-08-07). He stands IN the scene as a corner overlay;

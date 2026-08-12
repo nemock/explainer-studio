@@ -161,6 +161,19 @@ take beats a synthetic one).
 the transcripts and comments (i.e., it's generic — "be more practical", "go
 deeper"), it is not done. Re-read §2's materials and find the specific gap.
 
+## 6b. Write the facts to the wiki BEFORE the blueprint (2026-08-12)
+
+Every verified fact becomes an atomized node under
+`explainer-content/research/<topic-slug>/`, with `status`, `url`, `source_date`,
+`retrieved` and `tier`, at the moment it is verified. See
+[research-wiki.md](research-wiki.md).
+
+Not optional and not a formality. The blueprint's evidence section should be able to
+POINT at nodes; a paragraph asserting that sources were checked is exactly what this
+replaces. Write nodes for the failures too — a RETRACTED node stopped #57 from
+reinstating a claim I had already disproved, and a NOT-VERIFIED node records that
+Bloomberg returned 403 so its circulating quotes never get aired as if we read them.
+
 ## 7. Title candidates
 
 Write 5, ranked. Rules: every candidate uses patterns from §3b; at least one
