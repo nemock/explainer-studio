@@ -100,6 +100,13 @@ def run(proj):
     (proj.captions_dir / "captions.srt").write_text("\n".join(srt))
     (proj.captions_dir / "captions.vtt").write_text("\n".join(vtt))
 
+    # Stamp the timeline with a fingerprint of the audio it was built from, so a
+    # later render-only run can prove the timeline still describes what is on disk
+    # (timelineguard.py — a re-record after align used to render silently desynced).
+    from . import timelineguard
+    timelineguard.stamp(proj)
+    timelineguard.clear_blocked(proj)
+
     metrics = {"align_s": round(align_s, 2), "words": len(words), "audio_s": round(duration, 2)}
     proj.write_json(proj.work / "metrics_align.json", metrics)
     return metrics

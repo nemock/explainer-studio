@@ -7,8 +7,8 @@ from datetime import date
 from pathlib import Path
 
 from .project import Project, ASPECTS
-from . import deckbuild, manifest, wiki, ingest, themes, qa, presets, validate, handoff, brand, talktime, stills, renderlock, contenttypes
-from .media import synth, align, render, mux
+from . import deckbuild, manifest, wiki, ingest, themes, qa, presets, validate, handoff, brand, talktime, stills, renderlock, contenttypes, childproc
+from .media import synth, align, render, mux, scriptguard, timelineguard
 
 STAGES = [("narrate", synth.run), ("align", align.run), ("deck", deckbuild.run),
           ("render", render.run), ("mux", mux.run), ("manifest", manifest.run),
@@ -227,10 +227,55 @@ def cmd_scaffold(args):
 
 def cmd_media(args):
     proj = Project.load(args.project_dir)
+
+    # SCRIPT/AUDIO STALENESS GUARD (scriptguard.py, 2026-08-10). Runs BEFORE any
+    # stage and regardless of --only, because the detached `render` path skips
+    # narrate entirely and would otherwise render a cached, stale segments.json.
+    # A mismatch writes BLOCKED.md and exits non-zero, so Phase 1 never writes
+    # render_complete.json and the watcher's Phase 2 never publishes.
+    try:
+        guard = scriptguard.enforce(proj, log=lambda m: _log(proj, m),
+                                    allow_stale=getattr(args, "allow_stale_script", False))
+    except scriptguard.StaleScriptError as e:
+        print(json.dumps({"blocked": "stale_script", "reason": e.report["reason"],
+                          "stale_segments": e.report["stale"],
+                          "unstamped_segments": e.report["unstamped"],
+                          "blocked_file": str(scriptguard.blocked_path(proj))}, indent=2))
+        return 1
+    if getattr(args, "recheck", False):
+        print(json.dumps({"ok": True, "reason": guard["reason"],
+                          "checked": len([s for s in guard["segments"]
+                                          if s["status"] in ("match", "exempt")]),
+                          "unstamped": guard["unstamped"],
+                          "not_recorded": guard["not_recorded"]}, indent=2))
+        return 0
+
     only = set(args.only.split(",")) if args.only else None
+
+    # TIMELINE STALENESS GUARD (timelineguard.py, 2026-08-12). The scriptguard above
+    # proves the TEXT matches; this proves the AUDIO does. `render` dispatches
+    # --only render,mux,manifest,qa and never re-aligns, so a take re-recorded after
+    # the last align used to render against the previous timeline — succeeding, and
+    # producing a video desynced from the card onward. No-op when this run includes
+    # align, which is about to rebuild the timeline anyway.
+    try:
+        timelineguard.enforce(proj, only=only, log=lambda m: _log(proj, m),
+                              allow_stale=getattr(args, "allow_stale_timeline", False))
+    except timelineguard.StaleTimelineError as e:
+        print(json.dumps({"blocked": "stale_timeline", "reason": e.report["reason"],
+                          "changed": e.report.get("changed", []),
+                          "fix": "explainer2 media <dir> --only narrate,align, then render"},
+                         indent=2))
+        return 1
+
     engine = getattr(args, "engine", "deck")
     results, t0 = {}, time.time()
     lock = None  # machine-global render lock, held across render→mux (renderlock.py)
+    # Trap termination so a killed render takes its remotion/chrome tree with it and
+    # releases the render lock, instead of orphaning an encode that keeps writing
+    # frames under a lockfile whose recorded pid is already dead (2026-08-10).
+    childproc.on_terminate(lambda: renderlock.release(lock))
+    childproc.install_handlers(log=lambda m: _log(proj, m))
     try:
         for name, fn in STAGES:
             if only and name not in only:
@@ -268,6 +313,14 @@ def cmd_media(args):
 
 def cmd_stage(args):
     proj = Project.load(args.project_dir)
+    # Same guard as cmd_media — a single-stage invocation must not be the way a
+    # stale narrate/align sneaks through (scriptguard.py).
+    try:
+        scriptguard.enforce(proj, log=lambda m: _log(proj, m))
+    except scriptguard.StaleScriptError as e:
+        print(json.dumps({"blocked": "stale_script", "reason": e.report["reason"],
+                          "stale_segments": e.report["stale"]}, indent=2))
+        return 1
     fn = STAGE_MAP[args.stage]
     print(json.dumps(fn(proj), indent=2))
 
@@ -474,6 +527,17 @@ def main(argv=None):
     m.add_argument("--only", default=None, help="comma list: narrate,align,deck,render,mux,manifest")
     m.add_argument("--engine", default="remotion", choices=["deck", "remotion"],
                    help="remotion = motion-graphics engine (DEFAULT, skips deck/mux); deck = JS deck engine (fallback)")
+    m.add_argument("--recheck", action="store_true",
+                   help="run the script/audio staleness guard ONLY and exit (0 clean, 1 blocked); "
+                        "renders nothing. Clears a resolved BLOCKED.md.")
+    m.add_argument("--allow-stale-script", action="store_true", dest="allow_stale_script",
+                   help="render even though the recorded audio disagrees with script.json "
+                        "(same as EXPLAINER_ALLOW_STALE_SCRIPT=1). Logged loudly; the video "
+                        "will say something other than what the script says.")
+    m.add_argument("--allow-stale-timeline", action="store_true", dest="allow_stale_timeline",
+                   help="render even though a take was re-recorded since the last align "
+                        "(same as EXPLAINER_ALLOW_STALE_TIMELINE=1). Logged loudly; slides "
+                        "and captions will drift out of sync with the narration.")
     m.set_defaults(func=cmd_media)
 
     rn = sub.add_parser("render", help="launch render→mux→manifest→qa DETACHED (survives session "

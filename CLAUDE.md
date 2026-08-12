@@ -76,6 +76,31 @@ the playbook — the repo, not the session, is where insight accumulates.
 - Projects land in `projects/<date>_<slug>/` — a symlink into the private `explainer-content` repo, not a plain gitignored local dir (see "What this project is" above). Per-project layout: PRD §10.
 - **Media stages run in the foreground EXCEPT the heavy render.** Run the light stages synchronously (`bin/explainer2 media --only narrate,align <dir>`), then launch the deep-dive render **detached** with `bin/explainer2 render <dir>` — it exceeds the Bash 10-min cap and a harness-backgrounded encode dies on app-suspend, and detaching keeps the machine usable instead of locking it up mid-encode. No polling loops (global CLAUDE.md shell rules apply: no loops, no brace expansion, absolute paths). See SKILL §7 for the full render-robustness + render-lock detail. **Rendering defaults to the Remotion motion engine** (motion-playbook.md; needs `npm install` in `remotion/`); pass `--engine deck` for the legacy JS deck engine (then also run the `deck` stage).
 
+### After ANY re-record: align before you render
+
+`bin/explainer2 render <dir>` dispatches **only** `render,mux,manifest,qa`. It does
+**not** re-run `align`. So a take re-recorded in the booth after the last align gets
+rendered against the previous run's `work/timeline.json`, and the result is a video
+whose slides and captions drift from the card onward with the tail cut off. It does not
+error: the render succeeds, QA passes, `ready_for_post` comes back true.
+
+```bash
+bin/explainer2 media '<dir>' --only narrate,align   # rebuild the timeline FIRST
+bin/explainer2 render '<dir>'
+```
+
+**`media/timelineguard.py` now enforces this** (2026-08-12, after the Plan to Market
+promo nearly shipped desynced). `align` stamps `work/timeline_audio.json` with a
+fingerprint of the takes it consumed; any later run that touches a timeline-consuming
+stage without re-aligning recomputes that fingerprint, and on a mismatch writes
+`BLOCKED-TIMELINE.md` and exits non-zero so nothing downstream publishes. Runs that
+include `align` are never blocked. Override with `--allow-stale-timeline` /
+`EXPLAINER_ALLOW_STALE_TIMELINE=1`, which you almost never want.
+
+This is the **audio** counterpart to `media/scriptguard.py`, which guards the **text**.
+Scriptguard could not catch this: the operator recorded exactly the current words, so
+the text agreed perfectly while the audio changed underneath.
+
 ## Decisions already made (don't relitigate without asking)
 
 - GUI = local FastAPI + plain HTML/JS at localhost ("Mission Control"), opened in Chrome. No Electron/Tauri in v2.0. Every GUI action has a CLI twin.
