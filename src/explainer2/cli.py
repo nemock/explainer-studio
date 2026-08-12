@@ -39,6 +39,15 @@ THEME_MUSIC = {
         "path": _REPO_ROOT / "library/music/11-magnific_generate-a-sophisticated-_LU1wnIYswO.mp3",
         "gain": 0.22,
     },
+    # The Operator's Guide to Product Leadership rides alongside the deep dives on the
+    # same channel, so it gets the same bed rather than the global fallback. Added
+    # 2026-08-12, after module 1 rendered on the fallback Pixabay bed at 0.12 — which is
+    # the DESIGNED behaviour for an unlisted theme, not a bug, but 0.12 was already found
+    # inaudible under narration (that is why nemock moved to 0.22).
+    "plg-guide": {
+        "path": _REPO_ROOT / "library/music/11-magnific_generate-a-sophisticated-_LU1wnIYswO.mp3",
+        "gain": 0.22,
+    },
 }
 
 
