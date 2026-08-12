@@ -114,7 +114,48 @@ and should stay — do not erode them away chasing a perfectly flat silhouette.
 **Do not bake an episode number into the mark.** The badge number is Remotion/compositor
 typography over the mark, for the same reason the cards stay blank.
 
-## 6. The presenter — BLOCKED, not merely off
+## 6. The like/subscribe badge — LOCKED (2026-08-12)
+
+Every episode closes on a like-and-subscribe CTA, so the corner badge is a **series**
+asset, not a per-module one. Generate it once; modules 2–12 reuse this exact file.
+Operator, 2026-08-12: viewers expect it in the top corner, and it does not read as
+unserious on a professional training series — because it is built from this world's
+palette and torn-edge vocabulary rather than pasted on as a platform sticker.
+
+A cut-paper thumbs-up in navy over a rust underlayer, beside a rust bell over navy, both
+carrying the cream torn borders and stacked-layer shadows the figures use.
+
+| Asset | Where |
+|---|---|
+| Transparent cutout (USE THIS) | `Product_Leadership_Operators_Guide/assets/imagegen/plg_like_subscribe.png` — RGBA 875×519 |
+| Proofs | `assets/imagegen/proof_subscribe_a.png` (chosen), `_b.png` (rejected — the thumb's cuff floats detached) |
+| Provenance | `assets/imagegen/provenance.json`, including the derivation of the cutout |
+
+**It lives at the SERIES root, not in a module.** A module's deck resolves asset paths
+against `[project, workspace, series root]`, so `assets/imagegen/plg_like_subscribe.png`
+in any module's `deck.json` finds this one file. Do not copy it into a module — a second
+copy at the same relative path silently wins over this one, and then twelve episodes are
+one bad regeneration away from disagreeing with each other.
+
+**Author it as `badge`, never as `image`.** On the CTA component `image` is the book-cover
+field: it places a cover beside the text and reflows the card into two columns. `badge`
+is absolutely positioned over the layout and changes nothing beneath it.
+
+```json
+{"type": "payoff", "kicker": "...", "headline": "...",
+ "badge": "assets/imagegen/plg_like_subscribe.png"}
+```
+
+Cut from the proof with `tools/cutout.py` (rembg), which correctly treats the cream torn
+borders as part of the object — a flat colour key on that cream eats the outlines. Then
+cropped to the alpha bbox, because transparent margins make `width: 15%` render the
+visible icons ~17% smaller than the number implies.
+
+1k/medium is the right resolution here and there is no 2k version: the badge renders about
+288px wide, so the extra resolution buys nothing. This is the one place the "final art at
+2k/high" rule in §3 does not apply.
+
+## 7. The presenter — BLOCKED, not merely off
 
 Operator, 2026-08-11: *"keep the chibi characters out of this video project."*
 

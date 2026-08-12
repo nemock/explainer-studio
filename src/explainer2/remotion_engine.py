@@ -546,7 +546,8 @@ def _scene_for(slide, theme="", warn=None):
                           "accent": accent, "accentRed": accent2}
     if t in ("payoff", "cta"):
         return "CTA", {"kicker": kicker, "headline": headline, "accent": accent,
-                       "accentRed": accent2, "subkicker": slide.get("subkicker", "")}
+                       "accentRed": accent2, "subkicker": slide.get("subkicker", ""),
+                       "badge": slide.get("badge") or ""}
     if t == "punch":
         return "PunchWord", {"word": slide.get("word") or headline, "kicker": kicker,
                              "kind": slide.get("kind", ""), "accent": accent, "accentRed": accent2}
@@ -893,7 +894,9 @@ def _stage_images(sp, spec, public):
     # `set` = Papercraft Motion backdrop (papercraft-motion-spec.md §8). Paths under
     # papercraft/ are shared brand set dressing staged wholesale by render() — leave
     # them un-rebased so staticFile('papercraft/...') resolves.
-    ASSET_FIELDS = ("image", "bottomImage", "set", "video", "mark")
+    # "badge" = the CTA corner badge (like/subscribe). Without it here the file is never
+    # copied into public/ and staticFile() 404s at render time.
+    ASSET_FIELDS = ("image", "bottomImage", "set", "video", "mark", "badge")
 
     def _stage_one(img):
         # chibi/ refs are staged from the private pose library by _stage_chibi (which runs
