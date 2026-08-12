@@ -35,7 +35,6 @@ import fcntl
 import json
 import os
 import re
-import shlex
 import subprocess
 import sys
 import time
@@ -178,32 +177,59 @@ def completion_prompt(show, proj):
     )
 
 
-def launch_render(cfg, show, proj):
-    """Phase 1: run the long deterministic render as a DETACHED OS process (no Bash
-    time cap), writing work/render_complete.json on success. Returns the pid, or None
-    on dry-run. PATH gets render_path_prepend (ffmpeg lives in /opt/homebrew/bin, which
-    is not on the minimal launchd PATH)."""
-    exp = cfg["explainer_bin"]
-    q = shlex.quote
-    p = q(str(proj))
-    rc = q(str(Path(proj) / "work" / "render_complete.json"))
-    script = (
-        f"{q(exp)} media {p} && "
-        f"{q(exp)} stills {p} --aspect 4:5 && "
-        f"{q(exp)} handoff {p} && "
-        f"{q(exp)} validate {p} && "
-        f'printf \'{{"ts": %s}}\' "$(date +%s)" > {rc}'
-    )
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    logdir = Path(cfg["logs_dir"]); logdir.mkdir(parents=True, exist_ok=True)
-    render_log = logdir / f"{show['id']}_{stamp}_render.log"
+def render_env(cfg):
+    """launchd's PATH carries neither Homebrew nor /usr/local; ffmpeg and npx need both."""
     env = dict(os.environ)
     prepend = cfg.get("render_path_prepend")
     if prepend:
         env["PATH"] = prepend + ":" + env.get("PATH", "")
+    return env
+
+
+def script_guard_ok(cfg, proj):
+    """`explainer2 media --recheck`: does the recorded audio still match script.json?
+
+    Cheap (no stages run). Returns (ok, message). This is the same guard Phase 1
+    enforces in-process — checking it here keeps a blocked project from burning a
+    Phase-1 launch every cycle and tripping the crashloop backoff, and lets a
+    resolved block clear itself (--recheck deletes BLOCKED.md when it passes)."""
+    try:
+        r = subprocess.run([cfg["explainer_bin"], "media", str(proj), "--recheck"],
+                           capture_output=True, text=True, timeout=180,
+                           env=render_env(cfg), cwd=cfg["claude_cwd"])
+    except Exception as e:
+        return True, f"guard check failed to run ({e}) — Phase 1 will check in-process"
+    if r.returncode == 0:
+        return True, ""
+    out = (r.stdout or r.stderr or "").strip()
+    # the guard prints its own log lines before the JSON verdict; report the reason only
+    i = out.find("{")
+    if i >= 0:
+        try:
+            return False, json.loads(out[i:]).get("reason", "")[:400]
+        except ValueError:
+            pass
+    return False, out.replace("\n", " ")[:400]
+
+
+def launch_render(cfg, show, proj):
+    """Phase 1: run the long deterministic render as a DETACHED OS process (no Bash
+    time cap), writing work/render_complete.json on success. Returns the pid, or None
+    on dry-run.
+
+    Driven by tools/phase1_render.py rather than a `/bin/sh -c 'A && B'` one-liner:
+    the shell reaped only itself when killed, leaving the remotion/chrome tree
+    rendering as orphans (2026-08-10). The driver traps termination and kills the
+    render's process group."""
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    logdir = Path(cfg["logs_dir"]); logdir.mkdir(parents=True, exist_ok=True)
+    render_log = logdir / f"{show['id']}_{stamp}_render.log"
+    driver = cfg.get("phase1_driver") or str(
+        Path(cfg["launch_booth"]).parent / "phase1_render.py")
     child = subprocess.Popen(
-        ["/usr/bin/caffeinate", "-ims", "/bin/sh", "-c", script],
-        cwd=cfg["claude_cwd"], env=env, start_new_session=True,
+        ["/usr/bin/caffeinate", "-ims", cfg["python"], driver,
+         str(proj), "--explainer", cfg["explainer_bin"]],
+        cwd=cfg["claude_cwd"], env=render_env(cfg), start_new_session=True,
         stdout=render_log.open("w"), stderr=subprocess.STDOUT)
     write_lock(proj, child.pid)  # hold the claim for the render's lifetime
     att = read_attempts(proj)
@@ -282,6 +308,18 @@ def run(cfg, dry):
                 else:
                     # Phase 1: no render yet (or a prior render died before completing);
                     # launch the detached render. launch_render writes the lock.
+                    #
+                    # First: does the audio still match script.json? An edit landing
+                    # between the last take and Phase 1 aligns the new text onto the old
+                    # audio SILENTLY and publishes it (2026-08-10). Blocked projects need
+                    # a human at the booth, so don't spend the cycle's slot on them.
+                    ok, why = script_guard_ok(cfg, proj)
+                    if not ok:
+                        log(cfg, f"BLOCKED {show['id']}: {proj.name} — script.json changed "
+                                 f"after recording; NOT rendering. {why} "
+                                 f"(see {proj / 'BLOCKED.md'}; recover with "
+                                 f"tools/unstick_stale_script.py)")
+                        break
                     att = read_attempts(proj)
                     if (att.get("count", 0) >= CRASHLOOP_AFTER
                             and time.time() - att.get("ts", 0) < CRASHLOOP_RETRY_SECS):

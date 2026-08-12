@@ -131,6 +131,21 @@ Each entry: **what · when · spec fields · motion · don't.**
   Authoring guidance: widen `w` generously (0.22–0.30 is fine) and spread nodes across
   the canvas rather than crowding them into one band. If a schematic looks empty in the
   middle, that is a sign the notes are too small, not that you need more nodes.
+  **When the nodes are PEERS, pin the color and the size (2026-08-12, plg-guide module 1).**
+  The post-it color cycles by node INDEX, which quietly says "these are four different
+  kinds of thing." That is right for an org map and wrong for a set — the four decisions
+  in the plg-guide spine came out yellow/blue/pink/green and read as four unrelated
+  boxes. New optional field:
+  - **`pastel`** — `"yellow"|"blue"|"pink"|"green"`, pins the note color. Wins over both
+    the `kind` mapping and the index cycle. Author a set as one color with the ACTIVE
+    node in a second color; that is what a person highlighting one card in a stack
+    actually looks like, and it survives the camera moving between stages.
+
+  Size is the same trap. `shape: "square"` on a SUBSET makes those nodes visibly bigger
+  than the rest, so peers stop looking like peers — apply it to all of them or none. And
+  a bare `w` around 0.19 asks the substrate library for a wide torn *strip*: four of those
+  are thin slivers floating in an empty frame. For a row of peers, `w: 0.205` +
+  `shape: "square"` on every node fills the middle band properly.
   **`sketch: true` DEFEATS the post-it treatment on paper themes (caught 2026-07-29, #53).**
   `Schematic.tsx` computes `const note = ink.paper && !fields.sketch`, so setting `sketch`
   forces `background: 'rgba(9,13,28,.72)'` — a dark translucent card with white text, which
@@ -149,8 +164,16 @@ Each entry: **what · when · spec fields · motion · don't.**
 
 ### G2. The chibi presenter (IMPLEMENTED 2026-08-07 — on EVERY scene, automatic)
 
+> **SCOPE, 2026-08-10 — DEEP DIVES ONLY.** The presenter now runs on the
+> `nemock-deep-dive` theme and nothing else. The six personal-show worlds (`fwf`,
+> `mmt-tangerine`, `ftt-study`, `wsc-goldenrod`, `ttd-indigo`, `fmf-alarm`) are in
+> `CHIBI_NEVER` — a hard block a project file cannot switch on — until the operator
+> settles how a stand-in should work in a vertical frame. Everything below describes
+> the deep-dive behavior. See
+> `make_money/routine_changes/2026-08-10-booth-show-chibi-and-props-doc-correction.md`.
+
 Dave's cartoon stand-in stands beside the content on **every slide** of a landscape
-personal-show render. This is automatic — the engine assigns a pose to every scene, so a
+deep-dive render. This is automatic — the engine assigns a pose to every scene, so a
 deck needs no authoring at all to get it. Operator directive: *"if the chibis are only on
 one or two slides, then they don't actually make sense at all."*
 
@@ -173,8 +196,14 @@ one or two slides, then they don't actually make sense at all."*
   is why schematics should still spread across the canvas rather than crowd the right.
 - **Per project:** `"presenter": {"enabled": false}` in `project.json` opts out;
   `"charHeightFrac"` (0.18–0.22, default 0.22) tunes his size.
-- **Never on Circumvent** (separate brand, hard rule) and **skipped on portrait** — a 9:16
-  lane would eat a third of the frame, so Shorts are unaffected.
+- **Never on Circumvent** (separate brand, hard rule), **never on the six personal-show
+  worlds** (paused 2026-08-10, see the scope note above), and **skipped on portrait** — a
+  9:16 lane would eat a third of the frame, so Shorts are unaffected.
+- **Never as set dressing.** A `chibi/...` ref in `props` (or in a slide `image`) is
+  dropped by `_stage_chibi` with a `run.log` warning. Before 2026-08-10 that path staged
+  the pose and rendered him as a PROP — which is how the stand-in kept appearing on the
+  portrait shows even though this layer skips portrait. The presenter layer is the only
+  route to a pose.
 
 Engine: `ChibiPresenter.tsx` + `_assign_chibi` in `remotion_engine.py`. Full rationale in
 `make_money/routine_changes/2026-08-07-chibi-presenter-on-every-slide.md`.
@@ -257,16 +286,37 @@ underline and renders as a red or green bar floating on blank paper. Two consequ
 image it sits on. If the answer is "the empty area below X" or "roughly where the text is",
 it is wrong. Open the PNG and look.
 
-**Do the check as a contact sheet, not a coordinate argument (added 2026-08-05, #55).** Draw
-every authored mark onto its own art at its real 0-1 position, tile the results into one
-labelled grid, and read that single image. It answers "does this land on a thing?" directly
-instead of by reasoning about numbers, and it scales: #55 checked 17 figures in one look.
-On that deck **six of seventeen marks were on blank cream paper on the first pass** — one
-circling open sky beside a bridge rather than the point where the bridge stops — and every
-one of them had felt like a sensible coordinate when authored. Re-render the sheet after
-fixing and look again; the second pass caught a mark that was still 0.12 off. A reusable
-builder is ~30 lines of PIL (crop each figure, draw the ellipse + a crosshair, paste into a
-grid, label with the slide id and `at`).
+**SUPERSEDED 2026-08-08 (#56): the PIL-on-raw-art contact sheet is DEAD as a verification
+method. Author marks from MEASUREMENT; verify on RENDERED FRAMES.** The #55 contact sheet
+below could never catch a bad coordinate, because it drew the authored numbers onto the raw
+art — it verified the numbers with the same numbers, plus the same eyeball that authored
+them. On #56 three circles "passed" that sheet and still missed their subjects on Dave's
+screen. A calibration render (crosshair image + mark authored at the crosshair) proved the
+RENDERER is honest through the Ken Burns; every miss was an eyeballed coordinate. The two
+rules now:
+
+1. **Author `at` from measured pixels, never by eye.** Segment the subject in the art
+   (the green cluster, the navy cluster inside a region) with ~10 lines of numpy and set
+   the mark from the measured centroid/bbox. On #56 the ONE measured mark landed dead-on
+   in every frame; eyeballed ones missed by up to 0.14.
+2. **Verify with `python3 tools/mark_stills.py <project_dir>`** (after narrate+align).
+   It renders every mark-carrying scene through the real engine at the frame where its
+   last mark has finished drawing and tiles the REAL frames into `work/mark_stills.png`.
+   Read every tile and name the thing each mark sits on. This is the gate; a raw-art
+   sheet is not.
+
+**Narrative order is part of mark correctness (same ruling).** A circle must never draw
+before the thing it circles exists — on #56 a schematic annotation fired on the segment's
+first phrase, drawing a ring on empty canvas before any note had revealed ("why would you
+draw a circle before the thing even exists?"). The engine now warns when a schematic's
+annotation resolves before its first stage reveal; the warning is a defect, not noise. And
+an annotation that fires WITH its target's reveal is usually redundant — the pop is the
+emphasis; circle things the narration returns to, not things that just appeared.
+
+*(Historical note — the #55 method this replaces: draw every authored mark onto its own
+art with PIL, tile, and look. Kept here only so nobody reinvents it as an "improvement";
+it catches transposed/garbled coordinates but not miseyeballed ones, which is the class
+that actually ships.)*
 
 ### D. Document & evidence (the #38 lane, generalized)
 - **DocReveal** — scroll a real page/screenshot.

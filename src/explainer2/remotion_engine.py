@@ -437,6 +437,28 @@ def _circumvent_scene(slide, t, kicker, accent, headline):
     if t == "define":
         return "CvgDefine", {**common, "term": slide.get("term", ""),
                              "definition": slide.get("definition", "")}
+    # stat / statgrid: the Cvg family has no counter or grid component, and until
+    # 2026-08-12 both fell through to CvgScene, which prints ONLY `headline` — so the
+    # figure and its label were dropped and the slide rendered as a set with a kicker
+    # and nothing else. It shipped that way twice (FMF 2026-08-07 s3 lost "4 deaths,
+    # 2,557 serious injuries"; MMT 2026-08-10 s4/s6/s9), past deck_census, past
+    # validate, past publish, because the census treats `stat` as a type that draws
+    # its own figure — true of the classic StatCounter, false here. Compose the
+    # authored numbers into text the Cvg components already print. Same doctrine as
+    # _cta_fallback: never silently drop authored content.
+    if t == "stat":
+        value = str(slide.get("value") or "").strip()
+        label = str(slide.get("label") or "").strip()
+        text = " ".join(x for x in (value, label) if x)
+        return "CvgScene", {**common, "headline": text or headline,
+                            "accent": accent or ([value] if value else [])}
+    if t == "statgrid":
+        items = [": ".join(x for x in (str(s.get("value", "")).strip(),
+                                       str(s.get("label", "")).strip()) if x)
+                 for s in (slide.get("stats") or []) if isinstance(s, dict)]
+        items = [i for i in items if i]
+        return "CvgList", {**common, "items": items or _items(slide),
+                           "title": slide.get("title", ""), "ordered": False}
     if t == "quote":
         return "CvgScene", {**common, "headline": slide.get("quote") or headline,
                             "attrib": slide.get("attribution") or slide.get("source", "")}

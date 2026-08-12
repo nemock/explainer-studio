@@ -12,6 +12,8 @@ can't creep up over a long (multi-hour) render. Deterministic: renderAt(t) per f
 import json, time, math, subprocess
 from playwright.sync_api import sync_playwright
 
+from .. import childproc
+
 
 def _ffmpeg_video_only(proj, label, fps):
     """Start an ffmpeg that reads PNG frames from stdin and writes a video-only MP4."""
@@ -23,7 +25,9 @@ def _ffmpeg_video_only(proj, label, fps):
            "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
            "-color_range", "tv", "-movflags", "+faststart", str(out)]
     # stdout/stderr -> log file (never a pipe) so ffmpeg can't deadlock on a full buffer.
-    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=log, stderr=log)
+    # Own process group (childproc) so a killed render takes the encoder with it.
+    proc = childproc.spawn(cmd, label=f"ffmpeg:{label}", stdin=subprocess.PIPE,
+                           stdout=log, stderr=log)
     return proc, log, out
 
 
@@ -73,6 +77,7 @@ def run(proj):
                 except BrokenPipeError:
                     pass
                 rc = proc.wait()
+                childproc.untrack(proc.pid)
                 log.close()
             if rc != 0:
                 tail = (proj.work / f"render_ffmpeg_{label}.log").read_text(errors="ignore")[-2000:]

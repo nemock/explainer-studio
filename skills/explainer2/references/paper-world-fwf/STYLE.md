@@ -72,9 +72,23 @@ Canonical violet-world creations; pass as a style reference for continuity:
 Cold-start fallback: re-upload `mark/fwf_book_mark_source.png` as a style reference, or
 run the §3 recipe fresh — it reproduces the look on its own.
 
-## 6. The presenter
+## 6. The presenter — OFF on the show worlds (2026-08-10)
 
-Dave's chibi character joins scenes as a bottom-corner cutout via `chibi/<pose>` deck
-refs — see the CHIBI_DIR note in `src/explainer2/remotion_engine.py`. The chibi is a
-separate private library and is NOT generated with this recipe; never try to redraw him
-via Magnific prompts.
+**Do not author the chibi character in any of the six show worlds** (`fwf`,
+`mmt-tangerine`, `ftt-study`, `wsc-goldenrod`, `ttd-indigo`, `fmf-alarm`). The stand-in
+is a **deep-dive-only** feature (`nemock-deep-dive`) while its design in a vertical frame
+is settled; all six worlds sit in `CHIBI_NEVER` in `src/explainer2/remotion_engine.py`,
+a hard block that `"presenter": {"enabled": true}` cannot override.
+
+The old instruction here — *join scenes as a bottom-corner cutout via `chibi/<pose>`
+deck refs* — is **withdrawn**. It predates the 2026-08-07 presenter layer, and it did not
+fail safe: `_stage_chibi` staged those refs and rendered Dave as a **prop**, at prop
+scale, standing in the set as furniture. That is now dropped with a `run.log` warning.
+Where the presenter does run (deep dives), it is automatic and needs no deck authoring:
+motion-playbook §G2.
+
+The chibi remains a separate private library and is NOT generated with this recipe;
+never try to redraw him via Magnific prompts.
+
+Decision doc:
+`make_money/routine_changes/2026-08-10-booth-show-chibi-and-props-doc-correction.md`.

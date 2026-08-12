@@ -164,6 +164,14 @@ def run(proj):
     content_issues, advisories = _package_content_issues(proj, m)
     issues += content_issues
 
+    # Does every slide actually show something? Checked against the BUILT SPEC, because
+    # the 2026-08-12 blank-slide bug lived in the deck -> spec translation and was
+    # invisible to every gate that read deck.json. See slidecheck.py.
+    from . import slidecheck
+    blank, overlong = slidecheck.run(proj)
+    issues += blank
+    advisories += overlong
+
     status = m.get("status", {})
     if status.get("ready_for_post") and issues:
         issues.append("ready_for_post=true but the above issues exist — inconsistent")

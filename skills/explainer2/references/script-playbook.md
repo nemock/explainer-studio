@@ -456,6 +456,10 @@ to date missed length on the first draft; the rule exists because it bites).
 - [ ] Title promise(s) each map to a specific segment
 - [ ] Every topic-specific term a newcomer might not know is defined observably on
       first use (§4.9) — reread asking "what does that mean?"; no line leaves it unanswered
+- [ ] **`python3 tools/script_coherence.py <project_dir>` exits 0** (spoken-humanizer
+      §C4) — verbless noun-stacks, bare numerals, cards opening on a bare
+      pronoun/connective, over-long sentences. Reading the cards does not substitute:
+      on #56 the eye-pass missed ten of these and the operator caught the first on card one.
 - [ ] Read every segment aloud mentally — no tongue-twisters, no 70-word runs
 - [ ] **Spoken-humanizer pass (mandatory since 2026-06-19, supersedes the old
       speakability pass):** run `references/spoken-humanizer.md` end to end before

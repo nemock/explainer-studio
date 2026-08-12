@@ -17,12 +17,21 @@ Booth 2.0 (docs/booth-upgrade-plan.md):
             mini-preview (rendered client-side; the true frames are Remotion's, so the
             booth shows an honest stylized cue, not a fake "exact" render).
 
+Text stamping (2026-08-10): every saved take gets a `voiceover/<stem>.meta.json`
+recording the card text it was recorded against, and Finish records a digest of the
+whole script's spoken content. `explainer2 media` uses both to refuse to render a
+script that changed after the audio — see media/scriptguard.py for the near-miss that
+prompted it. Stamps move with their audio through archive_take/promote_take, so a
+promoted take is never described by a different take's stamp.
+
 Run it in the background; it returns when the operator clicks "Finish" in the browser."""
 import fcntl
 import json, os, queue, re, shutil, subprocess, sys, threading, time, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
+
+from .media import scriptguard
 
 ASSETS = Path(__file__).parent / "assets"
 WPM = 150                    # matches the client + script-playbook read-rate math
@@ -237,7 +246,11 @@ def run(proj, open_browser=True):
         if recorded(sid):
             nums = _take_nums(sid)
             n = (nums[-1] + 1) if nums else 1
-            wav(sid).rename(vdir / f"{cur['stem'][sid]}.take{n}.wav")
+            st = cur["stem"][sid]
+            wav(sid).rename(vdir / f"{st}.take{n}.wav")
+            # the take's text record moves with its audio (scriptguard), so a
+            # promoted archive is never described by a different take's stamp
+            scriptguard.move_meta(vdir, st, f"{st}.take{n}")
             return n
         return 0
 
@@ -400,6 +413,11 @@ def run(proj, open_browser=True):
         with lock:
             archive_take(sid)               # current -> next take number
             src.rename(wav(sid))
+            # restore that take's own text stamp; if it has none (recorded before
+            # stamping existed) drop the stamp rather than inherit a wrong one —
+            # the guard then falls back to its other evidence for this segment.
+            if not scriptguard.move_meta(vdir, f"{st}.take{n}", st):
+                scriptguard.drop_meta(vdir, st)
         qc_cache.pop(st, None)
         drift_state.pop(st, None)
         qc_for(sid)
@@ -423,6 +441,15 @@ def run(proj, open_browser=True):
                     qc_warn += 1
             if dr and dr.get("status") == "done" and dr.get("drift", 0) >= 0.15:
                 drift_flag += 1
+            # Backfill a text stamp for takes this session inherited (resumed booth,
+            # or recorded before stamping existed) whose ASR drift says the audio
+            # DOES say the current card text. Evidence-based, so it can only ever
+            # confirm — a drifted or unchecked take stays unstamped and the render
+            # guard falls back to its other sources (scriptguard.py).
+            if (recorded(sid) and not scriptguard.read_meta(vdir, st)
+                    and dr and dr.get("status") == "done" and dr.get("drift", 1.0) < 0.15):
+                scriptguard.stamp(vdir, st, s["text"], seg_id=sid, slide=s["slide"],
+                                  source="booth-drift-backfill")
             cards.append({"id": sid, "slide": s["slide"], "recorded": recorded(sid),
                           "takes": t, "edited": sid in edited,
                           "qc": q, "drift": (dr or {}).get("drift"),
@@ -539,6 +566,13 @@ def run(proj, open_browser=True):
                 ok = r.returncode == 0 and wav(sid).exists()
                 q = qc_for(sid, force=True) if ok else None
                 if ok:
+                    # Stamp the text this take was recorded against, beside the wav.
+                    # This is what lets `explainer2 media` prove, at render time, that
+                    # the audio still matches script.json (scriptguard.py, 2026-08-10).
+                    c = card(sid)
+                    scriptguard.stamp(vdir, cur["stem"][sid], (c or {}).get("text", ""),
+                                      seg_id=sid, slide=(c or {}).get("slide"),
+                                      source="booth")
                     drift_enqueue(sid)
                 self._send(200 if ok else 500,
                            json.dumps({"ok": ok, "seg": sid, "takes": takes(sid), "qc": q}))
@@ -617,6 +651,15 @@ def run(proj, open_browser=True):
     rec = [s["id"] for s in seg_list if recorded(s["id"])]
     miss = [s["id"] for s in seg_list if not recorded(s["id"])]
     result = {"recorded": rec, "missing": miss, "segments": len(seg_list)}
-    done_marker.write_text(json.dumps({**result, "done": True}))  # durable Finish signal
+    # script_digest: a hash of every card's spoken text as it read at Finish. The
+    # render guard compares it to the script on disk, so an edit landing between
+    # Finish and the watcher's render is caught even for cards it has no per-take
+    # stamp for — and a no-op touch of script.json is provably a no-op (scriptguard.py).
+    # Main script cards only — the shorts hook/outro cards live in shorts/plan.json
+    # and are not part of what `media` narrates, so they must not enter the digest.
+    done_marker.write_text(json.dumps(
+        {**result, "done": True,
+         "script_digest": scriptguard.script_digest(
+             [s for s in seg_list if not s.get("plan_slug")])}))
     print("RECORD DONE:", json.dumps(result))
     return result

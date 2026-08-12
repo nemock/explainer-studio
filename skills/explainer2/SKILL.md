@@ -74,6 +74,12 @@ conflict for the operator. Do not skip steps because they seem obvious.
    app-suspend, so launch it detached via `bin/explainer2 render` (§7) and check
    progress on re-invocation. Never write a polling loop (global CLAUDE.md shell
    rules).
+8. **NEVER edit `script.json` after the operator has recorded it** (added
+   2026-08-10, after a near-miss). Forced alignment does not fail on a text/audio
+   mismatch — it silently maps the new words onto the old audio and the video
+   ships saying the old ones. If a line must change after recording, the segment
+   must be RE-RECORDED. `explainer2 media` now enforces this: it refuses to run,
+   writes `BLOCKED.md` naming the stale segments, and exits non-zero (§7a).
 
 ## Environment
 
@@ -246,7 +252,13 @@ body line).
     waiter dies on suspension, re-run `--wait` or just check for the file.
   - Script edits during a session need NO restart (Booth 2.0): the booth
     hot-reloads `script.json` on refresh, and the operator can edit lines
-    inline in the booth (writes back to the script with a backup).
+    inline in the booth (writes back to the script with a backup). **An edited
+    card that is already recorded must be re-recorded** — the booth stamps each
+    take's text (`voiceover/seg_NNN.meta.json`) and the render guard blocks on the
+    mismatch (§7a).
+  - **After Finish, `script.json` is frozen** (hard rule 8). The Finish sentinel
+    carries a digest of the script's spoken content; any later edit is caught by
+    the guard and the render refuses to start.
   Then read `work/adlib_report.json` — the booth drift-checks every take live
   and writes the report at Finish (§7b; run `bin/explainer2 adlib` only as the
   fallback for `unchecked` segments). If a segment is flagged `rerecord`, tell
@@ -265,6 +277,32 @@ operator downloads into `assets/inbox/` (filename prefixed with the slide id);
 `bin/explainer2 assets <dir> ingest` conforms + records license provenance.
 Every footage scene keeps its deck slide as fallback — render proceeds either
 way.
+
+### 7a. Script/audio staleness guard (runs first, blocks the render)
+Before any stage, `media` checks that every recorded segment's audio still
+matches `script.json` (`src/explainer2/media/scriptguard.py`). Two layers: the
+booth stamps `voiceover/seg_NNN.meta.json` with a hash of each card's text at
+save time, and the mtime of `script.json` versus the newest take is the cheap
+pre-check. On a mismatch it writes **`BLOCKED.md`** naming the stale segments
+with recorded-vs-current text and **exits non-zero** — no mp4, no
+`work/render_complete.json`, so the recording watcher's Phase 2 never publishes.
+
+Why it is a refusal and not a warning: on 2026-08-10 `script.json` was edited
+three minutes after the operator clicked Finish, the watcher rendered ninety
+seconds later, and align reported "OK, 395 words" while mapping the NEW text onto
+the OLD audio. Only a human noticing the render stopped it publishing.
+
+Recovery — move the stale takes aside so the booth asks for them again (audio and
+alternate takes are preserved as `seg_NNN.oldtext.bak`), clear the watcher's
+locks, relaunch the booth:
+```
+python3 tools/unstick_stale_script.py <project_dir> --fix --relaunch-booth
+```
+If the audio is genuinely still correct and only the script's *wording on disk*
+changed (numerals spelled out, punctuation), assert that instead of re-recording:
+`--accept <ids|all>`. Re-check with `bin/explainer2 media <dir> --recheck` (exit
+0/1; deletes `BLOCKED.md` when it passes). `--allow-stale-script` overrides the
+guard — the video will then say something other than what the script says.
 
 ### 7. Media pipeline
 Run the light stages inline, then launch the heavy render **detached**:
@@ -302,6 +340,15 @@ mid-encode. `caffeinate` blocks OS idle-sleep but NOT task termination. So:
   lock **working** (another render is in flight; this one auto-starts after) —
   not a hang. The lockfile *content* is just a note; if its named holder pid is
   dead, the flock is already free.
+- **Killing a render: `python3 tools/kill_render.py <project_dir> --fix`, never a
+  bare `kill <pid>` (2026-08-10).** A render is a tree — `npm exec remotion
+  render` → `node` → the whole `chrome-headless-shell` fleet — and killing the
+  parent reaps only the parent. On 2026-08-10 the Phase-1 shell was killed and
+  the remotion tree kept rendering, reparented to init, under a lockfile whose
+  recorded pid was already dead. `kill_render.py` signals the process GROUP,
+  verifies nothing is left, and clears a stale lock note. `explainer2 media` also
+  traps SIGTERM/SIGINT/SIGHUP itself now (`childproc.py`) and takes its render
+  children down with it.
 - If a render died: delete the corrupt `work/video_16x9.mp4`, then re-run
   `bin/explainer2 render <project_dir>` (narrate/align/deck are cheap, cached,
   and idempotent; the render redoes). Verify the final file with `ffprobe`
@@ -581,11 +628,14 @@ Flow:
    the least-recently-posted Short. Override with `--video <slug>` / `--short`.
    Returns the mp4 path, resolved video URL, target platforms, and
    `prior_captions` (the do-not-repeat list).
-2. YOU (generation plane) write FRESH captions — hook-first, operator voice,
-   per-platform, genuinely distinct from `prior_captions` (reword, don't shuffle;
-   Reddit/X punish near-dupes). Keep the clickable video URL as the reply-comment
-   on X/Bluesky/Threads (`url_comment`), in the YT description, and inline in the
-   IG and Facebook captions (neither can auto-comment). Write a plan JSON:
+2. YOU (generation plane) write FRESH captions **inside a `humaner` skill
+   invocation** (Skill tool; it owns voice, cadence, and the AI-tell lint — don't
+   re-derive them). Per-platform, distinct from `prior_captions` (reword, don't
+   shuffle; Reddit/X punish near-dupes). Set `url_comment` for X/Bluesky/Threads —
+   it posts as a reply-comment on X and Threads, and inlines into the Bluesky text,
+   which is link-only (no media, 300 chars including the URL). Put the URL in the YT
+   description and inline in the IG and Facebook captions (neither can
+   auto-comment). Write a plan JSON:
    `{video_slug, short_slug, video_url, short_mp4, scheduled:"next_free_slot",
    posts:[{platform, caption, url_comment?, extra?}]}` (`extra` carries
    platform-specific fields — `mediaType:"reel"` for IG and Facebook;

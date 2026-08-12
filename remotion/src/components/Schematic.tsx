@@ -10,7 +10,10 @@ import {PaperNote, PaperSheet, fitNote, NOTE_PASTEL, PASTEL_CYCLE, NotePastel} f
 // through the diagram"). Replaces StepFlow for anything non-linear.
 //
 // fields (all data, authored in deck.json — no per-video React):
-//   nodes:  [{id, label, sub?, x, y, w?, kind?: 'good'|'bad'|'neutral'}]   x/y/w in 0-1 frame space
+//   nodes:  [{id, label, sub?, x, y, w?, kind?: 'good'|'bad'|'neutral',
+//            pastel?: 'yellow'|'blue'|'pink'|'green'}]   x/y/w in 0-1 frame space
+//            (pastel pins the paper-note color; use it when nodes are PEERS and the
+//             decorative cycle would wrongly imply they are different kinds of thing)
 //   edges:  [{from, to, label?, kind?}]
 //   stageTimes: (number|null)[]  — cue frames per stage (Python-resolved)
 //   stages: [{reveal: [node or "<from>-><to>" edge ids]}]  — assembly order
@@ -273,8 +276,15 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
           // is laid on top (papercraft-substrate-plan.md). The CSS card below is kept for
           // the non-paper themes, which have no substrate library of their own.
           if (note) {
-            const pastel: NotePastel = n.kind === 'good' ? 'green' : n.kind === 'bad' ? 'pink'
-              : PASTEL_CYCLE[ni % PASTEL_CYCLE.length];
+            // An explicit n.pastel WINS over both the kind mapping and the decorative cycle.
+            // The cycle assumes nodes are unrelated boxes; when they are a SET OF PEERS (the
+            // four decisions in plg-guide module 1), four different colors actively say
+            // "these are four different kinds of thing" and the reader believes it. Pinning
+            // the color lets an author say "same kind, one of them lit" — which is what a
+            // person highlighting one card in a set actually looks like.
+            const pastel: NotePastel = (n.pastel as NotePastel)
+              || (n.kind === 'good' ? 'green' : n.kind === 'bad' ? 'pink'
+                  : PASTEL_CYCLE[ni % PASTEL_CYCLE.length]);
             return (
               <div key={n.id} style={{
                 position: 'absolute', left: b.x, top: b.y, width: b.w, height: b.h,

@@ -16,9 +16,15 @@ export const sceneSchema = z.object({
   fields: z.any().default({}),
   // Chibi presenter pose for this scene: the staged filename in the public dir. The
   // engine assigns one to EVERY scene (authored `chibi` on the deck slide, else the
-  // neutral rotation) — see remotion_engine._assign_chibi.
+  // neutral rotation) — see remotion_engine._assign_chibi. `chibiSide` seats him in the
+  // left or right bottom corner (engine-chosen: the emptier one); `chibiFlip` mirrors
+  // the pose so its gesture aims at the content.
   chibi: z.string().optional(),
+  chibiSide: z.enum(['left', 'right']).optional(),
   chibiFlip: z.boolean().optional(),
+  // Per-scene character-height override (frac of frame height). The engine sets a
+  // smaller size on schematics, whose auto-sized post-its reach into the corners.
+  chibiH: z.number().optional(),
 });
 
 // The whole motion spec. The Python engine writes this as the Remotion props file.

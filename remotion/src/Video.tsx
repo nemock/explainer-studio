@@ -30,7 +30,7 @@ import {ReactiveStrip, Waveform} from './components/Audio';
 import {PaperAtom, ElementStat, DiscoveryCard, PeriodicSlot, PaperWord, PaperFire, PaperProp, PaperFootage, PaperCTA, PaperMolecule} from './components/Chem';
 import {InkProvider, isPaperTheme} from './ink';
 import {WorldProvider} from './components/PaperWorld';
-import {ChibiPresenter, laneFrac} from './components/ChibiPresenter';
+import {ChibiPresenter} from './components/ChibiPresenter';
 
 // the component catalog (motion-playbook §2). Unknown -> TalkingScene (captions-led).
 const REGISTRY: Record<string, React.FC<any>> = {
@@ -175,16 +175,14 @@ export const Video: React.FC<VideoProps> = (props) => {
   // in the upper two-thirds, so a single element settles around the top-third line instead of
   // being pinned high with a dead middle (operator direction 2026-07-16). Landscape = 0.
   const contentBottom = height > width ? Math.round(height * (theme === 'cut-bond' ? 0.36 : 0.34)) : 0;
-  // Chibi presenter (operator directive 2026-08-07): Dave stands beside the content on
-  // EVERY scene, above everything, and never over the content or under the captions.
-  // The lane he occupies is taken out of the content layer by a scale transform rather
-  // than an inset, because components position from useVideoConfig() (the full frame)
-  // instead of from their container — an inset would clip them, a transform preserves
-  // every component's internal pixel math exactly. See ChibiPresenter.tsx.
+  // Chibi presenter (operator directive 2026-08-07, revised same day): Dave stands IN
+  // the scene as a small overlay in a bottom corner — the scene fills the frame exactly
+  // as it did before he existed. The v1 reserved-lane approach (content scaled left)
+  // was rejected by the operator: it read as the character "standing offstage",
+  // separate from the action. Placement does the not-obscuring work now: the engine
+  // picks the emptier corner per scene and flips the pose to face the content.
   const chibiOn = Boolean(presenter?.enabled && scenes.some((s) => (s as any).chibi));
   const charH = presenter?.charHeightFrac || 0.18;
-  const lane = chibiOn ? laneFrac(charH, width, height) : 0;
-  const contentScale = 1 - lane;
   // Distance from the frame BOTTOM to the top of the caption block, allowing two lines.
   const captionTopPx = captionBottomPx + captionFontSize * 2.9;
   return (
@@ -200,11 +198,9 @@ export const Video: React.FC<VideoProps> = (props) => {
         return (
           <Sequence key={i} from={scene.from} durationInFrames={scene.durationInFrames} layout="none">
             <SceneWrap durationInFrames={scene.durationInFrames} paper={paper} tear={(scene as any).tear ? `tear${i}` : null}>
-              {/* Content layer. With the presenter on, this whole layer is scaled into the
-                  area left of his lane, which is what guarantees no slide ever paints
-                  under him. Annotations ride INSIDE the transform: they are frame-space
-                  marks aimed at the content, so they must move with it or they drift off
-                  their subject (the #55 class of error, in a new place). */}
+              {/* Content layer — full frame. The presenter overlays it (v2, 2026-08-07);
+                  the v1 lane scale that shrank this layer beside him was rejected by the
+                  operator as "the character standing offstage". */}
               <AbsoluteFill style={{
                 bottom: inset,
                 // `height: 'auto'` is what makes the inset REAL. AbsoluteFill's own defaults
@@ -214,7 +210,6 @@ export const Video: React.FC<VideoProps> = (props) => {
                 // content centred in the full frame. Letting the top/bottom pair size the
                 // box is the fix.
                 ...(inset ? {height: 'auto'} : {}),
-                ...(lane ? {transform: `scale(${contentScale})`, transformOrigin: '0% 50%'} : {}),
               }}>
                 <Comp fields={scene.fields || {}} durationInFrames={scene.durationInFrames} sceneFrom={scene.from} audioFrom={audioFrom} />
                 {/* narration-cued hand-drawn annotations (motion-playbook §2H) — full-frame
@@ -226,19 +221,20 @@ export const Video: React.FC<VideoProps> = (props) => {
         );
       })}
       {audio && !paper ? <ReactiveStrip audio={audio} audioFrom={audioFrom || 0} /> : null}
-      <Captions words={words} bottomPx={captionBottomPx} fontSize={captionFontSize} theme={theme} accentColor={captionAccent} reserveRightPx={lane * width} />
+      <Captions words={words} bottomPx={captionBottomPx} fontSize={captionFontSize} theme={theme} accentColor={captionAccent} />
       {/* The presenter mounts LAST so he is above the scene, the annotations AND the
           captions: the viewer reads him as Dave presenting, not as scene furniture
-          (operator directive 2026-08-07). He cannot collide with either, because the
-          content is scaled out of his lane and the captions reserve it too. */}
+          (operator directive 2026-08-07). He stands IN the scene as a corner overlay;
+          the engine picks the emptier corner and faces him toward the content. */}
       {chibiOn
         ? scenes.map((scene, i) =>
             (scene as any).chibi ? (
               <Sequence key={`chibi${i}`} from={scene.from} durationInFrames={scene.durationInFrames} layout="none">
                 <ChibiPresenter
                   pose={(scene as any).chibi}
-                  charHeightFrac={charH}
+                  charHeightFrac={(scene as any).chibiH || charH}
                   captionTopPx={captionTopPx}
+                  side={(scene as any).chibiSide}
                   flip={(scene as any).chibiFlip}
                 />
               </Sequence>

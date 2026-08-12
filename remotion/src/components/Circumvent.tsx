@@ -129,12 +129,43 @@ const SceneType: React.FC<{
   const {width, height} = useVideoConfig();
   const e = ease(frame, at);
   const scale = hit != null ? flick(frame, hit) : 1;
-  const long = (headline || '').length > 48;
+  // Headline size is LENGTH-AWARE, the idiom CvgPunch / CvgCta / CvgCompare already use
+  // (2026-08-11). Until 2026-08-12 this was a single boolean with two sizes, so anything
+  // past ~110 chars overran the block box and printed off the top of the frame. FMF
+  // 2026-08-07 shipped its COVER slide that way (s1, 230 chars, "Boston Scientific's"
+  // clipped at the frame edge) and nothing caught it. The first two tiers reproduce the
+  // old boolean exactly, so every headline that fit before renders pixel-identical.
+  // Boundaries come from RENDERED evidence, not arithmetic. The block box is 47.5% of
+  // height and 4:5 (1350px) binds, not 9:16 — but a character-width estimate off that box
+  // put the limit at 165, and the renders disagree: WSC 2026-08-12 s23 fits at 173 chars,
+  // FMF 2026-08-07 s1 clips at 233. So the first step sits at 185, between the two
+  // measured points and leaning safe. Everything that fit before still renders at exactly
+  // its old size; only genuine overflow steps down. Re-tune from stills, never from a
+  // formula, and check 4:5 rather than 9:16.
+  const hLen = (headline || '').length;
+  const hSize = hLen <= 48 ? 0.078
+    : hLen <= 185 ? 0.062
+    : hLen <= 240 ? 0.052
+    : hLen <= 320 ? 0.044
+    : 0.038;
   const P = paperRgb(W.paper);
   // Portrait pass 2026-08-07: type tracks the min dimension (landscape identical), and
   // the text block widens on narrow frames — 62% of a portrait width wastes the room.
   const portrait = height > width;
   const M = Math.min(width, height);
+  // Portrait pass 2026-08-11 (operator, FTT 08-11 slide 1: "the text is crammed way to
+  // the top of the screen, even though there is plenty of room in the middle... the font
+  // doesn't need to be so tiny"). Two portrait-only changes; landscape stays identical.
+  //
+  // 1. A `top` band no longer pins the block to the frame edge. The top scrim already
+  //    fades to nothing at 56% of height, so that band IS the type's room — the block now
+  //    centres inside it instead of sitting at its ceiling. This closes the dead strip
+  //    between the headline and the set's subject without printing over the artwork.
+  // 2. Type tracks the min dimension, which on portrait is the WIDTH. That sizes the
+  //    block as if the frame were 1080 square and leaves a 1080x1920 frame visibly
+  //    under-set. Scale type up on portrait rather than leaving the room empty.
+  const TS = portrait ? 1.18 : 1;
+  const topBand = band === 'top' && portrait;
   return (
     <>
       <AbsoluteFill style={{
@@ -145,11 +176,13 @@ const SceneType: React.FC<{
       }} />
       <AbsoluteFill style={{
         alignItems: align === 'center' ? 'center' : 'flex-start',
-        justifyContent: band === 'top' ? 'flex-start' : 'center',
+        justifyContent: band === 'top' && !portrait ? 'flex-start' : 'center',
         // Portrait: reserve the caption band (lower ~16%) so a centered block can never
-        // run under the caption pill (operator report 2026-08-07).
+        // run under the caption pill (operator report 2026-08-07). On a portrait `top`
+        // band the reserve is the whole lower 44% instead, which is what turns the top
+        // scrim into the block's box so it can centre inside it (2026-08-11).
         padding: portrait
-          ? `${height * 0.085}px ${width * 0.075}px ${height * 0.18}px`
+          ? `${height * 0.085}px ${width * 0.075}px ${height * (topBand ? 0.44 : 0.18)}px`
           : `${height * 0.085}px ${width * 0.075}px`,
       }}>
         <div style={{
@@ -159,19 +192,19 @@ const SceneType: React.FC<{
         }}>
           {kicker ? (
             <div style={{
-              fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.021, letterSpacing: 5,
+              fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.021 * TS, letterSpacing: 5,
               textTransform: 'uppercase', color: W.accent, marginBottom: M * 0.016,
             }}>{kicker}</div>
           ) : null}
           {headline ? (
             <div style={{
-              fontFamily: BRAND.font, fontWeight: 900, fontSize: M * (long ? 0.062 : 0.078),
+              fontFamily: BRAND.font, fontWeight: 900, fontSize: M * hSize * TS,
               lineHeight: 1.06, color: W.ink, letterSpacing: -0.5,
             }}>{colorize(headline, accent, W.accent)}</div>
           ) : null}
           {sub ? (
             <div style={{
-              fontFamily: BRAND.font, fontWeight: 700, fontSize: M * 0.026, color: W.accent,
+              fontFamily: BRAND.font, fontWeight: 700, fontSize: M * 0.026 * TS, color: W.accent,
               marginTop: M * 0.02,
             }}>{sub}</div>
           ) : null}
@@ -338,12 +371,16 @@ export const CvgList: React.FC<{fields: any}> = ({fields}) => {
               transform: `translateX(${(1 - e) * -30}px)`, opacity: e,
               marginBottom: M * 0.024,
             }}>
+              {/* `ordered: false` swaps the index badge for a plain paper chip. A statgrid
+                  routes here on the Cvg worlds (no counter component exists), and numbering
+                  three statistics 1/2/3 reads as a ranking they do not have. */}
               <div style={{
-                width: M * 0.052, height: M * 0.052, background: W.accent,
+                width: M * (fields.ordered === false ? 0.022 : 0.052), height: M * 0.052,
+                background: W.accent, flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontFamily: BRAND.font, fontWeight: 900, fontSize: M * 0.026, color: W.paper,
                 transform: `rotate(${i % 2 ? 1.6 : -1.4}deg)`,
-              }}>{i + 1}</div>
+              }}>{fields.ordered === false ? '' : i + 1}</div>
               <div style={{
                 fontFamily: BRAND.font, fontWeight: 900, fontSize: M * 0.058, color: W.ink, lineHeight: 1.1,
               }}>{label}</div>
@@ -367,19 +404,32 @@ export const CvgCompare: React.FC<{fields: any}> = ({fields}) => {
   // pixel-identical (min == height there).
   const portrait = height > width;
   const M = Math.min(width, height);
+  // Portrait value size is LENGTH-AWARE (2026-08-11), the same idiom CvgPunch and CvgCta
+  // already use. A flat bump big enough to fix FTT's ~60-char halves pushed FMF's ~75-char
+  // halves to within 30px of the frame edge. Both sides step together off the LONGER
+  // value so the two halves never render at different sizes.
+  const vMax = Math.max(String(L.value || '').length, String(R.value || '').length);
+  const pSize = vMax > 70 ? 0.056 : 0.066;
   const Side: React.FC<{d: any; e: number; side: 'l' | 'r'}> = ({d, e, side}) => (
     <div style={{
       flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      transform: `translateY(${(1 - e) * 24}px)`, opacity: e, padding: `0 ${width * 0.03}px`,
+      transform: `translateY(${(1 - e) * 24}px)`, opacity: e,
+      // Wider side gutter on portrait: at the bumped size a long value otherwise kisses
+      // the frame edge (FMF proof, 2026-08-11).
+      padding: `0 ${width * (portrait ? 0.05 : 0.03)}px`,
     }}>
       <div style={{
-        fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.022, letterSpacing: 4,
+        fontFamily: BRAND.font, fontWeight: 800, fontSize: M * (portrait ? 0.028 : 0.022), letterSpacing: 4,
         textTransform: 'uppercase', color: d.kind === 'bad' ? W.neutral : W.accent, marginBottom: M * 0.018,
       }}>{d.title || ''}</div>
       <div style={{
         // Portrait halves are short AND sit above the caption band — 0.072 wrapped long
-        // values into the captions (operator screenshot, FMF 4:5). Step down on portrait.
-        fontFamily: BRAND.font, fontWeight: 900, fontSize: M * (portrait ? 0.054 : 0.072), lineHeight: 1.08,
+        // values into the captions (operator screenshot, FMF 4:5). Stepped down on
+        // portrait for that, then partly back up 2026-08-11: 0.054 was over-corrected and
+        // read as tiny type floating in clear space (operator, FTT 08-11 slide 2). The
+        // caption clearance now comes from the container's bottom padding, not from
+        // shrinking the type.
+        fontFamily: BRAND.font, fontWeight: 900, fontSize: M * (portrait ? pSize : 0.072), lineHeight: 1.08,
         color: W.ink, textAlign: 'center', opacity: d.kind === 'bad' ? 0.62 : 1,
       }}>{d.value || ''}</div>
       <div style={{
@@ -393,9 +443,10 @@ export const CvgCompare: React.FC<{fields: any}> = ({fields}) => {
       <Set src={fields.set} anchor={fields.anchor} />
       <AbsoluteFill style={{background: 'rgba(242,237,224,.70)'}} />
       {fields.kicker ? (
-        <AbsoluteFill style={{alignItems: 'center', justifyContent: 'flex-start', paddingTop: height * 0.1}}>
+        <AbsoluteFill style={{alignItems: 'center', justifyContent: 'flex-start',
+                              paddingTop: height * (portrait ? 0.07 : 0.1)}}>
           <div style={{
-            fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.021, letterSpacing: 5,
+            fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.021 * (portrait ? 1.18 : 1), letterSpacing: 5,
             textTransform: 'uppercase', color: W.accent,
           }}>{fields.kicker}</div>
         </AbsoluteFill>
@@ -404,7 +455,9 @@ export const CvgCompare: React.FC<{fields: any}> = ({fields}) => {
                             justifyContent: 'center',
                             // Bottom padding clears the caption band on portrait (the pill
                             // sits in the lower ~16% and ate the second side's last line).
-                            padding: portrait ? `${height * 0.12}px 0 ${height * 0.2}px` : 0}}>
+                            // Top padding tightened 2026-08-11 so the kicker and the first
+                            // half stop reading as two disconnected blocks.
+                            padding: portrait ? `${height * 0.10}px 0 ${height * 0.19}px` : 0}}>
         <Side d={L} e={eL} side="l" />
         <div style={portrait
           ? {height: 3, width: '38%', background: W.accent, opacity: 0.5}

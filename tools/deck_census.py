@@ -49,10 +49,18 @@ def slide_has_cues(s):
     return False
 
 
-# Types whose ENTIRE frame is the text they are given. A figure/schematic/stat slide draws
+# Types whose ENTIRE frame is the text they are given. A figure/schematic slide draws
 # something without a headline; these do not — an empty one renders a blank card.
+#
+# `stat` and `statgrid` are on this list as of 2026-08-12. They were excluded on the
+# assumption that a stat slide draws its own figure, which holds for the classic
+# StatCounter/StatGrid but NOT for the Cvg family (the six personal-show worlds), where
+# there is no counter component at all. That exclusion is why FMF 2026-08-07 shipped a
+# blank card where "4 deaths, 2,557 serious injuries" should have been. The engine now
+# composes those fields into text (remotion_engine._circumvent_scene), and this check is
+# the half that catches a stat slide authored with no numbers in it.
 TEXT_BEARING_TYPES = {"statement", "highlight", "punch", "quote", "reframe",
-                      "cta", "payoff"}
+                      "cta", "payoff", "stat", "statgrid"}
 
 
 def _contentless_slides(slides):
@@ -75,6 +83,11 @@ def _contentless_slides(slides):
             continue
         # reframe prints before/after rather than a headline
         if s.get("type") == "reframe" and (s.get("before") or s.get("after")):
+            continue
+        # stat prints value/label, statgrid prints its stats — neither needs a headline
+        if s.get("type") == "stat" and (s.get("value") or s.get("label")):
+            continue
+        if s.get("type") == "statgrid" and (s.get("stats") or s.get("items")):
             continue
         bad.append(f"{s.get('id', '?')} ({s.get('type')})")
     return bad

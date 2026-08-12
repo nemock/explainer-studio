@@ -1,0 +1,36 @@
+{
+  "library": "paper-world-fwf/proof-3d",
+  "purpose": "MagnificPaperCraft style proof — the move from FLAT cut-paper collage to THREE-DIMENSIONAL paper construction (operator direction 2026-08-09). Four takes of the FWF anchor scene (the founder's desk at night) so the new look is directly comparable to the locked flat anchor s7UWMJUl8e.",
+  "status": "AWAITING OPERATOR PICK — no anchor selected yet, STYLE.md not yet rewritten. Nothing here is locked.",
+  "generated": "2026-08-09",
+  "generator": "Magnific, model gpt-2, text-to-image",
+  "style_anchor_used": null,
+  "why_no_anchor": "Deliberate. The existing FWF anchor (s7UWMJUl8e) is a FLAT collage and specifies 'flat and clean'; anchoring the proof to it would have pulled the result back to flat. These takes are unanchored so the winner becomes the NEW anchor for the 3D world.",
+  "prompt": "Three-dimensional handmade papercraft diorama photographed in a studio. Physical paper sculpture with real volume and depth: folded, scored and curled cardstock forming solid built objects, visible paper thickness at every cut edge, layered planes standing apart from each other, soft realistic shadows falling between and beneath the constructions. Subject: a founder's desk built entirely from paper, an indigo cardstock laptop standing open, a tall stack of white paper pages beside it, a small paper mug. Setting: a night-time paper room, deep violet paper walls receding behind the desk. Color palette strictly: deep violet paper background (#36185B), white cardstock for figures and structures (#FFFFFF), and a single soft indigo paper accent (#757BBD) used sparingly. Generous negative space in the upper third, calm composition, no text, no words, no logos.",
+  "cost_credits": 60,
+  "aspect": "16:9",
+  "takes": [
+    {
+      "file": "take1_xSgJgWJjfW.png",
+      "creation": "xSgJgWJjfW",
+      "qc": "Palette exact, strong dimensionality, best practical lighting (lit desk lamp sells the depth). Upper third COMPROMISED: the lamp head reaches into the headline band at left-centre and the moon window occupies the upper right."
+    },
+    {
+      "file": "take2_Tde8ekuVNR.png",
+      "creation": "Tde8ekuVNR",
+      "qc": "Cleanest upper third of the four, very generous negative space, palette exact. Objects read smoother and less obviously constructed than take 4. Strong runner-up, and the best choice for scenes that need maximum headline room."
+    },
+    {
+      "file": "take3_jUSOScMLD0.png",
+      "creation": "jUSOScMLD0",
+      "qc": "Most charming scene (curtained moon window, lit lamp, paper plant) and the richest set dressing. Upper third is busy on BOTH sides, so the headline band has the least room. Better as a mid-deck backdrop than an anchor."
+    },
+    {
+      "file": "take4_aFQ5QPGfSh.png",
+      "creation": "aFQ5QPGfSh",
+      "qc": "RECOMMENDED ANCHOR. Most distinctly three-dimensional: faceted pot, folded desk with visible creases and paper thickness, angular plant. Upper third clean apart from a low-contrast arch and the shelf top-right. Desk sits dead centre, which is what survives the 9:16 and 4:5 centre crops best."
+    }
+  ],
+  "recommendation": "take4_aFQ5QPGfSh as the primary style anchor; take2_Tde8ekuVNR recorded as a secondary anchor for headline-heavy scenes. Operator confirms before STYLE.md is rewritten — the world is operator-locked and the pick sets the look for every asset generated afterwards.",
+  "next_steps": "On confirmation: rewrite paper-world-fwf/STYLE.md §3 (recipe) and §5 (anchors) for the 3D look, regenerate the 4 sets + 6 props anchored to the winner, expand the set count to break the 4-backdrop repetition (set_workshop and set_desk_night were each used 9x in 30 days), then re-run tools/asset_catalog.py index."
+}
