@@ -20,6 +20,7 @@ import {PaperSting} from './components/PaperSting';
 import {BRGPaperSting} from './components/BRGPaperSting';
 import {KeepCard} from './components/KeepCard';
 import {PaperHook} from './components/PaperHook';
+import {PaperMonitor} from './components/PaperMonitor';
 import {PaperSetHook, PaperPopCard, PaperCounter} from './components/PaperSet';
 import {PaperStatement, PaperDefine, PaperPunch} from './components/PaperText';
 // Circumvent scene family (2026-07-30): the paper IS the slide, no cards.
@@ -41,6 +42,8 @@ const REGISTRY: Record<string, React.FC<any>> = {
   BRGPaperSting,
   KeepCard,
   PaperHook,
+  // on-camera cold open: real Dave behind a cut hole in the paper set
+  PaperMonitor,
   // Papercraft Motion (papercraft-motion-spec.md; migration map in
   // papercraft-motion-migration.md §3)
   PaperSetHook,
@@ -147,7 +150,7 @@ const SceneWrap: React.FC<{durationInFrames: number; paper?: boolean; tear?: str
 // Everything else (the Cut & Bond chemistry kit, figures, text scenes, data viz) lays content
 // out on the page and lifts cleanly.
 const FULL_BLEED = new Set([
-  'BrandSting', 'PaperSting', 'BRGPaperSting', 'PaperHook', 'Hero3D', 'Footage', 'KeepCard',
+  'BrandSting', 'PaperSting', 'BRGPaperSting', 'PaperHook', 'PaperMonitor', 'Hero3D', 'Footage', 'KeepCard',
   'CvgScene', 'CvgPunch', 'CvgCta', 'CvgList', 'CvgCompare', 'CvgSteps', 'CvgDefine',
   'PaperSetHook', 'PaperPopCard', 'PaperCounter', 'PaperStatement', 'PaperDefine',
   'PaperPunch', 'PaperStairs', 'PaperCompare', 'PaperSteps', 'PaperList', 'PaperBookCTA',

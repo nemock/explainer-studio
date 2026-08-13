@@ -487,6 +487,19 @@ def _scene_for(slide, theme="", warn=None):
         return slide["component"], (slide.get("fields") or {})
     t = slide.get("type")
     kicker = slide.get("kicker", "")
+
+    # The on-camera cold open (references/paper-world/ON-CAMERA-COLD-OPEN.md). Mapped
+    # ABOVE the theme dispatch because the paper set is an asset, not a palette: the
+    # component composites real footage behind a cut hole in whatever plate it is given.
+    # `screen` is the measured rect of that hole — author it from tools/key_screen.py's
+    # sidecar JSON, never by eye. `startAtSec` and `pullBack` are filled in by build_spec.
+    if t == "oncamera":
+        return "PaperMonitor", {"set": slide.get("set") or "papercraft/desk_monitor.png",
+                                "video": slide.get("video"),
+                                "screen": slide.get("screen"),
+                                "screenWidthFrac": slide.get("screen_width_frac"),
+                                "pullBackSecs": slide.get("pull_back_secs")}
+
     accent = slide.get("accent", []) or []
     accent2 = slide.get("accent2", []) or []
     headline = slide.get("headline") or slide.get("title") or slide.get("word") or ""
@@ -697,10 +710,37 @@ def build_spec(sp):
                 sc["fields"].pop("props")
                 warnings.append(f"{segs[i]['slide']}: props dropped — the Paper* corner prop "
                                 f"layer is landscape-only (portrait has no free corner)")
+    # ONE CONTINUOUS TAKE ACROSS THE COLD OPEN. The deck is 1:1 with script segments, so
+    # a 30-second on-camera open is several scenes — and each <Video> would otherwise
+    # restart the same file, making Dave jump back to his first word on every slide.
+    # Each scene therefore plays its own slice: startAtSec = this scene's narration start
+    # minus the start of the run it belongs to. The LAST scene of a run gets pullBack,
+    # which is the spec's no-cut exit (the camera retreats to the full desk instead).
+    _run_start = None
+    for i, sc in enumerate(scenes):
+        if sc["component"] != "PaperMonitor":
+            _run_start = None
+            continue
+        if _run_start is None:
+            _run_start = segs[i]["start"]
+        sc["fields"]["startAtSec"] = round(segs[i]["start"] - _run_start, 3)
+        nxt = scenes[i + 1]["component"] if i + 1 < len(scenes) else None
+        if nxt != "PaperMonitor":
+            sc["fields"]["pullBack"] = True
+        if not sc["fields"].get("video"):
+            warnings.append(f"{segs[i]['slide']}: on-camera scene has no `video` — the "
+                            f"monitor renders as a blank paper screen until the take is wired up")
+
     # Presenter poses, assigned while scenes are still 1:1 with segments — the sting
     # scenes are inserted further down and would break the index alignment.
     presenter = _assign_chibi(scenes, slides_by_id, [s["slide"] for s in segs],
                               sp.data, warnings.append)
+    # Real Dave is ON SCREEN in these scenes. A chibi Dave standing beside the monitor
+    # puts two versions of the same person in one frame — excluded by operator directive
+    # 2026-08-12, and excluded here rather than left to the deck author to remember.
+    for sc in scenes:
+        if sc["component"] == "PaperMonitor":
+            sc.pop("chibi", None)
     # which field each staggered component syncs (label list -> fields.itemTimes)
     _ITEM_FIELDS = {"BuildList": ("items", lambda f: f.get("items") or []),
                     "StepFlow": ("steps", lambda f: [s.get("title") if isinstance(s, dict) else s

@@ -79,6 +79,78 @@ deliberately rather than arriving by default.
   script-playbook §4.1's three tests. Being on camera makes a weak open worse, not
   better, because there is now a face selling it.
 
+## BUILT 2026-08-12 — how to actually use it
+
+The set, the keyer and the component all exist now. Three pieces:
+
+**1. The plate.** `remotion/public/papercraft/desk_monitor.png` — a reusable asset, not a
+one-off (a mug, a stack of paper, a plant; desk three-quarter, monitor face-on). Generate
+new ones with the STYLE.md recipe and **the screen as a flat bright-green paper panel**,
+which is the one place green is allowed in that plate.
+
+> **`remotion/public/` is gitignored** (`.gitignore` line 4, `public/`), so this plate is
+> not in the repo — same as every sting and papercraft asset before it. On a fresh clone
+> it has to be regenerated: run the recipe below, then the keyer. The prompt is kept here
+> for exactly that reason.
+>
+> *Prompt used for the current plate (gpt-2, 16:9), on top of the STYLE.md recipe:* a desk
+> seen slightly three-quarter on with a large monitor facing the viewer straight on, the
+> screen a completely flat plain empty bright green paper rectangle with nothing on it,
+> navy bezel and stand, plus a paper mug, a small stack of paper sheets and a potted plant
+> — everything else navy and cream, green used ONLY for the screen.
+
+**2. The keyer.** `tools/key_screen.py` cuts the green to a genuinely transparent hole:
+
+```bash
+python3 tools/key_screen.py in.png remotion/public/papercraft/desk_monitor.png
+```
+
+It centre-crops to 16:9 first, erodes the hole a few pixels so the antialiasing and green
+spill stay as opaque paper, feathers the edge, despills toward the bezel navy, and writes a
+sidecar JSON with the **measured** screen rect. Copy that rect into the slide; never eyeball
+it. Two things it exists to prevent, both of which bit during the build:
+
+- despilling weighted by alpha leaves the eroded lip at full green (10,576 emerald pixels
+  ringing the footage), because the lip is fully opaque and so gets a weight of zero;
+- a plate that is not exactly the comp's aspect makes image fractions and frame fractions
+  disagree by however much `objectFit: cover` crops, so every authored coordinate is off.
+
+**3. The slide.** Deck type `oncamera`, one per script segment as usual:
+
+```jsonc
+{"id": "s01", "type": "oncamera", "video": "oncamera/57_cold_open.mp4",
+ "screen": {"x0": 0.2423, "y0": 0.1463, "x1": 0.7562, "y1": 0.6356},
+ "set": "papercraft/desk_monitor.png"}
+```
+
+`screen_width_frac` (default 0.62) sets how much of the frame the screen fills at rest —
+Dave's 55-70%. The engine fills in the rest:
+
+- **`startAtSec`**, so consecutive `oncamera` scenes play *one continuous take* instead of
+  restarting the file on every slide. The deck is 1:1 with segments and the cold open spans
+  several, so without this Dave jumps back to his first word four times.
+- **`pullBack`** on the last scene of the run — the no-cut exit.
+- **The chibi presenter is dropped** on these scenes by the engine, not by author discipline.
+
+Author no `marks` on them; there is nothing to point at but Dave.
+
+**The one non-obvious trap, for whoever touches the component next.** The footage layer is
+absolutely positioned and the plate is an in-flow `<Img>`, and **CSS paints positioned boxes
+above in-flow ones no matter the source order** — so without explicit `zIndex` the video
+renders *on top of* the paper and the bezel never overlaps it. It looks like a geometry bug
+and it is not. The tell: widening the bleed makes the leak *worse*, not better.
+
+**Verify with a rendered still, not by reading the code.** Put a coloured border on a
+placeholder take and count how many of those pixels survive the composite; zero means the
+bezel covers the footage edge, which is the seam the whole idea rests on.
+
+## Still open
+
+**Dave's footage.** Drop the take at `remotion/public/oncamera/<slug>.mp4` and point the
+slide's `video` at it. `remotion/public/oncamera/placeholder.mp4` is a burned-in timecode
+clip for checking geometry and continuity — it is not for broadcast. A slide with no
+`video` renders a blank paper screen and logs a warning rather than failing the render.
+
 ## How to test it honestly
 
 Two videos on camera, the rest of the slate on paper, then compare. The confound to
