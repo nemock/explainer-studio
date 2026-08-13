@@ -122,7 +122,11 @@ def main():
     dataviz = sum(types.get(t, 0) for t in DATA_VIZ_TYPES)
     teaching = sum(types.get(t, 0) for t in TEACHING_TYPES)
     footage = types.get("footage", 0)
-    has_hook = slides[0].get("type") == "hook" if slides else False
+    # `oncamera` counts as a hero cold open (2026-08-13). The on-camera open puts real
+    # Dave inside the paper set for the first ~35s (ON-CAMERA-COLD-OPEN.md); it is more of
+    # a hero beat than the art card it replaces, but the check only knew the word "hook",
+    # so wiring one up failed the floor for no reason.
+    has_hook = slides[0].get("type") in ("hook", "oncamera") if slides else False
     has_punch = types.get("punch", 0) > 0
     teaching_needed = max(1, round(n / 18))
     blank = _contentless_slides(slides)
@@ -145,7 +149,7 @@ def main():
         (f"text-type slides {text_count}/{n} = {text_pct:.0f}% (cap 40%)", text_pct <= 40),
         (f"longest text-type run {max_run} (cap 2)", max_run <= 2),
         (f"schematic/figure slides {teaching} (need ≥{teaching_needed} ≈ one per act)", teaching >= teaching_needed),
-        (f"hero cold open (first slide type=hook): {has_hook}; midroll punch present: {has_punch}", has_hook and has_punch),
+        (f"hero cold open (first slide type=hook|oncamera): {has_hook}; midroll punch present: {has_punch}", has_hook and has_punch),
         (f"annotated slides {annotated}/{n} (need ≥ 1/3)", annotated * 3 >= n),
         (f"slides with authored narration cues {cued} (need ≥ 1; 0 = failed deck)", cued >= 1),
         (f"slides that would render blank: {', '.join(blank) if blank else 'none'}", not blank),
