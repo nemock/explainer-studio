@@ -27,6 +27,14 @@ export type PaperWorldTokens = {
   // grey dirt on cream (2026-08-07).
   lightTint?: string;
   lightSurround?: string;
+  // The DE-EMPHASIS colour: what a `kind: 'bad'` half or punch word is drawn in, as
+  // against `accent`/`ink` for a normal one. Circumvent.tsx has referenced W.neutral since
+  // it was written, but the token was never declared, so it resolved to undefined on every
+  // world — which silently dropped `background` entirely and rendered the bad half's
+  // underline bar INVISIBLE (spotted 2026-08-12). Optional; the components fall back to a
+  // half-strength ink, which matches the intent already expressed one line away as
+  // `opacity: kind === 'bad' ? 0.62 : 1`. "Bad" here means muted, not alarmed.
+  neutral?: string;
   // Kicker TEXT colour. Defaults to accentSoft, which is what every dark world has always
   // used. It needs its own token because accentSoft does double duty — kicker text AND
   // chip/band fills — and on a LIGHT ground one value cannot do both: a fill light enough

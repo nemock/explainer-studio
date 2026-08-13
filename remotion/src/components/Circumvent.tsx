@@ -323,7 +323,7 @@ export const CvgPunch: React.FC<{fields: any}> = ({fields}) => {
           ) : null}
           <div style={{
             fontFamily: BRAND.font, fontWeight: 900, fontSize: size, lineHeight: 0.98,
-            color: fields.kind === 'bad' ? W.neutral : W.ink, letterSpacing: -2,
+            color: fields.kind === 'bad' ? (W.neutral ?? `${W.ink}8A`) : W.ink, letterSpacing: -2,
           }}>{word}</div>
           <div style={{
             height: height * 0.012, width: `${Math.min(78, word.length * 7)}%`, margin: `${height * 0.026}px auto 0`,
@@ -420,7 +420,7 @@ export const CvgCompare: React.FC<{fields: any}> = ({fields}) => {
     }}>
       <div style={{
         fontFamily: BRAND.font, fontWeight: 800, fontSize: M * (portrait ? 0.028 : 0.022), letterSpacing: 4,
-        textTransform: 'uppercase', color: d.kind === 'bad' ? W.neutral : W.accent, marginBottom: M * 0.018,
+        textTransform: 'uppercase', color: d.kind === 'bad' ? (W.neutral ?? `${W.ink}8A`) : W.accent, marginBottom: M * 0.018,
       }}>{d.title || ''}</div>
       <div style={{
         // Portrait halves are short AND sit above the caption band — 0.072 wrapped long
@@ -434,7 +434,7 @@ export const CvgCompare: React.FC<{fields: any}> = ({fields}) => {
       }}>{d.value || ''}</div>
       <div style={{
         marginTop: M * 0.026, width: '46%', height: M * 0.011,
-        background: d.kind === 'bad' ? W.neutral : W.accent, transform: `scaleX(${e})`,
+        background: d.kind === 'bad' ? (W.neutral ?? `${W.ink}8A`) : W.accent, transform: `scaleX(${e})`,
       }} />
     </div>
   );
