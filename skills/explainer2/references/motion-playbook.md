@@ -286,6 +286,23 @@ underline and renders as a red or green bar floating on blank paper. Two consequ
 image it sits on. If the answer is "the empty area below X" or "roughly where the text is",
 it is wrong. Open the PNG and look.
 
+**`hook` slides DROP `marks` — do not author them there (found 2026-08-12, #57).**
+`_scene_for` maps `hook` to `PaperHook` with exactly `{image, kicker, headline, accent,
+stage}`. A `marks` array on a hook slide is discarded at spec-build: no error, no warning,
+and `deck_census.py` still counts the slide toward the annotation floor because it only
+looks for the *authored* key. So a deck can pass the floor while showing one fewer callout
+than it claims. #55's cold-open circle on `hook_it_works.png` never rendered, and nobody
+noticed for ten days. Two consequences:
+
+- **Put the cold open's callout on slide 2 instead.** The hook is a full-bleed art card with
+  a pinned label block; it does not need a ring on top of it anyway.
+- **Never satisfy the annotation floor with a hook slide.** Count only `figure`/`footage`
+  `marks` and `schematic` `annotations` — those are the two paths that actually render.
+
+Same failure class as the `figure`-`title`-without-`imageFromFrac` bug above and the
+`source`/`source_url` passthrough gap: an authored field silently dropped by the type map,
+where the absence of a warning reads as success.
+
 **SUPERSEDED 2026-08-08 (#56): the PIL-on-raw-art contact sheet is DEAD as a verification
 method. Author marks from MEASUREMENT; verify on RENDERED FRAMES.** The #55 contact sheet
 below could never catch a bad coordinate, because it drew the authored numbers onto the raw
