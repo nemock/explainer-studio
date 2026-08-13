@@ -134,6 +134,30 @@ Dave's 55-70%. The engine fills in the rest:
 
 Author no `marks` on them; there is nothing to point at but Dave.
 
+**`patches` — paper stuck on the glass.** Any `oncamera` slide may carry:
+
+```jsonc
+"patches": [{"image": "papercraft-notes/note_half_torn_1.webp",
+             "at": [0.303, 0.232], "w": 0.165, "rotate": -3}]
+```
+
+Coordinates are PLATE space like `screen`, so a patch rides the camera and stays on the
+monitor through the push-in and the pull-back. It renders above both the footage and the
+bezel — a real sticky note sits on the glass — and it may overlap the frame, which is what
+sells it as an object in the room rather than a rectangle pasted on. It takes the standard
+two-step tint (desaturate, then multiply, masked to the paper's alpha); a straight multiply
+over the library's generated yellow lands somewhere other than the palette value asked for.
+`papercraft-notes` and `papercraft-fixings` are staged unconditionally, so no new asset
+work is needed.
+
+**Why it exists, and the honest use of it.** #57's camera burned `DJI OSMO POCKET 3` into
+the top-left of the take. Cropping it out was measured and rejected: from the left it costs
+24% of the width and pushes Dave off-centre (re-centring leaves ~49% of the frame), and from
+the top it cuts 18% off, while his head starts at 6%. A torn scrap taped over that corner
+is native vocabulary in this world and costs nothing. **Verify coverage on a rendered
+frame, not by eye** — count near-white pixels in the watermark's bbox before and after
+(1,201 → 0 here). The better fix remains turning the watermark off in the camera.
+
 **The one non-obvious trap, for whoever touches the component next.** The footage layer is
 absolutely positioned and the plate is an in-flow `<Img>`, and **CSS paints positioned boxes
 above in-flow ones no matter the source order** — so without explicit `zIndex` the video

@@ -85,6 +85,8 @@ export const PaperMonitor: React.FC<{fields: any}> = ({fields}) => {
   // but the outermost pixels of the take, which is exactly why the spec says to shoot
   // "flat and slightly wide so the crop into the monitor's aspect does not cut his head".
   const bleed: number = fields.bleed ?? 0.012;
+  // paper stuck on the glass: [{image, at:[x,y], w, rotate?, tint?}] in plate space
+  const patches: any[] = fields.patches ?? [];
 
   // The backdrop is a safety net only: the camera never scales below 1.0, so the plate
   // always covers the frame. It exists so a mis-authored `screenWidthFrac` shows paper
@@ -155,6 +157,43 @@ export const PaperMonitor: React.FC<{fields: any}> = ({fields}) => {
           <Img src={staticFile(plate)}
                style={{width: '100%', height: '100%', objectFit: 'cover'}} />
         </AbsoluteFill>
+
+        {/* 4. `patches` — paper stuck ON the glass, above everything.
+               A physical sticky note on a monitor sits on the screen, so this layer is
+               above both the footage and the bezel and may overlap the frame, which is
+               what sells it as an object in the room rather than a rectangle pasted on.
+               Coordinates are PLATE space like `screen`, so a patch rides the camera and
+               stays put on the monitor through the push-in and the pull-back.
+               Built for #57, where the camera burned a maker's watermark into the top-left
+               of the take and cropping it out would have cost half the frame width. */}
+        {patches.map((p: any, i: number) => {
+          const src = staticFile(p.image);
+          const tint = p.tint ?? '#efe4c8';
+          return (
+            <div key={`patch${i}`} style={{
+              position: 'absolute', zIndex: 3,
+              left: pct(p.at[0]), top: pct(p.at[1]), width: pct(p.w),
+              transform: `translate(-50%, -50%) rotate(${p.rotate ?? 0}deg)`,
+              filter: 'drop-shadow(0 6px 12px rgba(20,12,40,.45))',
+            }}>
+              <div style={{position: 'relative'}}>
+                {/* desaturate first: the library stock is generated yellow, and multiplying
+                    straight over it lands somewhere other than the palette value asked for
+                    (a pastel blue comes out sage). Same two-step as PaperNote. */}
+                <Img src={src} style={{width: '100%', height: 'auto', display: 'block',
+                                       filter: 'grayscale(1) brightness(1.18)'}} />
+                {/* the multiply half, masked to the paper's own alpha so the tint stops at
+                    the torn edge instead of painting a rectangle over the shot */}
+                <div style={{
+                  position: 'absolute', inset: 0, background: tint, mixBlendMode: 'multiply',
+                  WebkitMaskImage: `url(${src})`, maskImage: `url(${src})`,
+                  WebkitMaskSize: '100% 100%', maskSize: '100% 100%',
+                  WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat',
+                }} />
+              </div>
+            </div>
+          );
+        })}
       </AbsoluteFill>
     </AbsoluteFill>
   );
