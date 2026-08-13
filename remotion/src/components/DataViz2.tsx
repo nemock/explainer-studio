@@ -3,18 +3,27 @@ import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from
 import {BRAND} from '../brand';
 import {useInk} from '../ink';
 
-const Kicker: React.FC<{text?: string; o: number; height: number}> = ({text, o, height}) =>
-  text ? (
-    <div style={{fontFamily: BRAND.font, color: BRAND.green, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 5, textTransform: 'uppercase', textAlign: 'center', opacity: o, marginBottom: height * 0.035}}>
+// This file's own Kicker, separate from the one in TextScenes. It hardcoded BRAND.green
+// and never read the ink, so on every theme whose accent is not green the kicker above a
+// trend/pictograph/waterfall/ring/funnel scene came out studio green — the same leak as
+// the hardcoded accent in colorize.tsx. Caught 2026-08-12 while rendering a Pictograph on
+// plg-guide: rust dots under a green label. The green themes resolve ink.accent to
+// BRAND.green, so nothing about them moves.
+const Kicker: React.FC<{text?: string; o: number; height: number}> = ({text, o, height}) => {
+  const ink = useInk();
+  return text ? (
+    <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 5, textTransform: 'uppercase', textAlign: 'center', opacity: o, marginBottom: height * 0.035}}>
       {text}
     </div>
   ) : null;
+};
 
 // trend / crash -> a line chart drawn on left-to-right (motion-playbook §2B). The plummet
 // reads as gut-punch. fields: {kicker, points:[numbers], endLabel, kind:'good'|'bad'}
 export const DrawLine: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
   const frame = useCurrentFrame();
   const {fps, height, width} = useVideoConfig();
+  const ink = useInk();
   const pts: number[] = (fields.points && fields.points.length ? fields.points : [10, 30, 25, 60, 45, 80]);
   const W = width * 0.62, H = height * 0.42;
   const max = Math.max(...pts), min = Math.min(...pts);
@@ -80,8 +89,8 @@ export const Pictograph: React.FC<{fields: any; durationInFrames: number}> = ({f
   const total = fields.total || 100, filled = fields.filled || 0;
   const shown = Math.round(interpolate(frame, [0, durationInFrames * 0.7], [0, filled], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}));
   const cols = Math.ceil(Math.sqrt(total * 1.6));
-  const col = fields.kind === 'good' ? BRAND.green : (ink.danger ?? BRAND.red);
   const ink = useInk();
+  const col = fields.kind === 'good' ? BRAND.green : (ink.danger ?? BRAND.red);
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
       <Kicker text={fields.kicker} o={spring({frame, fps, config: {damping: 18}})} height={height} />
