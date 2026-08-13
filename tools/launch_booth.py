@@ -26,6 +26,8 @@ Usage:
   python3 tools/launch_booth.py --no-open <project_dir>  # same, but don't open a browser tab
   python3 tools/launch_booth.py --wait <project_dir>     # block until the green Finish button
   python3 tools/launch_booth.py --status <project_dir>   # DONE / PENDING / NOT_OPEN (instant)
+                                                        # PENDING only for a booth that
+                                                        # identifies as THIS project
   python3 tools/launch_booth.py --claim <project_dir>    # CLAIMED / LOCKED — atomically claim completion so concurrent/resumed fires can't double-post
   python3 tools/launch_booth.py --stop                   # stop any running booth
 
@@ -157,11 +159,20 @@ def _pop_tab(url):
         print(f"could not open a browser tab ({e}); open it yourself: {url}")
 
 
+def _project_title(proj):
+    """The project's title, or '' if it has none. Used to tell 'this booth is not ours'
+    apart from 'we have no way to tell', which matter differently in status()."""
+    try:
+        return str(json.loads((proj / "project.json").read_text()).get("title", ""))
+    except Exception:
+        return ""
+
+
 def _booth_serves_project(port, proj):
     """Does the booth on `port` belong to THIS project? Checked by title match on
     the served page (cheap, no new endpoint). Best-effort: False on any error."""
     try:
-        title = str(json.loads((proj / "project.json").read_text()).get("title", ""))
+        title = _project_title(proj)
         page = urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=2).read().decode()
         return bool(title) and title in page
     except Exception:
@@ -252,10 +263,24 @@ def status(project):
     if marker.exists():
         print("DONE", marker.read_text().strip())
         return 0
+    # A LISTENER IS NOT A BOOTH (fixed 2026-08-13). This used to report PENDING for any
+    # process holding a pool port. With no work/booth_port yet it scanned the whole
+    # 8765..8794 pool, so an unrelated server on a pool port answered for us — a Daily
+    # Beats archive on 8770 made a project that had never been recorded report PENDING.
+    # Unattended checkers read that as "booth already open" and wait instead of launching.
+    # start() has always confirmed identity before reusing a port; status() now does too.
     port = _project_port(proj)
-    ports = [port] if port else list(ALL_PORTS)
-    for cand in ports:
-        if cand and _pids_on_port(cand):
+    if port and _pids_on_port(port):
+        # We wrote work/booth_port ourselves, so a listener there is already good evidence.
+        # The title check upgrades it; accept when the project has no title to check with,
+        # rather than regressing an untitled project to NOT_OPEN.
+        if _booth_serves_project(port, proj) or not _project_title(proj):
+            print(f"PENDING http://127.0.0.1:{port}/")
+            return 0
+    # No recorded port, or it is no longer ours: scan the pool, but accept ONLY a port
+    # that positively identifies as this project's booth.
+    for cand in ALL_PORTS:
+        if cand != port and _pids_on_port(cand) and _booth_serves_project(cand, proj):
             print(f"PENDING http://127.0.0.1:{cand}/")
             return 0
     print("NOT_OPEN")
