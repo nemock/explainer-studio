@@ -178,7 +178,40 @@ export const Quote: React.FC<{fields: any; durationInFrames?: number}> = ({field
 // punch -> one giant word, max energy (the seam). fields: {word, kicker, kind:'good'|'bad'}
 // OR the headline variant: {headline, accent, accentRed} — per-word accent coloring takes
 // precedence over the whole-word `kind` color when accent/accentRed are actually set.
-export const PunchWord: React.FC<{fields: any}> = ({fields}) => {
+/**
+ * A slow living drift for typography-only cards (operator-approved 2026-08-12).
+ *
+ * These cards finish their entrance and then hold perfectly still while the narration
+ * keeps going, which is what QA's freezedetect reports as "visual dead air": on module 1
+ * the punch and reframe cards alone accounted for 184 of 373 flagged seconds, while figure
+ * slides — which drift under Ken Burns — scored ZERO. PaperBackground already carries an
+ * anti-freeze breath, but at ~0.0002 alpha per frame it is far under the -60dB threshold,
+ * and turning it up is not an option: the operator rejected a livelier background on
+ * 2026-07-16 as "a distracting gyration". So the motion goes on the card, not the ground.
+ *
+ * It is applied to the OUTER AbsoluteFill, so it composes with each card's own entrance
+ * transform rather than fighting it, and moves the whole composition as one piece — no
+ * reflow, no re-wrap, nothing shifting relative to anything else.
+ *
+ * Sized so it CANNOT clip. Worst-case text width is 81% of frame on PunchWord (6% padding,
+ * then maxWidth 92% of that) and 84% on Reframe; at the 1.4% peak scale those become 82.1%
+ * and 85.2%, leaving ~7.4% clear on each side. Vertically these cards are centred with
+ * hundreds of spare pixels, so an 11px drift is nowhere near an edge. Periods are primes-ish
+ * and different per axis so the two never resolve into an obvious loop.
+ */
+const useCardDrift = (height: number, durationInFrames: number) => {
+  const frame = useCurrentFrame();
+  // Deliberately the SAME ramp KineticHeadline uses, not a new invention. That component
+  // added this for exactly this reason, and module 1's QA numbers show it works: `statement`
+  // logged 9 flagged spans totalling 6s, against punch's 49 spans / 105s over a comparable
+  // slide count. Matching the proven constants also means these three card types age
+  // together instead of drifting at three different rates.
+  const live = interpolate(frame, [0, durationInFrames], [1, 1.035]);
+  const dy = interpolate(frame, [0, durationInFrames], [0, -height * 0.014]);
+  return `scale(${live.toFixed(5)}) translateY(${dy.toFixed(3)}px)`;
+};
+
+export const PunchWord: React.FC<{fields: any; durationInFrames?: number}> = ({fields, durationInFrames = 300}) => {
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
   const p = spring({frame, fps, config: {damping: 9, stiffness: 140}});
@@ -186,8 +219,9 @@ export const PunchWord: React.FC<{fields: any}> = ({fields}) => {
   const color = fields.kind === 'good' ? ink.accent : fields.kind === 'bad' ? BRAND.red : ink.body;
   const text = fields.word || fields.headline;
   const hasAccent = (fields.accent && fields.accent.length) || (fields.accentRed && fields.accentRed.length);
+  const drift = useCardDrift(height, durationInFrames);
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 6%'}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 6%', transform: drift}}>
       <Kicker text={fields.kicker} o={interpolate(p, [0, 1], [0, 1])} height={height} />
       <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.2, lineHeight: 1.02, color, textTransform: 'uppercase', transform: `scale(${p})`, textShadow: ink.paper ? PAPER_SHADOW : '0 16px 70px rgba(0,0,0,.6)', textAlign: 'center', maxWidth: '92%', whiteSpace: 'pre-line', textWrap: 'balance' as any}}>
         {hasAccent ? colorize(text, fields.accent, fields.accentRed, ink.accent) : text}
@@ -197,14 +231,15 @@ export const PunchWord: React.FC<{fields: any}> = ({fields}) => {
 };
 
 // reframe -> "before" struck through, dissolving into "after". fields: {before, after}
-export const Reframe: React.FC<{fields: any}> = ({fields}) => {
+export const Reframe: React.FC<{fields: any; durationInFrames?: number}> = ({fields, durationInFrames = 300}) => {
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
   const a = spring({frame, fps, config: {damping: 18}});
   const flip = spring({frame: frame - 26, fps, config: {damping: 16}});
   const ink = useInk();
+  const drift = useCardDrift(height, durationInFrames);
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 8%', flexDirection: 'column'}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 8%', flexDirection: 'column', transform: drift}}>
       <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.06, color: ink.body, opacity: interpolate(flip, [0, 1], [1, 0.35]), textDecoration: 'line-through', textDecorationColor: BRAND.red, textAlign: 'center'}}>
         {fields.before}
       </div>

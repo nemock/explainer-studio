@@ -44,11 +44,18 @@ const FAMILIES: {family: NoteFamily; aspect: number; takes: number}[] = [
 // The other three sat at 1.12-1.25. This brings yellow to 1.29/1.24, in family with blue,
 // while staying a desaturated post-it rather than the hot gold a pure lightness drop gives.
 // Ink on the note stays 10.3:1. No published video uses these yet, so nothing re-renders.
+// `rust` added 2026-08-12 for plg-guide, whose world is strictly cream/navy/rust with no
+// fourth colour. Its "unowned decisions" set was rendering on the `bad` pink, which is both
+// off-palette there AND nearly invisible as paper: measured against that theme's cream
+// ground the pink sits at a 1.04 luminance ratio — the same disappearing-edge failure the
+// old pale yellow had at 1.07. This sits at 1.30, matching the corrected yellow, and keeps
+// the navy ink at 8.9:1. Deliberately NOT added to PASTEL_CYCLE, so no existing deck moves.
 export const NOTE_PASTEL = {
   yellow: '#f7d271',
   pink: '#ffd2d8',
   blue: '#c3dcf0',
   green: '#cbe8c8',
+  rust: '#e8bfa8',
 } as const;
 export type NotePastel = keyof typeof NOTE_PASTEL;
 export const PASTEL_CYCLE: NotePastel[] = ['yellow', 'blue', 'pink', 'green'];
