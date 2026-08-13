@@ -23,7 +23,7 @@ const FigMark: React.FC<{m: any; i: number}> = ({m, i}) => {
   const ink = useInk();
   // 'green' means "the world's accent" — indigo in the BRG world, studio green on navy;
   // 'white' means "the body ink", which is a deep ink on the cream paper worlds.
-  const color = m.color === 'red' ? (ink.paper ? '#c2352b' : BRAND.red)
+  const color = m.color === 'red' ? (ink.danger ?? (ink.paper ? '#c2352b' : BRAND.red))
               : m.color === 'white' ? ink.body : ink.accent;
   const {paths, length, tip} = React.useMemo(() => {
     const gen = rough.generator();
@@ -86,7 +86,8 @@ const FigureMarks: React.FC<{marks?: any[]}> = ({marks}) => {
 // `accentColor` is the world's ONE accent (studio green on navy, indigo in the BRG world) —
 // pass ink.accent from the caller so figures never hard-code a green that is off-brand here.
 const figColorize = (text: string, accents: string[] = [], accents2: string[] = [],
-                     accentColor: string = BRAND.green) => {
+                     accentColor: string = BRAND.green,
+                     dangerColor: string = BRAND.red) => {
   if (!text) return null;
   const all = [...(accents || []), ...(accents2 || [])];
   if (!all.length) return text;
@@ -97,7 +98,7 @@ const figColorize = (text: string, accents: string[] = [], accents2: string[] = 
       return <span key={i} style={{color: accentColor}}>{p}</span>;
     }
     if ((accents2 || []).some((a) => a.toLowerCase() === p.toLowerCase())) {
-      return <span key={i} style={{color: BRAND.red}}>{p}</span>;
+      return <span key={i} style={{color: dangerColor}}>{p}</span>;
     }
     return <React.Fragment key={i}>{p}</React.Fragment>;
   });
@@ -190,14 +191,14 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
       ) : null}
       {phased ? (
         <div style={{position: 'absolute', left: 0, right: 0, textAlign: 'center', padding: '0 12%', fontFamily: BRAND.font, color: ink.body, fontWeight: 900, fontSize: height * 0.062, lineHeight: 1.15, opacity: titleOpacity, textShadow: ink.paper ? PAPER_SHADOW : '0 3px 18px rgba(0,0,0,.6)'}}>
-          {figColorize(fields.title, fields.accent, fields.accent2, ink.accent)}
+          {figColorize(fields.title, fields.accent, fields.accent2, ink.accent, (ink.danger ?? (ink.paper ? '#c2352b' : BRAND.red)))}
         </div>
       ) : null}
       {persistentTitle ? (
         // in-flow header: kicker -> title -> image card -> caption. Smaller than the phased
         // title (which owns the whole frame on its own) so the image still leads.
         <div style={{textAlign: 'center', padding: '0 4%', fontFamily: BRAND.font, color: ink.body, fontWeight: 900, fontSize: height * 0.042, lineHeight: 1.16, opacity: kIntro, marginBottom: height * 0.022, textShadow: ink.paper ? PAPER_SHADOW : '0 3px 18px rgba(0,0,0,.6)'}}>
-          {figColorize(fields.title, fields.accent, fields.accent2, ink.accent)}
+          {figColorize(fields.title, fields.accent, fields.accent2, ink.accent, (ink.danger ?? (ink.paper ? '#c2352b' : BRAND.red)))}
         </div>
       ) : null}
       {/* The artifact frame: a bright white card + deep shadow reads as a lit print on the
@@ -297,7 +298,7 @@ export const Footage: React.FC<{fields: any; durationInFrames: number}> = ({fiel
         {fields.headline ? (
           <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 8%'}}>
             <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.07, color: BRAND.white, textAlign: 'center', textShadow: '0 10px 50px rgba(0,0,0,.8)'}}>
-              {figColorize(fields.headline, fields.accent, fields.accent2, ink.accent)}
+              {figColorize(fields.headline, fields.accent, fields.accent2, ink.accent, (ink.danger ?? (ink.paper ? '#c2352b' : BRAND.red)))}
             </div>
           </AbsoluteFill>
         ) : null}
@@ -316,7 +317,7 @@ export const Footage: React.FC<{fields: any; durationInFrames: number}> = ({fiel
     <AbsoluteFill>
       {fields.headline ? (
         <div style={{position: 'absolute', top: '7%', left: 0, right: 0, textAlign: 'center', fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: height * 0.026, letterSpacing: 4, textTransform: 'uppercase', opacity: intro, padding: '0 8%'}}>
-          {fields.accent2 && fields.accent2.length ? figColorize(fields.headline, fields.accent, fields.accent2, ink.accent) : fields.headline}
+          {fields.accent2 && fields.accent2.length ? figColorize(fields.headline, fields.accent, fields.accent2, ink.accent, (ink.danger ?? (ink.paper ? '#c2352b' : BRAND.red))) : fields.headline}
         </div>
       ) : null}
       <div style={{position: 'absolute', top: '14%', left: '19%', width: '62%', height: '60%', borderRadius: 18, overflow: 'hidden', border: '2px solid rgba(245,247,255,.10)', boxShadow: '0 36px 100px rgba(0,0,0,.62), 0 0 0 1px rgba(0,0,0,.4)', transform: `scale(${winScale})`, opacity: intro}}>

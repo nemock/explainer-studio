@@ -23,7 +23,10 @@ export const colorizeText = (
   text: string | undefined,
   accent: string[] = [],
   accent2: string[] = [],
-  accentColor: string = BRAND.green
+  accentColor: string = BRAND.green,
+  // Same reasoning as accentColor: accent2 is the world's DANGER colour, not a fixed
+  // studio scarlet. Callers pass ink.danger; the default keeps every old call unchanged.
+  dangerColor: string = BRAND.red
 ): React.ReactNode => {
   const a = new Set((accent || []).flatMap((s) => s.split(/\s+/)).map(norm));
   const a2 = new Set((accent2 || []).flatMap((s) => s.split(/\s+/)).map(norm));
@@ -31,7 +34,7 @@ export const colorizeText = (
   return parts.map((tok, i) => {
     const key = norm(tok);
     if (key && a.has(key)) return <span key={i} style={{color: accentColor}}>{tok}</span>;
-    if (key && a2.has(key)) return <span key={i} style={{color: BRAND.red}}>{tok}</span>;
+    if (key && a2.has(key)) return <span key={i} style={{color: dangerColor}}>{tok}</span>;
     return tok;
   });
 };

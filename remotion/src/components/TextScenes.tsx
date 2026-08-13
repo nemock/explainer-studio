@@ -7,8 +7,8 @@ import {PaperStage, isStageName, stageZonePx, fitStageText} from './PaperStage';
 import {colorizeText} from './colorize';
 
 const colorize = (text: string, accent: string[] = [], red: string[] = [],
-                 accentColor?: string) =>
-  colorizeText(text, accent, red, accentColor);
+                 accentColor?: string, dangerColor?: string) =>
+  colorizeText(text, accent, red, accentColor, dangerColor);
 
 const SubKicker: React.FC<{text?: string; height: number}> = ({text, height}) => {
   const ink = useInk();
@@ -54,7 +54,7 @@ const RevealWords: React.FC<{text: string; accent?: string[]; accentRed?: string
         const e = spring({frame: frame - delay, fps, config: {damping: 15, stiffness: 130}});
         const pop = (isA || isR) ? interpolate(e, [0, 1], [1.22, 1], {extrapolateRight: 'clamp'}) : 1;
         return (
-          <span key={i} style={{display: 'inline-block', color: isA ? ink.accent : isR ? BRAND.red : undefined,
+          <span key={i} style={{display: 'inline-block', color: isA ? ink.accent : isR ? (ink.danger ?? BRAND.red) : undefined,
             opacity: e, transform: `translateY(${interpolate(e, [0, 1], [20, 0])}px) scale(${pop})`,
             transformOrigin: 'center bottom'}}>{w}</span>
         );
@@ -142,7 +142,7 @@ export const DefineTerm: React.FC<{fields: any; durationInFrames?: number}> = ({
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 9%', transform: `scale(${live}) translateY(${drift}px)`}}>
       <Kicker text={fields.kicker} o={t} height={height} />
       <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 900, fontSize: termSize, lineHeight: 1.1, textAlign: 'center', opacity: t, transform: `translateY(${interpolate(t, [0, 1], [24, 0])}px)`, textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
-        {colorize(fields.term, fields.accent, fields.accentRed, ink.accent)}
+        {colorize(fields.term, fields.accent, fields.accentRed, ink.accent, (ink.danger ?? BRAND.red))}
       </div>
       <div style={{fontFamily: BRAND.font, color: ink.body, fontWeight: 700, fontSize: height * 0.038, lineHeight: 1.3, textAlign: 'center', maxWidth: '85%', marginTop: height * 0.028, opacity: d, transform: `translateY(${interpolate(d, [0, 1], [18, 0])}px)`}}>
         {fields.definition}
@@ -216,7 +216,7 @@ export const PunchWord: React.FC<{fields: any; durationInFrames?: number}> = ({f
   const {fps, height} = useVideoConfig();
   const p = spring({frame, fps, config: {damping: 9, stiffness: 140}});
   const ink = useInk();
-  const color = fields.kind === 'good' ? ink.accent : fields.kind === 'bad' ? BRAND.red : ink.body;
+  const color = fields.kind === 'good' ? ink.accent : fields.kind === 'bad' ? (ink.danger ?? BRAND.red) : ink.body;
   const text = fields.word || fields.headline;
   const hasAccent = (fields.accent && fields.accent.length) || (fields.accentRed && fields.accentRed.length);
   const drift = useCardDrift(height, durationInFrames);
@@ -224,7 +224,7 @@ export const PunchWord: React.FC<{fields: any; durationInFrames?: number}> = ({f
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 6%', transform: drift}}>
       <Kicker text={fields.kicker} o={interpolate(p, [0, 1], [0, 1])} height={height} />
       <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.2, lineHeight: 1.02, color, textTransform: 'uppercase', transform: `scale(${p})`, textShadow: ink.paper ? PAPER_SHADOW : '0 16px 70px rgba(0,0,0,.6)', textAlign: 'center', maxWidth: '92%', whiteSpace: 'pre-line', textWrap: 'balance' as any}}>
-        {hasAccent ? colorize(text, fields.accent, fields.accentRed, ink.accent) : text}
+        {hasAccent ? colorize(text, fields.accent, fields.accentRed, ink.accent, (ink.danger ?? BRAND.red)) : text}
       </div>
     </AbsoluteFill>
   );
@@ -240,7 +240,7 @@ export const Reframe: React.FC<{fields: any; durationInFrames?: number}> = ({fie
   const drift = useCardDrift(height, durationInFrames);
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 8%', flexDirection: 'column', transform: drift}}>
-      <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.06, color: ink.body, opacity: interpolate(flip, [0, 1], [1, 0.35]), textDecoration: 'line-through', textDecorationColor: BRAND.red, textAlign: 'center'}}>
+      <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.06, color: ink.body, opacity: interpolate(flip, [0, 1], [1, 0.35]), textDecoration: 'line-through', textDecorationColor: (ink.danger ?? BRAND.red), textAlign: 'center'}}>
         {fields.before}
       </div>
       <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 900, fontSize: height * 0.04, margin: `${height * 0.02}px 0`, opacity: a}}>↓</div>
@@ -266,7 +266,7 @@ export const BuildList: React.FC<{fields: any; durationInFrames: number}> = ({fi
         <Kicker text={fields.kicker} o={spring({frame, fps, config: {damping: 18}})} height={height} />
         {fields.title ? (
           <div style={{fontFamily: BRAND.font, color: ink.body, fontWeight: 800, fontSize: height * 0.036, lineHeight: 1.2, opacity: titleO, marginBottom: height * 0.024, transform: `translateY(${interpolate(titleO, [0, 1], [16, 0])}px)`}}>
-            {colorize(fields.title, fields.accent, fields.accentRed, ink.accent)}
+            {colorize(fields.title, fields.accent, fields.accentRed, ink.accent, (ink.danger ?? BRAND.red))}
           </div>
         ) : null}
         {items.map((it, i) => {
@@ -320,7 +320,7 @@ export const SideBySide: React.FC<{fields: any; durationInFrames?: number}> = ({
                    transform: `translateX(${interpolate(o, [0, 1], [dir * 40, 0])}px)${paper ? ` rotate(${dir * 0.5}deg)` : ''}`}}>
         {paper ? <PaperSheet id={`cmp:${d?.title ?? ''}:${d?.value ?? ''}`} family="card"
                              radius={20} tint={bad ? '#f6e0dc' : '#fffcf5'} /> : null}
-        <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 3, textTransform: 'uppercase', color: bad ? BRAND.red : ink.accent, marginBottom: height * 0.018}}>{d?.title}</div>
+        <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 3, textTransform: 'uppercase', color: bad ? (ink.danger ?? BRAND.red) : ink.accent, marginBottom: height * 0.018}}>{d?.title}</div>
         <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.044, color: ink.body, lineHeight: 1.12}}>{d?.value}</div>
       </div>
     );

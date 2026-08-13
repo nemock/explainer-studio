@@ -53,7 +53,7 @@ export const CTA: React.FC<{fields: any}> = ({fields}) => {
         </div>
       ) : null}
       <div style={{fontFamily: BRAND.font, color: ink.body, fontWeight: 900, fontSize: headlineSize, lineHeight: 1.05, textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
-        {colorizeText(fields.headline, fields.accent, fields.accentRed, ink.accent)}
+        {colorizeText(fields.headline, fields.accent, fields.accentRed, ink.accent, (ink.danger ?? BRAND.red))}
       </div>
       {fields.subkicker ? (
         <div style={{fontFamily: BRAND.font, color: ink.body, opacity: 0.82, fontWeight: 700, fontSize: height * 0.03, marginTop: height * 0.028, lineHeight: 1.3}}>

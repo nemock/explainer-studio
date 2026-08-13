@@ -306,7 +306,18 @@ reaches significance, so the extra step buys friction, not information.
 **two** thumbnails, but the second is for **promotional reuse** (social, the
 newsletter, LinkedIn), not for testing — design it to stand alone in those
 contexts rather than as a near-twin of A. Name them plainly: `thumb_a` = the live
-thumbnail, `thumb_b` = promo. `publish` sets thumbnail A over the API and nothing
+thumbnail, `thumb_b` = promo.
+
+**BOTH thumbnails put Dave in the base image — the promo variant is not exempt
+(operator directive 2026-08-12, #56).** A thumb_b built as pure papercraft
+data-viz with no Dave was rejected on sight: "We always produce a thumbnail with
+me in the base image. The thumbnail is a photorealistic representation of me as
+part of the narrative scene." So B gets its own photoreal Dave-in-scene base
+(different narrative angle from A, per §6's differ-at-a-glance rule), never an
+illustration standing alone. Same session, a second sizing ruling: **band
+headlines over a composed scene run ~70px/58px, not the §2 template's
+96px** — the template sizes assume the empty navy gradient, and at 96px over a
+scene the headline crowds the subject ("the headline is too large"). `publish` sets thumbnail A over the API and nothing
 further is needed in Studio; the old "Ineligible until Public" two-step below is
 now moot and kept only as historical context.
 

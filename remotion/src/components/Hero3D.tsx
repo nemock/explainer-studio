@@ -63,7 +63,7 @@ export const Hero3D: React.FC<{fields: any}> = ({fields}) => {
             textShadow: '0 12px 60px rgba(0,0,0,.8)',
           }}
         >
-          {colorizeText(fields.headline, fields.accent, fields.accentRed, ink.accent)}
+          {colorizeText(fields.headline, fields.accent, fields.accentRed, ink.accent, (ink.danger ?? BRAND.red))}
         </div>
       </AbsoluteFill>
     </AbsoluteFill>

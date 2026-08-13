@@ -33,8 +33,8 @@ const seedFrom = (s: string) => {
   return ((h >>> 0) % 2147483645) + 1;
 };
 
-const kindColor = (kind?: string) =>
-  kind === 'bad' ? BRAND.red : kind === 'neutral' ? 'rgba(245,247,255,.55)' : BRAND.green;
+const kindColor = (kind: string | undefined, danger: string) =>
+  kind === 'bad' ? danger : kind === 'neutral' ? 'rgba(245,247,255,.55)' : BRAND.green;
 
 // Paper-world schematic: nodes read as colored sticky notes (Dave 2026-07-18 — the cream
 // cards + white dotted edges had no contrast on the cream page). Edges are hand-drawn navy
@@ -148,7 +148,7 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
       const b = nodeBox(n);
       const dr = gen.rectangle(b.x, b.y, b.w, b.h,
         {seed: seedFrom(`node:${n.id}`), roughness: 1.6, bowing: 1.2,
-         stroke: kindColor(n.kind), strokeWidth: Math.max(2.5, H * 0.004)});
+         stroke: kindColor(n.kind, (ink.danger ?? BRAND.red)), strokeWidth: Math.max(2.5, H * 0.004)});
       m.set(n.id, gen.toPaths(dr).map((p) => ({d: p.d})));
     });
     return m;
@@ -205,7 +205,7 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
             const [x1, y1, x2, y2] = [a.x * W, a.y * H, b.x * W, b.y * H];
             const len = Math.hypot(x2 - x1, y2 - y1);
             const angle = Math.atan2(y2 - y1, x2 - x1);
-            const color = kindColor(e.kind);
+            const color = kindColor(e.kind, (ink.danger ?? BRAND.red));
             const head = Math.max(14, H * 0.024);
             if (ink.paper) {
               // hand-drawn navy Sharpie connector, drawn on with the reveal
@@ -257,7 +257,7 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
             const e = spring({frame: frame - at, fps, config: {damping: 15, stiffness: 120}});
             if (frame < at) return null;
             return (sketchPaths.get(n.id) || []).map((p, j) => (
-              <path key={`${n.id}${j}`} d={p.d} fill="none" stroke={kindColor(n.kind)}
+              <path key={`${n.id}${j}`} d={p.d} fill="none" stroke={kindColor(n.kind, (ink.danger ?? BRAND.red))}
                     strokeWidth={Math.max(2.5, H * 0.004)} strokeLinecap="round" opacity={e} />
             ));
           }) : null}
@@ -268,7 +268,7 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
           const at = revealAt.get(n.id) ?? 0;
           const e = spring({frame: frame - at, fps, config: {damping: 15, stiffness: 120}});
           if (frame < at) return null;
-          const color = kindColor(n.kind);
+          const color = kindColor(n.kind, (ink.danger ?? BRAND.red));
           const note = ink.paper && !fields.sketch;   // post-it treatment
           // color-by-kind when the node carries semantic good/bad (e.g. jagged-frontier
           // inside=green / outside=coral); otherwise cycle the decorative post-it palette.

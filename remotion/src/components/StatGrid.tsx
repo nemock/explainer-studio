@@ -6,7 +6,8 @@ import {useInk, PAPER_SHADOW} from '../ink';
 // motion-playbook §2B — a grid of hero numbers, each springing in on a stagger.
 // fields: {kicker, stats:[{value, label, kind?}], source?}. kind: good->green, bad->red, else body ink.
 // Values are shown as-authored strings ($1, $2.2B, 93%) so abbreviated figures render cleanly.
-const tone = (k: string | undefined, neutral: string) => (k === 'bad' ? BRAND.red : k === 'good' ? BRAND.green : neutral);
+const tone = (k: string | undefined, neutral: string, danger: string) =>
+  (k === 'bad' ? danger : k === 'good' ? BRAND.green : neutral);
 
 export const StatGrid: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames = 300}) => {
   const frame = useCurrentFrame();
@@ -32,7 +33,7 @@ export const StatGrid: React.FC<{fields: any; durationInFrames: number}> = ({fie
           return (
             <div key={i} style={{textAlign: 'center', opacity: e, transform: `translateY(${(1 - e) * 26}px)`}}>
               <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.12, lineHeight: 1,
-                color: tone(s.kind, ink.body), textShadow: ink.paper ? PAPER_SHADOW : '0 12px 60px rgba(0,0,0,.55)', fontVariantNumeric: 'tabular-nums'}}>
+                color: tone(s.kind, ink.body, (ink.danger ?? BRAND.red)), textShadow: ink.paper ? PAPER_SHADOW : '0 12px 60px rgba(0,0,0,.55)', fontVariantNumeric: 'tabular-nums'}}>
                 {s.value}
               </div>
               <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.026, letterSpacing: 1,

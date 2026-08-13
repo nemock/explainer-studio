@@ -21,10 +21,13 @@ Two checks, deliberately different in kind:
 """
 
 # Components that draw their own visual and legitimately carry no text.
+# PaperSting/BRGPaperSting added 2026-08-12: the paper-rocket brand stings render a full
+# animation from zero-to-one text field, and the first deep-dive run of this check flagged
+# both bumpers on a video whose every content scene was fine (#56).
 _DRAWS = {
     "Figure", "Footage", "Schematic", "Timeline", "Waveform", "DrawLine", "Pictograph",
-    "Ring", "Funnel", "Waterfall", "Hero3D", "BrandSting", "KeepCard", "PaperPopCard",
-    "PaperStairs", "PaperCounter", "StatCounter",
+    "Ring", "Funnel", "Waterfall", "Hero3D", "BrandSting", "PaperSting", "BRGPaperSting",
+    "KeepCard", "PaperPopCard", "PaperStairs", "PaperCounter", "StatCounter",
 }
 
 # Any of these carrying content means the scene has something to show.
@@ -35,8 +38,10 @@ _DRAWS = {
 # kicker="reported by Boston Scientific, as of March 18, 2026" and headline="" — so a
 # version of this list that counted the kicker would have passed the very slide it was
 # written to catch. (It did, on the first draft. The test case is in the suite.)
+# before/strike/after are Reframe's whole payload (2026-08-12, #56 — without them every
+# Reframe in every deck flags as blank).
 _TEXT_KEYS = ("headline", "word", "term", "definition", "quote", "attrib", "label",
-              "title", "mark", "image")
+              "title", "mark", "image", "before", "strike", "after")
 _LIST_KEYS = ("items", "steps", "stats", "points", "events", "nodes")
 _PAIR_KEYS = ("left", "right")
 

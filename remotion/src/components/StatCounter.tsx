@@ -34,7 +34,7 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
   const lo = Math.min(from, to, 0);
   const hi = Math.max(from, to, 0);
   // domain must be strictly increasing even when the range is one-sided (e.g. 0 -> -1000)
-  const numColor = interpolateColors(value, [Math.min(lo, -1), 0, Math.max(hi, 1)], [BRAND.red, ink.paper ? ink.body : '#cdd6ff', BRAND.green]);
+  const numColor = interpolateColors(value, [Math.min(lo, -1), 0, Math.max(hi, 1)], [(ink.danger ?? BRAND.red), ink.paper ? ink.body : '#cdd6ff', BRAND.green]);
   const negative = value < 0;
 
   const TRACK = height * 0.62;
@@ -91,11 +91,11 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
             borderRadius: 999,
             width: fillW,
             left: negative ? `calc(50% - ${fillW}px)` : '50%',
-            background: ink.paper ? undefined : (negative ? BRAND.red : BRAND.green),
+            background: ink.paper ? undefined : (negative ? (ink.danger ?? BRAND.red) : BRAND.green),
           }}
         >
           {ink.paper ? <PaperSheet id={`meter-fill:${negative ? 'n' : 'p'}`} family="card_tag" radius={999} edge={5}
-                                   tint={negative ? BRAND.red : BRAND.green} /> : null}
+                                   tint={negative ? (ink.danger ?? BRAND.red) : BRAND.green} /> : null}
         </div>
       </div>
       {fields.label || fields.labelNeg ? (
@@ -106,7 +106,7 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
             fontSize: height * 0.022,
             letterSpacing: 2,
             textTransform: 'uppercase',
-            color: negative ? BRAND.red : ink.body,
+            color: negative ? (ink.danger ?? BRAND.red) : ink.body,
             opacity: 0.85,
             marginTop: height * 0.02,
           }}

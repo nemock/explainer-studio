@@ -22,6 +22,13 @@ export type Ink = {
   neutral: string; // mid neutral fill (Waterfall neutral bar)
   accent: string;  // the ONE accent (kicker + highlighted words). Default = the studio green.
   accentWash: string; // translucent accent for marker-wipe highlights laid OVER artwork
+  // The "something is wrong" colour: PunchWord kind:'bad', Reframe's strike-through,
+  // Schematic bad nodes, negative deltas. OPTIONAL — useInk defaults it to BRAND.red, so
+  // every theme that does not declare one behaves exactly as it always has. A theme sets
+  // it only when the studio red is foreign to its world: plg-guide is strictly
+  // cream/navy/rust, and a scarlet punch word on that cream is the same off-brand leak as
+  // the green accent and the pink note were (operator, 2026-08-12).
+  danger?: string;
   paper: boolean;  // true on the paper worlds — gate dark drop-shadows off
   // Headline type sits on real paper stock in this world: statement posters, the hook card,
   // compare trays, and the opt-in PaperStage scenes. Scoped to the two DEEP-DIVE channels
@@ -129,6 +136,7 @@ const PAPER_PLG: Ink = {
   neutral: 'rgba(27,43,75,.5)',
   accent: '#a8481f',
   accentWash: 'rgba(168,72,31,.30)',
+  danger: '#a8481f',   // no scarlet in this world — 'bad' is the rust, deepened by context
   paper: true,
   typeOnPaper: false,   // its own series world — not a deep-dive world
 };
@@ -191,4 +199,9 @@ export const InkProvider: React.FC<{theme?: string; children: React.ReactNode}> 
   <InkContext.Provider value={(theme && INK_BY_THEME[theme]) || (isPaperTheme(theme) ? PAPER : NAVY)}>{children}</InkContext.Provider>
 );
 
+// Deliberately does NOT fill in `danger`. Each call site keeps the exact fallback it
+// had before this field existed — plain BRAND.red in most components, the deeper #c2352b
+// on the paper worlds for Media marks and Annotate. Filling a single default here would
+// have quietly repainted the red on every other paper theme (nemock, brg, wte, cut-bond
+// and the six shows), which is exactly the repaint the theme-isolation rule forbids.
 export const useInk = (): Ink => useContext(InkContext);

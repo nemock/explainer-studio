@@ -30,10 +30,10 @@ const seedFrom = (s: string) => {
 // Annotation ink is theme-keyed (2026-07-26). `green` means "the accent" — the studio
 // green on navy, indigo in the BRG world; `white` means "the body ink" — white on navy,
 // deep ink on cream (plain white is invisible on paper). `red` darkens on paper because
-// BRAND.red is tuned to glow on navy and washes out on cream.
+// (ink.danger ?? (ink.paper ? '#c2352b' : BRAND.red)) is tuned to glow on navy and washes out on cream.
 const colorsFor = (ink: Ink): Record<string, string> => ({
   green: ink.accent,
-  red: ink.paper ? '#c2352b' : BRAND.red,
+  red: (ink.danger ?? (ink.paper ? '#c2352b' : BRAND.red)),
   white: ink.body,
 });
 

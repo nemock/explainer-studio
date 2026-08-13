@@ -7,8 +7,8 @@ import {useInk} from '../ink';
 // motion-playbook §2A — the cold-open / outro punch: kicker + a big headline that
 // springs in, accent words colored. fields: {kicker, headline, accent[], accentRed[], sub}
 const colorize = (text: string, accent: string[] = [], accentRed: string[] = [],
-                 accentColor?: string) =>
-  colorizeText(text, accent, accentRed, accentColor);
+                 accentColor?: string, dangerColor?: string) =>
+  colorizeText(text, accent, accentRed, accentColor, dangerColor);
 
 export const KineticHook: React.FC<{fields: any}> = ({fields}) => {
   const ink = useInk();
@@ -49,7 +49,7 @@ export const KineticHook: React.FC<{fields: any}> = ({fields}) => {
           textShadow: '0 10px 50px rgba(0,0,0,.6)',
         }}
       >
-        {colorize(fields.headline || '', fields.accent, fields.accentRed, ink.accent)}
+        {colorize(fields.headline || '', fields.accent, fields.accentRed, ink.accent, (ink.danger ?? BRAND.red))}
       </div>
       {fields.sub ? (
         <div
@@ -63,7 +63,7 @@ export const KineticHook: React.FC<{fields: any}> = ({fields}) => {
             transform: `translateY(${interpolate(sub, [0, 1], [20, 0])}px)`,
           }}
         >
-          {colorize(fields.sub, fields.accent, fields.accentRed, ink.accent)}
+          {colorize(fields.sub, fields.accent, fields.accentRed, ink.accent, (ink.danger ?? BRAND.red))}
         </div>
       ) : null}
     </AbsoluteFill>

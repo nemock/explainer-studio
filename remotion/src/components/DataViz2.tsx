@@ -21,7 +21,7 @@ export const DrawLine: React.FC<{fields: any; durationInFrames: number}> = ({fie
   const xy = pts.map((p, i) => [(i / (pts.length - 1)) * W, H - ((p - min) / (max - min || 1)) * H]);
   const d = xy.map((c, i) => `${i ? 'L' : 'M'}${c[0].toFixed(1)} ${c[1].toFixed(1)}`).join(' ');
   const draw = interpolate(frame, [0, durationInFrames * 0.8], [1, 0], {extrapolateRight: 'clamp'});
-  const stroke = fields.kind === 'bad' ? BRAND.red : BRAND.green;
+  const stroke = fields.kind === 'bad' ? (ink.danger ?? BRAND.red) : BRAND.green;
   const dotI = Math.min(pts.length - 1, Math.floor(interpolate(frame, [0, durationInFrames * 0.8], [0, pts.length - 1], {extrapolateRight: 'clamp'})));
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
@@ -59,7 +59,7 @@ export const Waterfall: React.FC<{fields: any; durationInFrames: number}> = ({fi
           const at = itemTimes && itemTimes[i] != null ? (itemTimes[i] as number) : i * per;
           const g = spring({frame: frame - at, fps, config: {damping: 16}});
           const isEnd = i === bars.length - 1 || i === 0;
-          const col = (b.kind === 'bad') ? BRAND.red : isEnd ? BRAND.green : ink.neutral;
+          const col = (b.kind === 'bad') ? (ink.danger ?? BRAND.red) : isEnd ? BRAND.green : ink.neutral;
           return (
             <div key={i} style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: height * 0.012}}>
               <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.026, color: ink.body}}>{b.value}</div>
@@ -80,7 +80,7 @@ export const Pictograph: React.FC<{fields: any; durationInFrames: number}> = ({f
   const total = fields.total || 100, filled = fields.filled || 0;
   const shown = Math.round(interpolate(frame, [0, durationInFrames * 0.7], [0, filled], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}));
   const cols = Math.ceil(Math.sqrt(total * 1.6));
-  const col = fields.kind === 'good' ? BRAND.green : BRAND.red;
+  const col = fields.kind === 'good' ? BRAND.green : (ink.danger ?? BRAND.red);
   const ink = useInk();
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
