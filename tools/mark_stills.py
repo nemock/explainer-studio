@@ -53,6 +53,12 @@ def main():
     for entry in (REMO / "public").iterdir():
         os.symlink(entry, pub / entry.name)
     for f in (pdir / "assets" / "imagegen").glob("*.png"):
+        # unlink first: the loop above symlinked EVERY shared asset into pub, so if a
+        # project image shares a basename with one, shutil.copy would follow the symlink
+        # and write through to remotion/public instead of replacing the link — polluting
+        # the shared dir, and leaving pub serving a symlink that Remotion 404s on. Caught
+        # 2026-08-14 when a still-test had leaked project art into the shared dir.
+        (pub / f.name).unlink(missing_ok=True)
         shutil.copy(f, pub / f.name)
 
     targets = []
