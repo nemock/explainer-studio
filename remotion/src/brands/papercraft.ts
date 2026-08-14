@@ -35,6 +35,21 @@ export type PaperWorldTokens = {
   // half-strength ink, which matches the intent already expressed one line away as
   // `opacity: kind === 'bad' ? 0.62 : 1`. "Bad" here means muted, not alarmed.
   neutral?: string;
+  // 'table' (default) = this world composes its own desk: a ground, three laid sheets, a
+  // vignette to groundDeep, and a key light. That reads as depth on a dark table and as a
+  // lit stage on a light one — tan corners and a blown hotspot, with the Figure and
+  // Schematic slides still on flat cream beside it. Two backdrops in one video, which is
+  // what kept brg-deep-dive off the papercraft map (2026-08-01).
+  // 'page' = draw NO table. Video.tsx already paints PaperBackground behind every paper
+  // scene, so the scene simply composes on that one shared cream surface. Not a tuned
+  // second backdrop — the same backdrop (2026-08-12).
+  surface?: 'table' | 'page';
+  // Where this world's decorative elements live. Defaults to the shared
+  // papercraft/elements/, which was generated in FWF's purple — so on any other world a
+  // PaperPunch kind:'bad' placed a PURPLE warning triangle on the page (caught on
+  // plg-guide, 2026-08-12). Same class of leak as a hardcoded accent colour, except the
+  // colour is baked into a PNG. A world that needs its own palette points here instead.
+  elementDir?: string;
   // Kicker TEXT colour. Defaults to accentSoft, which is what every dark world has always
   // used. It needs its own token because accentSoft does double duty — kicker text AND
   // chip/band fills — and on a LIGHT ground one value cannot do both: a fill light enough
@@ -224,9 +239,43 @@ export const PAPER_NEMOCK: PaperWorldTokens = {
   kicker: '#3ddc84',
 };
 
+// PLG — The Operator's Guide to Product Leadership (2026-08-12). A LIGHT-ground world,
+// built on PAPER_NEMOCK rather than on any of the dark tables, for the reason that world
+// documents: a Paper* kicker and a Schematic kicker have to be the same colour on the same
+// page. Module 1 shipped with 30 of 56 slides on the classic map — bare type and CSS shapes
+// on the cream background — because plg-guide was never routed to the papercraft map and
+// had no world here, so paperWorldFor() fell back to FWF's purple table.
+//
+// The ground is #f5f0eb, matching Video.tsx's cream for this theme and STYLE.md §1 exactly,
+// so a Paper* scene and a Figure mount sit on one continuous surface. lightTint/
+// lightSurround are the warm-falloff tokens (2026-08-07) that make a light table possible
+// at all; the original near-black surround reads as grey dirt on cream, which is what kept
+// brg-deep-dive off this map back on 2026-08-01.
+export const PAPER_PLG: PaperWorldTokens = {
+  ground: '#f5f0eb',
+  groundDeep: '#e6ddd0',
+  sheet: '#efe7dc',
+  sheetAlt: '#e8dfd2',
+  paper: '#fdfaf5',      // card stock a touch brighter than the table, so cards lift off it
+  paperShade: '#e2d8ca',
+  ink: '#1b2b4b',
+  accent: '#a8481f',
+  accentSoft: '#d9a58c',
+  shadow: 'rgba(120,92,40,.30)',
+  hookSheet: '#f5f0eb',
+  hookInk: '#1b2b4b',
+  lightTint: '255,252,240',
+  lightSurround: '150,120,70',
+  surface: 'page',
+  elementDir: 'papercraft-plg/elements',
+  // The same rust the classic components already use here (ink.tsx PAPER_PLG.accent).
+  kicker: '#a8481f',
+};
+
 // Theme -> world. Every paper channel owns its ground; anything unmapped keeps FWF.
 const WORLD_BY_THEME: Record<string, PaperWorldTokens> = {
   'nemock-deep-dive': PAPER_NEMOCK,
+  'plg-guide': PAPER_PLG,
   'brg-deep-dive': PAPER_BRG_DEEP,
   'brg-paper': PAPER_BRG,
   'wte-guide': PAPER_WTE,

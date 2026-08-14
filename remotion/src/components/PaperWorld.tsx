@@ -264,6 +264,11 @@ export const PaperTable: React.FC<{
   const radius = 78 - 30 * tight;                 // % of frame
   const surround = 0.22 + 0.26 * tight + (mood === 'hard' ? 0.1 : 0);
   const sheetShadow = `0 ${height * 0.018}px ${height * 0.05}px ${world.shadow}`;
+  // A 'page' world draws no table at all: Video.tsx has already painted PaperBackground
+  // behind this scene, and that is the surface the Figure mounts and Schematic post-its
+  // sit on. Painting a second one over it is the two-backdrop bug, so the scene composes
+  // straight onto the shared page. Dark worlds keep the table and are untouched.
+  if (world.surface === 'page') return null;
   return (
     <AbsoluteFill style={{background: world.ground}}>
       {/* the table itself is real paper stock (phase 4), tinted to the channel's ground so

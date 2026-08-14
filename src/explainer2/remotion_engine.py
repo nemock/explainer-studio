@@ -539,7 +539,12 @@ def _scene_for(slide, theme="", warn=None):
     # tape, Schematic's PaperNote post-its, StatCounter's paper meter are all classic-map
     # components gated on ink.paper) and renders them on the cream PaperBackground.
     # BRG keeps PaperHook (below) and BRGPaperSting.
-    if theme in ("nemock-deep-dive", "wte-guide", "circumvent"):
+    # plg-guide joined 2026-08-12 (operator: "every slide composed with magnific-papercraft
+    # elements"). It is a light world like brg-deep-dive, but the blocker recorded above is
+    # now clearable: the lightTint/lightSurround tokens landed 2026-08-07, six days AFTER
+    # that exclusion, and PAPER_PLG uses them so the table is the same #f5f0eb cream the
+    # figures and schematics already sit on. One backdrop, not two.
+    if theme in ("nemock-deep-dive", "wte-guide", "circumvent", "plg-guide"):
         pc = _papercraft_scene(slide, t, kicker, accent, headline)
         if pc:
             return pc

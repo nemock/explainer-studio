@@ -163,7 +163,7 @@ export const PaperPunch: React.FC<{fields: any}> = ({fields}) => {
           </PaperCard>
           {bad ? (
             <div style={{position: 'absolute', right: -width * 0.055, top: -height * 0.055, width: width * 0.09, ...warn.object}}>
-              <Img src={staticFile('papercraft/elements/el_warning.png')} style={{width: '100%', display: 'block',
+              <Img src={staticFile(`${W.elementDir ?? 'papercraft/elements'}/el_warning.png`)} style={{width: '100%', display: 'block',
                    filter: `drop-shadow(0 ${height * 0.012}px ${height * 0.022}px ${W.shadow})`, transform: 'rotate(8deg)'}} />
             </div>
           ) : null}
