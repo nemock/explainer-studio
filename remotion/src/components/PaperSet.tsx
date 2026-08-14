@@ -232,7 +232,7 @@ export const PaperCounter: React.FC<{fields: any; durationInFrames: number}> = (
         <PaperCard id={`num:${fields.label ?? fields.value ?? ''}`} style={{padding: `${height * 0.025}px ${width * 0.03}px`, borderRadius: 22,
                            boxShadow: `0 ${height * 0.02}px ${height * 0.045}px ${W.shadow}`}}>
           <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.15, lineHeight: 1, color: W.ink, fontVariantNumeric: 'tabular-nums'}}>
-            {shown}{fields.suffix || ''}
+            {fields.prefix || ''}{shown}{fields.suffix || ''}
           </div>
         </PaperCard>
         {fields.label ? (

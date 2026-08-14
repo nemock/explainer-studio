@@ -358,7 +358,19 @@ def _papercraft_component(slide, t, kicker, accent, headline):
                               "steps": [f'{e.get("date","")} — {e.get("label","")}'.strip(" —")
                                         for e in (slide.get("events") or [])]}
     if t == "stat":
-        return "PaperCounter", {"kicker": kicker, "value": slide.get("value", 0),
+        # PaperCounter does ARITHMETIC on `value` (value / 10 for the chip count, then
+        # value * progress), so it needs a number. Handing it the deck's raw string made
+        # "2.3M" / 10 -> NaN -> `inputRange must contain only finite numbers`, which is a
+        # hard render abort, not a bad-looking slide. The classic `stat` branch has always
+        # parsed first; this one was added 2026-08-14 without it and took #57's render down.
+        # Unparseable magnitudes ("2.3M", "$500M") return None here exactly as they do in
+        # the classic map, and fall through to the headline treatment — there is no honest
+        # counter form for a number the parser cannot read.
+        parsed = _parse_stat(slide.get("value"))
+        if not parsed:
+            return None
+        to, prefix = parsed
+        return "PaperCounter", {"kicker": kicker, "value": to, "prefix": prefix,
                                 "label": slide.get("label", "")}
     if t in ("steps", "flow"):
         return "PaperSteps", {"kicker": kicker, "steps": _items(slide)}
