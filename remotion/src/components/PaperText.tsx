@@ -197,11 +197,20 @@ export const PaperReframe: React.FC<{fields: any}> = ({fields}) => {
       <PaperProps items={fields.props} />
       <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve,
                             flexDirection: 'column'}}>
+        <div style={{position: 'relative'}}>
+        <div style={{position: 'absolute', left: '50%', bottom: -height * 0.012, width: '86%',
+                     height: height * 0.028, transform: 'translateX(-50%)', background: W.shadow,
+                     borderRadius: '50%', filter: 'blur(10px)', opacity: before.shadowOpacity ?? 0.5}} />
         <PaperCard id={`rf-before:${fields.before ?? ''}`} family="card_index"
                    style={{...before.object, padding: `${height * 0.024}px ${width * 0.03}px`}}>
           {fields.kicker ? <Kicker text={fields.kicker} height={height} /> : null}
+          {/* capped to the card's inner width, same reason PaperPunch caps its word: a
+              height-only size ran the longer line past the card edge, and the strike bar
+              — which spans 100% of the line box — overran with it. */}
           <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 900,
-                       fontSize: height * 0.055, lineHeight: 1.1, color: W.ink, textAlign: 'center',
+                       fontSize: Math.min(height * 0.055,
+                                          (width * 0.62) / Math.max(1, (fields.before || '').length * 0.52)),
+                       lineHeight: 1.1, color: W.ink, textAlign: 'center',
                        opacity: interpolate(struck, [0, 1], [1, 0.42])}}>
             {fields.before}
             {/* the strike is a torn rust strip laid over the line, not a text-decoration —
@@ -211,16 +220,24 @@ export const PaperReframe: React.FC<{fields: any}> = ({fields}) => {
                          transform: `scaleX(${struck.toFixed(3)})`, transformOrigin: 'left center'}} />
           </div>
         </PaperCard>
+        </div>
         <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.04,
                      color: W.accent, margin: `${height * 0.018}px 0`, opacity: after.object.opacity ?? 1}}>↓</div>
+        <div style={{position: 'relative'}}>
+        <div style={{position: 'absolute', left: '50%', bottom: -height * 0.014, width: '90%',
+                     height: height * 0.032, transform: 'translateX(-50%)', background: W.shadow,
+                     borderRadius: '50%', filter: 'blur(12px)', opacity: after.shadowOpacity ?? 0.55}} />
         <PaperCard id={`rf-after:${fields.after ?? ''}`}
                    style={{...after.object, padding: `${height * 0.028}px ${width * 0.034}px`}}>
-          <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.068,
+          <div style={{fontFamily: BRAND.font, fontWeight: 900,
+                       fontSize: Math.min(height * 0.068,
+                                          (width * 0.72) / Math.max(1, (fields.after || '').length * 0.52)),
                        lineHeight: 1.08, color: W.ink, textAlign: 'center',
                        textShadow: `0 2px 0 rgba(255,255,255,.7)`}}>
             {fields.after}
           </div>
         </PaperCard>
+        </div>
       </AbsoluteFill>
     </AbsoluteFill>
   );
