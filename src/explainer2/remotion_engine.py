@@ -343,6 +343,23 @@ def _papercraft_component(slide, t, kicker, accent, headline):
         return "PaperCompare", {"kicker": kicker,
                                 "left": {"title": slide.get("from_label", ""), "value": slide.get("from", "")},
                                 "right": {"title": slide.get("to_label", ""), "value": slide.get("to", "")}}
+    # The last four types with no papercraft equivalent (2026-08-12). reframe gets a real
+    # component because the beat IS a sentence changing; the other three reuse components
+    # that already say the right thing on paper, rather than inventing near-duplicates.
+    if t == "reframe":
+        return "PaperReframe", {"kicker": kicker, "before": slide.get("before", ""),
+                                "strike": slide.get("strike", ""), "after": slide.get("after", "")}
+    if t == "statgrid":
+        return "PaperList", {"kicker": kicker, "title": slide.get("title", ""),
+                             "items": [f'{x.get("value","")}  {x.get("label","")}'.strip()
+                                       for x in (slide.get("stats") or [])]}
+    if t == "timeline":
+        return "PaperSteps", {"kicker": kicker,
+                              "steps": [f'{e.get("date","")} — {e.get("label","")}'.strip(" —")
+                                        for e in (slide.get("events") or [])]}
+    if t == "stat":
+        return "PaperCounter", {"kicker": kicker, "value": slide.get("value", 0),
+                                "label": slide.get("label", "")}
     if t in ("steps", "flow"):
         return "PaperSteps", {"kicker": kicker, "steps": _items(slide)}
     if t == "list":
@@ -363,6 +380,7 @@ def _papercraft_component(slide, t, kicker, accent, headline):
                             "subkicker": slide.get("subkicker", "")}
     if t == "hook" and (slide.get("set") or slide.get("beats")):
         return "PaperSetHook", {"set": slide.get("set"), "props": slide.get("props", []),
+                                "headTop": slide.get("head_top"),
                                 "beats": slide.get("beats", []), "kicker": kicker,
                                 "headline": headline, "accent": accent}
     return None
@@ -494,11 +512,20 @@ def _scene_for(slide, theme="", warn=None):
     # `screen` is the measured rect of that hole — author it from tools/key_screen.py's
     # sidecar JSON, never by eye. `startAtSec` and `pullBack` are filled in by build_spec.
     if t == "oncamera":
+        # `patches` was missing from this list until 2026-08-14 and #57 rendered with the
+        # camera's watermark still showing: the deck authored it, the component supported
+        # it, and the type map dropped it in between with no warning. Exactly the failure
+        # this file's own notes describe for figure `title` and for `source_url` — an
+        # authored field lost in the mapping, where nothing errors and the census still
+        # passes. The still-tests missed it because they passed fields to the component
+        # directly and never went through _scene_for.
         return "PaperMonitor", {"set": slide.get("set") or "papercraft/desk_monitor.png",
                                 "video": slide.get("video"),
                                 "screen": slide.get("screen"),
                                 "screenWidthFrac": slide.get("screen_width_frac"),
-                                "pullBackSecs": slide.get("pull_back_secs")}
+                                "pullBackSecs": slide.get("pull_back_secs"),
+                                "patches": slide.get("patches") or [],
+                                "bleed": slide.get("bleed")}
 
     accent = slide.get("accent", []) or []
     accent2 = slide.get("accent2", []) or []

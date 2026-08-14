@@ -22,7 +22,7 @@ import {KeepCard} from './components/KeepCard';
 import {PaperHook} from './components/PaperHook';
 import {PaperMonitor} from './components/PaperMonitor';
 import {PaperSetHook, PaperPopCard, PaperCounter} from './components/PaperSet';
-import {PaperStatement, PaperDefine, PaperPunch} from './components/PaperText';
+import {PaperStatement, PaperDefine, PaperPunch, PaperReframe} from './components/PaperText';
 // Circumvent scene family (2026-07-30): the paper IS the slide, no cards.
 import {CvgScene, CvgPunch, CvgList, CvgCompare, CvgSteps, CvgDefine, CvgCta} from './components/Circumvent';
 import {PaperStairs, PaperCompare, PaperSteps, PaperList, PaperBookCTA} from './components/PaperData';
@@ -52,6 +52,7 @@ const REGISTRY: Record<string, React.FC<any>> = {
   PaperStatement,
   PaperDefine,
   PaperPunch,
+  PaperReframe,
   CvgScene,
   CvgPunch,
   CvgCta,

@@ -172,3 +172,56 @@ export const PaperPunch: React.FC<{fields: any}> = ({fields}) => {
     </AbsoluteFill>
   );
 };
+
+// reframe -> the before line on a card, struck through, and the after line on a second
+// card below it. Added 2026-08-12: `reframe` was one of six types with no papercraft
+// equivalent, so on plg-guide it fell through to the classic map and drew bare type on the
+// ground. Art cannot carry this one — the whole beat is a sentence turning into a different
+// sentence — so the magnific element here is the paper the two lines are written on.
+// fields: {kicker, before, strike, after}
+export const PaperReframe: React.FC<{fields: any}> = ({fields}) => {
+  const W = useWorld();
+  const frame = useCurrentFrame();
+  const {width} = useVideoConfig();
+  const {M: height, reserve} = usePaperLayout();
+  const cf = fields.cueFrames || {};
+  const hit = cf.hit ?? 5;
+  const before = usePlace(hit);
+  const after = usePopup(hit + 26);
+  // the strike draws across the old line, then the new card lands on top of the beat
+  const struck = interpolate(frame, [hit + 12, hit + 22], [0, 1],
+                             {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  return (
+    <AbsoluteFill style={{overflow: 'hidden'}}>
+      <PaperTable seed={fields.after || 'reframe'} tightenAt={hit} />
+      <PaperProps items={fields.props} />
+      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve,
+                            flexDirection: 'column'}}>
+        <PaperCard id={`rf-before:${fields.before ?? ''}`} family="card_index"
+                   style={{...before.object, padding: `${height * 0.024}px ${width * 0.03}px`}}>
+          {fields.kicker ? <Kicker text={fields.kicker} height={height} /> : null}
+          <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 900,
+                       fontSize: height * 0.055, lineHeight: 1.1, color: W.ink, textAlign: 'center',
+                       opacity: interpolate(struck, [0, 1], [1, 0.42])}}>
+            {fields.before}
+            {/* the strike is a torn rust strip laid over the line, not a text-decoration —
+                it has to read as something placed on the paper */}
+            <div style={{position: 'absolute', left: 0, top: '52%', height: Math.max(3, height * 0.008),
+                         width: '100%', background: W.accent, borderRadius: 2,
+                         transform: `scaleX(${struck.toFixed(3)})`, transformOrigin: 'left center'}} />
+          </div>
+        </PaperCard>
+        <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.04,
+                     color: W.accent, margin: `${height * 0.018}px 0`, opacity: after.object.opacity ?? 1}}>↓</div>
+        <PaperCard id={`rf-after:${fields.after ?? ''}`}
+                   style={{...after.object, padding: `${height * 0.028}px ${width * 0.034}px`}}>
+          <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.068,
+                       lineHeight: 1.08, color: W.ink, textAlign: 'center',
+                       textShadow: `0 2px 0 rgba(255,255,255,.7)`}}>
+            {fields.after}
+          </div>
+        </PaperCard>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};

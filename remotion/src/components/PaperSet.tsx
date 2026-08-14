@@ -97,7 +97,12 @@ export const PaperSetHook: React.FC<{fields: any; durationInFrames: number}> = (
           ))}
         </div>
         {/* the promise headline — lands with the camera push */}
-        <div style={{position: 'absolute', left: '50%', top: portrait ? frameH * 0.46 : frameH * 0.4,
+        {/* `headTop` (deck field, frame-height fraction) lifts the card off the set when the
+            art has a subject where the headline would otherwise land — plg-guide module 1
+            put it across two of the four faces at the moment the line says "four people".
+            Defaults to the original values, so every shipped hook is unchanged. */}
+        <div style={{position: 'absolute', left: '50%',
+                     top: frameH * (fields.headTop ?? (portrait ? 0.46 : 0.4)),
                      transform: 'translateX(-50%)', maxWidth: width * (portrait ? 0.86 : 0.62)}}>
           <div style={{opacity: frame >= pushAt + 4 ? 1 : 0}}>
             <div style={{position: 'absolute', left: '50%', bottom: -height * 0.016, width: '88%', height: height * 0.034,
