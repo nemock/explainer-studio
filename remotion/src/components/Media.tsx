@@ -197,7 +197,14 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
       {persistentTitle ? (
         // in-flow header: kicker -> title -> image card -> caption. Smaller than the phased
         // title (which owns the whole frame on its own) so the image still leads.
-        <div style={{textAlign: 'center', padding: '0 4%', fontFamily: BRAND.font, color: ink.body, fontWeight: 900, fontSize: height * 0.042, lineHeight: 1.16, opacity: kIntro, marginBottom: height * 0.022, textShadow: ink.paper ? PAPER_SHADOW : '0 3px 18px rgba(0,0,0,.6)'}}>
+        // marginBottom 0.022 -> 0.075 (2026-08-14): SAME BUG AS THE KICKER ABOVE, one line
+        // down. The mount's top-left tape overhangs by ~height*0.06, and a persistent title
+        // is centred with only 4% side padding, so any title long enough to reach the
+        // mount's left edge had its first characters drawn over by the tape — #57 shipped
+        // "It traveled" as "t raveled", "The situation" as "he situation", "People left" as
+        // "eople left". The kicker got this clearance in 2026-08-11; persistentTitle landed
+        // 2026-07-28 and was never re-checked against the tape. Clear the TAPE, not the mount.
+        <div style={{textAlign: 'center', padding: '0 4%', fontFamily: BRAND.font, color: ink.body, fontWeight: 900, fontSize: height * 0.042, lineHeight: 1.16, opacity: kIntro, marginBottom: height * 0.075, textShadow: ink.paper ? PAPER_SHADOW : '0 3px 18px rgba(0,0,0,.6)'}}>
           {figColorize(fields.title, fields.accent, fields.accent2, ink.accent, (ink.danger ?? (ink.paper ? '#c2352b' : BRAND.red)))}
         </div>
       ) : null}
@@ -259,10 +266,20 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
           bottom-right tape strip ran into it. Now 30px, centred, capped at 62% measure so a
           long caption breaks to two lines instead of one thin full-width run, and pushed down
           to 0.055 so it clears the tape rather than sharing space with it. */}
+      {/* When the slide ALSO carries an on-screen citation, the caption has to clear it.
+          SourceLine is bottom-anchored at height*0.05 and grows upward to two lines
+          (~height*0.099 total); this caption is the last item of a centred column and was
+          landing inside that band, so the two overprinted — #57's release and Bloomberg
+          figures both rendered their caption on top of the source line. Introduced the same
+          day as the universal source/source_url passthrough (remotion_engine.build_spec):
+          before that, only statgrid could carry a source, and it draws its own footer.
+          A centred column shifts up by half of any marginBottom, so this reserves 2x the
+          band it needs to clear. */}
       {fields.caption ? (
         <div style={{fontFamily: BRAND.font, color: ink.body, opacity: 0.75 * imgOpacity,
                      fontSize: height * 0.028, lineHeight: 1.35, textAlign: 'center',
-                     maxWidth: '62%', marginTop: height * 0.055}}>
+                     maxWidth: '62%', marginTop: height * 0.055,
+                     marginBottom: (fields.source || fields.source_url) ? height * 0.11 : 0}}>
           {fields.caption}
         </div>
       ) : null}
