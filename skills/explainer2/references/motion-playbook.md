@@ -282,9 +282,36 @@ underline and renders as a red or green bar floating on blank paper. Two consequ
   the second has no subject. The annotation-coverage floor counts *slides*, not marks, so
   dropping a bogus second mark costs nothing.
 
+**A DOCUMENT FIGURE MUST CARRY ITS WORDS — use `pageText` (2026-08-14, operator-caught).**
+The "no text, no words, no logos" clause is a constraint on the GENERATOR, not on the slide:
+Magnific bakes garbled, misspelled, uneditable type, so the art stays blank and **Remotion
+renders the words**. That second half existed for notes, cards and schematics and was
+missing for figures, so a document slide had nowhere to put its sentence — the title
+rendered above the mount and the page itself stayed empty. Dave's verdict on the result:
+*"You've drawn this nice paper card that clearly should have something rendered on it."*
+
+```jsonc
+"pageText": {"text": "the equivalent work of 700 full-time agents",
+             "at": [0.51, 0.385], "w": 0.42, "size": 0.036, "accent": ["equivalent"]}
+```
+
+Image-space like `marks`, inside the same moving container, so it rides the Ken Burns. Let
+it wrap — a quoted line reads better balanced over two lines than crammed onto one.
+
+- **Never bake decoration in place of the words.** #57 asked the generator for a green
+  highlighter stroke *so there would be something to underline*, then authored an
+  `underline` on top of it: two green lines, neither underlining anything, over a blank
+  page. Leave the page blank, set the type on it, and let a baked stroke sit UNDER the
+  type as its underline — which is the only thing a stroke is for.
+- **If the beat is "the document says X", X goes on the page.** A `title` above the mount
+  saying the same words is a duplicate; drop one.
+- **Then the mark has a subject.** #57's red box captioned "That figure is an average" was
+  drawn around empty paper until the line it referred to was actually set on the page.
+
 **The standing check before any figure ships:** for each mark, name out loud the thing in the
 image it sits on. If the answer is "the empty area below X" or "roughly where the text is",
-it is wrong. Open the PNG and look.
+it is wrong. Open the PNG and look. **And if the slide's point is something the document
+says, check the document says it** — on the page, not in a caption above it.
 
 **`hook` slides DROP `marks` — do not author them there (found 2026-08-12, #57).**
 `_scene_for` maps `hook` to `PaperHook` with exactly `{image, kicker, headline, accent,

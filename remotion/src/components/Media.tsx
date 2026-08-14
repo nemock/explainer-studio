@@ -70,6 +70,36 @@ const FigMark: React.FC<{m: any; i: number}> = ({m, i}) => {
     </>
   );
 };
+// Type rendered ON the paper page, in IMAGE space, inside the same moving container as
+// FigureMarks — so it rides the Ken Burns and stays on the sheet.
+//
+// WHY THIS EXISTS. Generated paper art carries NO text by construction (the STYLE.md recipe
+// ends "no text, no words, no logos"). So a document slide whose whole point is a sentence
+// had nowhere to put the sentence: the title rendered ABOVE the mount, and the page itself
+// stayed blank. #57 shipped a figure with a green highlighter stroke and an authored
+// `underline` mark on top of it — two green lines, neither underlining anything, over an
+// empty page. The words belong on the page; the stroke underneath them is the underline.
+//
+// `size` and the wrap width are fractions, and the whole block sits inside the image's
+// transform, so it scales with the shot instead of drifting off it.
+const FigurePageType: React.FC<{pageText?: any; height: number; ink: any}> = ({pageText, height, ink}) => {
+  if (!pageText || !pageText.text) return null;
+  const [x, y] = pageText.at || [0.5, 0.42];
+  return (
+    <div style={{
+      position: 'absolute', left: `${x * 100}%`, top: `${y * 100}%`,
+      width: `${(pageText.w ?? 0.5) * 100}%`, transform: 'translate(-50%, -50%)',
+      fontFamily: BRAND.font, fontWeight: 700,
+      fontSize: height * (pageText.size ?? 0.032), lineHeight: 1.28,
+      color: ink.body, textAlign: pageText.align || 'center',
+      textWrap: 'balance', pointerEvents: 'none',
+    }}>
+      {figColorize(pageText.text, pageText.accent, pageText.accent2, ink.accent,
+                   (ink.danger ?? (ink.paper ? '#c2352b' : BRAND.red)))}
+    </div>
+  );
+};
+
 const FigureMarks: React.FC<{marks?: any[]}> = ({marks}) => {
   if (!marks || !marks.length) return null;
   return (
@@ -241,11 +271,11 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
             <FigureMarks marks={marks} />
           </div>
         ) : tour ? (
-          <div style={{position: 'relative', ...tour}}>{img}<FigureMarks marks={marks} /></div>
+          <div style={{position: 'relative', ...tour}}>{img}<FigurePageType pageText={fields.pageText} height={height} ink={ink} /><FigureMarks marks={marks} /></div>
         ) : autoKen ? (
-          <div style={{position: 'relative', ...autoKen}}>{img}<FigureMarks marks={marks} /></div>
+          <div style={{position: 'relative', ...autoKen}}>{img}<FigurePageType pageText={fields.pageText} height={height} ink={ink} /><FigureMarks marks={marks} /></div>
         ) : (
-          <div style={{position: 'relative'}}>{img}<FigureMarks marks={marks} /></div>
+          <div style={{position: 'relative'}}>{img}<FigurePageType pageText={fields.pageText} height={height} ink={ink} /><FigureMarks marks={marks} /></div>
         )}
         {hl ? (
           <div style={{position: 'absolute', top: `${hl.top ?? 30}%`, left: `${hl.left ?? 6}%`, height: `${hl.height ?? 12}%`, width: `${hlW}%`, background: ink.accentWash, borderRadius: 8}} />

@@ -677,7 +677,10 @@ def _scene_for(slide, theme="", warn=None):
                           "title": slide.get("title", ""), "accent": accent, "accent2": accent2,
                           "imageFromFrac": slide.get("imageFromFrac", 0),
                           "moves": slide.get("moves", []), "assemble": slide.get("assemble"),
-                          "marks": slide.get("marks", [])}
+                          "marks": slide.get("marks", []),
+                          # type rendered ON the page (FigurePageType). Generated paper art
+                          # has no text, so a document slide needs this to say anything.
+                          "pageText": slide.get("pageText")}
     if t == "footage":
         return "Footage", {"image": slide.get("image"), "headline": headline,
                            "accent": accent, "accent2": accent2,
