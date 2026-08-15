@@ -349,6 +349,25 @@ rules now:
    Read every tile and name the thing each mark sits on. This is the gate; a raw-art
    sheet is not.
 
+**A SCHEMATIC ANNOTATION DOES NOT FOLLOW THE SCHEMATIC CAMERA (2026-08-14, operator-caught).**
+`annotations` are FRAME-space; the schematic's `camera` translates and zooms the nodes under
+them. So an annotation authored at its node's own `x,y` lands correctly only when the final
+camera stage happens to sit at centre `[0.5, *]` with `zoom: 1`. #57 authored all four at the
+node coordinates plus a guessed `+0.08` vertical nudge: s10 and s21 end at centre 0.50/0.52
+and looked fine, s29 ends at 0.46 and the ring hung off the note's left edge onto blank
+canvas. Dave spotted it; the measured miss was dx +0.037, dy −0.034.
+
+**Measure the note, do not model the camera.** Render the scene at the annotation's
+`cueFrame`, segment the target note by its pastel (pin one with `pastel:` so it is the only
+note of that colour on the slide), and set `at` to the measured centroid. Re-measuring after
+the edit should print a miss of 0.000.
+
+**The harness trap that hid it:** `annotations` live on the SCENE object, not in `fields`
+(`sc["annotations"]`, resolved in `build_spec`, rendered by `AnnotateOverlay` in Video.tsx).
+A still harness that passes only `{component, fields}` renders the scene with every
+annotation silently stripped — so the frame you inspect *cannot* show the defect you are
+looking for, and a clean-looking still means nothing. Pass the scene's `annotations` through.
+
 **Narrative order is part of mark correctness (same ruling).** A circle must never draw
 before the thing it circles exists — on #56 a schematic annotation fired on the segment's
 first phrase, drawing a ring on empty canvas before any note had revealed ("why would you
