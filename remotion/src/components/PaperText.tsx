@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
-import {useWorld, PaperTable, PaperCard, PaperProps, usePaperLayout, usePlace, usePopup, flick} from './PaperWorld';
+import {useWorld, PaperTable, PaperCard, PaperProps, usePaperLayout, usePlace, usePopup, flick, usePaperPush} from './PaperWorld';
 
 // Papercraft Motion — text family (papercraft-motion-spec.md §7). Text is always
 // printed ON paper that physically exists in the set: statements/quotes/punches/
@@ -43,7 +43,8 @@ const Kicker: React.FC<{text?: string; height: number}> = ({text, height}) => {
 
 // statement / quote / highlight -> a cream card places center; optional `hit`
 // cue flicks the card + snaps the light (used when the line lands mid-scene).
-export const PaperStatement: React.FC<{fields: any}> = ({fields}) => {
+export const PaperStatement: React.FC<{fields: any; durationInFrames?: number}> = ({fields, durationInFrames = 300}) => {
+  const push = usePaperPush(durationInFrames);
   const W = useWorld();
   const frame = useCurrentFrame();
   const {width} = useVideoConfig();
@@ -58,7 +59,7 @@ export const PaperStatement: React.FC<{fields: any}> = ({fields}) => {
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <PaperTable seed={fields.headline || 'statement'} tightenAt={hit} />
       <PaperProps items={fields.props} />
-      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve}}>
+      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve, ...push}}>
         <div style={{position: 'relative', maxWidth: width * (portrait ? 0.88 : 0.66), transform: `scale(${hit != null ? flick(frame, hit) : 1})`}}>
           <div style={{position: 'absolute', left: '50%', bottom: -height * 0.016, width: '88%', height: height * 0.034,
                        transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(9px)', opacity: p.shadowOpacity}} />
@@ -83,7 +84,8 @@ export const PaperStatement: React.FC<{fields: any}> = ({fields}) => {
 
 // define -> the term on a big tag (places on its cue), the definition UNFOLDS
 // beneath it (two-step clip reveal with a fold shade).
-export const PaperDefine: React.FC<{fields: any}> = ({fields}) => {
+export const PaperDefine: React.FC<{fields: any; durationInFrames?: number}> = ({fields, durationInFrames = 300}) => {
+  const push = usePaperPush(durationInFrames);
   const W = useWorld();
   const frame = useCurrentFrame();
   const {width} = useVideoConfig();
@@ -100,7 +102,7 @@ export const PaperDefine: React.FC<{fields: any}> = ({fields}) => {
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <PaperTable seed={fields.term || 'define'} tightenAt={termAt} />
       <PaperProps items={fields.props} />
-      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve}}>
+      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve, ...push}}>
         <div style={{position: 'relative'}}>
           <div style={{position: 'absolute', left: '50%', bottom: -height * 0.016, width: '86%', height: height * 0.032,
                        transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(9px)', opacity: p.shadowOpacity}} />
@@ -125,7 +127,8 @@ export const PaperDefine: React.FC<{fields: any}> = ({fields}) => {
 // punch -> ONE word stamped hard on a cream card: hard place on the hit cue,
 // spotlight snap, flick; kind "bad" places the warning-triangle element beside
 // it a beat later (the palette has no red — the warning prop carries the alarm).
-export const PaperPunch: React.FC<{fields: any}> = ({fields}) => {
+export const PaperPunch: React.FC<{fields: any; durationInFrames?: number}> = ({fields, durationInFrames = 300}) => {
+  const push = usePaperPush(durationInFrames);
   const W = useWorld();
   const frame = useCurrentFrame();
   const {width} = useVideoConfig();
@@ -139,7 +142,7 @@ export const PaperPunch: React.FC<{fields: any}> = ({fields}) => {
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <PaperTable seed={fields.word || 'punch'} tightenAt={hit} mood={bad ? 'hard' : 'soft'} />
       <PaperProps items={fields.props} />
-      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve}}>
+      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve, ...push}}>
         <div style={{position: 'relative', transform: `scale(${flick(frame, hit)})`}}>
           <div style={{position: 'absolute', left: '50%', bottom: -height * 0.02, width: '92%', height: height * 0.04,
                        transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(11px)', opacity: p.shadowOpacity}} />
@@ -179,7 +182,8 @@ export const PaperPunch: React.FC<{fields: any}> = ({fields}) => {
 // ground. Art cannot carry this one — the whole beat is a sentence turning into a different
 // sentence — so the magnific element here is the paper the two lines are written on.
 // fields: {kicker, before, strike, after}
-export const PaperReframe: React.FC<{fields: any}> = ({fields}) => {
+export const PaperReframe: React.FC<{fields: any; durationInFrames?: number}> = ({fields, durationInFrames = 300}) => {
+  const push = usePaperPush(durationInFrames);
   const W = useWorld();
   const frame = useCurrentFrame();
   const {width} = useVideoConfig();
@@ -196,7 +200,7 @@ export const PaperReframe: React.FC<{fields: any}> = ({fields}) => {
       <PaperTable seed={fields.after || 'reframe'} tightenAt={hit} />
       <PaperProps items={fields.props} />
       <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve,
-                            flexDirection: 'column'}}>
+                            flexDirection: 'column', ...push}}>
         <div style={{position: 'relative'}}>
         <div style={{position: 'absolute', left: '50%', bottom: -height * 0.012, width: '86%',
                      height: height * 0.028, transform: 'translateX(-50%)', background: W.shadow,

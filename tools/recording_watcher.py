@@ -60,6 +60,44 @@ DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})_")
 CRASHLOOP_AFTER = 3
 CRASHLOOP_RETRY_SECS = 30 * 60  # ~every 6th 5-minute cycle
 
+# Ceiling on renders running AT ONCE across every show, overridable per-config
+# with "max_concurrent_renders".
+#
+# The `spawned` flag caps the spawn RATE at one per cycle, which is not the same
+# thing: a render runs for ~an hour while cycles come every five minutes, so up
+# to twelve can pile up, and each project's publish_lock only excludes a second
+# worker on the SAME project. On 2026-08-20 five landed together (FTT,
+# ig_carousel, WSC, Teardown, Product-Leadership module-01), two of them holding
+# ~1.5 GB of Python plus a chrome-headless-shell tree. Against 31 orphaned
+# Claude sessions that drove a 16 GB machine to load 105 with swap exhausted,
+# and the renders then made no progress for want of RAM -- starved, not wedged.
+# Renders are throughput work: running them one at a time finishes them all
+# sooner than running six that are each paging.
+DEFAULT_MAX_CONCURRENT_RENDERS = 1
+
+
+def live_renders(cfg):
+    """Count phase-1 render drivers alive right now, across every project.
+
+    Counts OS processes rather than reading each project's publish_lock, so a
+    render started outside the watcher (a manual `phase1_render.py`, or one left
+    behind by a previous watcher generation) still occupies a slot.
+    """
+    driver = cfg.get("phase1_driver") or str(
+        Path(cfg["launch_booth"]).parent / "phase1_render.py")
+    try:
+        out = subprocess.run(["ps", "-Ao", "args="], capture_output=True,
+                             text=True, timeout=30).stdout
+    except (OSError, subprocess.SubprocessError):
+        # Cannot establish the count, so cannot prove there is room. Report the
+        # cap to hold off launching rather than risk another pile-up.
+        return DEFAULT_MAX_CONCURRENT_RENDERS
+    # The driver is spawned under `caffeinate -ims <python> <driver> ...`, so both
+    # caffeinate and the python child carry the driver path in their args; count
+    # each render once by matching only the python invocation.
+    return sum(1 for line in out.splitlines()
+               if driver in line and "caffeinate" not in line)
+
 
 def pid_alive(pid):
     """True if a process with this pid currently exists."""
@@ -361,6 +399,19 @@ def run(cfg, dry):
                                  f"launched {n}x with no render_complete.json "
                                  f"— skipping so other shows get this cycle's slot; "
                                  f"retrying after backoff")
+                        continue
+                    # Global concurrency cap. Unlike the per-project publish_lock
+                    # this counts renders across ALL shows, so a slow render does
+                    # not accumulate company while it works. `continue` rather than
+                    # `break`: a cheap phase-2 publish on another project may still
+                    # use this cycle, and `spawned` stays False so nothing is lost.
+                    cap = cfg.get("max_concurrent_renders",
+                                  DEFAULT_MAX_CONCURRENT_RENDERS)
+                    running = live_renders(cfg)
+                    if running >= cap:
+                        log(cfg, f"RENDER-CAP {show['id']}: {proj.name} ready to render "
+                                 f"but {running} render(s) already running (cap {cap}) "
+                                 f"— deferring to a later cycle")
                         continue
                     if dry:
                         log(cfg, f"[DRY-RUN] {show['id']}: {proj.name} DONE, no render "

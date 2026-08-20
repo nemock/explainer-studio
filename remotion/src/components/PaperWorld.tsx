@@ -1,5 +1,5 @@
 import React, {createContext, useContext} from 'react';
-import {AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AbsoluteFill, Easing, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {PaperWorldTokens, PAPER_FWF, paperWorldFor, SNAP, HINGE, CAM} from '../brands/papercraft';
 import {PaperSheet, CardFamily} from './PaperNote';
 
@@ -16,8 +16,20 @@ export const useWorld = (): PaperWorldTokens => useContext(WorldContext);
 // Papercraft Motion — shared world infrastructure (papercraft-motion-spec.md §2/§3/§6).
 // The scene is a miniature SET on a dark table: four planes (table/set/stage/float)
 // under one camera, paper-physics entrances, and a key light. All motion is a pure
-// function of frame (deterministic). HARD RULE: paper never floats — no ambient drift;
-// stillness between beats is the stop-motion hold (operator veto 2026-07-16).
+// function of frame (deterministic).
+//
+// MOTION RULE — reworded 2026-08-20 by the operator, because the previous wording ("HARD
+// RULE: paper never floats — no ambient drift; stillness between beats is the stop-motion
+// hold") was a machine paraphrase of a 2026-07-16 conversation, not his words, and it
+// overshot what he actually objected to. In his words: what was wrong was OBJECTS BOBBING
+// — "very distracting, in fact nauseating to one friend that looked at one of the videos".
+//
+// What is banned is the WRONG KIND of motion, not motion:
+//   - bobbing / floating an object on a sine, and
+//   - creeping an object a pixel at a time to manufacture a sense of movement, which
+//     "just looks weird" and is usually only there to satisfy a dead-air metric.
+// What is welcome is a DELIBERATE camera move — Ken Burns, a pan, a push. "If you're going
+// to move it, you move it." Perceptible and purposeful beats sub-perceptual drift.
 
 export type Camera = {x: number; y: number; zoom: number};
 export type CameraMove = {at: number; to: Partial<Camera>};
@@ -89,6 +101,33 @@ export const usePopup = (at: number) => {
 };
 
 // flick: 2-frame percussive scale hit on an already-present element (beat accent).
+/**
+ * A deliberate camera push across a scene, for the paper text cards.
+ *
+ * The distinction the operator drew on 2026-08-20: a Ken Burns or a pan is welcome —
+ * "if you're going to move it, you move it" — while creeping an object a pixel at a time
+ * to manufacture motion "just looks weird", and bobbing on a sine is worse (it made a
+ * viewer queasy). So this is sized to READ as a camera rather than to satisfy a metric:
+ * ~6% over the shot, eased, one direction, no oscillation and no per-object float.
+ *
+ * It scales the whole scene about a fixed origin, so everything in the card moves together
+ * as one plane. The page behind it is painted once at the video level and cannot move with
+ * this, which on a near-uniform cream ground costs almost nothing visually — but it is why
+ * this is a push on the composition rather than a true parallax camera.
+ */
+// 0.06 was measured against the widest card in module 1 (PaperPunch, already 92% of frame)
+// and pushed it to 96.4% — 0.1% clear of the right edge. These cards are near-full-width by
+// design, so the room available for a push is small; 0.025 is what the widest one absorbs
+// with margin to spare. On scenes that own a set or artwork (PaperSetHook, Figure) there is
+// far more room and the camera move can be correspondingly bigger.
+export const usePaperPush = (durationInFrames: number, amount = 0.025) => {
+  const frame = useCurrentFrame();
+  const t = interpolate(frame, [0, Math.max(1, durationInFrames)], [0, 1],
+                        {extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+                         easing: Easing.bezier(0.33, 0, 0.15, 1)});
+  return {transform: `scale(${(1 + amount * t).toFixed(5)})`, transformOrigin: '50% 50%'};
+};
+
 export const flick = (frame: number, at: number): number =>
   interpolate(frame, [at, at + 2, at + 6], [1, 1.045, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
 

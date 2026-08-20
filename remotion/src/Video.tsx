@@ -153,7 +153,7 @@ const SceneWrap: React.FC<{durationInFrames: number; paper?: boolean; tear?: str
 // out on the page and lifts cleanly.
 const FULL_BLEED = new Set([
   'BrandSting', 'PaperSting', 'BRGPaperSting', 'PaperHook', 'PaperMonitor', 'Hero3D', 'Footage', 'KeepCard',
-  'CvgScene', 'CvgPunch', 'CvgCta', 'CvgList', 'CvgCompare', 'CvgSteps', 'CvgDefine',
+  'CvgScene', 'CvgPunch', 'CvgCta', 'CvgList', 'CvgCompare', 'CvgSteps', 'CvgDefine', 'CvgReframe',
   'PaperSetHook', 'PaperPopCard', 'PaperCounter', 'PaperStatement', 'PaperDefine',
   'PaperPunch', 'PaperStairs', 'PaperCompare', 'PaperSteps', 'PaperList', 'PaperBookCTA',
 ]);
