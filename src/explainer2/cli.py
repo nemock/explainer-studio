@@ -23,11 +23,15 @@ STAGE_MAP = dict(STAGES)
 # survive a move off /Volumes.
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
-# Fallback bed for any theme without its own entry (the Pixabay "presentation background"
-# track; benign Content ID claim accepted). Kept as the non-deep-dive default so existing
-# channels (midnight/masterclass etc.) are undisturbed by the deep-dive music change.
-DEFAULT_MUSIC = _REPO_ROOT / "library/music/07-alex-morgan-presentation-background-music-548620.mp3"
-DEFAULT_MUSIC_GAIN = 0.12
+# Fallback bed for any theme without its own THEME_MUSIC entry.
+# Operator, 2026-08-14: "I don't want to use the licensed music from the Pixabay website
+# anymore." The Magnific "sophisticated" bed becomes the default for EVERY theme, not just
+# the two that named it in THEME_MUSIC. Provenance is Dave's Magnific subscription output,
+# so the per-project Pixabay licence auto-copy (_copy_music_license) will not fire for it —
+# that is expected, not a missing step. The old Pixabay beds stay in library/music/ because
+# the back catalogue still references them from its own project.json files.
+DEFAULT_MUSIC = _REPO_ROOT / "library/music/11-magnific_generate-a-sophisticated-_LU1wnIYswO.mp3"
+DEFAULT_MUSIC_GAIN = 0.22   # 0.12 was measured inaudible under narration
 
 # Per-channel beds. Keep beds FLAT at render (no sidechain ducking — the gaps between spoken
 # lines are too short, so ducking pumps; operator 2026-07-16). NOTE nemock-deep-dive's bed is

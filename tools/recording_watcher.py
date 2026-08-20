@@ -43,11 +43,20 @@ from pathlib import Path
 
 DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})_")
 
-# Phase-1 crashloop guard: a render that dies in seconds gets relaunched every
-# cycle and, being first in the shows list, hogs the one-job-per-cycle slot and
-# starves every other show (2026-08-07 npx-PATH incident). After this many
-# consecutive launches with no work/render_complete.json, skip the project so
-# other shows get the slot, and only retry it after the backoff.
+# Crashloop guard, both phases: a worker that dies in seconds gets relaunched
+# every cycle and, being first in the shows list, hogs the one-job-per-cycle slot
+# and starves every other show. After this many consecutive launches with no
+# completion artifact, skip the project so other shows get the slot, and only
+# retry it after the backoff.
+#
+# Phase 1 (render, artifact work/render_complete.json): 2026-08-07 npx-PATH incident.
+# Phase 2 (publish, artifact README.md): 2026-08-14 expired-OAuth incident. The
+# headless `claude -p` publish died on auth in ~2s, wrote nothing at all, and so
+# looked identical next cycle — 1,000 respawns over six days, and because phase 2
+# set `spawned` unconditionally it starved every other show's render behind it
+# (FWF 2026-08-17 recorded fine and never got a slot). The pre-existing
+# uploads.json check only catches a PARTIAL publish; a zero-progress failure
+# sailed straight past it.
 CRASHLOOP_AFTER = 3
 CRASHLOOP_RETRY_SECS = 30 * 60  # ~every 6th 5-minute cycle
 
@@ -82,22 +91,38 @@ def render_done(proj):
     return (Path(proj) / "work" / "render_complete.json").exists()
 
 
-def attempts_path(proj):
-    return Path(proj) / "work" / "render_attempts.json"
+def attempts_path(proj, kind="render"):
+    return Path(proj) / "work" / f"{kind}_attempts.json"
 
 
-def read_attempts(proj):
+def read_attempts(proj, kind="render"):
     try:
-        return json.loads(attempts_path(proj).read_text())
+        return json.loads(attempts_path(proj, kind).read_text())
     except (OSError, ValueError):
         return {}
 
 
-def clear_attempts(proj):
+def clear_attempts(proj, kind="render"):
     try:
-        attempts_path(proj).unlink()
+        attempts_path(proj, kind).unlink()
     except OSError:
         pass
+
+
+def bump_attempts(proj, kind="render"):
+    """Record one more launch of `kind`'s worker. Both phases count separately."""
+    att = read_attempts(proj, kind)
+    attempts_path(proj, kind).write_text(
+        json.dumps({"count": att.get("count", 0) + 1, "ts": time.time()}))
+
+
+def crashlooping(proj, kind):
+    """True if `kind` has burned CRASHLOOP_AFTER launches with no completion
+    artifact and is still inside the backoff window. Returns (bool, count)."""
+    att = read_attempts(proj, kind)
+    n = att.get("count", 0)
+    return (n >= CRASHLOOP_AFTER
+            and time.time() - att.get("ts", 0) < CRASHLOOP_RETRY_SECS), n
 
 
 def log(cfg, msg):
@@ -232,9 +257,7 @@ def launch_render(cfg, show, proj):
         cwd=cfg["claude_cwd"], env=render_env(cfg), start_new_session=True,
         stdout=render_log.open("w"), stderr=subprocess.STDOUT)
     write_lock(proj, child.pid)  # hold the claim for the render's lifetime
-    att = read_attempts(proj)
-    attempts_path(proj).write_text(
-        json.dumps({"count": att.get("count", 0) + 1, "ts": time.time()}))
+    bump_attempts(proj, "render")
     log(cfg, f"RENDER (phase 1) launched for {show['id']}: {proj} "
              f"(pid {child.pid}, log {render_log})")
     return child.pid
@@ -261,6 +284,7 @@ def spawn_completion(cfg, show, proj, dry):
         write_lock(proj, child.pid)
     except OSError as e:
         log(cfg, f"WARNING: could not re-stamp publish lock for {proj}: {e}")
+    bump_attempts(proj, "publish")
     log(cfg, f"PUBLISH (phase 2) spawned for {show['id']}: {proj} (pid {child.pid}, "
              f"log {out_file})")
     return child.pid
@@ -291,7 +315,7 @@ def run(cfg, dry):
                              f"{lk.get('pid')} still active — backing off")
                     break
                 if render_done(proj):
-                    clear_attempts(proj)  # render completed; crashloop counter is stale
+                    clear_attempts(proj, "render")  # render completed; counter is stale
                     # Phase 2: render finished; publish. Guard against re-posting if a
                     # prior publish got partway (uploads.json written, README not yet).
                     if (proj / "uploads.json").exists():
@@ -299,6 +323,17 @@ def run(cfg, dry):
                                  f"present but no README — prior publish partial; NOT "
                                  f"auto-retrying (double-post risk), needs review")
                         break
+                    # ...and against a publish that dies before writing anything at
+                    # all (expired OAuth, missing bin), which the uploads.json check
+                    # above cannot see. `continue`, not `break`, so the doomed project
+                    # yields this cycle's slot instead of starving every other show.
+                    looping, n = crashlooping(proj, "publish")
+                    if looping:
+                        log(cfg, f"PUBLISH-CRASHLOOP {show['id']}: {proj.name} phase-2 "
+                                 f"spawned {n}x with no README — skipping so other shows "
+                                 f"get this cycle's slot; retrying after backoff. Check "
+                                 f"the newest {show['id']}_*_completion.log for the cause")
+                        continue
                     if dry:
                         log(cfg, f"[DRY-RUN] {show['id']}: {proj.name} render done — "
                                  f"would spawn PUBLISH (phase 2)")
@@ -320,11 +355,10 @@ def run(cfg, dry):
                                  f"(see {proj / 'BLOCKED.md'}; recover with "
                                  f"tools/unstick_stale_script.py)")
                         break
-                    att = read_attempts(proj)
-                    if (att.get("count", 0) >= CRASHLOOP_AFTER
-                            and time.time() - att.get("ts", 0) < CRASHLOOP_RETRY_SECS):
+                    looping, n = crashlooping(proj, "render")
+                    if looping:
                         log(cfg, f"RENDER-CRASHLOOP {show['id']}: {proj.name} phase-1 "
-                                 f"launched {att['count']}x with no render_complete.json "
+                                 f"launched {n}x with no render_complete.json "
                                  f"— skipping so other shows get this cycle's slot; "
                                  f"retrying after backoff")
                         continue

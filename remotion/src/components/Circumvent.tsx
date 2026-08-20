@@ -575,3 +575,110 @@ export const CvgDefine: React.FC<{fields: any}> = ({fields}) => {
     </AbsoluteFill>
   );
 };
+
+// reframe -> the beat where a sentence changes. The Paper* family does this on two
+// stacked cards (PaperReframe); here the paper IS the slide, so the old phrase is struck
+// with an accent strip laid straight on the scene and the new line lands beneath it.
+//
+// Why this exists (2026-08-20): `reframe` had no branch in `_circumvent_scene` at all and
+// fell through to the CvgScene catch-all, which prints only `headline` — so before/strike/
+// after were dropped and the slide held the frame showing a kicker and nothing else. TTD
+// 2026-08-13 s8 shipped into the blocked state that way (~5.9s of empty card at the exact
+// beat the episode pivots on). Same defect class as the stat/statgrid drop fixed
+// 2026-08-12; the catch-all has now swallowed three types, so anything added to the deck
+// vocabulary needs a branch here, not a fall-through.
+//
+// All three authored fields render, which the Paper* version does not do — PaperReframe
+// accepts `strike` and never draws it, striking the whole `before` line instead. The
+// three-part reading is what the decks actually author: `before` is the lead-in that
+// stands, `strike` is the phrase being negated, `after` is what replaces it. A deck that
+// omits `strike` falls back to the two-part reading and strikes `before` itself.
+export const CvgReframe: React.FC<{fields: any}> = ({fields}) => {
+  const W = useWorld();
+  const frame = useCurrentFrame();
+  const {width, height} = useVideoConfig();
+  const cf = fields.cueFrames || {};
+  const at = cf.in ?? 3;
+  const hit = cf.hit ?? at + 2;
+  const e = ease(frame, at);
+  // the strip draws across the old phrase, then the new line lands on the beat
+  const struck = interpolate(frame, [hit + 12, hit + 22], [0, 1],
+                             {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const land = ease(frame, hit + 24, 16);
+  const portrait = height > width;
+  const M = Math.min(width, height);
+  const TS = portrait ? 1.18 : 1;
+  const P = paperRgb(W.paper);
+  const before = fields.before || '';
+  const strikeText = fields.strike || '';
+  const afterText = fields.after || '';
+  // Length-aware sizing, the idiom SceneType / CvgPunch / CvgCta already use: step down
+  // rather than overrun the block box. Tuned against 4:5, the binding aspect.
+  const fit = (s: string, base: number) => {
+    const n = (s || '').length;
+    const f = n <= 40 ? 1 : n <= 90 ? 0.8 : n <= 150 ? 0.64 : n <= 230 ? 0.52 : 0.44;
+    return M * base * f * TS;
+  };
+  // With no `strike` authored, the struck phrase IS `before` (PaperReframe's reading).
+  const leadLine = strikeText ? before : '';
+  const struckLine = strikeText || before;
+  return (
+    <AbsoluteFill>
+      <Set src={fields.set} anchor={fields.anchor} />
+      <Cutouts items={fields.props} />
+      <AbsoluteFill style={{
+        background: `linear-gradient(180deg, rgba(${P},0) 0%, rgba(${P},.76) 22%, rgba(${P},.76) 78%, rgba(${P},0) 100%)`,
+        opacity: 0.98,
+      }} />
+      <AbsoluteFill style={{
+        alignItems: 'flex-start', justifyContent: 'center',
+        padding: portrait
+          ? `${height * 0.085}px ${width * 0.075}px ${height * 0.18}px`
+          : `${height * 0.085}px ${width * 0.075}px`,
+      }}>
+        <div style={{
+          maxWidth: width * (portrait ? 0.85 : 0.62),
+          transform: `translateY(${(1 - e) * 22}px)`, opacity: e,
+        }}>
+          {fields.kicker ? (
+            <div style={{
+              fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.021 * TS, letterSpacing: 5,
+              textTransform: 'uppercase', color: W.accent, marginBottom: M * 0.016,
+            }}>{fields.kicker}</div>
+          ) : null}
+          {leadLine ? (
+            <div style={{
+              fontFamily: BRAND.font, fontWeight: 900, fontSize: fit(leadLine, 0.046),
+              lineHeight: 1.1, color: W.ink, letterSpacing: -0.5, marginBottom: M * 0.018,
+            }}>{leadLine}</div>
+          ) : null}
+          {struckLine ? (
+            <div style={{
+              display: 'inline-block', position: 'relative',
+              fontFamily: BRAND.font, fontWeight: 900, fontSize: fit(struckLine, 0.056),
+              lineHeight: 1.1, color: W.ink, letterSpacing: -0.5,
+              opacity: interpolate(struck, [0, 1], [1, 0.42]),
+            }}>
+              {struckLine}
+              {/* an accent strip laid over the phrase, not a text-decoration: it has to
+                  read as something placed on the scene, in the world's annotation color */}
+              <div style={{
+                position: 'absolute', left: 0, top: '54%', width: '100%',
+                height: Math.max(3, M * 0.008), background: W.accent, borderRadius: 2,
+                transform: `scaleX(${struck.toFixed(3)})`, transformOrigin: 'left center',
+              }} />
+            </div>
+          ) : null}
+          {afterText ? (
+            <div style={{
+              fontFamily: BRAND.font, fontWeight: 900, fontSize: fit(afterText, 0.068),
+              lineHeight: 1.06, color: W.ink, letterSpacing: -0.5,
+              marginTop: M * 0.026,
+              transform: `translateY(${(1 - land) * 18}px)`, opacity: land,
+            }}>{colorize(afterText, fields.accent, W.accent)}</div>
+          ) : null}
+        </div>
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};

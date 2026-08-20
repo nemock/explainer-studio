@@ -489,6 +489,16 @@ def _circumvent_scene(slide, t, kicker, accent, headline):
         items = [i for i in items if i]
         return "CvgList", {**common, "items": items or _items(slide),
                            "title": slide.get("title", ""), "ordered": False}
+    # reframe: the beat where a sentence changes. Until 2026-08-20 this type had NO branch
+    # here and fell through to the CvgScene catch-all, which prints only `headline` — so
+    # before/strike/after were dropped and the slide held the frame with a kicker and
+    # nothing else. TTD 2026-08-13 s8 was blocked for exactly that (~5.9s of empty card on
+    # the episode's pivot beat). Third type the catch-all has swallowed, after stat and
+    # statgrid on 2026-08-12: add a branch for any new deck type, never a fall-through.
+    if t == "reframe":
+        return "CvgReframe", {**common, "before": slide.get("before", "") or headline,
+                              "strike": slide.get("strike", ""),
+                              "after": slide.get("after", "")}
     if t == "quote":
         return "CvgScene", {**common, "headline": slide.get("quote") or headline,
                             "attrib": slide.get("attribution") or slide.get("source", "")}
@@ -1258,8 +1268,14 @@ def _render_one(sp, log=print, frames=None, out=None):
     # Blank paper substrates (papercraft-substrate-plan.md). Unlike the two libraries above
     # these are never named in a deck — components pick a substrate internally — so they
     # must be staged unconditionally or PaperNote renders nothing.
+    # papercraft-plg/ joins this list for the SAME reason (2026-08-14): its elements are
+    # chosen inside the component via the world's elementDir token, never named in a deck
+    # field, so the _lib_refs scan above cannot see them. It was staged only into the repo's
+    # remotion/public — which is what `remotion still` reads — so every still looked right
+    # while the real render, which builds its own per-project public dir, 404'd on the
+    # warning triangle and DIED. Stills are not proof that a render will stage.
     for _lib in ("papercraft-notes", "papercraft-cards", "papercraft-fixings",
-                 "papercraft-grounds", "papercraft-stages"):
+                 "papercraft-grounds", "papercraft-stages", "papercraft-plg"):
         _sub = REMOTION_DIR / "public" / _lib
         if _sub.exists():
             shutil.copytree(_sub, public / _lib, dirs_exist_ok=True)
