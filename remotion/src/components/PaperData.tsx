@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
-import {useWorld, CameraMove, PLANE, Plane, PaperTable, PaperCard, PaperProps, usePaperLayout, resolveCamera, usePlace, popupStyle, placeStyle, flick} from './PaperWorld';
+import {useWorld, CameraMove, PLANE, Plane, PaperTable, PaperCard, PaperProps, usePaperLayout, resolveCamera, usePlace, popupStyle, placeStyle, flick, usePaperPush} from './PaperWorld';
 import {PaperSheet} from './PaperNote';
 
 // Papercraft Motion — data & structure family (papercraft-motion-spec.md §7).
@@ -105,7 +105,8 @@ export const PaperStairs: React.FC<{fields: any; durationInFrames: number}> = ({
 // PaperCompare — two paper trays popup left then right; the "bad" side sits in
 // harder shadow with a plum header strip (the palette carries the judgment).
 // fields: {left:{title,value,kind}, right:{title,value,kind}, cueFrames:{l?,r?}}
-export const PaperCompare: React.FC<{fields: any}> = ({fields}) => {
+export const PaperCompare: React.FC<{fields: any; durationInFrames?: number}> = ({fields, durationInFrames = 300}) => {
+  const push = usePaperPush(durationInFrames);
   const W = useWorld();
   const frame = useCurrentFrame();
   const {fps, width} = useVideoConfig();
@@ -144,7 +145,7 @@ export const PaperCompare: React.FC<{fields: any}> = ({fields}) => {
       <PaperTable seed={(fields.left?.title || '') + 'vs'} />
       <PaperProps items={fields.props} />
       <Kicker text={fields.kicker} height={height} />
-      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve}}>
+      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve, ...push}}>
         <div style={{display: 'flex', flexDirection: portrait ? 'column' : 'row',
                      gap: portrait ? height * 0.05 : width * 0.05, width: '100%',
                      justifyContent: 'center', alignItems: portrait ? 'center' : 'stretch'}}>
@@ -162,6 +163,7 @@ export const PaperCompare: React.FC<{fields: any}> = ({fields}) => {
 // camera steps laterally with the active card.
 // fields: {kicker, steps:[string|{title}], itemTimes?}
 export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
+  const push = usePaperPush(durationInFrames);
   const W = useWorld();
   const frame = useCurrentFrame();
   const {fps, width, height: frameH} = useVideoConfig();
@@ -192,6 +194,7 @@ export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({f
           must not ride the lateral camera step that tracks the active flow card */}
       <PaperProps items={fields.props} />
       <Plane cam={cam} factor={PLANE.stage}>
+        <AbsoluteFill style={{...push}}>
         <Kicker text={fields.kicker} height={height} />
         {steps.map((s, i) => {
           const st = popupStyle(frame, fps, at(i));
@@ -232,6 +235,7 @@ export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({f
             </React.Fragment>
           );
         })}
+        </AbsoluteFill>
       </Plane>
     </AbsoluteFill>
   );
@@ -241,6 +245,7 @@ export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({f
 // PaperList — items place one by one AS they're said: lilac number chip + a
 // cream strip per item. fields: {kicker, title, items[], itemTimes?}
 export const PaperList: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
+  const push = usePaperPush(durationInFrames);
   const W = useWorld();
   const frame = useCurrentFrame();
   const {fps, width} = useVideoConfig();
@@ -254,7 +259,7 @@ export const PaperList: React.FC<{fields: any; durationInFrames: number}> = ({fi
       <PaperTable seed={fields.title || fields.kicker || 'list'} />
       <PaperProps items={fields.props} />
       <Kicker text={fields.kicker} height={height} />
-      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve}}>
+      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve, ...push}}>
         <div>
           {fields.title ? (
             <div style={{...placeStyle(frame, fps, height, 4), marginBottom: height * 0.024}}>
@@ -290,7 +295,8 @@ export const PaperList: React.FC<{fields: any; durationInFrames: number}> = ({fi
 // PaperBookCTA — the close: the real book cover stands on the table (places with a
 // settle + shadow), the offer card places beside it, warm soft light.
 // fields: {kicker, headline, accent, subkicker, image (book cover, staged)}
-export const PaperBookCTA: React.FC<{fields: any}> = ({fields}) => {
+export const PaperBookCTA: React.FC<{fields: any; durationInFrames?: number}> = ({fields, durationInFrames = 300}) => {
+  const push = usePaperPush(durationInFrames);
   const W = useWorld();
   const frame = useCurrentFrame();
   const {width} = useVideoConfig();
@@ -304,6 +310,7 @@ export const PaperBookCTA: React.FC<{fields: any}> = ({fields}) => {
       <PaperTable seed={fields.headline || 'cta'} />
       <PaperProps items={fields.props} />
       <AbsoluteFill style={{flexDirection: portrait ? 'column' : 'row', alignItems: 'center', justifyContent: 'center',
+                            ...push,
                             gap: portrait ? height * 0.04 : width * 0.05,
                             padding: portrait ? `0 6% ${reserve}px` : '0 6%'}}>
         {fields.image ? (
