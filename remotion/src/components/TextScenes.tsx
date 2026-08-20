@@ -63,8 +63,15 @@ const RevealWords: React.FC<{text: string; accent?: string[]; accentRed?: string
   );
 };
 
-// statement -> a headline that reveals word-by-word, then keeps a slow continuous drift so it
-// never sits frozen. fields: {kicker, headline, accent, accentRed, subkicker}
+// statement -> a headline that reveals word-by-word. fields: {kicker, headline, accent,
+// accentRed, subkicker}
+//
+// It used to hold a slow continuous scale+translate afterwards so the shot "never sat
+// frozen". That and three like it were removed 2026-08-20: the operator's objection is to
+// creeping an object a pixel at a time to manufacture motion — it "just looks weird", and
+// these moved a mean of 0.20/255 across a shot, which is invisible as motion and visible
+// as wrongness. A deliberate camera move is the sanctioned alternative (usePaperPush on
+// the paper scenes); nothing here is a substitute for one.
 export const KineticHeadline: React.FC<{fields: any; durationInFrames?: number}> = ({fields, durationInFrames = 300}) => {
   const frame = useCurrentFrame();
   const {fps, height, width} = useVideoConfig();
@@ -100,13 +107,9 @@ export const KineticHeadline: React.FC<{fields: any; durationInFrames?: number}>
   const headlineSize = Math.max(height * 0.07,
                                 fitStageText(fields.headline || '', HEADLINE_BOX.w, HEADLINE_BOX.h));
 
-  // slow continuous life: a gentle push-in + upward drift across the whole scene (clears the
-  // freezedetect dead-air the old one-shot fade left; premium, not jittery).
-  const live = interpolate(frame, [0, durationInFrames], [1, 1.035]);
-  const drift = interpolate(frame, [0, durationInFrames], [0, -height * 0.014]);
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 8%', color: ink.body}}>
-      <div style={{transform: `scale(${live}) translateY(${drift}px)`, display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
+      <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
         <Kicker text={fields.kicker} o={s} height={height} />
         {/* On the paper worlds the headline sits on a real poster instead of floating as bare
             type on the ground (operator-caught on #50). Statement is the most-used slide type
@@ -135,11 +138,8 @@ export const DefineTerm: React.FC<{fields: any; durationInFrames?: number}> = ({
   const d = spring({frame: frame - 10, fps, config: {damping: 18}});
   const ink = useInk();
   const termSize = (fields.term || '').length > 16 ? height * 0.06 : height * 0.075;
-  // slow continuous life so the definition doesn't sit frozen after it reveals (paper freezedetect)
-  const live = interpolate(frame, [0, durationInFrames], [1, 1.03]);
-  const drift = interpolate(frame, [0, durationInFrames], [0, -height * 0.012]);
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 9%', transform: `scale(${live}) translateY(${drift}px)`}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 9%'}}>
       <Kicker text={fields.kicker} o={t} height={height} />
       <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 900, fontSize: termSize, lineHeight: 1.1, textAlign: 'center', opacity: t, transform: `translateY(${interpolate(t, [0, 1], [24, 0])}px)`, textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
         {colorize(fields.term, fields.accent, fields.accentRed, ink.accent, (ink.danger ?? BRAND.red))}
@@ -158,11 +158,8 @@ export const Quote: React.FC<{fields: any; durationInFrames?: number}> = ({field
   const q = spring({frame, fps, config: {damping: 18}});
   const at = spring({frame: frame - 18, fps, config: {damping: 16}});
   const ink = useInk();
-  // slow continuous life so the quote doesn't sit frozen after it springs in (paper freezedetect)
-  const live = interpolate(frame, [0, durationInFrames], [1, 1.03]);
-  const drift = interpolate(frame, [0, durationInFrames], [0, -height * 0.012]);
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 9%', transform: `scale(${live}) translateY(${drift}px)`}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 9%'}}>
       <div style={{fontFamily: BRAND.font, color: ink.body, fontWeight: 800, fontSize: height * 0.058, lineHeight: 1.25, textAlign: 'center', opacity: q, transform: `translateY(${interpolate(q, [0, 1], [26, 0])}px)`, textShadow: ink.paper ? PAPER_SHADOW : '0 10px 40px rgba(0,0,0,.6)'}}>
         {fields.quote}
       </div>
@@ -178,39 +175,6 @@ export const Quote: React.FC<{fields: any; durationInFrames?: number}> = ({field
 // punch -> one giant word, max energy (the seam). fields: {word, kicker, kind:'good'|'bad'}
 // OR the headline variant: {headline, accent, accentRed} — per-word accent coloring takes
 // precedence over the whole-word `kind` color when accent/accentRed are actually set.
-/**
- * A slow living drift for typography-only cards (operator-approved 2026-08-12).
- *
- * These cards finish their entrance and then hold perfectly still while the narration
- * keeps going, which is what QA's freezedetect reports as "visual dead air": on module 1
- * the punch and reframe cards alone accounted for 184 of 373 flagged seconds, while figure
- * slides — which drift under Ken Burns — scored ZERO. PaperBackground already carries an
- * anti-freeze breath, but at ~0.0002 alpha per frame it is far under the -60dB threshold,
- * and turning it up is not an option: the operator rejected a livelier background on
- * 2026-07-16 as "a distracting gyration". So the motion goes on the card, not the ground.
- *
- * It is applied to the OUTER AbsoluteFill, so it composes with each card's own entrance
- * transform rather than fighting it, and moves the whole composition as one piece — no
- * reflow, no re-wrap, nothing shifting relative to anything else.
- *
- * Sized so it CANNOT clip. Worst-case text width is 81% of frame on PunchWord (6% padding,
- * then maxWidth 92% of that) and 84% on Reframe; at the 1.4% peak scale those become 82.1%
- * and 85.2%, leaving ~7.4% clear on each side. Vertically these cards are centred with
- * hundreds of spare pixels, so an 11px drift is nowhere near an edge. Periods are primes-ish
- * and different per axis so the two never resolve into an obvious loop.
- */
-const useCardDrift = (height: number, durationInFrames: number) => {
-  const frame = useCurrentFrame();
-  // Deliberately the SAME ramp KineticHeadline uses, not a new invention. That component
-  // added this for exactly this reason, and module 1's QA numbers show it works: `statement`
-  // logged 9 flagged spans totalling 6s, against punch's 49 spans / 105s over a comparable
-  // slide count. Matching the proven constants also means these three card types age
-  // together instead of drifting at three different rates.
-  const live = interpolate(frame, [0, durationInFrames], [1, 1.035]);
-  const dy = interpolate(frame, [0, durationInFrames], [0, -height * 0.014]);
-  return `scale(${live.toFixed(5)}) translateY(${dy.toFixed(3)}px)`;
-};
-
 export const PunchWord: React.FC<{fields: any; durationInFrames?: number}> = ({fields, durationInFrames = 300}) => {
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
@@ -219,9 +183,8 @@ export const PunchWord: React.FC<{fields: any; durationInFrames?: number}> = ({f
   const color = fields.kind === 'good' ? ink.accent : fields.kind === 'bad' ? (ink.danger ?? BRAND.red) : ink.body;
   const text = fields.word || fields.headline;
   const hasAccent = (fields.accent && fields.accent.length) || (fields.accentRed && fields.accentRed.length);
-  const drift = useCardDrift(height, durationInFrames);
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 6%', transform: drift}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 6%'}}>
       <Kicker text={fields.kicker} o={interpolate(p, [0, 1], [0, 1])} height={height} />
       <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.2, lineHeight: 1.02, color, textTransform: 'uppercase', transform: `scale(${p})`, textShadow: ink.paper ? PAPER_SHADOW : '0 16px 70px rgba(0,0,0,.6)', textAlign: 'center', maxWidth: '92%', whiteSpace: 'pre-line', textWrap: 'balance' as any}}>
         {hasAccent ? colorize(text, fields.accent, fields.accentRed, ink.accent, (ink.danger ?? BRAND.red)) : text}
@@ -237,9 +200,8 @@ export const Reframe: React.FC<{fields: any; durationInFrames?: number}> = ({fie
   const a = spring({frame, fps, config: {damping: 18}});
   const flip = spring({frame: frame - 26, fps, config: {damping: 16}});
   const ink = useInk();
-  const drift = useCardDrift(height, durationInFrames);
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 8%', flexDirection: 'column', transform: drift}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 8%', flexDirection: 'column'}}>
       <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.06, color: ink.body, opacity: interpolate(flip, [0, 1], [1, 0.35]), textDecoration: 'line-through', textDecorationColor: (ink.danger ?? BRAND.red), textAlign: 'center'}}>
         {fields.before}
       </div>
@@ -292,9 +254,6 @@ export const SideBySide: React.FC<{fields: any; durationInFrames?: number}> = ({
   const l = spring({frame, fps, config: {damping: 18}});
   const r = spring({frame: frame - 10, fps, config: {damping: 18}});
   const ink = useInk();
-  // continuous life so the two cards don't sit frozen after they slide in (paper freezedetect)
-  const live = interpolate(frame, [0, durationInFrames], [1, 1.028]);
-  const drift = interpolate(frame, [0, durationInFrames], [0, -height * 0.01]);
   // The side colours used to be POSITIONAL (left always good, right always bad), which quietly
   // ignored the deck's own `kind`. #50 has a compare with `bad` on the LEFT, one with `bad` on
   // BOTH sides, and one with neither — all three rendered wrong. Honour the authored kind when
@@ -326,7 +285,7 @@ export const SideBySide: React.FC<{fields: any; durationInFrames?: number}> = ({
     );
   };
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 7%', transform: `scale(${live}) translateY(${drift}px)`}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 7%'}}>
       <div style={{display: 'flex', gap: height * 0.03, width: '100%', alignItems: 'stretch'}}>
         {col(fields.left, l, -1, false)}
         {col(fields.right, r, 1, true)}
