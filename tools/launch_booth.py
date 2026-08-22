@@ -125,6 +125,48 @@ def _booth_ports_in_use():
     return [p for p in ALL_PORTS if _pids_on_port(p)]
 
 
+def _cmdline(pid):
+    """Full command line of `pid`, or '' if it has gone away."""
+    return subprocess.run(["/bin/ps", "-o", "command=", "-p", str(pid)],
+                          capture_output=True, text=True).stdout.strip()
+
+
+def _proc_label(cmd):
+    """A short human label for a command line, e.g. 'daily_beats/server.py'."""
+    parts = cmd.split()
+    if not parts:
+        return "unknown process"
+    tok = next((t for t in parts[1:] if not t.startswith("-")), parts[0])
+    p = Path(tok)
+    return "/".join(p.parts[-2:]) if len(p.parts) > 1 else (p.name or "unknown process")
+
+
+def _port_occupant(port):
+    """Identify what is listening on `port`: None if free, else (is_booth, label).
+
+    A LISTENER IS NOT A BOOTH (same lesson as status(), re-learned 2026-08-22). The
+    launcher used to call any occupant of a pool port "another booth", so the daily
+    beats server — holding :8770 under launchd since Aug 12 — made the launcher report
+    a booth that did not exist, and sent the operator hunting for a stale recording tab.
+    The booth's real signature is `python -m explainer2.cli record <project>`."""
+    pids = _pids_on_port(port)
+    if not pids:
+        return None
+    other = None
+    for pid in pids:
+        cmd = _cmdline(pid)
+        if not cmd:
+            continue
+        parts = cmd.split()
+        if "explainer2.cli" in parts and "record" in parts:
+            i = parts.index("record")
+            name = Path(parts[i + 1]).name if i + 1 < len(parts) else ""
+            return (True, f"another booth ({name})" if name else "another booth")
+        if other is None:
+            other = _proc_label(cmd)
+    return (False, other) if other else None
+
+
 def _project_port(project):
     """The port this project's booth was last launched on (work/booth_port)."""
     f = Path(project) / "work" / "booth_port"
@@ -139,10 +181,18 @@ def stop():
     if not ports:
         print(f"no booth running on {BASE_PORT}-{max(ALL_PORTS)}")
         return
+    stopped = 0
     for port in ports:
+        occ = _port_occupant(port)
+        if occ and not occ[0]:                # same rule as the note: identify, then act
+            print(f"skipped :{port} — held by {occ[1]}, not a booth")
+            continue
         for pid in _pids_on_port(port):
             subprocess.run(["/bin/kill", "-TERM", str(pid)])
         print(f"stopped booth on :{port}")
+        stopped += 1
+    if not stopped:
+        print(f"no booth running on {BASE_PORT}-{max(ALL_PORTS)}")
 
 
 def _pop_tab(url):
@@ -222,7 +272,14 @@ def start(project, open_tab=True):
         print(f"no free booth port in {BASE_PORT}-{max(ALL_PORTS)}; run --stop first")
         return 1
     if port != pref:
-        print(f"note: home port :{pref} busy (another booth) — using :{port}; "
+        occ = _port_occupant(pref)
+        if occ is None:                       # freed between the scan and now
+            who = "was busy"
+        elif occ[0]:
+            who = f"held by {occ[1]}"
+        else:
+            who = f"held by {occ[1]} (not a booth)"
+        print(f"note: home port :{pref} {who} — using :{port}; "
               f"Chrome will re-ask for the mic once on the new origin")
 
     env = dict(os.environ, EXPLAINER_RECORDER_PORT=str(port))

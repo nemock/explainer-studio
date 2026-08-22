@@ -99,10 +99,10 @@ the package.
 
 | Type | What it is | Extra playbook | Package set |
 |---|---|---|---|
-| `deepdive` | standalone retention-engineered teaching video (~8–17 min); the default for 16:9 | — | meta + article + linkedin + A/B thumbs |
+| `deepdive` | standalone retention-engineered teaching video (~8–17 min); the default for 16:9 | — | meta + article + linkedin + both thumbs |
 | `short` | 9:16 vertical; usually a derived cut, sometimes a standalone run | — | meta only |
 | `masterclass` | ONE EPISODE of a multi-part series teaching a large concept in order (15–35 min; episodes build on each other) | `masterclass-playbook.md` | same as deepdive |
-| `promo` | a little commercial: direct-response piece for ONE offer/event/book (60 s–3 min, multiple CTAs) | `promo-playbook.md` | meta + linkedin + A/B thumbs (no article) |
+| `promo` | a little commercial: direct-response piece for ONE offer/event/book (60 s–3 min, multiple CTAs) | `promo-playbook.md` | meta + linkedin + both thumbs (no article) |
 
 Rules of thumb:
 - **Ten standalone ideas = ten deep dives. One large concept split into
@@ -445,7 +445,7 @@ invoke the skill, then write every reader-facing artifact in that pass.**
 
 Write titles/description/chapters per blueprint §8 into `meta.json` (the
 manifest merges it). **Thumbnails: read `references/thumbnail-playbook.md`, then
-build A/B 1280×720 cards (cutout → brand template → `tools/html2png.py`) into
+build the two 1280×720 cards (a = live, b = promo reuse) (cutout → brand template → `tools/html2png.py`) into
 `package/thumbnails/`.**
 
 > **Two keys `publish` actually reads, and neither is the obvious one (2026-08-05).**
@@ -546,7 +546,7 @@ A complete package is generation-plane deliverables, none produced by a
 media stage (so nothing else guarantees they exist — that's how #16 shipped
 without `linkedin.md`, 2026-07-04). For a deep dive or masterclass episode
 that's FOUR: `package/meta.json` · `package/article.md` · `package/linkedin.md`
-· `package/thumbnails/thumb_a.png` + `thumb_b.png` (the A/B pair). The set is
+· `package/thumbnails/thumb_a.png` + `thumb_b.png` (a = live, b = promo reuse). The set is
 per-content-type (promo drops the article; standalone short needs meta only —
 `contenttypes.py` is the registry and validate reads it).
 **Run `bin/explainer2 validate <project_dir>` at the end of Package and again
@@ -570,8 +570,13 @@ the 500-char cap; (2) AI-disclosure answered honestly (operator voice + licensed
 motion graphics = No); (3) an end screen (subscribe + video) over the payoff
 slide — "Import from latest video" is the fast, series-consistent path;
 (4) **added to the "Deep Dives" playlist — standing operator rule, 2026-06-12**;
-(5) **both thumbnails into Test & Compare, always** (standing rule, 2026-06-19;
-never ask whether to A/B); (6) visibility is the operator's call — never set
+(5) **thumb_a only. A/B Test & Compare is RETIRED** (operator, 2026-07-26,
+re-confirmed 2026-08-20): the channel's per-video volume never reaches
+significance, so it buys friction and not information. thumb_b is still built,
+as a PROMO asset the operator uses by hand for social and the newsletter. The
+2026-06-19 "always A/B, never ask" rule this replaces stayed live here for four
+weeks after the decision, because the retirement was recorded in the thumbnail
+playbook and nowhere else; (6) visibility is the operator's call — never set
 Public / schedule-Public without an explicit go.
 - **Title/description gotcha:** YouTube REJECTS angle brackets (`<` / `>`) in
   the title and description (error "Angled brackets aren't allowed"). Write

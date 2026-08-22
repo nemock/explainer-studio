@@ -6,7 +6,8 @@ never hand-paint a PNG** — so the look is deterministic and reproducible. This
 file freezes the quality bar so any model reproduces it without guessing.
 
 The output goes in `<project>/package/thumbnails/`: `thumb_a.{html,png}` and
-`thumb_b.{html,png}` (two variants for YouTube's Test & Compare), each pointing
+`thumb_b.{html,png}` (a = the live thumbnail, b = a promo asset for social and the
+newsletter; A/B testing retired, see §6), each pointing
 at a cutout `headshot-a.png` / `headshot-b.png`.
 
 ---
@@ -138,8 +139,7 @@ next best, and the plain cutout is the fallback.
    informative and clickable. Same HTML-card → `html2png.py` mechanic as §2/§6,
    just over the operator's base image instead of the navy gradient. Keep it
    legible at 120px (§0 contract still holds).
-4. **A/B still applies** (§6, [[thumbnail-ab-always]]) — produce two variants;
-   Test & Compare is post-publish.
+4. **Still produce two** (§6) — a = live, b = promo reuse. Not a test pair.
 
 When in doubt, ask the operator which path a given video should take; lean toward
 the illustrative path for story-driven / special-edition deep dives.
@@ -208,8 +208,8 @@ the §2c operator-generated route still works. Full flow + guardrails:
 - **Cost hygiene:** `simulate_cost {tool:"images_generate", arguments:{…}}` (free) before
   generating. (The operator's plan has large credit headroom, but keep the habit.)
 - Then compose the brand headline on top exactly as §2c step 3 — the generated base
-  replaces the operator-supplied `base.png`; everything downstream is unchanged. A/B
-  still applies (§6).
+  replaces the operator-supplied `base.png`; everything downstream is unchanged. Both
+  thumbnails still get built (§6): a = live, b = promo reuse.
 
 ## 3. Copy rules
 
@@ -321,19 +321,15 @@ scene the headline crowds the subject ("the headline is too large"). `publish` s
 further is needed in Studio; the old "Ineligible until Public" two-step below is
 now moot and kept only as historical context.
 
-**Test & Compare is a TWO-STEP, post-publish flow (operator directive,
-2026-06-26: "it's always ineligible until the video is actually set as public;
-this happens every single time").** In the upload wizard Test & Compare is listed
-**Ineligible on every video** and stays that way until the video is Public. So:
-(1) at upload, attach the SINGLE custom thumbnail (variant A) and do NOT treat
-"Ineligible" as a blocker or flag it — it is expected every time; (2) AFTER the
-video is Public, open it in Studio where the thumbnail's **Test & compare** is now
-eligible, and add variant B there (operator drags B, Claude drives). Variant B is
-deliberately held back at upload and goes up in this post-publish step. See
-[[thumbnail-ab-always]].
+**SUPERSEDED — the whole Test & Compare flow below is retired.** It is kept as the
+record of what the two-step upload used to require (operator directive 2026-06-26:
+Test & Compare reads "Ineligible" until the video is Public, every single time).
+None of it runs now. Attach thumb_a at upload and stop; do not open Test & Compare,
+and do not hold thumb_b back for it.
 
-Produce **A and B variants for YouTube Test & Compare — and they MUST differ in
-a way a viewer notices.** The
+Thumb_b still gets built, and it still **must differ in a way a viewer notices** —
+not to beat variant A in a test, but because it has to stand alone in a feed or a
+newsletter where the video's title is not next to it. The
 high-leverage variable is the **hook**: give B a different headline *angle*
 (claim vs. curiosity vs. negation — e.g. A "MEASURE ANYTHING" / B "NO DATA?
 DECIDE ANYWAY"), paired with a different pose/expression. **Two near-identical
@@ -349,7 +345,7 @@ as one thumbnail, which defeats the experiment. Keep the cutout files as
 - [ ] Cutout edge clean (no light fringe, no tan/background halo); thin props not
       thinned by erosion.
 - [ ] Subject separates from the bg — if not, applied §5 (and noted it in PLAYBOOK).
-- [ ] Two variants (A/B) rendered.
+- [ ] Two thumbnails rendered: a (live) and b (promo reuse).
 - [ ] For a multi-video series: same cutout treatment + layout across the set;
       only copy (and, if needed, the §5 hue) varies.
 
@@ -362,7 +358,7 @@ red keyword bands, white sub with green accent) but is **prop-driven**, so it re
 same `brand.ts` as the video and the thumbnail is a visual sibling of the render.
 
 - Props: `{bands[], sub, accent[], cutout, mirror, innerHot, bandSize}`.
-- Render A/B: `cd remotion && npx remotion still src/index.ts Thumbnail <out.png> --props=<variant.json> --public-dir=<thumbnails dir>` (the cutout PNG lives in that public dir, referenced by `staticFile`).
+- Render each: `cd remotion && npx remotion still src/index.ts Thumbnail <out.png> --props=<variant.json> --public-dir=<thumbnails dir>` (the cutout PNG lives in that public dir, referenced by `staticFile`).
 - The matting preprocess is unchanged: `cutout.py` (only if the selfie isn't already keyed — **check the alpha first; an operator-supplied transparent PNG is preferred, don't re-segment it**) then `clean_matte.py`.
 - **Always trim the cutout to its alpha bbox** — `clean_matte.py --trim` is now the default. A wide transparent PNG with the subject mid-canvas otherwise renders dead-centre under the headline (caught on #12); trimming lets the template anchor the subject to the right.
 - The HTML + `html2png.py` path (§2/§6) remains a valid fallback.
@@ -374,5 +370,5 @@ Operator steer: treat these as guidelines for improving our work, not laws.
 - **Bigger subject / face** reads better at sidebar size — lean larger. A strong story-prop (the hard hat + saw on #12) can carry the frame when a face alone won't.
 - **High contrast** subject-vs-bg and text-vs-bg; the §5 teal/indigo hotspots earn their keep.
 - **Fewer words win.** Our two-band + green-sub is the channel signature; keep each line tight and legible.
-- **A/B must differ at a glance** — different hook *angle* (claim vs curiosity vs negation) plus a pose change (mirror works); near-identical pairs aren't a real test.
+- **b must differ from a at a glance** — different hook *angle* (claim vs curiosity vs negation) plus a pose change (mirror works); near-identical pairs aren't a real test.
 - **Squint test at ~120 px** before shipping.

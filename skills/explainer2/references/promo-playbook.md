@@ -142,7 +142,7 @@ Selling is where trust is spent fastest, so the standing rules bind hardest:
   stills — real artifacts of the offer, licensed/owned only.
 - **Every CTA is seen AND heard:** on-screen URL/action text synced to the
   spoken ask, and the end-card holds the URL until the video ends.
-- Thumbnails: A/B pair as standard; the composed-scene standard applies.
+- Thumbnails: two as standard (a = live, b = promo reuse); the composed-scene standard applies.
 
 ## 6. Pipeline + packaging deltas
 
@@ -153,7 +153,7 @@ Selling is where trust is spent fastest, so the standing rules bind hardest:
 - Shorts: cut 1–3 **teasers** — each one hook + one CTA, native hook recorded
   in the same booth session as always. A teaser is a promo in miniature, not
   a highlight reel.
-- Package deliverables: `meta.json`, `linkedin.md`, A/B thumbnails. **No
+- Package deliverables: `meta.json`, `linkedin.md`, both thumbnails. **No
   article.md** — the offer's landing page is the written companion (validate
   enforces the per-type set).
 - The comment-CTA is OPTIONAL for promos and off by default: the promo wants

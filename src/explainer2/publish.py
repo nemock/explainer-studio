@@ -7,7 +7,7 @@ against the official YouTube Data API v3 — no third-party SaaS, no per-token
 billing, secrets stay local.
 
 HYBRID: the API sets file + core metadata + ONE thumbnail + playlist + schedule.
-It CANNOT do A/B thumbnails, title A/B, end screens, or pinned comments (no public
+It CANNOT do end screens or pinned comments (no public
 endpoint) — so those print as a Chrome checklist.
 
 MULTI-CHANNEL (the Blotato model, done locally):
@@ -156,12 +156,16 @@ def build_plan(proj, channel, privacy="private", when=None):
 def _browser_checklist(meta, thumb_b, alt_title, chan):
     handle = chan.get("handle") or "the target channel"
     todo = []
+    # A/B Test & Compare was RETIRED 2026-07-26 (the channel's per-video volume never
+    # reaches significance, so it buys friction and not information) and re-confirmed
+    # 2026-08-20. thumb_b is still built, but as a PROMO asset the operator uses by hand
+    # for social/newsletter/LinkedIn — never as a test variant. This checklist kept
+    # telling him to open Test & Compare on every upload for four weeks after the
+    # decision, because the retirement was written into the playbook and nowhere else.
     if thumb_b:
-        todo.append(f"A/B THUMBNAILS: thumbnail A is set by the API; open Test & Compare, "
-                    f"add variant B (package/{thumb_b}), and start the test.")
-    if alt_title:
-        todo.append(f"TITLE A/B (optional): add the alternate title to Test & Compare — "
-                    f"\"{alt_title}\"")
+        todo.append(f"THUMBNAIL B is built at package/{thumb_b} — a promo asset for social "
+                    f"and the newsletter, to use at will. Do NOT open Test & Compare; A/B "
+                    f"is retired.")
     todo.append("END SCREEN: add subscribe + a video element (Best for viewer) over the last ~20s.")
     pc = meta.get("pinned_comment")
     if pc:

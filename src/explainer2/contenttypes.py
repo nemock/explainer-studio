@@ -13,7 +13,7 @@ both are content_type "masterclass"; `distribution` decides the public brand.
 """
 
 # Package deliverables per type: the files validate.py enforces under package/
-# (SKILL §8d), plus whether the A/B thumbnail pair is required.
+# (SKILL §8d), plus whether the thumbnail pair is required (a = live, b = promo reuse).
 CONTENT_TYPES = {
     "deepdive": {
         "label": "Deep dive",

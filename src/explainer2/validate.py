@@ -29,7 +29,7 @@ def _package_issues(proj):
         tdir = pkg / "thumbnails"
         for t in ("thumb_a.png", "thumb_b.png"):
             if not (tdir / t).exists():
-                out.append(f"package/thumbnails/{t} missing — the A/B thumbnail pair is standard")
+                out.append(f"package/thumbnails/{t} missing — two thumbnails are standard (a = live, b = promo reuse; A/B testing retired 2026-07-26)")
     return out
 
 

@@ -634,7 +634,7 @@ def main(argv=None):
     pub = sub.add_parser("publish", help="hybrid YouTube upload of the PRIMARY video via the "
                          "operator's own OAuth (dry-run default; --fire to upload). API sets "
                          "file+metadata+thumbnail+playlist+schedule; prints a Chrome checklist for "
-                         "the API-blind steps (A/B thumbs, title A/B, end screen, pinned comment)")
+                         "the API-blind steps (end screen, pinned comment, altered-content disclosure)")
     pub.add_argument("project_dir", nargs="?", help="omit only with --authorize")
     pub.add_argument("--fire", action="store_true", help="actually upload (default: dry-run plan)")
     pub.add_argument("--privacy", choices=["public", "unlisted", "private"], default="private",
