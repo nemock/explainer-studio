@@ -652,6 +652,45 @@ export const PaperFootage: React.FC<{fields: any}> = ({fields}) => {
 // No on-screen text — the burned-in caption ("Like and subscribe for more") carries it.
 // fields: {image}
 // ---------------------------------------------------------------------------
+// SketchbookPage — the longform sleep-history visual (AUTHORING-LONGFORM.md §7). One
+// full-bleed 16:9 sketchbook-page image per narration chunk, with a page-length one-way
+// drift (never oscillation) and a gentle dip-to-dark at each page turn. Pass the slide's
+// durationInFrames so the drift spans the whole page regardless of chunk length; the
+// fade windows sit inside it. Deliberately slower and dimmer than every other component:
+// nothing here may pop, bounce, or startle a listener with their eyes half open.
+export const SketchbookPage: React.FC<{fields: any; durationInFrames?: number}> = ({fields, durationInFrames}) => {
+  const frame = useCurrentFrame();
+  const {fps, width} = useVideoConfig();
+  const dur = durationInFrames ?? fields.durFrames ?? 1800;
+  const kbC = {extrapolateLeft: 'clamp' as const, extrapolateRight: 'clamp' as const};
+  // One-way drift across the full page: a whisper of zoom plus a slow slide. Direction
+  // alternates by fields.drift ('in' zooms toward, 'out' pulls away) so an hour of pages
+  // doesn't creep monotonically; each page still moves one way only.
+  const out = fields.drift === 'out';
+  const zoom = interpolate(frame, [0, dur], out ? [1.045, 1.0] : [1.0, 1.045], kbC);
+  const driftX = interpolate(frame, [0, dur], out ? [width * 0.006, 0] : [0, -width * 0.006], kbC);
+  const fadeIn = Math.round(fps * 0.9);
+  const fadeOut = Math.round(fps * 0.9);
+  const opacity = Math.min(
+    interpolate(frame, [0, fadeIn], [0, 1], kbC),
+    interpolate(frame, [dur - fadeOut, dur], [1, 0], kbC),
+  );
+  return (
+    <AbsoluteFill style={{background: '#1d150f'}}>
+      <AbsoluteFill style={{opacity}}>
+        <Img
+          src={staticFile(fields.image)}
+          style={{width: '100%', height: '100%', objectFit: 'cover',
+            transform: `scale(${zoom}) translateX(${driftX}px)`}}
+        />
+        {/* candlelight vignette: keeps frame edges dim and steadies perceived brightness
+            across pages generated with varying exposure */}
+        <AbsoluteFill style={{background: 'radial-gradient(ellipse at 50% 42%, rgba(0,0,0,0) 55%, rgba(20,13,8,0.34) 100%)'}} />
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
 export const PaperCTA: React.FC<{fields: any}> = ({fields}) => {
   const frame = useCurrentFrame();
   const {fps, width} = useVideoConfig();
