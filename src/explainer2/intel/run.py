@@ -35,9 +35,19 @@ def default_queries(topic):
 
 def sweep(intel_dir: Path, queries, per_query=15):
     out = intel_dir / "candidates.json"
-    if _fresh(out):
+    key = intel_dir / "candidates.queries.json"
+    # The cache is keyed on the QUERIES, not just file age (fixed 2026-08-24). It used to
+    # hit on freshness alone, so re-running with different --queries silently returned the
+    # previous search's candidates while intel.json recorded the NEW queries beside them —
+    # a file that misstates where its own finalists came from. Caught on plg module 2, where
+    # a re-run with completely different queries returned a byte-identical finalist list,
+    # "How to cut Shadow Foam" included.
+    same = key.exists() and json.loads(key.read_text()) == list(queries)
+    if _fresh(out) and same:
         _log(f"sweep cached ({out.name})")
         return json.loads(out.read_text())
+    if _fresh(out) and not same:
+        _log("sweep: queries changed since the cached run — re-searching")
     seen, candidates = set(), []
     for q in queries:
         _log(f"search: {q!r}")
@@ -52,6 +62,7 @@ def sweep(intel_dir: Path, queries, per_query=15):
         time.sleep(PAUSE_S)
     candidates.sort(key=lambda c: c.get("view_count") or 0, reverse=True)
     out.write_text(json.dumps(candidates, indent=2))
+    key.write_text(json.dumps(list(queries), indent=2))
     _log(f"sweep: {len(candidates)} unique candidates")
     return candidates
 
@@ -87,6 +98,7 @@ def score_outliers(intel_dir: Path, candidates, max_finalists=12):
     finalists = scored[:max_finalists]
     out.write_text(json.dumps({"scored": scored, "finalist_ids": [f["id"] for f in finalists]},
                               indent=2))
+    key.write_text(json.dumps(sig, indent=2))
     _log(f"outliers: top score {finalists and finalists[0]['outlier_score']}, "
          f"{len(finalists)} finalists")
     return {"scored": scored, "finalist_ids": [f["id"] for f in finalists]}

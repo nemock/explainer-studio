@@ -29,7 +29,7 @@ import {PaperStairs, PaperCompare, PaperSteps, PaperList, PaperBookCTA} from './
 import {TearReveal} from './components/PaperWorld';
 import {DrawLine, Waterfall, Pictograph, Ring, Funnel} from './components/DataViz2';
 import {ReactiveStrip, Waveform} from './components/Audio';
-import {PaperAtom, ElementStat, DiscoveryCard, PeriodicSlot, PaperWord, PaperFire, PaperProp, PaperFootage, PaperCTA, PaperMolecule} from './components/Chem';
+import {PaperAtom, ElementStat, DiscoveryCard, PeriodicSlot, PaperWord, PaperFire, PaperProp, PaperFootage, PaperCTA, PaperMolecule, SketchbookPage} from './components/Chem';
 import {InkProvider, isPaperTheme} from './ink';
 import {WorldProvider} from './components/PaperWorld';
 import {ChibiPresenter} from './components/ChibiPresenter';
@@ -99,6 +99,7 @@ const REGISTRY: Record<string, React.FC<any>> = {
   PaperFootage,
   PaperCTA,
   PaperMolecule,
+  SketchbookPage,
   TalkingScene,
 };
 
@@ -168,7 +169,7 @@ const BRG_CREAM_THEMES = ['brg-deep-dive', 'wte-guide', 'plg-guide'];
 const CIRCUMVENT_CREAM = '#f2ede0';
 
 export const Video: React.FC<VideoProps> = (props) => {
-  const {audio, words, scenes, captionBottomPx, captionFontSize, audioFrom, width, height, theme, captionAccent, presenter} = props;
+  const {audio, words, scenes, captionBottomPx, captionFontSize, audioFrom, width, height, theme, captionAccent, showCaptions, presenter} = props;
   // Paper worlds: 'nemock-deep-dive' (Dave's deep dives) and 'cut-bond' (Cut & Bond).
   // Everything else ('midnight', the ISO 14971 series) keeps the navy brand.
   const paper = isPaperTheme(theme);
@@ -227,7 +228,7 @@ export const Video: React.FC<VideoProps> = (props) => {
         );
       })}
       {audio && !paper ? <ReactiveStrip audio={audio} audioFrom={audioFrom || 0} /> : null}
-      <Captions words={words} bottomPx={captionBottomPx} fontSize={captionFontSize} theme={theme} accentColor={captionAccent} />
+      {showCaptions !== false ? <Captions words={words} bottomPx={captionBottomPx} fontSize={captionFontSize} theme={theme} accentColor={captionAccent} /> : null}
       {/* On-screen source citations (operator 2026-08-12). Mounted here, NOT per
           component, so every slide type is covered and the caption clearance is
           reasoned about in one place. See components/SourceLine.tsx. */}

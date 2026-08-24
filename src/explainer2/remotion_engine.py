@@ -989,6 +989,10 @@ def build_spec(sp):
         "theme": sp.data.get("theme", ""),
         # Optional caption active-word color (e.g. an element's category accent).
         "captionAccent": sp.data.get("captionAccent", ""),
+        # Burned-in captions on/off. project.json `"captions": false` disables them —
+        # added for the longform sleep format, where a karaoke bar would fight the
+        # point of the video. Default stays on for every existing project.
+        "showCaptions": bool(sp.data.get("captions", True)),
         # Chibi presenter layer (None when off) — see _assign_chibi.
         **({"presenter": presenter} if presenter else {}),
         "_warnings": warnings,
@@ -1140,12 +1144,19 @@ def _apply_music(sp, out, log):
         return None
     gain = float(sp.data.get("music_gain", 0.12))
     tmp = out.with_suffix(".music.mp4")
-    fc = (f"[1:a]aloop=loop=-1:size=2000000000,volume={gain},"
+    # Loop the bed at the DEMUXER (-stream_loop), not with the aloop filter: aloop
+    # buffers `size` samples in memory to replay them, which is fine for a 3-minute
+    # shorts bed but blew up with "Error while filtering: Invalid argument" on the
+    # first longform render (66-minute bed, ~190M samples/channel) — caught
+    # 2026-08-24 on alchemy ep1, where the mux died at 58:15 after a completed
+    # 2.5-hour render. -stream_loop replays the input itself, buffers nothing, and
+    # behaves identically for short beds.
+    fc = (f"[1:a]volume={gain},"
           f"aformat=sample_rates=48000:channel_layouts=stereo[bed];"
           f"[0:a][bed]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[mix];"
           f"[mix]alimiter=limit=0.84:level=false[a]")
     ff = shutil.which("ffmpeg") or "ffmpeg"
-    cmd = [ff, "-hide_banner", "-y", "-i", str(out), "-i", str(mp),
+    cmd = [ff, "-hide_banner", "-y", "-i", str(out), "-stream_loop", "-1", "-i", str(mp),
            "-filter_complex", fc, "-map", "0:v", "-map", "[a]",
            "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
            "-movflags", "+faststart", "-shortest", str(tmp)]

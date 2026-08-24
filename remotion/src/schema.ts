@@ -45,6 +45,8 @@ export const videoSchema = z.object({
   // Optional caption active-word color (e.g. the element's category accent). Empty ->
   // the theme default (navy: green, paper: coral).
   captionAccent: z.string().default(''),
+  // Burned-in captions on/off (project.json `captions: false`; longform sleep videos).
+  showCaptions: z.boolean().default(true),
   // Chibi presenter layer (operator directive 2026-08-07). charHeightFrac is the
   // CHARACTER's height as a fraction of frame height (brand spec: 0.18-0.22), not the
   // pose canvas — the canvas carries transparent padding and a common foot baseline.
