@@ -80,6 +80,17 @@ conflict for the operator. Do not skip steps because they seem obvious.
    ships saying the old ones. If a line must change after recording, the segment
    must be RE-RECORDED. `explainer2 media` now enforces this: it refuses to run,
    writes `BLOCKED.md` naming the stale segments, and exits non-zero (§7a).
+9. **Visual QA Reads previews, never full-res renders (2026-08-25).** Before
+   Reading ANY rendered image for verification — a `remotion still` frame, an
+   extracted post-render frame, a thumbnail, a cutout — downscale it first with
+   `python3 tools/frame_preview.py <src.png>` (writes `previews/<stem>_preview.jpg`
+   beside the source, ≤800 px) and Read the preview JPEG. Full-res PNGs are
+   pipeline inputs only. Why: each full-res Read embeds 1–3 MB of base64 in the
+   session transcript; over a long run those Reads made up ~85% of a 172 MB
+   transcript and OOM'd the desktop app (13+ GB RAM, 2026-08-25). An 800 px
+   preview answers every QA question (layout, legibility, annotation landing,
+   color); only if it surfaces a suspected pixel-level defect, crop the region
+   first and preview the crop — still never Read the full-res original.
 
 ## Environment
 
@@ -88,6 +99,13 @@ conflict for the operator. Do not skip steps because they seem obvious.
 - Projects: `projects/<date>_<slug>/` under the repo root.
 - Talk-time library (operator's voice): pass
   `--library /Volumes/Casima/claudeCode/make_money/talk_time` to `talktime`.
+- **Session hygiene (2026-08-25): one session per video/module/episode.** Start
+  a FRESH Claude session for each new video (or masterclass episode), and
+  archive the session once that module ships. Week-spanning sessions accumulate
+  every image ever Read into one transcript file (140–170 MB observed), which
+  the desktop app re-parses whole on open — the other half of the RAM blowup
+  hard rule 9 addresses. State lives in the project dir + PLAYBOOK.md, not the
+  conversation, so a fresh session loses nothing.
 
 ## Content types (canonized 2026-07-06 — pick ONE before scaffolding)
 
@@ -367,7 +385,9 @@ deck/mux stages) and needs the Node toolchain (`npm install` in `remotion/`). Pa
 suspends — so always split it: light stages inline, then the detached `render`.
 Then read the QA warnings in the results
 JSON and fix what is fixable (deck pacing, dead air) — at most ONE re-render
-cycle.
+cycle. When you extract frames from the finished render to eyeball the
+slide-type mix, run each extracted frame through `tools/frame_preview.py` and
+Read the preview JPEGs, never the full-res frames (hard rule 9).
 
 **Render robustness (learned the hard way on #34, then #10).** A deep-dive
 render exceeds the Bash 10-min cap, and a render interrupted mid-encode leaves a

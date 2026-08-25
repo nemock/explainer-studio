@@ -134,7 +134,9 @@ anything non-linear. Authored as pure data:
 - **`motion-lab` fixture — SHIPPED** as `remotion/motion-lab.json` (a props file for
   the existing parametric Video composition, not a separate comp):
   `npx remotion still src/index.ts Video out.png --props=motion-lab.json --frame=N
-  --public-dir=<dir with staged doodle__*.png>`. Check frames 80/170/250/350.
+  --public-dir=<dir with staged doodle__*.png>`. Check frames 80/170/250/350 —
+  Read them as `tools/frame_preview.py` previews, never the full-res PNGs
+  (SKILL hard rule 9, 2026-08-25).
 - **Playbook updates — SHIPPED**: motion-playbook §2C (Schematic), §2H (annotation
   layer + doodles + license boundary), §5 (the implemented sync contract, deck.json
   as the authored artifact), §6 (component map); deck-playbook §2 (`schematic`),

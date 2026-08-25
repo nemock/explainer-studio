@@ -128,6 +128,12 @@ before the booth; validate). On top of that:
    viewer should feel the format snap into place. Record series-standing
    decisions (accent color, thumbnail layout, structure quirks) in the series
    CLAUDE.md the first time they're made; never re-decide per episode.
+6. **One session per episode (2026-08-25).** Run each episode in a FRESH
+   Claude session and archive it when the episode ships — never let a session
+   span multiple episodes or weeks. Long-lived sessions accumulate every image
+   ever Read into one 100+ MB transcript that OOMs the desktop app on open
+   (SKILL "Session hygiene"). The series outline, series CLAUDE.md, and each
+   project dir carry all cross-episode state; a fresh session loses nothing.
 
 ## 5. Length and depth
 

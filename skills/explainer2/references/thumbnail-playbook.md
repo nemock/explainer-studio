@@ -339,6 +339,11 @@ as one thumbnail, which defeats the experiment. Keep the cutout files as
 
 ## 7. Self-QA checklist
 
+Run every visual check below on a downscaled preview, not the 1280×720
+original: `python3 tools/frame_preview.py <thumb.png>` then Read the JPEG it
+prints (SKILL hard rule 9 — full-res Reads bloat the session transcript). An
+800 px preview is MORE honest for the squint test anyway.
+
 - [ ] 1280×720; reads at 120 px wide (squint test: headline + face legible).
 - [ ] ≤ 6 headline words, ≤ 2 bands; headline promise == title promise.
 - [ ] Payoff words accented green; brand red/green/navy intact.
@@ -358,7 +363,7 @@ red keyword bands, white sub with green accent) but is **prop-driven**, so it re
 same `brand.ts` as the video and the thumbnail is a visual sibling of the render.
 
 - Props: `{bands[], sub, accent[], cutout, mirror, innerHot, bandSize}`.
-- Render each: `cd remotion && npx remotion still src/index.ts Thumbnail <out.png> --props=<variant.json> --public-dir=<thumbnails dir>` (the cutout PNG lives in that public dir, referenced by `staticFile`).
+- Render each: `cd remotion && npx remotion still src/index.ts Thumbnail <out.png> --props=<variant.json> --public-dir=<thumbnails dir>` (the cutout PNG lives in that public dir, referenced by `staticFile`). To check the result, Read a `tools/frame_preview.py` preview of it, never the full-res PNG (SKILL hard rule 9).
 - The matting preprocess is unchanged: `cutout.py` (only if the selfie isn't already keyed — **check the alpha first; an operator-supplied transparent PNG is preferred, don't re-segment it**) then `clean_matte.py`.
 - **Always trim the cutout to its alpha bbox** — `clean_matte.py --trim` is now the default. A wide transparent PNG with the subject mid-canvas otherwise renders dead-centre under the headline (caught on #12); trimming lets the template anchor the subject to the right.
 - The HTML + `html2png.py` path (§2/§6) remains a valid fallback.

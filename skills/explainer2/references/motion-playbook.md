@@ -633,7 +633,10 @@ cue count, and PASS/FAIL per rule above. Fix fails before rendering.
 - [ ] Figures trace to wiki/intel; no invented numbers; fair-use docs cited.
 - [ ] Performance within M3/16GB (`OffthreadVideo` for clips; modest concurrency). *Footage
       is the exception — it uses `<Video loop>` so short B-roll loops; see §E.*
-- [ ] One-frame `npx remotion still` check on the key frames before the full render.
+- [ ] One-frame `npx remotion still` check on the key frames before the full render —
+      then Read the downscaled preview (`python3 tools/frame_preview.py <still.png>`),
+      never the full-res still (SKILL hard rule 9: full-res Reads bloat the
+      session transcript and OOM the desktop app).
 - [ ] **Sample the LAST frame of every scene that reveals items over time**, not a
       midpoint — steps, list, compare, schematic, anything narration-cued. A row sized
       for n items is at its widest when the nth lands, and a camera move is at its
@@ -649,7 +652,9 @@ cue count, and PASS/FAIL per rule above. Fix fails before rendering.
    visual budget.
 2. For each script segment, choose a component from §2 via the §3 content→vocabulary map.
 3. Write `motion.json` (DATA — components + fields + sync), 1:1 with the script.
-4. Still-check the key frames (`npx remotion still <comp> --frame=N`).
+4. Still-check the key frames (`npx remotion still <comp> --frame=N`), then
+   inspect via `tools/frame_preview.py` — Read the preview JPEG, not the
+   full-res still (SKILL hard rule 9).
 5. Render via the Remotion engine (render-lock + detached, SKILL §7).
 6. QA against §7; fix; at most one re-render cycle.
 
@@ -662,6 +667,7 @@ cue count, and PASS/FAIL per rule above. Fix fails before rendering.
 - Use `<Sequence from/durationInFrames>` for timing (`layout="none"` for inline content).
 - `calculateMetadata` for data-driven duration/dimensions/props; **Zod** for typed params.
 - Fonts via `@remotion/google-fonts`. Preview in `npx remotion studio`; single-frame
-  sanity via `npx remotion still`.
+  sanity via `npx remotion still` (inspect the still through `tools/frame_preview.py`
+  per SKILL hard rule 9 — never Read the full-res PNG).
 - Sub-rules available in the `remotion` skill (load on demand): transitions, audio-
   visualization, lottie, 3d, maps, text-animations, timing, captions, videos.
