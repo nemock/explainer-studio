@@ -43,6 +43,19 @@ are single-vendor and unverified — don't quote figures.
 - **One open loop, and pay it off.** An unresolved loop reads as wasted time.
 - **Length is a metric trade-off, not "shorter is better":** ~15–30s maximizes
   completion %; ~30–60s tends to win more total reach. Optimize % watched first.
+- **MEASURE the length before rendering; never estimate it from word counts.** Body =
+  the cut's segment spans from `work/segments.json`; hook and outro = the actual
+  duration of `voiceover/short_<slug>_{hook,outro}.wav`, which exist by then because the
+  booth records them with the script. Estimating hook/outro from words put module 2's
+  first cut at 58s against a real 63.5s — the error lands entirely in the direction that
+  breaks the band, because a written line always reads faster than it is spoken.
+- **When a cut runs long, look first for a body segment the recorded outro already
+  says.** Four of the six Operator's Guide cuts were over 60s, and in every case the
+  fix was one segment whose point the outro repeats in compressed form — module 2's
+  `ninety-seconds` enumerated the same four decisions in seg 13 and again in the outro,
+  word for word. Dropping it took the cut from 63.5s to 41.8s and removed a literal
+  repetition. That is the cheapest trim available: it costs nothing the viewer hears
+  twice, and it needs no re-recording.
 
 **The outro / loop (our default = loop).**
 - **Never signal the end** — no "thanks for watching," recap, or goodbye (same
