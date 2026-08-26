@@ -3,7 +3,7 @@
 The LLM generation stages (research/script/deck authoring) are done by the
 /explainer skill, NOT here. This CLI never calls an LLM (PRD §5)."""
 import argparse, json, re, sys, time
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 from .project import Project, ASPECTS
@@ -228,6 +228,25 @@ def cmd_scaffold(args):
         else:
             brand_note = f"brand '{args.brand}' NOT FOUND in ./brand/ or ~/.claude/explainer-brands/ — skipped"
     (out / "project.json").write_text(json.dumps(proj, indent=2))
+    # ORIGINATING SENTINEL (2026-08-25). Between this scaffold and the routine's
+    # booth-open step there is a 5-10 minute authoring window in which the project
+    # already looks bookable to the launchd recording watcher: today's date in the
+    # dir name, a script.json on disk, no README yet. The watcher's NOT_OPEN safety
+    # net fired inside that window and opened a booth on a HALF-AUTHORED script,
+    # then the routine's own Step 7 popped a second Chrome tab on top of it (FTT
+    # 2026-08-25 09:15:42, MMT 2026-08-24 09:23:02, and four earlier shows). Drop a
+    # sentinel here so the watcher knows a live run still owns the project; the
+    # launcher clears it the moment the booth is opened for real. It carries a
+    # timestamp because the watcher expires it — a run that dies mid-authoring must
+    # not disable the safety net forever. See
+    # make_money/routine_changes/2026-08-25-booth-originating-sentinel.md
+    (out / "work").mkdir(exist_ok=True)
+    (out / "work" / "originating.json").write_text(json.dumps({
+        "written_by": "explainer2 scaffold",
+        "written_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "meaning": "a run is authoring this project; the recording watcher must not "
+                   "open a booth for it yet. Cleared by tools/launch_booth.py on open.",
+    }, indent=2))
     try:
         catalog_updated = _refresh_catalog_counter(args.outdir)
     except Exception:

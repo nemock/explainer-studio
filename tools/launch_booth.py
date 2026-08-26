@@ -195,6 +195,21 @@ def stop():
         print(f"no booth running on {BASE_PORT}-{max(ALL_PORTS)}")
 
 
+def _clear_originating(proj):
+    """Retire the scaffold's originating sentinel (2026-08-25).
+
+    `explainer2 scaffold` drops work/originating.json to tell the launchd recording
+    watcher that a live run is still AUTHORING this project, so the watcher's
+    NOT_OPEN safety net must not open a booth for it yet. Reaching this launcher IS
+    the routine saying it has finished authoring, so clear it on every path that
+    opens or finds a booth. Never fails a launch: a missing file is the normal case
+    for hand-made projects that never had a sentinel."""
+    try:
+        (proj / "work" / "originating.json").unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
 def _pop_tab(url):
     """Open the booth URL as a tab in the operator's Chrome via macOS `open`.
     Fire-and-forget: no automation, no tab control — the OS hands the URL to
@@ -246,7 +261,12 @@ def start(project, open_tab=True):
         _ctype = json.loads((proj / "project.json").read_text()).get("content_type", "")
     except Exception:
         _ctype = ""
-    if _ctype == "deepdive" and not (proj / "shorts" / "plan.json").exists():
+    # masterclass added 2026-08-24. The guard was scoped to deepdive only, so it stayed
+    # silent for BOTH plg-guide episodes and the operator recorded the main script twice
+    # without the Short hooks, needing a second sitting each time — the exact failure the
+    # preflight was built for in the first place. A series episode ships Shorts like any
+    # deep dive; the content type was never the thing that mattered.
+    if _ctype in ("deepdive", "masterclass") and not (proj / "shorts" / "plan.json").exists():
         print("WARNING: no shorts/plan.json — this booth will show the main script ONLY.")
         print("         The native Short hooks/outros will NOT be recordable in this session.")
         print("         Author shorts/plan.json first (shorts-playbook) unless you intend no Shorts.")
@@ -255,6 +275,7 @@ def start(project, open_tab=True):
     # but still pop the tab: re-running the launcher means "get me the booth".
     for cand in _booth_ports_in_use():
         if _booth_serves_project(cand, proj):
+            _clear_originating(proj)
             print(f"booth already open for this project -> http://127.0.0.1:{cand}/")
             if open_tab:
                 _pop_tab(f"http://127.0.0.1:{cand}/")
@@ -264,6 +285,7 @@ def start(project, open_tab=True):
     # recorder clears it too, but do it here to close the launch->ready window.
     (proj / "work").mkdir(exist_ok=True)
     (proj / "work" / "record_done.json").unlink(missing_ok=True)
+    _clear_originating(proj)
 
     pref = _preferred_port(proj)
     ordered = [pref] + [p for p in ALL_PORTS if p != pref]

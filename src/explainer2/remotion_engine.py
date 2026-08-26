@@ -436,6 +436,34 @@ def _cta_fallback(theme, log=None):
     return headline
 
 
+_CVG_CONTENT_FIELDS = ("value", "label", "term", "definition", "quote", "word",
+                       "before", "after", "end_label", "sub", "title")
+
+
+def _cvg_salvage(slide):
+    """Last-resort text for a Cvg slide that would otherwise render empty. Sweeps the
+    content-bearing deck fields and the common list containers, in authoring order, and
+    returns a single printable string. Deliberately dumb: it exists so an unhandled type
+    degrades to readable type-on-a-set instead of a blank frame, not to lay anything out."""
+    parts = []
+    for f in _CVG_CONTENT_FIELDS:
+        v = slide.get(f)
+        if v is None:
+            continue
+        v = str(v).strip()
+        if v and v not in parts:
+            parts.append(v)
+    for row in (slide.get("items") or slide.get("steps") or slide.get("stats")
+                or slide.get("stages") or slide.get("events") or []):
+        if isinstance(row, dict):
+            row = " ".join(str(row.get(k)).strip() for k in ("label", "date", "title", "value")
+                           if row.get(k) is not None)
+        row = str(row).strip()
+        if row and row not in parts:
+            parts.append(row)
+    return " ".join(parts).strip()
+
+
 def _circumvent_scene(slide, t, kicker, accent, headline):
     """CIRCUMVENT style map. Every deck type resolves to a Cvg* scene so no slide can
     fall through to a card. `set`, `props`, `anchor`, `band` and `align` pass straight
@@ -499,6 +527,58 @@ def _circumvent_scene(slide, t, kicker, accent, headline):
         return "CvgReframe", {**common, "before": slide.get("before", "") or headline,
                               "strike": slide.get("strike", ""),
                               "after": slide.get("after", "")}
+    # ring / progress: FOURTH type the catch-all swallowed (MMT 2026-08-24 s9 — 13.6s of
+    # empty corridor while Dave narrated "about twelve percent of eligible patients
+    # currently get a thrombectomy", the number the whole story was built on). The type is
+    # legal in both other families (PaperCounter line ~384, Ring line ~664), so nothing
+    # upstream complained. The `%` suffix matches PaperCounter's `suffix: "%"`, and is
+    # skipped when the author already wrote one.
+    if t in ("ring", "progress"):
+        raw = slide.get("value")
+        value = "" if raw is None else str(raw).strip()
+        if value and not value.endswith("%"):
+            value = f"{value}%"
+        label = str(slide.get("label") or "").strip()
+        text = " ".join(x for x in (value, label) if x)
+        return "CvgScene", {**common, "headline": text or headline,
+                            "accent": accent or ([value] if value else [])}
+    # The remaining classic data-viz types. Each carries its content in fields CvgScene
+    # never prints, so each was a blank card waiting for the deck that reached for it.
+    # Composed into components the Cvg family already has rather than left to fall through.
+    if t == "pictograph":
+        filled, total = slide.get("filled"), slide.get("total")
+        head = f"{filled} of {total}" if filled is not None and total is not None else ""
+        label = str(slide.get("label") or "").strip()
+        text = " ".join(x for x in (head, label) if x)
+        return "CvgScene", {**common, "headline": text or headline,
+                            "accent": accent or ([head] if head else [])}
+    if t in ("funnel", "waterfall", "timeline", "diagram", "trend", "ranked"):
+        rows = (slide.get("stages") or slide.get("events") or slide.get("bars")
+                or slide.get("points") or slide.get("steps") or [])
+        items = []
+        for r in rows:
+            if isinstance(r, dict):
+                left = str(r.get("label") or r.get("date") or r.get("title") or "").strip()
+                right = str(r.get("value") if r.get("value") is not None else "").strip()
+                items.append(": ".join(x for x in (left, right) if x))
+            elif r is not None:
+                items.append(str(r).strip())
+        items = [i for i in items if i]
+        if t == "waterfall":
+            for edge in ("start", "end"):
+                e = slide.get(edge) or {}
+                if isinstance(e, dict) and (e.get("label") or e.get("value") is not None):
+                    row = ": ".join(x for x in (str(e.get("label") or "").strip(),
+                                                str(e.get("value") if e.get("value") is not None else "").strip()) if x)
+                    items.insert(0, row) if edge == "start" else items.append(row)
+        if items:
+            return "CvgList", {**common, "items": items,
+                               "title": slide.get("title", ""), "ordered": False}
+        tail = str(slide.get("end_label") or slide.get("label") or "").strip()
+        return "CvgScene", {**common, "headline": tail or headline}
+    if t == "keepcard":
+        return "CvgScene", {**common, "headline": slide.get("label") or headline,
+                            "subkicker": slide.get("sub") or common["subkicker"]}
     if t == "quote":
         return "CvgScene", {**common, "headline": slide.get("quote") or headline,
                             "attrib": slide.get("attribution") or slide.get("source", "")}
@@ -510,6 +590,19 @@ def _circumvent_scene(slide, t, kicker, accent, headline):
             (p.get("image") for p in (slide.get("props") or []) if isinstance(p, dict) and p.get("image")), None)
         return "CvgCta", {**common, "props": [], "mark": mark}
     # statement / hook / payoff / highlight / anything else: type on the set.
+    #
+    # LAST RESORT (2026-08-24). Enumerating branches has now failed four times in the same
+    # way — stat, statgrid, reframe, ring — because a type is legal upstream, carries its
+    # content in fields CvgScene does not print, and renders as a set with a kicker and
+    # nothing else. Every fix so far added the one missing branch and left the shape of the
+    # bug intact. This net closes the shape: if the slide would print NOTHING, salvage
+    # whatever authored content it has rather than emitting a blank card. Adding a proper
+    # branch above is still the right fix for any type that deserves real layout; this only
+    # guarantees the failure is legible instead of silent.
+    if not str(headline).strip():
+        salvage = _cvg_salvage(slide)
+        if salvage:
+            return "CvgScene", {**common, "headline": salvage}
     return "CvgScene", common
 
 

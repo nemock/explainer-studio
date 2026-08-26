@@ -204,6 +204,51 @@ def candidates(show):
     return [p for _, p in sorted(out, reverse=True)]
 
 
+# How long the scaffold's originating sentinel suppresses the NOT_OPEN safety net.
+# Authoring a booth show runs 5-10 minutes (research, humaner, deck); 45 minutes is
+# the same stale window launch_booth --claim already uses, so the two agree. A run
+# that dies mid-authoring costs at most one expiry plus one 5-minute cycle before
+# the safety net takes over.
+ORIGINATING_TTL_S = 45 * 60
+
+
+# The three files a run authors before it opens a booth. All six watched shows write
+# the same set (verified 2026-08-25 across ig_carousel, Monday MedTech, FTT, WSC, TTD,
+# FMF outputs), and `explainer2 validate` needs all three later anyway.
+AUTHORED_FILES = ("script.json", "deck.json", "meta.json")
+
+
+def unauthored(proj):
+    """Which of AUTHORED_FILES are missing — empty tuple means the project is bookable.
+
+    Second half of the 2026-08-25 fix, and the one that covers the crash case the
+    originating sentinel cannot: once the sentinel's 45 minutes expire, a project
+    abandoned mid-authoring looks exactly like a healthy one whose routine forgot to
+    open the booth. The safety net would then open a booth on a stub or half-written
+    script.json and ask Dave to record it. Requiring the full authored set means the
+    net only ever fires on work a run actually finished.
+    Origin: make_money/routine_changes/2026-08-25-booth-originating-sentinel.md"""
+    return tuple(f for f in AUTHORED_FILES if not (proj / f).exists())
+
+
+def originating_hold(proj):
+    """(still_authoring, age_seconds) for a project's work/originating.json.
+
+    `explainer2 scaffold` writes the sentinel and tools/launch_booth.py clears it the
+    moment the booth is opened for real, so its presence means a live run owns the
+    project and has NOT reached its booth step yet. Opening a booth underneath that
+    run gives the operator a second Chrome tab and, worse, a booth built from a
+    half-authored script.json (FTT 2026-08-25, MMT 2026-08-24, and four earlier
+    shows). Expire it so a crashed run cannot disable the safety net for good.
+    Origin: make_money/routine_changes/2026-08-25-booth-originating-sentinel.md"""
+    f = proj / "work" / "originating.json"
+    try:
+        age = time.time() - f.stat().st_mtime
+    except OSError:
+        return False, 0            # no sentinel: nothing owns this project
+    return age < ORIGINATING_TTL_S, int(age)
+
+
 def booth(cfg, verb, proj):
     """Run launch_booth.py <verb-ish>; returns (first_token, full_output)."""
     cmd = [cfg["python"], cfg["launch_booth"]] + verb + [str(proj)]
@@ -422,8 +467,20 @@ def run(cfg, dry):
                 break
             if state == "NOT_OPEN":
                 today = date.today().isoformat()
-                if proj.name.startswith(today) and (proj / "script.json").exists():
-                    if dry:
+                if proj.name.startswith(today):
+                    held, age = originating_hold(proj)
+                    missing = unauthored(proj)
+                    if held:
+                        log(cfg, f"{show['id']}: {proj.name} NOT_OPEN but a run is still "
+                                 f"authoring it (originating.json, {age // 60}m old) "
+                                 f"— leaving the booth to the routine")
+                    elif missing:
+                        log(cfg, f"NOT-READY {show['id']}: {proj.name} NOT_OPEN, no "
+                                 f"originating hold, but missing {', '.join(missing)} "
+                                 f"— a booth here would ask Dave to read a half-authored "
+                                 f"script, so none was opened. A run died mid-author; "
+                                 f"finish or delete the project.")
+                    elif dry:
                         log(cfg, f"[DRY-RUN] would relaunch booth for {show['id']}: {proj}")
                     else:
                         booth(cfg, [], proj)  # full launcher: detached booth + Chrome tab pop
