@@ -588,6 +588,14 @@ cue count, and PASS/FAIL per rule above. Fix fails before rendering.
 - [ ] Performance within M3/16GB (`OffthreadVideo` for clips; modest concurrency). *Footage
       is the exception — it uses `<Video loop>` so short B-roll loops; see §E.*
 - [ ] One-frame `npx remotion still` check on the key frames before the full render.
+- [ ] **Sample the LAST frame of every scene that reveals items over time**, not a
+      midpoint — steps, list, compare, schematic, anything narration-cued. A row sized
+      for n items is at its widest when the nth lands, and a camera move is at its
+      furthest, so a scene that overflows the frame at full count looks perfect at 60%
+      through. Both of module 2's four-card `steps` slides shipped with card one cut
+      mid-word ("hich problems we") past a mid-scene spot check that passed, and module 1
+      had been uploaded with the same clip for six days ("Own the / oad map"). The
+      midpoint is the one frame guaranteed not to show this class of bug.
 
 ## 8. Authoring procedure
 
