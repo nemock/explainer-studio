@@ -645,8 +645,8 @@ Flow:
    posts:[{platform, caption, url_comment?, extra?}]}` (`extra` carries
    platform-specific fields — `mediaType:"reel"` for IG and Facebook;
    `title`/`privacyStatus`/`shouldNotifySubscribers`/`isMadeForKids` for YouTube.
-   Facebook posts to the FWF Page; its `pageId` defaults in `promote.py`, so you
-   don't set it in the plan).
+   Facebook posts to the FWF Page; its `pageId` is resolved from the routing table,
+   so you don't set it in the plan).
 3. `bin/explainer2 promote post --plan plan.json` → **dry-run by default**: prints
    the exact Blotato payloads. Review them (this is the confirm step).
 4. `... promote post --plan plan.json --fire` → publishes (uploads the mp4 once,
@@ -656,9 +656,12 @@ Flow:
    regenerates `PROMOTIONS.md`. Ledger of record: `<projects>/../promotions.json`.
 
 Notes: Blotato key from `BLOTATO_API_KEY` env, else the blotato MCP config —
-never hardcode it. Account IDs default to the operator's channels
-(`promote.py` `DEFAULT_ACCOUNTS`); a plan may override per platform; if a post
-401s, re-verify via the blotato MCP `list_accounts`. A video must have a
+never hardcode it. **Account and Page ids are never written here or in the plan.**
+They resolve from brand `fwf` in the post queue's routing table,
+`make_money/post_queue/targets.json`, which is the only place they are allowed to
+live — `promote.py` kept its own copy until 2026-08-26 and it went stale. If a post
+401s or is held for a disconnected account, fix the row in `targets.json`. A video
+must have a
 resolvable URL (meta `youtube_url`, else a youtu.be link in meta/PLAYBOOK) AND
 cut Shorts to be promotable — `status` flags what isn't (e.g. backfill a missing
 `youtube_url`).

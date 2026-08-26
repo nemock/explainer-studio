@@ -266,17 +266,17 @@ def write_markdown(projects_dir, ledger=None):
 
 API_BASE = "https://backend.blotato.com/v2"
 
-# Connected Blotato account IDs (Dave's channels, per memory 2026-06-19). Verify
-# with the Blotato MCP `list_accounts` if posts 401 — IDs can change. A plan may
-# override any of these per platform via {"account_id": "..."}.
-DEFAULT_ACCOUNTS = {
-    "twitter": "16563", "bluesky": "46447", "threads": "6021",
-    "instagram": "41992", "youtube": "34001", "facebook": "37963",
-}
-# Facebook posts to a Page, not the profile: Blotato requires the Page's id
-# (a subaccount of account 37963) on the post target. "Founders Who Finish" Page,
-# connected 2026-06-22. Verify with the Blotato MCP `list_accounts` if posts 400.
-DEFAULT_FACEBOOK_PAGE_ID = "1216556091535160"
+# Blotato account and Page ids deliberately do NOT live in this file. The post queue's
+# routing table owns them and this module reads it. Keeping a local copy is what went
+# wrong: the Bluesky connection was remade on 2026-08-19 and its id changed 46447 ->
+# 74904, the table was updated, this dict was not, and every Bluesky post it built would
+# have been held with "No Bluesky account connected" (fixed 2026-08-26). A plan entry can
+# still override one platform via {"account_id": "..."} — see post-direct in run().
+TARGETS = "/Volumes/Casima/claudeCode/make_money/post_queue/targets.json"
+# Everything explainer2 promotes goes out as Founders Who Finish, so a row for this brand
+# wins over the platform's generic "any" row. That is how Facebook picks up its Page id
+# (the "Founders Who Finish" Page — Meta's API cannot post to a personal profile).
+BRAND = "fwf"
 # Platforms that support a threaded reply (used to attach the clickable URL).
 THREAD_REPLY = {"twitter", "bluesky", "threads"}
 # Platforms we NEVER attach video to — the link goes in the post body instead.
@@ -288,6 +288,24 @@ LINK_ONLY = {"bluesky"}
 # X/Twitter free-account native-video cap on this account. Over this, the Short
 # is replaced by a text post carrying the video URL.
 TWITTER_VIDEO_MAX_S = 120
+
+
+def _routing(platform):
+    """The queue's routing row for one platform — {account_id, page_id, ...} — or {}.
+
+    Read fresh on every call. A cached or copied value is precisely the thing that went
+    stale, and the table is a few KB."""
+    try:
+        rows = json.loads(Path(TARGETS).read_text())
+    except Exception as e:
+        raise RuntimeError(f"cannot read the post-queue routing table at {TARGETS} "
+                           f"({type(e).__name__}: {e}) — it owns every Blotato account id")
+    hit = {}
+    for want in ("any", BRAND):
+        for r in rows:
+            if r.get("brand") == want and r.get("platform") == platform:
+                hit = r
+    return hit
 
 
 def probe_duration(path):
@@ -360,6 +378,7 @@ def _build_post_body(entry, media_urls, scheduled, duration_s=None):
     never happened: Blotato accepts the post and the platform rejects it minutes
     later, after the run has ended."""
     platform = entry["platform"]
+    route = _routing(platform)
     link_only = platform in LINK_ONLY or (
         platform == "twitter" and duration_s is not None and duration_s > TWITTER_VIDEO_MAX_S
     )
@@ -381,14 +400,17 @@ def _build_post_body(entry, media_urls, scheduled, duration_s=None):
     if platform == "youtube":
         target.update(extra)
     elif platform == "facebook":
-        page = extra.pop("pageId", None) or DEFAULT_FACEBOOK_PAGE_ID
+        page = extra.pop("pageId", None) or route.get("page_id")
         if page:
             target["pageId"] = page
         content.update(extra)  # e.g. mediaType=reel
     else:
         content.update(extra)
-    body = {"post": {"accountId": entry.get("account_id") or DEFAULT_ACCOUNTS.get(platform),
-                     "content": content, "target": target}}
+    account = entry.get("account_id") or route.get("account_id")
+    if not account:
+        raise RuntimeError(f"no Blotato account for {platform!r}: {TARGETS} has no row for "
+                           f"brand {BRAND!r} or 'any', and the plan set no account_id")
+    body = {"post": {"accountId": account, "content": content, "target": target}}
     if scheduled == "next_free_slot":
         body["post"]["useNextFreeSlot"] = True
     elif scheduled:
