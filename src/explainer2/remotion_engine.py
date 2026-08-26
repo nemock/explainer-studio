@@ -1388,8 +1388,21 @@ def _render_one(sp, log=print, frames=None, out=None):
     _stage_chibi(spec, public, log)
     # CTA scenes show the brand book cover unless the project opts out with
     # "cta_book": false in project.json (e.g. masterclass modules use no book cover).
-    # wte-guide never shows the book: like-and-subscribe is its only CTA (2026-07-29).
-    _cta_book = sp.data.get("cta_book", True) and sp.data.get("theme") != "wte-guide"
+    # Some THEMES forbid it outright, because the no-book rule is a series-standing
+    # branding decision and not a per-project preference. Keep this tuple in step with
+    # the `_NO_STING` tuple below — a theme that wants no wordmark bumper almost always
+    # wants no book cover either, for the same reason.
+    #   wte-guide  2026-07-29 — like-and-subscribe is its only CTA.
+    #   plg-guide  2026-08-26 — same rule, written down in the series outline §6 ("CTA:
+    #     Like-and-subscribe ONLY. No book, no newsletter, no site CTA in the spoken
+    #     script or on any card") and §7 ("no book cover (cta_book: false)"). It was
+    #     enforced by hand in module 1's project.json and module 2 was scaffolded without
+    #     it, so the book cover rendered onto the final card of a series that is
+    #     explicitly not the book brand. A standing decision that only holds when someone
+    #     remembers to retype it into each project file is not a standing decision.
+    _NO_BOOK_CTA = ("wte-guide", "plg-guide")
+    _cta_book = (sp.data.get("cta_book", True)
+                 and sp.data.get("theme") not in _NO_BOOK_CTA)
     if _cta_book and any(s["component"] in ("CTA", "PaperBookCTA") for s in spec["scenes"]):
         bc_dir = REMOTION_DIR.parent / "book_cover"
         bc = next(iter(sorted(bc_dir.glob("*.png"))), None) if bc_dir.exists() else None

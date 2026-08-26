@@ -182,8 +182,35 @@ export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({f
   const areaTop = frameH * 0.17, areaH = frameH - areaTop - reserve;
   const cy = (i: number) => areaTop + (areaH / n) * (i + 0.5);
 
+  // The lateral step is DECORATION, not necessity: cardW is solved so the whole row
+  // fits on screen with an equal margin each side, so every card is already visible and
+  // the camera is only nodding toward the one being spoken. It must therefore never
+  // travel far enough to push the outermost card off the frame — and on the stage plane
+  // (factor 1.0) a pan of d costs exactly d*width of frame, on top of what the zoom and
+  // usePaperPush have already eaten from the margin.
+  //
+  // #55 shipped a fixed 0.3 coefficient. On a four-card row that spends 0.097 of a 0.048
+  // budget, and BOTH four-card steps slides rendered with card 1 clipped mid-word at the
+  // left edge ("hich problems we"). It went unnoticed because the clip only appears once
+  // the LAST card lands — the mid-scene frame a spot check catches looks perfect.
+  // Budget it from the geometry instead, so it stays safe for any n.
+  // Budget against the spring's PEAK, not where it settles. CAM is {damping 13,
+  // stiffness 190}, a damping ratio of ~0.47, so it is underdamped and sails about 19%
+  // past its target before coming back. A budget spent to the settle point is overspent
+  // by a fifth at the moment the eye is most likely to be watching the card move.
+  const CAM_ZOOM = 1.05, PUSH_MAX = 1.025;   // usePaperPush's default, compounding inside the plane
+  const OVERSHOOT = 1.19;                    // exp(-pi*z/sqrt(1-z^2)) for z = 13/(2*sqrt(190))
+  const zoomPeak = 1 + (CAM_ZOOM - 1) * OVERSHOOT;
+  const margin = (cx(0) - cardW / 2) / width;                       // equal on both sides by construction
+  // Spend 60% of what is free, not all of it: a card whose edge lands exactly on the
+  // frame edge is not clipped, but it reads as though it is about to be, which is the
+  // same design smell in a nicer suit.
+  const SPEND = 0.6;
+  const budget = Math.max(0, 0.5 - (0.5 - margin) * PUSH_MAX * zoomPeak) * SPEND;
+  const spread = Math.max(...steps.map((_, i) => Math.abs(cx(i) / width - 0.5)), 1e-6);
+  const panK = Math.min(0.3, budget / (spread * OVERSHOOT));
   const moves: CameraMove[] = n > 3 && !portrait
-    ? steps.slice(1).map((_, i) => ({at: at(i + 1), to: {x: 0.5 + (cx(i + 1) / width - 0.5) * 0.3, zoom: 1.05}}))
+    ? steps.slice(1).map((_, i) => ({at: at(i + 1), to: {x: 0.5 + (cx(i + 1) / width - 0.5) * panK, zoom: CAM_ZOOM}}))
     : [];
   const cam = resolveCamera(frame, fps, moves);
 
