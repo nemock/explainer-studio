@@ -315,9 +315,19 @@ def cmd_media(args):
             # the Remotion engine outputs the final muxed mp4 itself — no deck/mux stages
             if engine == "remotion" and name in ("deck", "mux"):
                 continue
-            # Serialize the memory-heavy capture+encode across every project and
-            # background routine on this Mac (the #10-vs-CVG collision, 2026-06-21).
-            if name in ("render", "mux") and lock is None:
+            # Serialize the memory-heavy stages across every project and background
+            # routine on this Mac (the #10-vs-CVG collision, 2026-06-21).
+            # Taken from NARRATE onward (2026-08-26), not from render: the two
+            # torch stages in front of the encode are the real peak. `narrate`
+            # loads Kokoro (media/synth.py) and `align` loads torchaudio MMS_FA plus
+            # the whole narration.wav (media/align.py) — 2.5-3.3 GB apiece. With the
+            # lock starting at `render`, both ran unguarded, so N concurrent jobs
+            # stacked N torch heaps while the lock dutifully serialized the encode
+            # behind them. Four `shorts` jobs peaked at ~12 GB on this 16 GB Mac and
+            # tripped the macOS out-of-memory dialog. Operator directive: a
+            # background render must never make the machine unusable interactively,
+            # even if serializing makes each run take longer.
+            if name in ("narrate", "align", "render", "mux") and lock is None:
                 lock = renderlock.acquire(proj, log=lambda m: _log(proj, m))
             ts = time.time()
             _log(proj, f"START {name}{' (remotion)' if engine == 'remotion' and name == 'render' else ''}")
@@ -418,8 +428,23 @@ def cmd_adlib(args):
 
 
 def cmd_shorts(args):
-    from . import shorts
-    print(json.dumps(shorts.run(args.project_dir, plan_path=args.plan, only=args.only_slug, engine=args.engine), indent=2))
+    # Admission gate FIRST, before `shorts` (and through it torch) is imported:
+    # a refused job must cost nothing. See renderlock.py "job admission control"
+    # for the 2026-08-26 incident this exists to prevent — a forked Claude session
+    # launched two `shorts` jobs per module from each half, and the two on the same
+    # module rendered the identical cut twice while four torch heaps sat resident.
+    # Refuse rather than queue: a waiting process still holds everything it has
+    # already imported, which is the cost we are trying not to pay.
+    claim = renderlock.claim_job(args.project_dir, kind="shorts")
+    if claim is None:
+        return 1
+    try:
+        from . import shorts
+        print(json.dumps(shorts.run(args.project_dir, plan_path=args.plan,
+                                    only=args.only_slug, engine=args.engine), indent=2))
+    finally:
+        renderlock.release(claim)
+    return 0
 
 
 def cmd_assets(args):

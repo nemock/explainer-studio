@@ -200,10 +200,18 @@ def run(parent_dir, plan_path=None, only=None, engine="deck"):
         lock = None
         try:
             if engine == "remotion":
-                # align (cheap) -> Remotion render (heavy, render-locked) -> manifest.
+                # align -> Remotion render -> manifest, ALL under the render lock.
+                # align is NOT cheap, despite the label this comment carried until
+                # 2026-08-26: it loads the torchaudio MMS_FA model plus the whole
+                # narration.wav into tensors (media/align.py) and peaks at 2.5-3.3 GB
+                # per process. Running it in FRONT of the lock let four concurrent
+                # `shorts` jobs sit in align together and peak at ~12 GB on a 16 GB
+                # Mac — macOS threw its out-of-memory dialog while the lock was
+                # correctly holding Remotion to a single render. A lock that guards
+                # the encode but not the peak allocation guards nothing.
                 # Remotion outputs the final muxed mp4 directly (no deck/render/mux).
-                _log(f"{cut['slug']}: align ok " + json.dumps(align.run(sp))[:100])
                 lock = renderlock.acquire(sp, log=_log)
+                _log(f"{cut['slug']}: align ok " + json.dumps(align.run(sp))[:100])
                 rr = remotion_engine.render(sp, log=_log)
                 _log(f"{cut['slug']}: remotion ok {json.dumps(rr)[:140]}")
                 renderlock.release(lock); lock = None
@@ -215,11 +223,15 @@ def run(parent_dir, plan_path=None, only=None, engine="deck"):
                 for name, fn in (("align", align.run), ("deck", deckbuild.run),
                                  ("render", render.run), ("mux", mux.run),
                                  ("manifest", manifest.run)):
-                    # Serialize the memory-heavy capture+encode (16 GB rule) against
-                    # every other render on this Mac — same flock as cmd_media. Held
-                    # per-cut (acquire before render, release after mux) so a long
+                    # Serialize the memory-heavy stages (16 GB rule) against every
+                    # other render on this Mac — same flock as cmd_media. Held
+                    # per-cut (acquire before ALIGN, release after mux) so a long
                     # deep-dive render can interleave between cuts.
-                    if name == "render" and lock is None:
+                    # Acquired at align, not render (2026-08-26): align is the peak
+                    # allocation of the entire pipeline (torch + MMS_FA model + full
+                    # waveform, 2.5-3.3 GB), well above the encode it used to guard.
+                    # Same fix as the remotion branch above — see its comment.
+                    if name == "align" and lock is None:
                         lock = renderlock.acquire(sp, log=_log)
                     r = fn(sp)
                     _log(f"{cut['slug']}: {name} ok {json.dumps(r)[:100]}")

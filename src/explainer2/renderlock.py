@@ -347,6 +347,101 @@ def release(fd):
         pass
 
 
+# ---- job admission control ----------------------------------------------------
+# The flock above serializes STAGES. It does not stop a whole JOB from starting,
+# and on 2026-08-26 that distinction cost a machine. A Claude session forked at
+# 21:11:44Z; both halves stayed live, and 3.5 minutes later each independently ran
+# the same `for mod in (module-02, module-01): Popen(... shorts ...)` launcher.
+# Four detached jobs, two of them on the SAME cut. The render lock did its job
+# perfectly — one render at a time — while four torch heaps (Kokoro + MMS_FA,
+# 2.5-3.3 GB apiece) sat on top of each other and tripped the macOS out-of-memory
+# dialog on a 16 GB Mac. Serializing the work does not help if N copies of the
+# work are resident at once.
+#
+# So: a job claims an admission slot before it does anything expensive. Two gates,
+# both cheap and both fail-safe:
+#   1. PER-PROJECT — one job of a given kind per project directory. This alone
+#      would have blocked the duplicate module-02 launch.
+#   2. MACHINE-WIDE — a ceiling on total live jobs across every project.
+# flock is released by the OS on death (even SIGKILL), so a crashed job never
+# wedges the gate and no stale-pid reaping is needed.
+JOBDIR = "/tmp/explainer-jobs"
+MAX_CONCURRENT_JOBS = 2          # total heavy explainer jobs resident at once
+
+
+def _job_lock_path(project_dir, kind):
+    safe = re.sub(r"[^A-Za-z0-9]+", "_", str(project_dir).strip("/"))[-120:]
+    return os.path.join(JOBDIR, f"{kind}-{safe}.lock")
+
+
+def _live_claims():
+    """Count job lockfiles currently held. A lock we can take is a dead holder's."""
+    live = 0
+    try:
+        names = os.listdir(JOBDIR)
+    except OSError:
+        return 0
+    for name in names:
+        if not name.endswith(".lock"):
+            continue
+        p = os.path.join(JOBDIR, name)
+        try:
+            fh = open(p, "a+")
+        except OSError:
+            continue
+        try:
+            fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            fcntl.flock(fh, fcntl.LOCK_UN)   # nobody held it — stale file, not a job
+        except OSError:
+            live += 1                        # held by a living process
+        finally:
+            fh.close()
+    return live
+
+
+def claim_job(project_dir, kind="shorts", log=print):
+    """Admission slot for one whole heavy job. Returns a file object to hold for
+    the job's lifetime, or None when the job must not start (caller should exit,
+    NOT wait — a waiting process still holds its interpreter and any model it has
+    already imported, which is the thing we are trying to avoid).
+
+    Hold the returned handle in a local that outlives the job; releasing it is
+    `release()`, same as the render lock.
+    """
+    os.makedirs(JOBDIR, exist_ok=True)
+    path = _job_lock_path(project_dir, kind)
+    fh = open(path, "a+")
+    try:
+        fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        fh.close()
+        log(f"REFUSED: a `{kind}` job is already running for {project_dir} "
+            f"(admission lock {path}). Not starting a second one.")
+        return None
+    # Count under a guard so two simultaneous starters cannot both see room.
+    guard = open(os.path.join(JOBDIR, ".admission.guard"), "a+")
+    try:
+        fcntl.flock(guard, fcntl.LOCK_EX)
+        live = _live_claims()          # includes the claim we just took
+        if live > MAX_CONCURRENT_JOBS:
+            release(fh)
+            log(f"REFUSED: {live - 1} heavy explainer job(s) already running "
+                f"(cap {MAX_CONCURRENT_JOBS}). Not starting `{kind}` for "
+                f"{project_dir}; re-run when the queue drains.")
+            return None
+    finally:
+        release(guard)
+    try:
+        fh.seek(0); fh.truncate()
+        fh.write(json.dumps({"pid": os.getpid(), "kind": kind,
+                             "project": str(project_dir),
+                             "since": time.strftime("%H:%M:%S")}))
+        fh.flush()
+    except Exception:
+        pass                            # diagnostics only; the flock is the gate
+    return fh
+
+
 def run_locked(cmd, label="ffmpeg", log=print, **run_kwargs):
     """Run a heavy encode subprocess (ffmpeg splice, post-mux re-encode, B-roll
     or SV-clip compositing) UNDER the machine-global render lock, so it

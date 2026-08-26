@@ -1436,6 +1436,18 @@ def _render_one(sp, log=print, frames=None, out=None):
     cmd = [npx, "remotion", "render", "src/index.ts", "Video", str(out),
            f"--props={props}", f"--public-dir={public}", "--log=error",
            "--timeout=300000"]  # generous delayRender timeout (slow disk I/O tolerance)
+    # RAM/CPU ceiling (2026-08-26). Left unbounded, Remotion takes ~half the cores
+    # for concurrency and runs an UNBOUNDED frame cache — the compositor payload
+    # observed during the out-of-memory incident read
+    # "maximum_frame_cache_size_in_bytes": null. That is a render that expands to
+    # fill whatever is free, on a machine the operator is using at the same time.
+    # Operator directive: a background render must never make the Mac unusable
+    # interactively, even at the cost of a longer render. Both knobs are
+    # overridable for a big-iron or unattended-overnight run.
+    conc = os.environ.get("EXPLAINER_REMOTION_CONCURRENCY", "2")
+    cache_mb = int(os.environ.get("EXPLAINER_REMOTION_FRAME_CACHE_MB", "512"))
+    cmd += [f"--concurrency={conc}",
+            f"--offthreadvideo-cache-size-in-bytes={cache_mb * 1024 * 1024}"]
     if frames:
         cmd.append(f"--frames={frames}")
     log(f"remotion: rendering {sp.dir.name} ({len(spec['scenes'])} scenes, {spec['durationInFrames']}f"

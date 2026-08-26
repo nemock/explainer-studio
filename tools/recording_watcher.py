@@ -95,8 +95,31 @@ def live_renders(cfg):
     # The driver is spawned under `caffeinate -ims <python> <driver> ...`, so both
     # caffeinate and the python child carry the driver path in their args; count
     # each render once by matching only the python invocation.
-    return sum(1 for line in out.splitlines()
-               if driver in line and "caffeinate" not in line)
+    #
+    # `explainer2 shorts` jobs count too (2026-08-26). They are heavy in exactly
+    # the same way as a phase-1 render — Kokoro in `narrate`, torchaudio MMS_FA
+    # plus the whole waveform in `align`, 2.5-3.3 GB apiece — but they never carry
+    # the phase-1 driver path, so this function could not see them. On 2026-08-26
+    # four of them ran unseen; had a show come ready in that window the watcher
+    # would have read "0 renders running" and launched a fifth job on top. Match
+    # `explainer2.cli shorts` (the python child) and NOT `bin/explainer2 shorts`
+    # (the shell wrapper), so a job is counted exactly once whether or not it was
+    # started under caffeinate.
+    def _counts(line):
+        if "caffeinate" in line:
+            return False
+        if driver in line:
+            return True
+        if "explainer2.cli" not in line or "shorts" not in line:
+            return False
+        # Only a real interpreter invocation counts. A bare substring test also
+        # matches any shell whose command line merely MENTIONS the job — a
+        # diagnostic `pgrep -f "explainer2.cli shorts"` typed in a Claude session
+        # is enough — and an inflated count makes the watcher defer a render that
+        # had room to run. Require argv[0] to be a python binary.
+        argv0 = line.split(" ", 1)[0].rsplit("/", 1)[-1].lower()
+        return argv0.startswith("python")
+    return sum(1 for line in out.splitlines() if _counts(line))
 
 
 def pid_alive(pid):
