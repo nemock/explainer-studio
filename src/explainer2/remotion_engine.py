@@ -697,7 +697,15 @@ def _scene_for(slide, theme="", warn=None):
         # Bond). Midnight-themed projects (the ISO 14971 series, and every deck before the
         # change) keep the Hero3D rotating wireframe sphere, their consistent brand. Do NOT
         # make PaperHook unconditional again: it leaks the paper rebrand into the midnight series.
-        if theme in ("cut-bond", "nemock-deep-dive", "brg-deep-dive", "wte-guide", "circumvent"):
+        # plg-guide added 2026-08-26. It was in the papercraft list above but not this
+        # one, and the gap only showed on a hook with no `set`/`beats` — every LONG-FORM
+        # hook has a set, so _papercraft_component caught them all and this branch was
+        # never reached. Shorts build their hook slide from the plan (`_hook_slide`), which
+        # has no set, so the first Short cut for this series opened on the Hero3D wireframe
+        # in STUDIO GREEN — the exact off-brand leak `accent2 == accent` exists to prevent,
+        # on the one frame that decides whether a Short gets watched.
+        if theme in ("cut-bond", "nemock-deep-dive", "brg-deep-dive", "wte-guide",
+                     "circumvent", "plg-guide"):
             return "PaperHook", {"image": slide.get("image"), "kicker": kicker,
                                  "headline": headline, "accent": accent,
                                  # `stage` is the fallback when a hook has no bespoke art
