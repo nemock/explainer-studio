@@ -239,14 +239,22 @@ export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({f
                      height: height * 0.05, borderRadius: 6,
                      transform: `scaleY(${stripT})`, transformOrigin: 'center top',
                      boxShadow: `0 ${height * 0.006}px ${height * 0.014}px ${W.shadow}`}
+                  // 16:9 spans card-centre to card-centre, so it MUST sit behind the cards
+                  // (zIndex 0 against the card's 1). The portrait branch above solved the
+                  // same problem by sitting in the gap; this branch kept the full span and
+                  // painted straight across the labels — on a two-line card the strip ran
+                  // through the second line ("and for them", "solving them"), and four of
+                  // module 1's five cards lost half a line to it. Behind the cards the strip
+                  // still shows in every gap, so nothing about the look changes except that
+                  // the type is legible.
                   : {position: 'absolute', left: cx(i - 1), top: frameH * 0.545, width: cx(i) - cx(i - 1),
-                     height: height * 0.014, borderRadius: 6,
+                     height: height * 0.014, borderRadius: 6, zIndex: 0,
                      transform: `scaleX(${stripT})`, transformOrigin: 'left center',
                      boxShadow: `0 ${height * 0.006}px ${height * 0.014}px ${W.shadow}`}}>
                   <PaperSheet id={`strip:${i}`} family="card_tag" radius={6} edge={5} tint={W.sheetAlt} />
                 </div>
               ) : null}
-              <div style={{position: 'absolute', left: cx(i) - cardW / 2,
+              <div style={{position: 'absolute', left: cx(i) - cardW / 2, zIndex: 1,
                            top: portrait ? cy(i) - height * 0.06 : frameH * 0.42, width: cardW}}>
                 <div style={{position: 'absolute', left: '50%', bottom: -height * 0.014, width: '82%', height: height * 0.028,
                              transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(7px)',
