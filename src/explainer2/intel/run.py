@@ -69,9 +69,20 @@ def sweep(intel_dir: Path, queries, per_query=15):
 
 def score_outliers(intel_dir: Path, candidates, max_finalists=12):
     out = intel_dir / "outliers.json"
-    if _fresh(out):
+    key = intel_dir / "outliers.inputs.json"
+    # Input-keyed cache, same rule as sweep() above (the 2026-08-24 fix landed there but
+    # was left half-applied here: this function still cached on age alone, and its
+    # key.write_text referenced two names that were never defined, so every first run on a
+    # new project died with NameError AFTER outliers.json had been written — which meant a
+    # retry hit the stale-age cache and looked like it had worked.
+    sig = {"candidate_ids": [c.get("id") for c in candidates],
+           "max_finalists": max_finalists}
+    same = key.exists() and json.loads(key.read_text()) == sig
+    if _fresh(out) and same:
         _log(f"outliers cached ({out.name})")
         return json.loads(out.read_text())
+    if _fresh(out) and not same:
+        _log("outliers: candidate set changed since the cached run — re-scoring")
     # one baseline fetch per channel, costliest first by candidate views
     medians, fetched = {}, 0
     for c in candidates:
