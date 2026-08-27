@@ -435,7 +435,10 @@ def cmd_shorts(args):
     # module rendered the identical cut twice while four torch heaps sat resident.
     # Refuse rather than queue: a waiting process still holds everything it has
     # already imported, which is the cost we are trying not to pay.
-    claim = renderlock.claim_job(args.project_dir, kind="shorts")
+    # wait=False: an interactive/ad-hoc shorts run should say so and stop rather
+    # than sit in a queue. Unattended callers that must not drop a run pass
+    # wait=True (daily_beats does).
+    claim = renderlock.claim_job(args.project_dir, kind="shorts", wait=False)
     if claim is None:
         return 1
     try:
@@ -443,7 +446,7 @@ def cmd_shorts(args):
         print(json.dumps(shorts.run(args.project_dir, plan_path=args.plan,
                                     only=args.only_slug, engine=args.engine), indent=2))
     finally:
-        renderlock.release(claim)
+        renderlock.release_job(claim)
     return 0
 
 

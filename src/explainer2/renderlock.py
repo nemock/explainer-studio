@@ -406,15 +406,49 @@ def _live_claims():
     return live
 
 
-def claim_job(project_dir, kind="shorts", log=print):
-    """Admission slot for one whole heavy job. Returns a file object to hold for
-    the job's lifetime, or None when the job must not start (caller should exit,
-    NOT wait — a waiting process still holds its interpreter and any model it has
-    already imported, which is the thing we are trying to avoid).
+JOB_ENV = "EXPLAINER_JOB_CLAIMED"   # inherited by children — see claim_job()
 
-    Hold the returned handle in a local that outlives the job; releasing it is
-    `release()`, same as the render lock.
+
+class _Passthrough:
+    """Returned by claim_job() when this process is already inside a claimed job.
+    It owns no slot, so release_job() on it is a no-op."""
+    __slots__ = ()
+
+
+def claim_job(project_dir, kind="shorts", log=print, wait=False):
+    """Admission slot for one whole heavy job. Returns a handle to hold for the
+    job's lifetime, or None when the job must not start.
+
+    Release with `release_job()`, NOT `release()` — the slot carries an env flag
+    that release_job clears.
+
+    HOLD THE RETURNED HANDLE in a variable that outlives the job. It is the open
+    file whose flock IS the slot: let it be garbage-collected and the file closes,
+    the flock drops, and the slot silently disappears while the job runs on. So
+    `claim = claim_job(...)`, never `if claim_job(...):` — the latter reads as
+    working code and gates nothing.
+
+    Two distinct refusals, deliberately treated differently:
+
+    * SAME PROJECT, same kind -> always refused, never waited for. A second job on
+      the same project is a duplicate, and waiting only repeats the identical work
+      later. This is the gate that would have stopped the 2026-08-26 incident,
+      where a forked session launched two jobs against the same module.
+    * MACHINE-WIDE CAP -> refused, or waited out when `wait=True`. Unattended
+      routines pass wait=True: hard-failing a scheduled run because two other jobs
+      happened to be resident drops a day's output, and the wait is nearly free
+      because callers claim BEFORE importing their models. A queued process is a
+      bare interpreter, not a resident 3 GB heap. That ordering is the whole
+      reason waiting is safe here; do not claim after an import.
+
+    Nested claims pass through. A job that shells out to a sibling script would
+    otherwise have its own child refused on the parent's key — daily_beats alone
+    has five such spawns (extract_shorts -> transcribe_clip, caption_shorts ->
+    caption_clips, ...). The env flag is inherited across fork/exec, which is
+    exactly the scope wanted: "this process tree already holds a slot."
     """
+    if os.environ.get(JOB_ENV):
+        return _Passthrough()
     os.makedirs(JOBDIR, exist_ok=True)
     path = _job_lock_path(project_dir, kind)
     fh = open(path, "a+")
@@ -425,19 +459,36 @@ def claim_job(project_dir, kind="shorts", log=print):
         log(f"REFUSED: a `{kind}` job is already running for {project_dir} "
             f"(admission lock {path}). Not starting a second one.")
         return None
-    # Count under a guard so two simultaneous starters cannot both see room.
-    guard = open(os.path.join(JOBDIR, ".admission.guard"), "a+")
-    try:
-        fcntl.flock(guard, fcntl.LOCK_EX)
-        live = _live_claims()          # includes the claim we just took
-        if live > MAX_CONCURRENT_JOBS:
+    deadline = time.time() + MAX_WAIT_SECS
+    waited = 0
+    while True:
+        # Count under a guard so two simultaneous starters cannot both see room.
+        guard = open(os.path.join(JOBDIR, ".admission.guard"), "a+")
+        try:
+            fcntl.flock(guard, fcntl.LOCK_EX)
+            live = _live_claims()      # includes the claim we already hold
+            if live <= MAX_CONCURRENT_JOBS:
+                break
+        finally:
+            release(guard)
+        if not wait:
             release(fh)
             log(f"REFUSED: {live - 1} heavy explainer job(s) already running "
                 f"(cap {MAX_CONCURRENT_JOBS}). Not starting `{kind}` for "
                 f"{project_dir}; re-run when the queue drains.")
             return None
-    finally:
-        release(guard)
+        if time.time() > deadline:
+            release(fh)
+            log(f"REFUSED: waited {MAX_WAIT_SECS}s for an admission slot and the "
+                f"queue never drained (cap {MAX_CONCURRENT_JOBS}). Giving up on "
+                f"`{kind}` for {project_dir} rather than waiting forever.")
+            return None
+        if waited % 20 == 0:           # first pass, then every ~5 min
+            log(f"admission: {live - 1} job(s) ahead (cap {MAX_CONCURRENT_JOBS}) "
+                f"— `{kind}` queued, waiting…")
+        waited += 1
+        time.sleep(POLL_SECS)
+    os.environ[JOB_ENV] = "1"          # inherited by every child this job spawns
     try:
         fh.seek(0); fh.truncate()
         fh.write(json.dumps({"pid": os.getpid(), "kind": kind,
@@ -447,6 +498,15 @@ def claim_job(project_dir, kind="shorts", log=print):
     except Exception:
         pass                            # diagnostics only; the flock is the gate
     return fh
+
+
+def release_job(claim):
+    """Release an admission slot taken by claim_job(). Safe on None and on the
+    pass-through handle a nested claim returns."""
+    if claim is None or isinstance(claim, _Passthrough):
+        return                          # owns no slot; the outer claim does
+    os.environ.pop(JOB_ENV, None)
+    release(claim)
 
 
 def run_locked(cmd, label="ffmpeg", log=print, **run_kwargs):
