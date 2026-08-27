@@ -4,7 +4,7 @@ filled here; Claude-authored summary / per-platform captions / sources are merge
 from an optional meta.json the skill writes. Handles multi-aspect + min-length."""
 import json
 import subprocess
-from . import __version__
+from . import slidecheck, __version__
 
 
 def _probe_duration(path):
@@ -48,6 +48,19 @@ def run(proj):
         length_warning = f"duration {duration}s is under min_length {proj.min_length}s — deepen the script"
         ready = False
 
+    # Does every rendered slide actually SHOW something? Four times (stat/statgrid
+    # 2026-08-12, reframe 2026-08-20, ring 2026-08-24) a deck shipped a blank card and
+    # this file still wrote ready_for_post=true, because readiness here only ever meant
+    # "the mp4 files exist and the video is long enough". slidecheck was the gate — but
+    # it ran only inside `explainer2 validate`, which nothing forces before publish.
+    # Gate readiness on the same blocking check, so manifest.json and handoff.json
+    # (which copies this flag) can never say ready over a slide that renders empty.
+    # Advisory findings (overlong headlines) stay validate-only; they don't block there
+    # either. A missing built spec returns no findings — validate reports that case.
+    blank_slides, _ = slidecheck.run(proj)
+    if blank_slides:
+        ready = False
+
     licenses = []
     if (proj.dir / "assets" / "licenses.json").exists():
         licenses = json.loads((proj.dir / "assets" / "licenses.json").read_text())
@@ -67,7 +80,8 @@ def run(proj):
         "deck": "deck/index.html" if (proj.dir / "deck" / "index.html").exists() else None,
         "video": video,
         "captions": {"srt": "captions/captions.srt", "vtt": "captions/captions.vtt"},
-        "status": {"ready_for_post": ready, "per_aspect": per_aspect, "length_warning": length_warning},
+        "status": {"ready_for_post": ready, "per_aspect": per_aspect,
+                   "length_warning": length_warning, "blank_slides": blank_slides},
         "ai_disclosure": {
             "ai_generated_audio": not operator_voice, "ai_generated_visuals": True,
             "recommended_label": "creator-disclosed", "c2pa_embedded": False,
@@ -88,4 +102,5 @@ def run(proj):
         manifest["promotes"] = proj.data["promotes"]
     proj.write_json(proj.dir / "manifest.json", manifest)
     return {"manifest": "manifest.json", "ready_for_post": ready,
-            "aspects": proj.aspects, "length_warning": length_warning}
+            "aspects": proj.aspects, "length_warning": length_warning,
+            "blank_slides": blank_slides}
