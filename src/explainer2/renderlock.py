@@ -21,11 +21,11 @@ Two concerns, two mechanisms:
 
 3. FOREIGN-ENCODE GUARD (added 2026-08-05, after #55) — the flock is
    COOPERATIVE and therefore only covers codebases that import this module.
-   Projects on this Mac that render without it (waveform-studio, daily_beats)
-   are invisible to the queue: they never take the lock, so nothing holds them
-   back and nothing tells us they are running. On 2026-08-05 #55 rendered for
-   37 minutes alongside waveform-studio's 8-hour 1440p encode and a daily_beats
-   Remotion render, with load average above 90 and ~113 MB free, and produced a
+   Any project that renders without it is invisible to the queue: it never takes
+   the lock, so nothing holds it back and nothing tells us it is running. On
+   2026-08-05 #55 rendered for 37 minutes alongside waveform-studio's 8-hour
+   1440p encode and a daily_beats Remotion render — neither of which took the
+   lock at the time — with load average above 90 and ~113 MB free, and produced a
    structurally complete but corrupt h264 bitstream: right duration, right frame
    count, wrong colors, unseekable, NAL errors from the first second. That is
    the PRD's "serialize memory-heavy stages" constraint being broken by projects
@@ -40,6 +40,13 @@ Two concerns, two mechanisms:
    which only exists while an encode is actually running and which no idle
    browser has. Own-session encodes are excluded by session id, so our own mux
    never blocks us.
+
+   Both named projects have since been wired in: waveform-studio and daily_beats
+   vendor this module verbatim and route their encodes through it, and as of
+   2026-08-26 daily_beats also holds the lock across its mlx_whisper model load
+   (capture_video.transcribe). The guard stays anyway — the flock is still
+   cooperative, and the next non-participant is one bare subprocess.run away.
+   Keep all three copies byte-identical; a divergent copy is a silent outage.
 
    Escape hatches, because a guard that cannot be turned off is its own outage:
    `EXPLAINER_FOREIGN_ENCODE_GUARD=0` disables it, and
