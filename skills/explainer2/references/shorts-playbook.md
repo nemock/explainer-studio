@@ -43,6 +43,15 @@ are single-vendor and unverified — don't quote figures.
 - **One open loop, and pay it off.** An unresolved loop reads as wasted time.
 - **Length is a metric trade-off, not "shorter is better":** ~15–30s maximizes
   completion %; ~30–60s tends to win more total reach. Optimize % watched first.
+- **At PLAN time you cannot measure, so budget for it.** The rule below needs the
+  recorded hook/outro wavs, and at the Script stage they do not exist yet — nor does
+  `work/segments.json`, since nothing has been narrated. So estimate the body from script
+  words at about one hundred and fifty four per minute, estimate the hook and outro the
+  same way, and then **add fifteen percent before checking the band.** Delivery runs
+  slower than the word count: module 2's first cut estimated 58s and recorded 63.5s, which
+  is roughly ten percent, and the margin is the difference between trimming now for free
+  and re-cutting after a render. Module 3 was planned this way and two of its three cuts
+  were trimmed at the plan stage rather than after the booth.
 - **MEASURE the length before rendering; never estimate it from word counts.** Body =
   the cut's segment spans from `work/segments.json`; hook and outro = the actual
   duration of `voiceover/short_<slug>_{hook,outro}.wav`, which exist by then because the
