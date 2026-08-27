@@ -515,9 +515,15 @@ def cmd_wiki(args):
         path = wiki.add_node(args.root, "source", args.name, args.body or args.name,
                              topic=args.topic, ref=args.ref)
     else:
-        path = wiki.add_node(args.root, "source-fact", args.name, args.body,
-                             topic=args.topic, source=args.source,
-                             confidence=args.confidence)
+        # Facts follow references/research-wiki.md: topic-scoped under
+        # explainer-content/research/, not the project-local wiki/ tree.
+        try:
+            path = wiki.add_claim(args.research_root, args.topic, args.name, args.body,
+                                  status=args.status, source=args.source, url=args.url,
+                                  source_date=args.source_date, tier=args.tier)
+        except ValueError as e:
+            print(f"wiki fact: {e}")
+            return 1
     print(json.dumps({"node": path}))
 
 
@@ -734,14 +740,29 @@ def main(argv=None):
     ln.set_defaults(func=cmd_learn)
 
     wk = sub.add_parser("wiki", help="add a wiki node")
-    wk.add_argument("kind", choices=["source", "fact"])
-    wk.add_argument("name")
-    wk.add_argument("--root", default=".")
-    wk.add_argument("--topic", default="")
+    wk.add_argument("kind", choices=["source", "fact"],
+                    help="fact = a research-wiki claim node (references/research-wiki.md); "
+                         "source = a Phase-1 project-local source node")
+    wk.add_argument("name", help="fact: the claim_id, e.g. klarna-700-is-an-equivalence")
+    wk.add_argument("--root", default=".", help="source nodes only: project-local wiki/ root")
+    wk.add_argument("--research-root", dest="research_root",
+                    default=str(_REPO_ROOT / "research"),
+                    help="fact nodes only; defaults to explainer-content/research/ via the "
+                         "repo symlink, so the node lands correctly from any cwd")
+    wk.add_argument("--topic", default="",
+                    help="fact: REQUIRED, the topic-slug directory the claim lives in")
     wk.add_argument("--body", default="")
     wk.add_argument("--ref", default="")
-    wk.add_argument("--source", default="")
-    wk.add_argument("--confidence", default="medium")
+    wk.add_argument("--source", default="", help="human-readable source name")
+    wk.add_argument("--url", default="", help="fact: the source URL")
+    wk.add_argument("--source-date", dest="source_date", default="",
+                    help="fact: date the SOURCE is dated (not today)")
+    wk.add_argument("--tier", default="", choices=("",) + wiki.TIERS,
+                    help="fact: REQUIRED. SECONDARY-SUMMARY means an outlet summarizing "
+                         "another outlet, which is how a soft claim hardens into a fact")
+    wk.add_argument("--status", default="",
+                    help="fact: REQUIRED, must start with one of: "
+                         + " | ".join(wiki.STATUS_PREFIXES))
     wk.set_defaults(func=cmd_wiki)
 
     args = p.parse_args(argv)
