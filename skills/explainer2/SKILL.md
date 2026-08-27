@@ -641,17 +641,21 @@ Flow:
    which is link-only (no media, 300 chars including the URL). Put the URL in the YT
    description and inline in the IG and Facebook captions (neither can
    auto-comment). Write a plan JSON:
-   `{video_slug, short_slug, video_url, short_mp4, scheduled:"next_free_slot",
-   posts:[{platform, caption, url_comment?, extra?}]}` (`extra` carries
+   `{video_slug, short_slug, video_url, short_mp4,
+   posts:[{platform, caption, url_comment?, extra?}]}` (no `scheduled` field —
+   the local post queue owns all timing; `extra` carries
    platform-specific fields — `mediaType:"reel"` for IG and Facebook;
    `title`/`privacyStatus`/`shouldNotifySubscribers`/`isMadeForKids` for YouTube.
    Facebook posts to the FWF Page; its `pageId` is resolved from the routing table,
    so you don't set it in the plan).
 3. `bin/explainer2 promote post --plan plan.json` → **dry-run by default**: prints
-   the exact Blotato payloads. Review them (this is the confirm step).
-4. `... promote post --plan plan.json --fire` → publishes (uploads the mp4 once,
-   reuses the URL across platforms) and logs each platform to the ledger so the
-   rotation advances.
+   the queue spec it would enqueue. Review it (this is the confirm step).
+4. `... promote post --plan plan.json --fire` → uploads the mp4 once and hands the
+   spec to the LOCAL post queue (`postq.py enqueue` — the dispatcher places the
+   posts and `reconcile.py` records live URLs later; nothing publishes at fire
+   time), and logs each platform to the ledger so the rotation advances. Direct
+   Blotato submission survives only in `post-direct`, the broken-run escape hatch —
+   never the normal path (queue cutover 2026-08-08).
 5. `bin/explainer2 promote status` / `report` → library promotion state and
    regenerates `PROMOTIONS.md`. Ledger of record: `<projects>/../promotions.json`.
 

@@ -32,6 +32,7 @@ Usage: recording_watcher.py --config /path/to/shows.json [--dry-run] [--force-ho
 """
 import argparse
 import fcntl
+import hashlib
 import json
 import os
 import re
@@ -184,6 +185,46 @@ def crashlooping(proj, kind):
     n = att.get("count", 0)
     return (n >= CRASHLOOP_AFTER
             and time.time() - att.get("ts", 0) < CRASHLOOP_RETRY_SECS), n
+
+
+def publish_blocked(proj):
+    """A prior publish run hit the Step-8 validate gate, wrote BLOCKED.md, and
+    exited cleanly — no README, so the crashloop guard keeps respawning it on
+    backoff forever. The verdict is deterministic: re-spawning an LLM run on an
+    unchanged work/validate.json re-derives the identical block (the 2026-08-24
+    MMT episode burned 14 publish runs this way). Skip the spawn until
+    validate.json actually changes. Returns (blocked, fingerprint, reason)."""
+    bl = proj / "BLOCKED.md"
+    vj = proj / "work" / "validate.json"
+    if not bl.exists() or not vj.exists():
+        return False, "", ""
+    try:
+        raw = vj.read_text()
+        v = json.loads(raw)
+    except (OSError, ValueError):
+        return False, "", ""
+    if v.get("ok"):
+        return False, "", ""  # gate passes now; stale BLOCKED.md — let phase 2 run
+    fp = hashlib.sha256(raw.encode()).hexdigest()[:16]
+    why = "; ".join(str(i) for i in v.get("issues", []))[:300]
+    return True, fp, why
+
+
+def notify_publish_blocked_once(cfg, show, proj, fp, why):
+    """One macOS notification per distinct validate verdict, not per cycle."""
+    marker = proj / "work" / "publish_blocked_notified"
+    try:
+        if marker.exists() and marker.read_text().strip() == fp:
+            return
+        marker.write_text(fp)
+    except OSError:
+        pass  # notification still worth attempting
+    subprocess.run([
+        "/usr/bin/osascript", "-e",
+        f'display notification "{show["id"]}: publish blocked at the validate gate '
+        f'({why[:120]}). Fix the deck/renderer, then the watcher resumes on its own." '
+        f'with title "Recording watcher"',
+    ], check=False)
 
 
 def log(cfg, msg):
@@ -429,6 +470,17 @@ def run(cfg, dry):
                                  f"present but no README — prior publish partial; NOT "
                                  f"auto-retrying (double-post risk), needs review")
                         break
+                    # Deterministic validate-gate block: a completed publish run left
+                    # BLOCKED.md and validate.json still fails identically. No LLM
+                    # spawn will change the verdict — skip (zero cost) until the
+                    # fingerprint moves, and tell Dave once per distinct block.
+                    blocked, fp, why = publish_blocked(proj)
+                    if blocked:
+                        log(cfg, f"PUBLISH-BLOCKED {show['id']}: {proj.name} — validate "
+                                 f"gate failing unchanged ({fp}); NOT spawning phase 2. "
+                                 f"{why} (see {proj / 'BLOCKED.md'})")
+                        notify_publish_blocked_once(cfg, show, proj, fp, why)
+                        continue
                     # ...and against a publish that dies before writing anything at
                     # all (expired OAuth, missing bin), which the uploads.json check
                     # above cannot see. `continue`, not `break`, so the doomed project

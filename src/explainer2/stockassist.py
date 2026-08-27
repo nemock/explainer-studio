@@ -81,13 +81,20 @@ def _probe(path):
 
 
 def _conform_video(src, dst, w, h):
+    # VideoToolbox encode — hold the machine-global render lock like every other
+    # encoder in this package (gap found in the 2026-08-27 concurrency audit).
+    from . import renderlock
     vf = (f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
           f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1,"
           f"colorspace=all=bt709:iall=bt601-6-625:fast=1")
-    subprocess.run(["ffmpeg", "-hide_banner", "-y", "-i", str(src), "-vf", vf,
-                    "-an", "-c:v", "h264_videotoolbox", "-b:v", "20M",
-                    "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
-                    str(dst)], check=True, capture_output=True)
+    lock = renderlock.acquire(label="stockassist:conform")
+    try:
+        subprocess.run(["ffmpeg", "-hide_banner", "-y", "-i", str(src), "-vf", vf,
+                        "-an", "-c:v", "h264_videotoolbox", "-b:v", "20M",
+                        "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
+                        str(dst)], check=True, capture_output=True)
+    finally:
+        renderlock.release(lock)
 
 
 def _extract_hero(src, dst, w, h):
