@@ -187,7 +187,7 @@ to date missed length on the first draft; the rule exists because it bites).
      into the material. The runtime it frees belongs to the mechanism (§4.1
      through-line, blueprint §8 spine).
    - **Lived experience is still welcome — as a load-bearing clause, never as a
-     credential.** VOICE.md §1.10's *subordinate-clause receipt* is the pattern:
+     credential.** CONSTRAINTS.md §1.10's *subordinate-clause receipt* is the pattern:
      the experience arrives spent on the point, not displayed. *"After thirty
      years of reading what suppliers will and won't warrant, the first thing I
      check is…"* earns its place because it explains WHY he checks that thing.
@@ -233,8 +233,15 @@ to date missed length on the first draft; the rule exists because it bites).
      viewer reaches the CTA. If the not-paywalled idea is used, the framing is
      **the answer isn't gated**, never *nothing-to-sell*.
 4. **Re-hooks:** a curiosity reset every 25–40 s of script time (≈ every 4–6
-   segments): a named trap, a counterintuitive rule, "here's where it gets
-   interesting". List their segment ids in `retention_map.re_hooks`.
+   segments): a named trap, a counterintuitive rule, a number that contradicts
+   the one before it, the turn in a case. **Never a staged reveal.** "Here's
+   where it gets interesting", "here's the part that", "here's the thing" are
+   banned by the `humaner` skill's LINT §12b (added 2026-08-28 from audience
+   retention data: viewers click off at the phrase, and Dave's read is that it
+   is patronizing — the script pausing to tell the listener the good part is
+   coming). Cut the drumroll and say the thing; if the payoff needs an
+   announcement, the problem is the payoff. List their segment ids in
+   `retention_map.re_hooks`.
 5. **Pattern interrupts:** the visual mode (deck / diagram / artifact /
    footage) must change at least every 3–4 segments; record the rule and the
    planned interrupt points. The biggest energy shift belongs at the midroll
@@ -392,7 +399,7 @@ to date missed length on the first draft; the rule exists because it bites).
   hear a person — but a tic that arrives because a checklist put it there lands
   in the wrong place and reads as a costume. Zinsser: style is organic, and
   adding it is a toupee. This mirrors the `humaner` skill's 2026-07-31
-  correction (VOICE.md Part 1 mechanics are recognition evidence, never a
+  correction (CONSTRAINTS.md Part 1 mechanics are recognition evidence, never a
   generation target) and is why craft now outranks voice. Practical test: if
   you can delete the tic and the sentence gets clearer, it was never his.
 - Contractions always. Direct address ("you") throughout. No hype words
@@ -467,7 +474,7 @@ to date missed length on the first draft; the rule exists because it bites).
       path reads this file and `spoken-humanizer.md` rather than the skill. Spawn one
       reviewer (model `sonnet`, never the drafting tier), give it the finished script, the
       written brief, CRAFT.md, the architecture tells and the **Operator VO script** dial
-      in FORMATS.md — and NOT VOICE.md, which turns a craft reviewer into a mimicry
+      in FORMATS.md — and NOT CONSTRAINTS.md, which turns a craft reviewer into a mimicry
       enforcer. Tell it to read the whole script aloud in one pass, and list the settled
       carve-outs so it does not re-litigate them (deliberate repetition, verbatim quoted
       lines, numbers spelled out for captions, the composite company, the series CTA).

@@ -120,7 +120,7 @@ you say?"* Also hunt: "my honest answer", "the honest truth", "honest opinion",
 of honesty ("it seems my answer is…", "as best I can tell", "I'd have to say").
 Still legal: describing something other than his own candor as honest ("the authors'
 own explanation is the honest one"), reporting what others were asked to do, and a
-mid-sentence casual "honestly" inside his own aside (VOICE.md §1.10 texture).
+mid-sentence casual "honestly" inside his own aside (CONSTRAINTS.md §1.10 texture).
 
 ### A2. Written-tell carryover — now covered by LINT.md
 General AI-tell removal (em/en dashes, curly quotes, AI vocabulary like delve,
@@ -229,12 +229,18 @@ Two tests every cold open must pass:
 
 ### B5. Momentum (earn the next sentence)
 - Every segment should end giving a reason to keep listening — a small open loop,
-  a turn, a "but here's where it gets real" (the *substance* version, not the
-  cliché). Honor the retention map's re-hooks and open loops.
+  a turn, a fact that reframes the one before it. **Not a staged reveal.** This
+  line used to offer "but here's where it gets real" with a parenthetical saying
+  to use the substance version and not the cliché; per the 2026-08-02 ruling a
+  disclaimer does not neutralize an imperative, and the phrase got reached for
+  anyway. It is now banned outright (`humaner` LINT §12b, 2026-08-28). The
+  substance does the pulling; a phrase announcing that a payoff is coming spends
+  the listener's patience on nothing. Honor the retention map's re-hooks and
+  open loops.
 
 ### B6. A point of view
 - Have an opinion and let stakes show. Acknowledge tension or mixed feelings where
-  they're real. This is the "soul" CRAFT.md and VOICE.md ask for in writing,
+  they're real. This is the "soul" CRAFT.md and CONSTRAINTS.md ask for in writing,
   aimed at the ear — neutral reporting is forgettable; a clear, honest stance is not.
 
 ---
@@ -335,7 +341,7 @@ blocklist = [
     # A1c EXTENDED 2026-07-31 (#53): the self-applied ADJECTIVE carries the same
     # presupposition. "my honest answer" -> "it seems my answer". Legal: describing
     # someone ELSE's explanation as "the honest one", or a mid-sentence casual
-    # "honestly" inside his own aside (VOICE.md 1.10 texture).
+    # "honestly" inside his own aside (CONSTRAINTS.md 1.10 texture).
     "my honest answer", "the honest truth", "honest opinion", "if i'm honest",
     "if i am honest", "honestly, my answer",
 ]

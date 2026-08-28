@@ -16,7 +16,7 @@ not writing.
 
 **VOICE SOURCE (binding, added 2026-07-26):** the article is written in the
 operator's mined voice via the HumanER skill. Before drafting, read
-`~/.claude/skills/humaner/VOICE.md` (especially section 1.10, the written
+`~/.claude/skills/humaner/CONSTRAINTS.md` (especially section 1.10, the written
 register) and the Substack dial in `~/.claude/skills/humaner/FORMATS.md`. The
 seven architecture tells in `~/.claude/skills/humaner/SKILL.md` are the failure
 modes that got this exact article type flagged 100% AI-generated (2026-07-25):
@@ -24,7 +24,7 @@ max one landed line per piece, no coined frameworks or callback motifs, uneven
 paragraph rhythm, at least one parked digression, hedged recalled numbers vs
 exact cited ones, verified stories only, no manufactured intimacy. The `humaner`
 skill's LINT.md pass runs AFTER drafting as the mechanical AI-tell lint;
-VOICE.md wins conflicts. Everything below layers on top of that voice source.
+CONSTRAINTS.md wins conflicts. Everything below layers on top of that voice source.
 
 ---
 
@@ -224,7 +224,7 @@ on top of real spine gaps. None of that is a banned phrase. All of it is bad wri
 
 Spawn one reviewer subagent (model `sonnet`), give it the finished article, the written
 brief, CRAFT.md, the architecture tells, and the **article/Substack** dial in FORMATS.md.
-Not VOICE.md. Tell it to read the whole piece aloud in one pass and to name the craft
+Not CONSTRAINTS.md. Tell it to read the whole piece aloud in one pass and to name the craft
 problem in the skill's vocabulary, and hand it the settled carve-outs so it does not
 re-argue them: a declared `length_variant`, deliberate repetition, verbatim quotes, the
 series CTA rule. Fix every finding or answer it in one line. Two rounds maximum.
