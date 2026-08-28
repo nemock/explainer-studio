@@ -66,6 +66,35 @@ NUMBER_WORDS = ("forty", "fifty", "sixty", "seventy", "eighty", "ninety", "hundr
                 "thousand", "million", "dozen")
 
 
+# U.S. English is a hard constraint on everything under the byline (humaner VOICE.md
+# §4.0). It lived only in an operator memory until 2026-08-28 — and that memory wrongly
+# claimed it was already codified — so nothing in the drafting path enforced it and
+# `-ise` spellings reached a recorded script, the burned-in captions and an on-screen
+# card. A prose rule fires on recall, and recall fails exactly when attention is on the
+# argument. This is the mechanical half.
+#
+# Spelling only. The singular-verb half of the rule ("Google runs", never "Google run")
+# needs a parser and a company list, and a naive check flags far more good prose than bad.
+BRITISH = {
+    "optimise": "optimize", "optimised": "optimized", "optimising": "optimizing",
+    "recognise": "recognize", "recognised": "recognized", "recognising": "recognizing",
+    "realise": "realize", "realised": "realized", "realising": "realizing",
+    "organise": "organize", "organised": "organized", "organising": "organizing",
+    "prioritise": "prioritize", "prioritised": "prioritized",
+    "apologise": "apologize", "apologised": "apologized",
+    "analyse": "analyze", "analysed": "analyzed", "analysing": "analyzing",
+    "summarise": "summarize", "summarised": "summarized",
+    "categorise": "categorize", "emphasise": "emphasize", "utilise": "utilize",
+    "behaviour": "behavior", "colour": "color", "favour": "favor", "honour": "honor",
+    "labour": "labor", "rumour": "rumor", "neighbour": "neighbor",
+    "centre": "center", "centred": "centered", "metre": "meter", "theatre": "theater",
+    "defence": "defense", "offence": "offense", "licence": "license",
+    "travelled": "traveled", "cancelled": "canceled", "modelling": "modeling",
+    "labelled": "labeled", "whilst": "while", "amongst": "among", "learnt": "learned",
+    "practise": "practice", "programme": "program", "grey": "gray",
+}
+
+
 def sentences(text):
     return [s.strip() for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s.strip()]
 
@@ -107,9 +136,14 @@ def main():
                         cards.append((f"card {len(cards) + 1} ({cut.get('slug', '?')} {role})",
                                       cut[role]))
 
-    fragments, openers, longs, colons, bare = [], [], [], [], []
+    fragments, openers, longs, colons, bare, british = [], [], [], [], [], []
 
     for card, text in cards:
+
+        for w_ in re.findall(r"[A-Za-z]+", text):
+            us = BRITISH.get(w_.lower())
+            if us:
+                british.append(f"{card}: {w_!r} -> {us!r}")
 
         # A demonstrative followed by its own noun ("That meeting feels fine") is not a
         # pronoun hanging in space — it names the thing in the same breath. Only flag the
@@ -165,6 +199,7 @@ def main():
         ("COLD-OPEN VIOLATIONS (card opens on a bare pronoun)", openers),
         (f"BREATHLESS (over {MAX_UNBROKEN}w with no pause, or over {MAX_WORDS}w total)", longs),
         ("MID-SENTENCE COLONS", colons),
+        ("BRITISH SPELLING (U.S. English is binding, VOICE.md 4.0)", british),
     ]
     bad = 0
     for label, hits in groups:
