@@ -52,6 +52,12 @@ are single-vendor and unverified — don't quote figures.
   is roughly ten percent, and the margin is the difference between trimming now for free
   and re-cutting after a render. Module 3 was planned this way and two of its three cuts
   were trimmed at the plan stage rather than after the booth.
+  *Measured delivery, for calibration: module 1 at 157 wpm, module 2 at 154, module 3 at
+  173 (mean 162). The 154 constant is sound, since it matched two of three, and one
+  outlier is not grounds to move it. What the spread is worth saying out loud is which
+  direction the margin protects: a FAST read only makes a cut shorter, which is
+  harmless. The margin exists for the slow read, because that is the one that breaks
+  the band.*
 - **MEASURE the length before rendering; never estimate it from word counts.** Body =
   the cut's segment spans from `work/segments.json`; hook and outro = the actual
   duration of `voiceover/short_<slug>_{hook,outro}.wav`, which exist by then because the
