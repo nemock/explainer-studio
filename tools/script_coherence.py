@@ -66,7 +66,7 @@ NUMBER_WORDS = ("forty", "fifty", "sixty", "seventy", "eighty", "ninety", "hundr
                 "thousand", "million", "dozen")
 
 
-# U.S. English is a hard constraint on everything under the byline (humaner VOICE.md
+# U.S. English is a hard constraint on everything under the byline (humaner CONSTRAINTS.md
 # §4.0). It lived only in an operator memory until 2026-08-28 — and that memory wrongly
 # claimed it was already codified — so nothing in the drafting path enforced it and
 # `-ise` spellings reached a recorded script, the burned-in captions and an on-screen
@@ -136,9 +136,17 @@ def main():
                         cards.append((f"card {len(cards) + 1} ({cut.get('slug', '?')} {role})",
                                       cut[role]))
 
-    fragments, openers, longs, colons, bare, british = [], [], [], [], [], []
+    fragments, openers, longs, colons, bare, british, doubled = [], [], [], [], [], [], []
 
     for card, text in cards:
+
+        # a repeated word or two-word phrase back to back, which is almost always a
+        # leftover from an edit rather than emphasis. Real emphasis repeats ACROSS a
+        # sentence break ("...the ladder. The ladder was measuring..."), so only flag a
+        # repeat with no punctuation between the two halves.
+        for m_ in re.finditer(r"\b(\w+(?:\s+\w+)?)\s+\1\b", text, re.I):
+            if m_.group(1).lower() not in ("that", "had", "so"):
+                doubled.append(f"{card}: {m_.group(0)!r}")
 
         for w_ in re.findall(r"[A-Za-z]+", text):
             us = BRITISH.get(w_.lower())
@@ -199,7 +207,7 @@ def main():
         ("COLD-OPEN VIOLATIONS (card opens on a bare pronoun)", openers),
         (f"BREATHLESS (over {MAX_UNBROKEN}w with no pause, or over {MAX_WORDS}w total)", longs),
         ("MID-SENTENCE COLONS", colons),
-        ("BRITISH SPELLING (U.S. English is binding, VOICE.md 4.0)", british),
+        ("BRITISH SPELLING (U.S. English is binding, CONSTRAINTS.md 4.0)", british),        ("DOUBLED WORD/PHRASE (an edit artifact, not emphasis)", doubled),
     ]
     bad = 0
     for label, hits in groups:
