@@ -214,6 +214,25 @@ skill's LINT.md pass. This is non-negotiable and is the step's gate.
   fact correct and note the conflict for the operator — facts and verbatim
   quotes win over stylistic smoothing.
 
+## 5b. Fresh-eyes gate (after LINT, before presenting)
+
+LINT.md is not sufficient on its own and module 3 proved it. That article passed the full
+LINT pass with zero blocklist hits, and a fresh reviewer then found that the
+negate-then-assert construction fired about ten times against a cap of one, that nearly
+every section closed on its own epigram, and that two "Here's the ___" openers were sitting
+on top of real spine gaps. None of that is a banned phrase. All of it is bad writing.
+
+Spawn one reviewer subagent (model `sonnet`), give it the finished article, the written
+brief, CRAFT.md, the architecture tells, and the **article/Substack** dial in FORMATS.md.
+Not VOICE.md. Tell it to read the whole piece aloud in one pass and to name the craft
+problem in the skill's vocabulary, and hand it the settled carve-outs so it does not
+re-argue them: a declared `length_variant`, deliberate repetition, verbatim quotes, the
+series CTA rule. Fix every finding or answer it in one line. Two rounds maximum.
+
+**Re-run the mechanical checks after applying its fixes.** On module 3 the repair for one
+finding introduced a section opening on a bare "Which", which is the §0 defect this
+playbook already bans. A fix made to satisfy one rule can break another.
+
 ## 6. Self-QA checklist (run before presenting)
 
 - [ ] Same arc and facts as the script; **zero new claims/numbers/quotes**

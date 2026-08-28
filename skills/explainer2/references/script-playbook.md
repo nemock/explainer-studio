@@ -461,6 +461,31 @@ to date missed length on the first draft; the rule exists because it bites).
       pronoun/connective, over-long sentences. Reading the cards does not substitute:
       on #56 the eye-pass missed ten of these and the operator caught the first on card one.
 - [ ] Read every segment aloud mentally — no tongue-twisters, no 70-word runs
+- [ ] **FRESH-EYES GATE — run it BEFORE the booth, not after (added 2026-08-28).**
+      The `humaner` skill mandates a fresh-context reviewer subagent for *every spoken
+      script*, and this playbook is where that obligation gets missed, because the script
+      path reads this file and `spoken-humanizer.md` rather than the skill. Spawn one
+      reviewer (model `sonnet`, never the drafting tier), give it the finished script, the
+      written brief, CRAFT.md, the architecture tells and the **Operator VO script** dial
+      in FORMATS.md — and NOT VOICE.md, which turns a craft reviewer into a mimicry
+      enforcer. Tell it to read the whole script aloud in one pass, and list the settled
+      carve-outs so it does not re-litigate them (deliberate repetition, verbatim quoted
+      lines, numbers spelled out for captions, the composite company, the series CTA).
+      Fix every finding or answer it in one line naming the carve-out. Cap at two rounds.
+
+      **The timing is the whole point, and module 3 is the worked example of getting it
+      wrong.** The gate ran there only after the booth AND after the render, and its
+      findings cost eighteen re-recorded cards, a re-align and a re-render. Every one of
+      those findings existed in the draft before a single word was recorded. Run before
+      the booth and the same review costs nothing but the reviewer's tokens.
+
+      **It finds a class of defect no lint can reach.** LINT.md detects banned *phrases*.
+      The reviewer detects an over-used *legal* construction — module 3's script landed six
+      quotable closers against a cap of one and reused one image three times as a callback,
+      none of which trips any blocklist because every instance is clean on its own. It also
+      catches spine gaps papered over with a transition, and sentences that only fail aloud:
+      a clause held in suspension, a compression whose verb was thirty segments back, an
+      adverb the ear attaches to the wrong word.
 - [ ] **Spoken-humanizer pass (mandatory since 2026-06-19, supersedes the old
       speakability pass):** run `references/spoken-humanizer.md` end to end before
       the gate — **CUT** (grep the spoken-cliché blocklist; every hit rewritten)

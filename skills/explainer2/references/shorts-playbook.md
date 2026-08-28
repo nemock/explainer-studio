@@ -164,6 +164,14 @@ Rapid cutting is a known trade-off; revisit only if retention data demands it.
 
 ## 7. Self-QA (before the booth / before `shorts`)
 
+- [ ] **The hooks and outros go through the fresh-eyes gate with the script.** They are
+      booth cards, read aloud cold, so they are spoken scripts under the `humaner` gate
+      exactly like the main body — `script_coherence.py` already treats them that way.
+      Review them in the SAME call as the script, never separately: the cross-cut defects
+      only show when the options are read together. On module 3 the LinkedIn reviewer
+      caught two posts using the same mechanism as their engine, which neither post
+      revealed on its own.
+
 - [ ] 3 cuts; each stands alone, one idea, covers a distinct part of the video.
 - [ ] Every cut has a `hook` + `hook_headline`; the first spoken words are the hook (no runway).
 - [ ] Every cut has an `outro`; `loop` outros hand back to the hook; `bridge` outros are short + specific.
