@@ -56,6 +56,7 @@ suspend), the signal isn't lost: re-run `--wait`, `--status`, or just check for 
 """
 import hashlib
 import json
+import re
 import os
 import subprocess
 import sys
@@ -270,6 +271,32 @@ def start(project, open_tab=True):
         print("WARNING: no shorts/plan.json — this booth will show the main script ONLY.")
         print("         The native Short hooks/outros will NOT be recordable in this session.")
         print("         Author shorts/plan.json first (shorts-playbook) unless you intend no Shorts.")
+
+    # A series episode owes its continuity-ledger entry BEFORE the booth, not after. The
+    # ledger's own rule says so ("append when the script goes final — before the booth,
+    # not after") and the reason is not tidiness: the ledger is the only record of what an
+    # episode actually said that survives context compaction, so a later module checking a
+    # backward reference against it finds nothing and either invents one or drops it.
+    #
+    # Written afterwards on modules 2 AND 3 of the Operator's Guide. Both times the entry
+    # was correct and both times it was late, which is the signature of a rule that depends
+    # on remembering. Operator, 2026-08-28: add the guard.
+    try:
+        _series = json.loads((proj / "project.json").read_text()).get("series") or {}
+    except Exception:
+        _series = {}
+    _ep = _series.get("episode")
+    if _ep:
+        _ledger = proj.parent / "continuity" / "ledger.md"
+        if not _ledger.exists():
+            print(f"WARNING: series episode {_ep} but no continuity ledger at {_ledger}.")
+            print("         Later modules check backward references against it; without one they")
+            print("         have nothing to cite.")
+        elif not re.search(rf"^##\s+Module\s+0*{_ep}\b", _ledger.read_text(), re.M):
+            print(f"WARNING: no continuity-ledger entry for Module {_ep:02d} in {_ledger.name}.")
+            print("         The rule is to append it when the script goes final, BEFORE the booth.")
+            print("         Write it now: concepts introduced (in the wording the video uses),")
+            print("         running-example state, claims -> KB node, callbacks, forward hook.")
     # idempotency (v1 record-open parity): if a live booth already serves THIS
     # project, report it instead of opening a duplicate on a fallback port —
     # but still pop the tab: re-running the launcher means "get me the booth".
