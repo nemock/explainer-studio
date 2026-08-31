@@ -210,6 +210,7 @@ def run(proj, open_browser=True):
     lock = threading.Lock()          # serialize disk load/edit against each other
     cur = {}                         # latest {"segs": [...], "stem": {...}}
     edited = set()                   # card ids edited this session (chip in the UI)
+    edit_log = []                    # per-edit {old,new} records; also streamed to work/booth_edits.jsonl
     backed_up = set()                # files already snapshotted to .pre-booth.bak this session
     qc_cache = {}                    # stem -> (mtime, qc dict)
     drift_state = {}                 # stem -> {"status": ..., "drift": float, "asr_text": str}
@@ -350,6 +351,34 @@ def run(proj, open_browser=True):
             shutil.copy2(path, path.with_name(path.name + ".pre-booth.bak"))
             backed_up.add(str(path))
 
+    def _edit_kind(old, new):
+        """Coarse label for what the operator did at the mic."""
+        if new in old:
+            return "cut"
+        if old in new:
+            return "addition"
+        return "reword" if abs(len(old.split()) - len(new.split())) <= 2 else "rewrite"
+
+    def log_edit(sid, slide, source, old, new):
+        """Record an inline edit with both texts. Written at edit time rather than at
+        wrap-up on purpose: a booth that exits without POSTing /done still leaves the
+        evidence behind, and booth_session.json is not guaranteed to exist.
+
+        This is the highest-signal writing feedback the pipeline produces — the operator
+        rejecting a line at the moment he has to say it out loud. It used to evaporate
+        into an overwritten script.json."""
+        if old == new:
+            return None
+        rec = {"ts": round(time.time(), 3), "id": sid, "slide": slide, "source": source,
+               "kind": _edit_kind(old, new), "old": old, "new": new}
+        edit_log.append(rec)
+        try:
+            with (work_dir / "booth_edits.jsonl").open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        except OSError:
+            pass  # bookkeeping never breaks a recording session
+        return rec
+
     def apply_edit(sid, new_text):
         """Write an inline edit back to its source of truth. Main cards -> script.json
         segments[].text; short hook/outro cards -> shorts/plan.json cut[role]."""
@@ -365,12 +394,14 @@ def run(proj, open_browser=True):
                 for cut in plan:
                     if cut.get("slug") == c["plan_slug"] and cut.get(c["plan_role"]):
                         backup_once(plan_path)
+                        old_text = cut[c["plan_role"]]
                         cut[c["plan_role"]] = new_text
                         hit = True
                         break
                 if not hit:
                     return False
                 plan_path.write_text(json.dumps(plan, indent=2, ensure_ascii=False) + "\n")
+                log_edit(sid, c.get("slide"), "shorts/plan.json", old_text, new_text)
             else:
                 sp = proj.script_json
                 script = json.loads(sp.read_text())
@@ -378,12 +409,14 @@ def run(proj, open_browser=True):
                 for seg in script.get("segments", []):
                     if seg.get("id") == sid:
                         backup_once(sp)
+                        old_text = seg["text"]
                         seg["text"] = new_text
                         hit = True
                         break
                 if not hit:
                     return False
                 sp.write_text(json.dumps(script, indent=2, ensure_ascii=False) + "\n")
+                log_edit(sid, c.get("slide"), "script.json", old_text, new_text)
         edited.add(sid)
         refresh()
         # text changed → the old drift verdict no longer applies to this card
@@ -452,6 +485,7 @@ def run(proj, open_browser=True):
                                   source="booth-drift-backfill")
             cards.append({"id": sid, "slide": s["slide"], "recorded": recorded(sid),
                           "takes": t, "edited": sid in edited,
+                          "edits": [e for e in edit_log if e["id"] == sid],
                           "qc": q, "drift": (dr or {}).get("drift"),
                           "drift_status": (dr or {}).get("status")})
         rec_n = sum(1 for c in cards if c["recorded"])
