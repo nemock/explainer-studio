@@ -44,6 +44,11 @@ _TEXT_KEYS = ("headline", "word", "term", "definition", "quote", "attrib", "labe
               "title", "mark", "image", "before", "strike", "after")
 _LIST_KEYS = ("items", "steps", "stats", "points", "events", "nodes")
 _PAIR_KEYS = ("left", "right")
+# The keys CvgCompare actually renders from each side. `title`/`value` are canonical
+# (702 and 712 uses across 440 decks); `label`/`text` are accepted aliases added
+# 2026-08-30. Anything outside this set is dropped on the floor by the component, so a
+# side made only of unrecognised keys must count as NO content, not as content.
+_PAIR_TEXT_KEYS = ("title", "label", "value", "text")
 
 # A headline longer than this cannot fit its box even at the smallest type step. Derived
 # from the 4:5 block box (the binding aspect), with margin. The step table itself lives in
@@ -64,7 +69,15 @@ def _has_content(fields):
             return True
     for k in _PAIR_KEYS:
         v = fields.get(k)
-        if isinstance(v, dict) and any(str(x).strip() for x in v.values()):
+        # Only keys the COMPONENT actually reads count. Until 2026-08-30 this accepted
+        # any non-empty value in the dict, which defeated the whole point of this file:
+        # FMF 2026-08-28 s12 authored `label` + `text` on both sides, CvgCompare read
+        # `title` + `value`, and the slide rendered as a divider and two underlines with
+        # no words on it — and slidecheck passed it, because the dict was not empty. The
+        # question here is not "did the author write something", it is "will anything
+        # appear". Keep this tuple in step with CvgCompare's field reads.
+        if isinstance(v, dict) and any(
+                str(v.get(pk, "")).strip() for pk in _PAIR_TEXT_KEYS):
             return True
     return False
 

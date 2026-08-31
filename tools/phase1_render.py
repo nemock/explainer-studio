@@ -229,6 +229,30 @@ def main():
         [exp, "handoff", proj],
         [exp, "validate", proj],
     ]
+
+    # Framing QC (2026-08-30). `validate` checks manifest/caption STRUCTURE and `qa`
+    # checks timing, so neither has ever looked at a pixel. The FWF daily shipped a
+    # punch card clipped at both frame edges to six platforms and every gate said ok.
+    # frame_qc extracts real frames and blocks on clipped type; a non-zero exit here
+    # means no render_complete.json, so Phase 2 never publishes the broken render.
+    # It is deliberately narrow (see the tool's docstring) and measured zero false
+    # positives across FWF 2026-08-29 and 2026-08-30.
+    qc = Path(__file__).resolve().parent / "frame_qc.py"
+    if qc.is_file():
+        rendered = []
+        try:
+            pj = json.loads((Path(proj) / "project.json").read_text())
+            rendered = list(pj.get("aspects") or [pj.get("aspect", "9:16")])
+        except Exception as e:                       # a missing/odd project.json must
+            print(f"[phase1] frame_qc: cannot read aspects ({e}) — "
+                  f"defaulting to 9:16", flush=True)  # never take the render down
+            rendered = ["9:16"]
+        for a in rendered:
+            verbs.append([sys.executable, str(qc), proj, "--aspect", a,
+                          "--json", str(Path(proj) / "work" /
+                                        f"frame_qc_{a.replace(':', 'x')}.json")])
+    else:
+        print(f"[phase1] frame_qc: {qc} missing — skipping framing QC", flush=True)
     t0 = time.time()
     for cmd in verbs:
         rc = run_verb(cmd)

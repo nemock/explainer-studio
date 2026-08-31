@@ -43,16 +43,69 @@ const colorize = (text: string, accent: string[] = [], accentColor: string) => {
 // score on the card version).
 const Set: React.FC<{src?: string; anchor?: string}> = ({src, anchor}) => {
   const frame = useCurrentFrame();
-  const {durationInFrames} = useVideoConfig();
+  const {durationInFrames, width, height} = useVideoConfig();
   const W = useWorld();
   if (!src) return <AbsoluteFill style={{backgroundColor: W.paper}} />;
   const t = durationInFrames ? frame / durationInFrames : 0;
   const scale = 1.06 + t * 0.05;             // slow push in
   const drift = interpolate(t, [0, 1], [0, -12]);
+  const resolved = staticFile(src);
+
+  // PORTRAIT (2026-08-30). The sets are 16:9 scenes — a wide arrangement of furniture on
+  // a ground line, under a deliberately empty wall that exists so type has somewhere to
+  // live. `objectFit: cover` into a 9:16 frame keeps only the middle **32%** of that
+  // width (0.5625 / 1.787), which is not a crop so much as a different picture: on
+  // set_desk_night it lands on the laptop and the page stack, cuts both in half at the
+  // frame edge, and throws away the lamp, the plant, the mug and the window. That is the
+  // severed-prop defect in the 2026-08-30 framing audit, and it is also where much of
+  // the empty top band came from, since the wall got scaled up with everything else.
+  //
+  // So portrait fits the scene to WIDTH instead. Nothing is severed, the whole
+  // arrangement reads, and it sits on the bottom where a ground line belongs. The space
+  // above is filled from a blurred copy of the SAME art rather than a colour constant:
+  // measured across all four FWF sets, the top row is near-uniform deep violet (channel
+  // spread 20-49), so the blurred fill and the band's own top meet with no visible seam,
+  // and it stays correct if the art is ever regenerated. Blur, not a plain copy, because
+  // an unblurred backdrop shows stretched furniture peeking above the band.
+  //
+  // Landscape is untouched: a 1.787 set in a 1.778 frame is already a whole-scene fit.
+  if (height > width) {
+    // Origin bottom-centre so the push-in grows out of the ground line. Range kept to
+    // 1.025 deliberately — the outermost props (the lamp) start ~1.5% from the image
+    // edge, and a larger push would start clipping the very objects this fix recovers.
+    const pScale = 1.0 + t * 0.025;
+    return (
+      <AbsoluteFill style={{overflow: 'hidden', backgroundColor: W.paper}}>
+        {/* `cover` maps the whole image HEIGHT into the frame (the width is what gets
+            cropped), so a merely-scaled backdrop still contains the desk and the floor,
+            and blurring that gave a pale wash that met the band's deep violet top in a
+            hard horizontal seam — visibly worse than the crop it replaced. Zooming to
+            3.2 from the top edge keeps only the image's top ~31%, which is wall on all
+            four sets, so the fill is the wall's own colour and the join disappears. */}
+        <Img
+          src={resolved}
+          style={{
+            width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top',
+            transform: `scale(${3.2 + t * 0.06})`, transformOrigin: 'top center',
+            filter: 'blur(40px) saturate(0.95)',
+          }}
+        />
+        <Img
+          src={resolved}
+          style={{
+            position: 'absolute', left: 0, right: 0, bottom: 0,
+            width: '100%', height: 'auto',
+            transform: `scale(${pScale})`, transformOrigin: 'bottom center',
+          }}
+        />
+      </AbsoluteFill>
+    );
+  }
+
   return (
     <AbsoluteFill style={{overflow: 'hidden', backgroundColor: W.paper}}>
       <Img
-        src={src.startsWith('papercraft') ? staticFile(src) : staticFile(src)}
+        src={resolved}
         style={{
           width: '100%', height: '100%', objectFit: 'cover',
           objectPosition: anchor || 'center',
@@ -118,6 +171,42 @@ const Cutouts: React.FC<{items?: any[]}> = ({items}) => (
 const paperRgb = (hex: string): string => {
   const h = hex.replace('#', '');
   return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)).join(',');
+};
+
+// Kicker size (2026-08-30, operator: "I don't understand why it is so tiny. We've got
+// plenty of vertical space").
+//
+// Kickers were `M * 0.021`, and M is the MIN dimension — the WIDTH in portrait. That is
+// the right rule for a headline, which has to survive a narrow frame, but on a kicker it
+// meant 22.7px of type in a 1920-tall frame next to an 84px headline. CvgPunch and
+// CvgCta had already gone their own way and size off `height` (42-46px), so the small
+// ones were an inconsistency rather than a decision.
+//
+// It cannot be a flat bump, because kicker length varies enormously — but the FIRST
+// version of this got the constraint wrong and is worth recording, because the mistake
+// is easy to repeat. It capped the size so the kicker fitted on ONE line. Nothing forces
+// one line: the kicker is an ordinary block and wraps. So a long kicker like "40% OF
+// SURVEYED CASES INVOLVED A LITIGANT USING AI" (49 chars) was pinned to the old 22.7px
+// to avoid a horizontal overflow that would never have happened, in a frame with a
+// thousand pixels of unused height above it. Operator, on seeing it: "I can barely read
+// that myself. Why, when there is so much available space...".
+//
+// The budget is therefore AREA, not line width: allow the type to wrap to two lines and
+// size it to fit that. Two rather than one because the vertical room is genuinely there,
+// and not more than two because a kicker is a label — at three lines it stops reading as
+// one and starts competing with the headline.
+//
+// Uppercase 800-weight runs ~0.62em, plus the tracking, which is a per-character cost
+// and so is subtracted before dividing. The floor is the old size, so no kicker is ever
+// SMALLER than it is today: this can only grow type, never shrink it.
+const KICKER_LINES = 2;
+const kickerSize = (text: string, M: number, width: number, portrait: boolean): number => {
+  const base = M * 0.021;
+  if (!portrait) return base;
+  const n = Math.max(1, (text || '').length);
+  const usable = width * 0.86;              // frame minus the type block's side padding
+  const fits = ((KICKER_LINES * usable) / n - 5) / 0.62;
+  return Math.max(base, Math.min(M * 0.034, fits));
 };
 
 const SceneType: React.FC<{
@@ -192,7 +281,7 @@ const SceneType: React.FC<{
         }}>
           {kicker ? (
             <div style={{
-              fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.021 * TS, letterSpacing: 5,
+              fontFamily: BRAND.font, fontWeight: 800, fontSize: kickerSize(kicker, M, width, portrait), letterSpacing: 5,
               textTransform: 'uppercase', color: W.accent, marginBottom: M * 0.016,
             }}>{kicker}</div>
           ) : null}
@@ -304,10 +393,36 @@ export const CvgPunch: React.FC<{fields: any}> = ({fields}) => {
   // past the safe area at 16:9. Sized off the min dimension (2026-08-07 portrait pass),
   // then HARD-CAPPED to the frame width the way CvgCta fits its headline — the length
   // steps alone let "Irreversible" (12 chars) bleed past a 1080px-wide frame edge to
-  // edge (operator screenshot, FMF 4:5). 900-weight glyphs run ~0.52em.
+  // edge (operator screenshot, FMF 4:5).
+  //
+  // 2026-08-30: the cap used a flat 0.52em per character, which is an AVERAGE and so
+  // cannot bound a word made of wide glyphs. Measured from renders: FWF 2026-08-29 s7
+  // "MAXIMUM" clipped both frame edges at 9:16, and FWF 2026-08-30 s6 "UNREAD" clipped
+  // the U and the D. Both are all-caps runs of wide letters (M/W ~0.95em, most caps
+  // ~0.68em, I ~0.30em), so their real width is 0.62-0.68em per character and the cap
+  // never bound. A per-character sum fixes it without over-shrinking narrow words the
+  // way a single safer constant would: "MAXIMUM" measures 5.19em and steps down hard,
+  // while a same-length word of narrow glyphs keeps its size. Re-tune the table from
+  // rendered stills, never from a formula.
+  const EM_WIDE = 0.95;   // M W
+  const EM_NARROW = 0.60; // E F L T J
+  const EM_THIN = 0.30;   // I
+  const emWidth = (w: string) => {
+    let sum = 0;
+    for (const ch of w.toUpperCase()) {
+      if (ch === 'M' || ch === 'W') sum += EM_WIDE;
+      else if (ch === 'I') sum += EM_THIN;
+      else if ('EFLTJ'.includes(ch)) sum += EM_NARROW;
+      else if (ch === ' ') sum += 0.28;
+      else sum += 0.68;
+    }
+    return Math.max(0.5, sum);
+  };
   const M = Math.min(width, height);
   const stepped = M * (word.length > 16 ? 0.105 : word.length > 12 ? 0.15 : word.length > 7 ? 0.2 : 0.26);
-  const size = Math.min(stepped, (width * 0.9) / Math.max(1, word.length * 0.52));
+  // 0.88 not 0.9: the old budget left no room for the negative letterSpacing rounding
+  // that put "UNREAD" a few pixels over an already-too-generous cap.
+  const size = Math.min(stepped, (width * 0.88) / emWidth(word));
   return (
     <AbsoluteFill>
       <Set src={fields.set} anchor={fields.anchor} />
@@ -345,12 +460,27 @@ export const CvgList: React.FC<{fields: any}> = ({fields}) => {
   // Type tracks the min dimension (2026-08-07 portrait pass): landscape identical, and
   // portrait labels scale to the narrow width instead of the tall height.
   const M = Math.min(width, height);
+  const portrait = height > width;
   return (
     <AbsoluteFill>
       <Set src={fields.set} anchor={fields.anchor} />
       <Cutouts items={fields.props} />
+      {/* Legibility scrim. The landscape ramp reaches zero at 62% of the width, which
+          was safe while the text block was landscape-narrow and sat inside it.
+          Portrait pads only 7.5% a side (below), so items run to 92.5% — well past
+          where this scrim has faded to nothing — and any item long enough to cross 62%
+          printed ink-on-ink over the dark half of the set. Measured on FWF 2026-08-29
+          slide 9: "behind", "first" and "migration, end" were unreadable, ink (43,18,66)
+          on ground (47,21,60), about 1.1:1.
+
+          So portrait gets its own ramp that never fully clears. It bottoms out at .60,
+          which over the darkest ground in these worlds composites to roughly 6:1 against
+          the ink — clear of WCAG AA with room for a darker set later. Landscape keeps
+          the original ramp byte-for-byte, so Circumvent's 16:9 is untouched. */}
       <AbsoluteFill style={{
-        background: 'linear-gradient(90deg, rgba(242,237,224,.92) 0%, rgba(242,237,224,.70) 34%, rgba(242,237,224,0) 62%)',
+        background: portrait
+          ? 'linear-gradient(90deg, rgba(242,237,224,.93) 0%, rgba(242,237,224,.86) 45%, rgba(242,237,224,.72) 75%, rgba(242,237,224,.60) 100%)'
+          : 'linear-gradient(90deg, rgba(242,237,224,.92) 0%, rgba(242,237,224,.70) 34%, rgba(242,237,224,0) 62%)',
       }} />
       <AbsoluteFill style={{justifyContent: 'center',
                             padding: width < height
@@ -358,7 +488,7 @@ export const CvgList: React.FC<{fields: any}> = ({fields}) => {
                               : `0 ${width * 0.075}px`}}>
         {fields.kicker ? (
           <div style={{
-            fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.021, letterSpacing: 5,
+            fontFamily: BRAND.font, fontWeight: 800, fontSize: kickerSize(fields.kicker, M, width, portrait), letterSpacing: 5,
             textTransform: 'uppercase', color: W.accent, marginBottom: M * 0.028,
           }}>{fields.kicker}</div>
         ) : null}
@@ -412,16 +542,40 @@ export const CvgCompare: React.FC<{fields: any}> = ({fields}) => {
   const pSize = vMax > 70 ? 0.056 : 0.066;
   const Side: React.FC<{d: any; e: number; side: 'l' | 'r'}> = ({d, e, side}) => (
     <div style={{
-      flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      // `flex: 1` is right in LANDSCAPE, where the container is a row and this makes two
+      // equal-width columns. In PORTRAIT the container is a column, so flex:1 made each
+      // side grow to fill half the available HEIGHT and then centre ~247px of content
+      // inside a ~680px box: about 216px of dead ground above AND below each side, which
+      // is what produced the ~435px chasm between the two halves (measured, FWF
+      // 2026-08-30 s3). Portrait sides are now content-height and the separation is an
+      // explicit gap on the container, so it is a design number instead of a leftover.
+      flex: portrait ? '0 0 auto' : 1,
+      // Content-height sides no longer stretch on the cross axis, so state the width or
+      // a long value sizes to max-content and stops wrapping the way it does today.
+      width: portrait ? '100%' : undefined,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       transform: `translateY(${(1 - e) * 24}px)`, opacity: e,
       // Wider side gutter on portrait: at the bumped size a long value otherwise kisses
       // the frame edge (FMF proof, 2026-08-11).
       padding: `0 ${width * (portrait ? 0.05 : 0.03)}px`,
     }}>
       <div style={{
-        fontFamily: BRAND.font, fontWeight: 800, fontSize: M * (portrait ? 0.028 : 0.022), letterSpacing: 4,
+        // Same class as a kicker — a short uppercase label with tracking — so it takes
+        // the same sizer (2026-08-30 audit). It was M * 0.028, about 30px at 1080 and
+        // roughly 10.8pt on a phone, sitting under a 60-71px value: the kicker bug in a
+        // second place. Compare slides appear about once per deck (237 across 236), so
+        // this is not an edge case. kickerSize keeps it length-aware and floors it at
+        // the old size, so no label shrinks.
+        fontFamily: BRAND.font, fontWeight: 800,
+        fontSize: kickerSize(d.title || d.label || '', M, width, portrait), letterSpacing: 4,
         textTransform: 'uppercase', color: d.kind === 'bad' ? (W.neutral ?? `${W.ink}8A`) : W.accent, marginBottom: M * 0.018,
-      }}>{d.title || ''}</div>
+        // `label` accepted alongside `title` (2026-08-30). A survey of 440 decks found
+        // `title` used 702 times and `label` 12, all in recent FWF dailies — those
+        // episodes shipped compare slides with NO labels at all, because an unread key
+        // becomes '' and prints nothing. CvgList already accepts `it.title || it.label`,
+        // so this only brings CvgCompare in line with a convention the deck authors were
+        // reasonably already using.
+      }}>{d.title || d.label || ''}</div>
       <div style={{
         // Portrait halves are short AND sit above the caption band — 0.072 wrapped long
         // values into the captions (operator screenshot, FMF 4:5). Stepped down on
@@ -431,7 +585,10 @@ export const CvgCompare: React.FC<{fields: any}> = ({fields}) => {
         // shrinking the type.
         fontFamily: BRAND.font, fontWeight: 900, fontSize: M * (portrait ? pSize : 0.072), lineHeight: 1.08,
         color: W.ink, textAlign: 'center', opacity: d.kind === 'bad' ? 0.62 : 1,
-      }}>{d.value || ''}</div>
+        // `text` accepted alongside `value` for the same reason. FMF 2026-08-28 s12
+        // authored `label` + `text`, so NEITHER key was read and the whole compare slide
+        // rendered as a divider and two underlines with no words on it. That shipped.
+      }}>{d.value || d.text || ''}</div>
       <div style={{
         marginTop: M * 0.026, width: '46%', height: M * 0.011,
         background: d.kind === 'bad' ? (W.neutral ?? `${W.ink}8A`) : W.accent, transform: `scaleX(${e})`,
@@ -446,18 +603,25 @@ export const CvgCompare: React.FC<{fields: any}> = ({fields}) => {
         <AbsoluteFill style={{alignItems: 'center', justifyContent: 'flex-start',
                               paddingTop: height * (portrait ? 0.07 : 0.1)}}>
           <div style={{
-            fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.021 * (portrait ? 1.18 : 1), letterSpacing: 5,
+            fontFamily: BRAND.font, fontWeight: 800, fontSize: kickerSize(fields.kicker, M, width, portrait), letterSpacing: 5,
             textTransform: 'uppercase', color: W.accent,
           }}>{fields.kicker}</div>
         </AbsoluteFill>
       ) : null}
       <AbsoluteFill style={{flexDirection: portrait ? 'column' : 'row', alignItems: 'center',
                             justifyContent: 'center',
+                            // The separation between the two halves, now that they are
+                            // content-height. Big enough to read as two things, small
+                            // enough that they read as one comparison.
+                            gap: portrait ? height * 0.045 : 0,
                             // Bottom padding clears the caption band on portrait (the pill
                             // sits in the lower ~16% and ate the second side's last line).
                             // Top padding tightened 2026-08-11 so the kicker and the first
-                            // half stop reading as two disconnected blocks.
-                            padding: portrait ? `${height * 0.10}px 0 ${height * 0.19}px` : 0}}>
+                            // half stop reading as two disconnected blocks, and again
+                            // 2026-08-30: with content-height sides the pair centres as a
+                            // group, so the old 0.10 pushed it low and left a wide empty
+                            // strip under the kicker.
+                            padding: portrait ? `${height * 0.06}px 0 ${height * 0.19}px` : 0}}>
         <Side d={L} e={eL} side="l" />
         <div style={portrait
           ? {height: 3, width: '38%', background: W.accent, opacity: 0.5}
@@ -492,7 +656,7 @@ export const CvgSteps: React.FC<{fields: any}> = ({fields}) => {
       {fields.kicker ? (
         <AbsoluteFill style={{alignItems: 'center', justifyContent: 'flex-start', paddingTop: height * 0.09}}>
           <div style={{
-            fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.021, letterSpacing: 5,
+            fontFamily: BRAND.font, fontWeight: 800, fontSize: kickerSize(fields.kicker, M, width, portrait), letterSpacing: 5,
             textTransform: 'uppercase', color: W.accent,
           }}>{fields.kicker}</div>
         </AbsoluteFill>
@@ -555,7 +719,7 @@ export const CvgDefine: React.FC<{fields: any}> = ({fields}) => {
                               : `0 ${width * 0.09}px`}}>
         {fields.kicker ? (
           <div style={{
-            fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.021, letterSpacing: 5,
+            fontFamily: BRAND.font, fontWeight: 800, fontSize: kickerSize(fields.kicker, M, width, portrait), letterSpacing: 5,
             textTransform: 'uppercase', color: W.accent, marginBottom: M * 0.02, opacity: e1,
           }}>{fields.kicker}</div>
         ) : null}
@@ -642,7 +806,7 @@ export const CvgReframe: React.FC<{fields: any}> = ({fields}) => {
         }}>
           {fields.kicker ? (
             <div style={{
-              fontFamily: BRAND.font, fontWeight: 800, fontSize: M * 0.021 * TS, letterSpacing: 5,
+              fontFamily: BRAND.font, fontWeight: 800, fontSize: kickerSize(fields.kicker, M, width, portrait), letterSpacing: 5,
               textTransform: 'uppercase', color: W.accent, marginBottom: M * 0.016,
             }}>{fields.kicker}</div>
           ) : null}
