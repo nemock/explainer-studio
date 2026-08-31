@@ -331,7 +331,25 @@ to date missed length on the first draft; the rule exists because it bites).
      recap" and `humaner`/FORMATS.md now agree; the skim-artifact job is served by
      the boxed artifacts instead. Formats still differ elsewhere (spoken texture,
      length, CTA register) — don't flatten those.
-8. **Chapters** = the `beat` labels; every beat boundary is a chapter.
+8. **Chapters** = the `beat` labels; every beat boundary is a chapter. **They go in
+   `meta.json`'s description, and they are not done until you have looked at the
+   frames.** Two failure modes, both hit on module 3 of the Product Leadership
+   series (2026-08-31):
+   - **The offset is per-project. Measure it:** `rendered_duration - last
+     segments.json end`. Module 3's was **0.17s** (no prepended sting, so narration
+     time is video time), where #54's PaperSting was 5.99s and #13's was 2.5s.
+     Assuming any of them lands every chapter wrong. See [[gag-splice-sting-offset]].
+   - **A `beat` marks where a section starts, which is not always what the viewer
+     sees there.** Extract a frame at each mark **+2s** (sampling exactly on the mark
+     catches the outgoing slide mid-transition), tile them into one contact sheet,
+     and read it once. On module 3 this moved a boundary: the beat labelled "Scope is
+     company size" opened on the ProductCon critique, and the scope argument didn't
+     start for another 48 seconds. It shipped as two chapters instead of one.
+
+   Merging a short bridge beat or dropping a sub-30s outro beat is a fine editorial
+   call; shipping a chapter whose title doesn't match its frame is not. And a
+   description that *promises* chapters without carrying them is worse than one that
+   says nothing — modules 1 and 2 shipped that promise unkept.
 9. **Define terms as you use them — comprehension IS retention (operator directive
    2026-07-14).** An undefined term the viewer doesn't know blocks them from
    following everything after it: they quietly tune out, so it's a retention leak,
