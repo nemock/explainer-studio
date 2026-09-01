@@ -92,6 +92,17 @@ BRITISH = {
     "travelled": "traveled", "cancelled": "canceled", "modelling": "modeling",
     "labelled": "labeled", "whilst": "while", "amongst": "among", "learnt": "learned",
     "practise": "practice", "programme": "program", "grey": "gray",
+    # VOCABULARY, not spelling (added 2026-08-31, module 4). The -ise/-our/-re list
+    # above passed a script that opened card two on "a fortnight later", because
+    # "fortnight" is spelled the same on both sides of the Atlantic and is simply not
+    # a word Americans say. Idiom is the other half of U.S. English and the checker
+    # was only covering one.
+    "fortnight": "two weeks", "fortnightly": "every two weeks",
+    "maths": "math", "aeroplane": "airplane", "aluminium": "aluminum",
+    "sceptic": "skeptic", "sceptical": "skeptical", "storey": "story (floor)",
+    "kerb": "curb", "tyre": "tire", "pyjamas": "pajamas", "cheque": "check",
+    "chuffed": "pleased", "rubbish": "garbage / nonsense",
+    "straightaway": "right away", "queueing": "lining up",
 }
 
 
