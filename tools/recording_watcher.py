@@ -60,6 +60,15 @@ DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})_")
 # sailed straight past it.
 CRASHLOOP_AFTER = 3
 CRASHLOOP_RETRY_SECS = 30 * 60  # ~every 6th 5-minute cycle
+# Phase 1 failing at the same verb with the same rc this many launches running is a
+# verdict, not a flake: stop relaunching and write BLOCKED.md. With the backoff above
+# that is ~3 hours, against the 26 hours and 31 launches FWF 2026-08-31 burned.
+RENDER_BLOCK_AFTER = 6
+# ...but never block permanently. A fix landing in the renderer or a SKILL leaves no
+# trace the watcher can see, so a block with no way back would need a human even after
+# the cause was gone. One probe launch this often re-tests it: the probe clears
+# everything if it now passes, and re-blocks if it does not.
+RENDER_BLOCK_PROBE_SECS = 6 * 60 * 60
 
 # Ceiling on renders running AT ONCE across every show, overridable per-config
 # with "max_concurrent_renders".
@@ -185,6 +194,110 @@ def crashlooping(proj, kind):
     n = att.get("count", 0)
     return (n >= CRASHLOOP_AFTER
             and time.time() - att.get("ts", 0) < CRASHLOOP_RETRY_SECS), n
+
+
+def render_blocked(proj):
+    """Phase 1 has died at the SAME verb with the SAME exit code RENDER_BLOCK_AFTER
+    launches running. Returns (blocked, fingerprint, reason).
+
+    The crashloop guard below throttles but never gives up, which is correct for a
+    flaky render and wrong for a broken one. FWF 2026-08-31 hit a `stills` step asking
+    for an aspect the renderer no longer produces: unfixable without a human, identical
+    every time, and re-rendering the whole video before failing. It burned 31 launches
+    and ~2 hours of compute across 26 hours while the episode sat unpublished, and the
+    only trace was a log line nobody was reading. A repeated identical failure is a
+    verdict, not a retry candidate — so write BLOCKED.md and stop.
+
+    Three ways back, so a block can never become permanent. A completed render deletes
+    render_failure.json; a run that fails somewhere new resets the streak; and every
+    RENDER_BLOCK_PROBE_SECS one launch is let through regardless, because a fix landing
+    in the renderer or a SKILL leaves no trace here and a block that only a human could
+    lift would outlive its own cause. Deleting work/render_failure.json forces the probe
+    immediately, which is what BLOCKED.md tells the reader to do."""
+    f = Path(proj) / "work" / "render_failure.json"
+    try:
+        d = json.loads(f.read_text())
+    except (OSError, ValueError):
+        return False, "", ""
+    streak = d.get("streak", 0)
+    if streak < RENDER_BLOCK_AFTER:
+        return False, "", ""
+    if time.time() - d.get("ts", 0) >= RENDER_BLOCK_PROBE_SECS:
+        return False, "", ""            # probe window: let one launch re-test it
+    return True, d.get("fp", ""), (f"{d.get('verb', '?')} exited {d.get('rc', '?')} on "
+                                   f"{streak} consecutive phase-1 launches")
+
+
+def write_render_blocked_md(cfg, show, proj, fp, why):
+    """Write BLOCKED.md for a stuck render, once per distinct failure fingerprint.
+
+    Never clobbers a BLOCKED.md written by another guard (the script-staleness check
+    or a publish-gate block): those name a different problem and a human is already
+    being pointed at them. Only a BLOCKED.md this function wrote gets rewritten, and
+    only when the fingerprint moves."""
+    bl = Path(proj) / "BLOCKED.md"
+    marker = "<!-- render-blocked -->"
+    if bl.exists():
+        try:
+            head = bl.read_text()
+        except OSError:
+            return
+        if marker not in head:
+            return                       # someone else's block; leave it alone
+        if fp and fp in head:
+            return                       # already written for this exact failure
+    logdir = Path(cfg["logs_dir"])
+    try:                                 # newest render log for this show, for the tail
+        logs = sorted(logdir.glob(f"{show['id']}_*_render.log"),
+                      key=lambda p: p.stat().st_mtime, reverse=True)
+        tail = "".join(logs[0].read_text(errors="replace").splitlines(True)[-25:]) \
+            if logs else "(no render log found)"
+        logname = logs[0].name if logs else "(none)"
+    except OSError as e:
+        tail, logname = f"(could not read render log: {e})", "(none)"
+    try:
+        bl.write_text(
+            f"{marker}\n"
+            f"# BLOCKED — phase 1 render is failing identically\n\n"
+            f"**Show:** {show['id']}\n"
+            f"**Project:** {Path(proj).name}\n"
+            f"**Failure:** {why}\n"
+            f"**Fingerprint:** `{fp}`\n\n"
+            f"The watcher stopped relaunching phase 1 for this project. Each launch was "
+            f"re-running the full render before dying at the same step, so retrying "
+            f"costs compute and changes nothing. A human needs to look at it.\n\n"
+            f"## Last 25 lines of `{logname}`\n\n"
+            f"```\n{tail}\n```\n\n"
+            f"## Recovering\n\n"
+            f"Fix the cause, then either wait or force it:\n\n"
+            f"- **Wait.** The watcher lets one probe launch through every "
+            f"{RENDER_BLOCK_PROBE_SECS // 3600}h. If it gets through, phase 1 deletes "
+            f"`work/render_failure.json`, this file goes away, and publishing resumes "
+            f"with no further steps.\n"
+            f"- **Force it now.** Delete `work/render_failure.json` and the next cycle "
+            f"relaunches immediately. (Deleting this file alone does nothing — the "
+            f"failure record is what the watcher reads.)\n\n"
+            f"If the probe fails the same way again, this file comes back with a higher "
+            f"streak. Nothing publishes for this project until a render completes.\n")
+    except OSError as e:
+        log(cfg, f"could not write {bl}: {e}")
+
+
+def notify_render_blocked_once(cfg, show, proj, fp, why):
+    """One macOS notification per distinct render failure, not per cycle."""
+    marker = Path(proj) / "work" / "render_blocked_notified"
+    try:
+        if marker.exists() and marker.read_text().strip() == fp:
+            return
+        marker.write_text(fp)
+    except OSError:
+        pass  # notification still worth attempting
+    subprocess.run([
+        "/usr/bin/osascript", "-e",
+        f'display notification "{show["id"]}: render blocked — {why[:120]}. '
+        f'Nothing will publish until it is fixed." '
+        f'with title "Recording watcher"',
+    ], check=False)
 
 
 def publish_blocked(proj):
@@ -506,6 +619,26 @@ def run(cfg, dry):
                     # between the last take and Phase 1 aligns the new text onto the old
                     # audio SILENTLY and publishes it (2026-08-10). Blocked projects need
                     # a human at the booth, so don't spend the cycle's slot on them.
+                    # Deterministic render block: phase 1 has died at the same verb
+                    # with the same exit code RENDER_BLOCK_AFTER launches running.
+                    # Retrying re-renders the whole video to reach an identical
+                    # failure, so stop and put a human on it.
+                    #
+                    # Checked BEFORE the script guard on purpose. script_guard_ok runs
+                    # `media --recheck`, whose scriptguard.clear_blocked() unlinks
+                    # BLOCKED.md unconditionally when the audio and script.json agree —
+                    # it cannot tell its own block from anyone else's. Running it first
+                    # would delete this block every cycle and we would rewrite it every
+                    # cycle. Skipping it here also saves a subprocess on a project that
+                    # is going nowhere until a human intervenes.
+                    rblocked, rfp, rwhy = render_blocked(proj)
+                    if rblocked:
+                        log(cfg, f"RENDER-BLOCKED {show['id']}: {proj.name} — {rwhy}; "
+                                 f"NOT relaunching phase 1 (see {proj / 'BLOCKED.md'})")
+                        if not dry:
+                            write_render_blocked_md(cfg, show, proj, rfp, rwhy)
+                            notify_render_blocked_once(cfg, show, proj, rfp, rwhy)
+                        continue
                     ok, why = script_guard_ok(cfg, proj)
                     if not ok:
                         log(cfg, f"BLOCKED {show['id']}: {proj.name} — script.json changed "

@@ -201,6 +201,50 @@ def _terminate(signum, _frame):
     os.kill(os.getpid(), signum)
 
 
+def verb_name(cmd):
+    """Short stable name for a verb, for the failure record. explainer2 verbs are
+    argv[1]; frame_qc is invoked as `python .../frame_qc.py`, whose argv[1] is an
+    absolute path that would differ across checkouts and defeat fingerprinting."""
+    if len(cmd) > 1 and cmd[1].endswith(".py"):
+        return Path(cmd[1]).stem
+    return cmd[1] if len(cmd) > 1 else cmd[0]
+
+
+def record_failure(proj, verb, rc):
+    """Write work/render_failure.json so the watcher can tell a transient crash from
+    a verb that can never succeed here.
+
+    `streak` counts CONSECUTIVE launches failing at the same verb with the same exit
+    code. That is the signal the watcher blocks on: FWF 2026-08-31 failed at `stills`
+    with rc 1 thirty-one times running, each launch re-rendering the video first, and
+    nothing in the loop could tell that from a flaky render worth retrying. A run that
+    fails somewhere new resets the streak, because that is genuinely new information."""
+    f = Path(proj) / "work" / "render_failure.json"
+    fp = f"{verb}:{rc}"
+    prev = {}
+    try:
+        prev = json.loads(f.read_text())
+    except (OSError, ValueError):
+        pass
+    streak = prev.get("streak", 0) + 1 if prev.get("fp") == fp else 1
+    try:
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps({"fp": fp, "verb": verb, "rc": rc,
+                                 "streak": streak, "ts": int(time.time())}))
+    except OSError as e:                      # a failure record that cannot be written
+        print(f"[phase1] could not write {f}: {e}", flush=True)   # must not mask the
+        return 0                                                  # real failure below
+    return streak
+
+
+def clear_failure(proj):
+    """Drop a stale failure record once the render gets all the way through."""
+    try:
+        (Path(proj) / "work" / "render_failure.json").unlink()
+    except OSError:
+        pass
+
+
 def run_verb(cmd):
     """Run one explainer2 verb as a child in its OWN process group."""
     print(f"\n[phase1] $ {' '.join(cmd)}", flush=True)
@@ -223,9 +267,29 @@ def main():
     proj = str(Path(args.project_dir).resolve())
     _child["proj"] = proj                 # _reap needs this from the signal handler
     exp = args.explainer
+
+    # Which aspects this project actually renders. Read ONCE: the stills verb and
+    # frame_qc below both key off it, and both must agree with what `media` produced.
+    try:
+        pj = json.loads((Path(proj) / "project.json").read_text())
+        rendered = list(pj.get("aspects") or [pj.get("aspect", "9:16")])
+    except Exception as e:                        # a missing/odd project.json must
+        print(f"[phase1] cannot read aspects ({e}) — defaulting to 9:16", flush=True)
+        rendered = ["9:16"]                       # never take the render down
+
+    # Stills aspect (2026-09-01). This was hardcoded to 4:5. That was silently fine
+    # while the renderer emitted 4:5 whatever the config said, so nothing caught it
+    # when the 2026-08-30 decision retired the 4:5 cut. Once the renderer started
+    # honoring `aspects`, `stills` asked for a video that is no longer produced and
+    # exited 1 — phase 1 died BEFORE writing render_complete.json, and the watcher,
+    # which has no other success signal, respawned it 31 times on FWF 2026-08-31
+    # while the episode never published. Prefer 4:5 where a show still renders it;
+    # otherwise take what was actually rendered.
+    stills_aspect = "4:5" if "4:5" in rendered else rendered[0]
+
     verbs = [
         [exp, "media", proj],
-        [exp, "stills", proj, "--aspect", "4:5"],
+        [exp, "stills", proj, "--aspect", stills_aspect],
         [exp, "handoff", proj],
         [exp, "validate", proj],
     ]
@@ -239,14 +303,6 @@ def main():
     # positives across FWF 2026-08-29 and 2026-08-30.
     qc = Path(__file__).resolve().parent / "frame_qc.py"
     if qc.is_file():
-        rendered = []
-        try:
-            pj = json.loads((Path(proj) / "project.json").read_text())
-            rendered = list(pj.get("aspects") or [pj.get("aspect", "9:16")])
-        except Exception as e:                       # a missing/odd project.json must
-            print(f"[phase1] frame_qc: cannot read aspects ({e}) — "
-                  f"defaulting to 9:16", flush=True)  # never take the render down
-            rendered = ["9:16"]
         for a in rendered:
             verbs.append([sys.executable, str(qc), proj, "--aspect", a,
                           "--json", str(Path(proj) / "work" /
@@ -257,14 +313,17 @@ def main():
     for cmd in verbs:
         rc = run_verb(cmd)
         if rc != 0:
+            streak = record_failure(proj, verb_name(cmd), rc)
             print(f"[phase1] FAILED: {cmd[1]} exited {rc} — no render_complete.json "
-                  f"written, Phase 2 will not publish", flush=True)
+                  f"written, Phase 2 will not publish "
+                  f"(same failure {streak}x running)", flush=True)
             # A verb that dies (crash, scriptguard refusal, remotion throw) can
             # still leave npm/node/chrome running; without this the failure path
             # leaked a tree that then starved the NEXT render (2026-08-20).
             _reap(f"{cmd[1]} exited {rc}")
             return rc
 
+    clear_failure(proj)          # got all the way through; any prior streak is stale
     sentinel = Path(proj) / "work" / "render_complete.json"
     sentinel.parent.mkdir(parents=True, exist_ok=True)
     sentinel.write_text(json.dumps({"ts": int(time.time()),

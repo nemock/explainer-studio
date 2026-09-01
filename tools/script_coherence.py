@@ -148,8 +148,20 @@ def main():
                                       cut[role]))
 
     fragments, openers, longs, colons, bare, british, doubled = [], [], [], [], [], [], []
+    empty = []
 
     for card, text in cards:
+
+        # A card with no words at all. Every other check in this file asks whether the
+        # sentences on a card are any good; not one of them asked whether the card HAS a
+        # sentence, so an empty card sailed through all of them and reached the booth,
+        # where the operator was shown a blank card to read (module 4 card 52,
+        # 2026-08-31). The cause was an edit that blanked a card's text instead of
+        # deleting the card, which is invisible to a parser looking at sentences: there
+        # were none to look at. Cheap check, and it fires before anyone stands at a mic.
+        if not text.strip():
+            empty.append(f"{card}: no text at all — blanked by an edit instead of deleted?")
+            continue
 
         # a repeated word or two-word phrase back to back, which is almost always a
         # leftover from an edit rather than emphasis. Real emphasis repeats ACROSS a
@@ -213,6 +225,7 @@ def main():
           f"[{len(segs)} script + {n_short} shorts hook/outro], {n_sent} sentences)")
 
     groups = [
+        ("EMPTY CARDS (a card with no words on it)", empty),
         ("VERBLESS SENTENCES (a noun-stack where a sentence belongs)", fragments),
         ("BARE NUMERALS (a count with no noun)", bare),
         ("COLD-OPEN VIOLATIONS (card opens on a bare pronoun)", openers),
