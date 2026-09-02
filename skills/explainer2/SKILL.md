@@ -242,7 +242,7 @@ body line).
   show the booth. Re-running the launcher on an already-open booth re-pops the
   tab (`--no-open` for headless launches). `--stop` takes it down.
   The operator records in the browser; takes save to `voiceover/` as they go (a
-  restart never loses recorded takes). When done, `python3 tools/launch_booth.py --stop`.
+  restart never loses recorded takes). When done, `python3 tools/launch_booth.py --stop <project_dir>` — **pass the project.** Bare `--stop` kills EVERY booth in the 8765-8794 pool, which on 2026-09-02 took out an unrelated ig_carousel booth that had been open since 07:23 alongside the one being closed. The scoped form matches on the running `explainer2.cli record <project>` process, so a stale `work/booth_port` cannot point it at somebody else's booth.
   - **Finish signal (operator directive 2026-06-23): right after READY, start the
     waiter as a harness BACKGROUND task** — `python3 tools/launch_booth.py --wait
     <project_dir>` via `run_in_background`. The booth writes `work/record_done.json`

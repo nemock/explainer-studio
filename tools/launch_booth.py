@@ -29,7 +29,8 @@ Usage:
                                                         # PENDING only for a booth that
                                                         # identifies as THIS project
   python3 tools/launch_booth.py --claim <project_dir>    # CLAIMED / LOCKED — atomically claim completion so concurrent/resumed fires can't double-post
-  python3 tools/launch_booth.py --stop                   # stop any running booth
+  python3 tools/launch_booth.py --stop <project_dir>    # stop ONLY that project's booth
+  python3 tools/launch_booth.py --stop                   # stop EVERY booth in the pool
 
 Tab opening (operator directive, 2026-07-04): a booth the operator can't see
 isn't open. On a successful start — including the idempotent "already open for
@@ -168,6 +169,26 @@ def _port_occupant(port):
     return (False, other) if other else None
 
 
+def _booth_project(port):
+    """The project a booth on `port` is recording, resolved, or None if it is not a booth.
+
+    Read off the LIVE process (`python -m explainer2.cli record <project>`), never from
+    <project>/work/booth_port. That file records where a booth was last launched, which
+    is not the same as what is running there now: ports are reused across projects, so a
+    stale file points at whatever took the port next. Matching on the running command is
+    the only way to be sure whose booth you are about to kill."""
+    for pid in _pids_on_port(port):
+        parts = _cmdline(pid).split()
+        if "explainer2.cli" in parts and "record" in parts:
+            i = parts.index("record")
+            if i + 1 < len(parts):
+                try:
+                    return Path(parts[i + 1]).resolve()
+                except OSError:
+                    return None
+    return None
+
+
 def _project_port(project):
     """The port this project's booth was last launched on (work/booth_port)."""
     f = Path(project) / "work" / "booth_port"
@@ -177,11 +198,31 @@ def _project_port(project):
         return None
 
 
-def stop():
+def stop(project=None):
+    """Stop booths. With `project`, stop ONLY that project's booth.
+
+    The unscoped form kills every booth in the pool, which is right for "clear the decks"
+    and wrong for "I have finished recording". On 2026-09-02 a bare --stop, run to close
+    one deep dive's booth on :8771, also killed an unrelated ig_carousel booth on :8765
+    that had been open since 07:23. Nothing was lost only because that session had not yet
+    recorded a take. Every other command in this pipeline takes a project directory; this
+    one now does too."""
     ports = _booth_ports_in_use()
     if not ports:
         print(f"no booth running on {BASE_PORT}-{max(ALL_PORTS)}")
         return
+    if project is not None:
+        want = Path(project).resolve()
+        mine = [pt for pt in ports if _booth_project(pt) == want]
+        if not mine:
+            # Say nothing died, and say what IS running, so the next move is obvious.
+            others = [(pt, _booth_project(pt)) for pt in ports]
+            running = ", ".join(f":{pt} {pr.name if pr else '(not a booth)'}" for pt, pr in others)
+            print(f"no booth running for {want.name} — nothing stopped")
+            if running:
+                print(f"still up: {running}")
+            return
+        ports = mine
     stopped = 0
     for port in ports:
         occ = _port_occupant(port)
@@ -463,7 +504,7 @@ def wait(project, max_seconds=6 * 3600):
 
 if __name__ == "__main__":
     if len(sys.argv) >= 2 and sys.argv[1] == "--stop":
-        stop()
+        stop(sys.argv[2] if len(sys.argv) >= 3 else None)
     elif len(sys.argv) == 3 and sys.argv[1] == "--wait":
         sys.exit(wait(sys.argv[2]))
     elif len(sys.argv) == 3 and sys.argv[1] == "--status":
