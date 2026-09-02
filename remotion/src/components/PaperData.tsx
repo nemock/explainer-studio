@@ -115,6 +115,23 @@ export const PaperCompare: React.FC<{fields: any; durationInFrames?: number}> = 
   const {portrait, M: height, reserve} = usePaperLayout();
   const cf = fields.cueFrames || {};
   const lAt = cf.l ?? 8, rAt = cf.r ?? 20;
+  // The "bad" header paints W.paper on W.sheet. That reads only while `sheet` is DARK,
+  // which it is in every world here except the LIGHT ones: PAPER_PLG has sheet #efe7dc
+  // and paper #fdfaf5, so the band came out near-white on pale cream and the header
+  // simply vanished. Module 4 rendered six compares with unreadable left titles
+  // ("DOES IT WORK?", "OUTPUT", "FEATURE TEAM") before anyone saw a frame.
+  // Choose the pair from the sheet's own luminance: dark worlds are byte-identical,
+  // light worlds get an ink band instead, which still carries the judgment.
+  // Same reasoning the `kicker` token already documents — on a light ground, one value
+  // cannot do both jobs.
+  const lum = (hex: string) => {
+    const h = (hex || '').replace('#', '');
+    if (h.length < 3) return 0;
+    const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+    const n = parseInt(full.slice(0, 6), 16);
+    return (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+  };
+  const lightSheet = lum(W.sheet) > 0.55;
   const tray = (d: any, at: number) => {
     const bad = d?.kind === 'bad';
     const st = popupStyle(frame, fps, at);
@@ -131,7 +148,8 @@ export const PaperCompare: React.FC<{fields: any; durationInFrames?: number}> = 
         <div style={{...st, position: 'relative', borderRadius: 18, overflow: 'hidden',
                      boxShadow: `0 ${height * (bad ? 0.026 : 0.016)}px ${height * (bad ? 0.05 : 0.034)}px ${W.shadow}`}}>
           <PaperSheet id={`tray:${d?.title ?? ''}`} radius={18} tint={W.paper} />
-          <div style={{position: 'relative', background: bad ? W.sheet : W.accentSoft, padding: `${height * 0.014}px 0`, textAlign: 'center',
+          <div style={{position: 'relative', background: bad ? (lightSheet ? W.ink : W.sheet) : W.accentSoft,
+                       padding: `${height * 0.014}px 0`, textAlign: 'center',
                        fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.026, letterSpacing: 3,
                        textTransform: 'uppercase', color: bad ? W.paper : W.ink}}>{d?.title}</div>
           <div style={{position: 'relative', padding: `${height * 0.03}px ${width * 0.018}px`, fontFamily: BRAND.font, fontWeight: 900,

@@ -26,7 +26,7 @@ promoted take is never described by a different take's stamp.
 
 Run it in the background; it returns when the operator clicks "Finish" in the browser."""
 import fcntl
-import json, os, queue, re, shutil, subprocess, sys, threading, time, webbrowser
+import atexit, json, os, queue, re, shutil, signal, subprocess, sys, threading, time, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
@@ -205,6 +205,10 @@ def run(proj, open_browser=True):
     work_dir = proj.dir / "work"; work_dir.mkdir(exist_ok=True)
     done_marker = work_dir / "record_done.json"
     done_marker.unlink(missing_ok=True)
+    # Same reasoning for the exit stamp written by the trap below: a stale one from
+    # the PREVIOUS booth would let the watcher report an old cause of death against a
+    # new booth that was SIGKILLed and stamped nothing.
+    (work_dir / "booth_exit.json").unlink(missing_ok=True)
     html = (ASSETS / "recorder.html").read_text().replace("{{TITLE}}", str(proj.data.get("title", "Voiceover")))
     state = {"done": False, "t0": time.time()}
     lock = threading.Lock()          # serialize disk load/edit against each other
@@ -668,6 +672,52 @@ def run(proj, open_browser=True):
     url = f"http://127.0.0.1:{srv.server_address[1]}/"
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     print(f"RECORDER READY → {url}\nRecord each segment in the browser, then click 'Finish & render'.", flush=True)
+
+    # --- exit trap (2026-09-02) ------------------------------------------------
+    # A booth that died used to leave NO trace anywhere: the watcher logged the
+    # relaunch, nothing logged the death. Diagnosing one on 2026-09-02 (FWF daily,
+    # booth gone between two 5-minute polls) meant reading four log sources and
+    # still ended unexplained, because the process wrote nothing on its way out —
+    # no traceback, despite stdout and stderr both landing in the booth log. So
+    # stamp the exit here instead of inferring it later.
+    #
+    # SIGKILL cannot be trapped and never will be. The watcher's per-poll
+    # heartbeat covers that case by recording when the booth was last seen alive,
+    # which bounds the death to one poll instead of five minutes of guessing.
+    _exit_state = {"logged": False}
+
+    def _stamp_exit(reason, code=None):
+        if _exit_state["logged"]:
+            return
+        _exit_state["logged"] = True
+        when = time.strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            print(f"BOOTH EXIT {when} reason={reason} code={code} pid={os.getpid()} "
+                  f"port={port} project={proj.dir}", flush=True)
+        except Exception:
+            pass
+        try:    # durable per-project copy: the booth log is shared and rotates
+            (work_dir / "booth_exit.json").write_text(json.dumps(
+                {"reason": reason, "code": code, "at": when, "pid": os.getpid(),
+                 "port": port, "project": str(proj.dir)}))
+        except Exception:
+            pass
+
+    def _on_signal(signum, _frame):
+        _stamp_exit(f"signal:{signal.Signals(signum).name}", 128 + signum)
+        signal.signal(signum, signal.SIG_DFL)
+        os.kill(os.getpid(), signum)      # die of the signal we were actually sent
+
+    # SIGINT is deliberately NOT trapped. The wait loop below already catches
+    # KeyboardInterrupt and finishes the session normally (writing record_done.json
+    # with whatever was recorded); a handler here would silently change that.
+    for _sig in (signal.SIGTERM, signal.SIGHUP):
+        try:
+            signal.signal(_sig, _on_signal)
+        except (ValueError, OSError):
+            pass                          # not the main thread, or unsupported
+    atexit.register(lambda: _stamp_exit("exit"))
+
     if open_browser:
         try:
             webbrowser.open(url)
@@ -696,4 +746,5 @@ def run(proj, open_browser=True):
          "script_digest": scriptguard.script_digest(
              [s for s in seg_list if not s.get("plan_slug")])}))
     print("RECORD DONE:", json.dumps(result))
+    _stamp_exit("finished")   # distinguishes a clean Finish from a death in the log
     return result

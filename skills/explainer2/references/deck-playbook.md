@@ -91,6 +91,13 @@ substrings of the text they accent or nothing highlights.
 - **`pictograph`** → `filled` + `total` + `kind` + `label` (X-of-Y dots).
 - **`trend`** → `points[]` + `end_label` + `kind` (sparkline).
 - **`ranked`** → `bars[]` of `{label, value, display?, kind?(muted|bad)}`.
+  **PAPER THEMES DROP EVERY LABEL (2026-09-01).** `ranked`/`trend` map to `PaperStairs`,
+  which reads `points` (the bare numbers) and discards `label`, `display` and per-bar
+  `kind`. Module 4 authored a five-row scorecard and rendered five blank white bars with
+  no text at all — a slide that says nothing while the narration reads its scores. The
+  catalog entry above is the DECK-engine contract; on a paper theme use `compare`,
+  `steps`, or `list` whenever the labels are the content, and keep `ranked` for the case
+  where the SHAPE of the numbers is the whole point.
 - **`diagram`** → `bars[]` of `{value, label, kind?(muted|bad)}` (bar chart).
 - **`delta`** → `from`/`from_label` → `to`/`to_label` + `kind` + `change` badge.
 - **`waterfall`** → `start{label,value}` / `steps[]{label,value,kind}` / `end{}`.

@@ -426,6 +426,70 @@ def originating_hold(proj):
     return age < ORIGINATING_TTL_S, int(age)
 
 
+# How often a still-alive booth also gets a line in watcher.log. The heartbeat FILE
+# is rewritten on every poll — that is what bounds a death to one cycle — but a booth
+# waiting all day would otherwise push everything else out of a log that rotates at
+# 2 MB, so the human-readable line is throttled to hourly.
+HEARTBEAT_LOG_EVERY_S = 60 * 60
+
+
+def beat_booth(proj):
+    """Record that this project's booth answered PENDING on this poll.
+
+    Returns True when the caller should ALSO write a line to watcher.log: the first
+    sighting, or HEARTBEAT_LOG_EVERY_S since the last logged one.
+
+    The file is forensic rather than operational. When a booth later dies,
+    last_alive() names the last poll that saw it, which bounds the death to one
+    cycle. Before this existed, diagnosing the 2026-09-02 FWF disappearance meant
+    inferring the window from which log lines were ABSENT — the booth was known
+    alive at 09:44 only because runningboardd happened to mention its pid, and the
+    upper bound came from the watcher NOT having logged a relaunch at 09:57.
+    Origin: make_money/routine_changes/2026-09-02-booth-death-forensics.md"""
+    f = proj / "work" / "booth_heartbeat.json"
+    now = time.time()
+    prev = {}
+    try:
+        prev = json.loads(f.read_text())
+    except Exception:
+        pass                      # no prior beat, or a truncated write: treat as first
+    say = (now - float(prev.get("last_logged") or 0)) >= HEARTBEAT_LOG_EVERY_S
+    try:
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps({
+            "state": "PENDING",
+            "at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "epoch": now,
+            "last_logged": now if say else (prev.get("last_logged") or now),
+        }))
+    except OSError:
+        return False              # a heartbeat is diagnostics; never break the cycle
+    return say
+
+
+def last_alive(proj):
+    """'HH:MM:SS (Nm Ns ago)' for the last poll that saw this booth, or None."""
+    try:
+        hb = json.loads((proj / "work" / "booth_heartbeat.json").read_text())
+        age = int(time.time() - float(hb["epoch"]))
+    except Exception:
+        return None
+    return f"{hb.get('at')} ({age // 60}m{age % 60:02d}s ago)"
+
+
+def exit_reason(proj):
+    """The booth's own account of why it exited, when recorder.py could stamp one.
+
+    Absent for SIGKILL and for a hard machine stop, which is exactly why last_alive()
+    exists alongside it: the two together distinguish 'died and said why' from 'was
+    killed outright', and that distinction is the whole diagnosis."""
+    try:
+        e = json.loads((proj / "work" / "booth_exit.json").read_text())
+    except Exception:
+        return None
+    return f"{e.get('reason')} at {e.get('at')}"
+
+
 def booth(cfg, verb, proj):
     """Run launch_booth.py <verb-ish>; returns (first_token, full_output)."""
     cmd = [cfg["python"], cfg["launch_booth"]] + verb + [str(proj)]
@@ -558,6 +622,11 @@ def run(cfg, dry):
         for proj in candidates(show):
             state, full = booth(cfg, ["--status"], proj)
             if state == "PENDING":
+                # Booth is up and waiting. Stamp the heartbeat every poll so a later
+                # death is bounded to one cycle; log hourly so the trail is readable.
+                if beat_booth(proj):
+                    log(cfg, f"{show['id']}: booth alive for {proj.name} "
+                             f"(waiting for the operator)")
                 break  # operator mid-recording; nothing to do for this show
             if state == "DONE":
                 if spawned:
@@ -692,8 +761,23 @@ def run(cfg, dry):
                         log(cfg, f"[DRY-RUN] would relaunch booth for {show['id']}: {proj}")
                     else:
                         booth(cfg, [], proj)  # full launcher: detached booth + Chrome tab pop
+                        # Say what is known about the death in the same line as the
+                        # relaunch. Before 2026-09-02 this line was the ONLY record
+                        # that a booth had died, and it carried neither when nor why.
+                        seen, why = last_alive(proj), exit_reason(proj)
+                        detail = "".join([
+                            f"; last seen alive {seen}" if seen else
+                            "; no heartbeat on file (booth predates this build,"
+                            " or died before its first poll)",
+                            f"; booth reported {why}" if why else
+                            "; booth stamped no exit (SIGKILL or a hard stop)",
+                        ])
                         log(cfg, f"{show['id']}: booth was NOT_OPEN for today's "
-                                 f"{proj.name} — relaunched (takes persist)")
+                                 f"{proj.name} — relaunched (takes persist){detail}")
+                        # The beat just reported belongs to the booth that died. Drop
+                        # it so a second death cannot be dated from the first booth's
+                        # heartbeat; the new booth writes its own on the next poll.
+                        (proj / "work" / "booth_heartbeat.json").unlink(missing_ok=True)
                 break
             log(cfg, f"{show['id']}: unexpected booth status '{full}' for {proj.name}")
             break
