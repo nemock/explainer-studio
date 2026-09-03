@@ -38,12 +38,19 @@ So `_reap()` snapshots descendants BEFORE signalling (the links vanish once the
 parents die), then sweeps in a loop — project roots via kill_render.find(), then
 any snapshot pid still breathing — until the project is quiet or the budget runs
 out. It runs on EVERY exit path: trapped signal, failed verb, and clean success.
-It is scoped to this project, so a concurrent render of another show is untouched;
-the unattributable ppid==1 sweep stays an explicit `kill_render.py
---sweep-orphans`.
+It is scoped to this project, so a concurrent render of another show is untouched.
 
-SIGKILL on the driver still cannot be trapped, and that leak is what
-`kill_render.py` is for.
+Then (2026-09-03) it sweeps every remotion browser already under init (ppid 1),
+machine-wide. That sweep used to be an explicit `kill_render.py --sweep-orphans`
+on the theory that ppid-1 trees are unattributable. They are, and it does not
+matter: a browser only reaches ppid 1 when the node driving it is dead, so it is
+never part of a live render and killing it can never abort work. The case the
+project-scoped passes cannot see: remotion hits its 180s browser-connect timeout,
+rejects WITHOUT killing the browser it spawned `detached`, node exits, and chrome
+is already under init when this runs — no ppid link, no --props to match. Three
+such trees from the 2026-08-31 daily-founder-tip crash-loop sat resident for
+three days. The recording watcher runs the same sweep every cycle for whatever
+this driver never gets to see (SIGKILL on the driver, hand-run renders).
 
 `explainer2 media` also refuses to run at all when the recorded audio disagrees
 with script.json (scriptguard.py), in which case this exits non-zero with
@@ -91,8 +98,9 @@ def _reap(why):
     snapshot pid still breathing — until nothing is left or the budget runs out.
 
     Scoped to THIS project on purpose. Attribution is by project path, so a
-    concurrent render of another show is never touched; the global ppid==1 sweep
-    stays an explicit operator action in kill_render.py --sweep-orphans."""
+    concurrent render of another show is never touched. The ppid==1 sweep that
+    follows is machine-wide but provably harmless: see kill_render.orphan_browsers.
+    """
     proj = _child["proj"]
     p = _child["proc"]
     print(f"[phase1] reaping render tree ({why})", flush=True)
@@ -144,6 +152,15 @@ def _reap(why):
         if not hits and not strays:
             break
         time.sleep(REAP_PASS_PAUSE_S)
+
+    # Orphans (ppid 1) are not "ours" by any link we can still see, but they are
+    # provably nobody's: a browser only reaches ppid 1 when the node driving it
+    # is dead. On the 2026-08-31 crash-loop remotion hit its 180s browser-connect
+    # timeout, threw WITHOUT killing the browser it had spawned detached, node
+    # exited, and by the time this ran chrome was already under init — the
+    # project-scoped passes above found nothing, and three trees sat for 3 days.
+    killed.update(kill_render.sweep_orphans(
+        log=lambda m: print(f"[phase1] {m}", flush=True)))
 
     leftover = _running(doomed) + [h["pid"] for h in _project_hits()]
     if leftover:

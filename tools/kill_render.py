@@ -26,6 +26,12 @@ Usage:
   kill_render.py <project_dir>            # report what would be killed
   kill_render.py <project_dir> --fix      # actually kill it
   kill_render.py --lock-only              # just clear a stale lock note
+  kill_render.py --sweep-orphans --fix    # kill every ppid-1 remotion browser tree
+
+Orphan policy (2026-09-03): the ppid==1 sweep is no longer operator-only.
+`phase1_render.py` runs sweep_orphans() on every exit path and the recording
+watcher runs it every cycle, because an orphaned browser is provably nobody's —
+see orphan_browsers().
 """
 import argparse
 import fcntl
@@ -135,13 +141,37 @@ def find(project_dir):
 def orphan_browsers():
     """Remotion browser trees whose parent is gone (ppid 1).
 
-    These cannot be attributed to a project — their argv carries no project path —
-    so they are only ever reported/killed as a separate, explicit sweep. This is
-    the exact residue of the 2026-08-10 kill: six chrome-headless-shell processes
-    still resident 26 minutes after the render that spawned them was killed."""
+    Their argv carries no project path, so they cannot be attributed to a
+    project — but they do not need to be. A chrome-headless-shell only reaches
+    ppid 1 when the node that spawned it has died, and a render whose node is
+    dead is over: nothing is driving that browser any more, so killing it can
+    never abort live work. That is why sweep_orphans() runs unattended.
+
+    How they arise: remotion launches the browser `detached` and, when its 180s
+    browser-connect timeout fires (BrowserRunner.js waitForWSEndpoint), rejects
+    WITHOUT killing the process it spawned. node then exits, chrome re-parents to
+    init, and by the time phase1_render's project-scoped reap runs there is no
+    ppid link and no --props to match. Three such trees sat resident for three
+    days after the 2026-08-31 daily-founder-tip crash-loop; six after the
+    2026-08-10 hand kill; twelve after 2026-08-20."""
     return [{"pid": pid, "ppid": ppid, "pgid": pgid, "cmd": cmd[:120]}
             for pid, ppid, pgid, cmd in _ps()
             if REMOTION_CHROME in cmd and ppid == 1]
+
+
+def sweep_orphans(log=print, fix=True):
+    """Kill every orphaned remotion browser tree on this Mac; return their pids.
+
+    Safe at any moment — see orphan_browsers() — so phase1_render.py calls this
+    on every exit path and the recording watcher calls it every cycle
+    (2026-09-03). `fix=False` only reports."""
+    orphans = orphan_browsers()
+    for o in orphans:
+        log(f"{'killing' if fix else 'would kill'} orphaned remotion browser "
+            f"pid {o['pid']} (ppid 1, group {o['pgid']}) and its children")
+        if fix:
+            childproc.kill_tree(o["pid"])
+    return [o["pid"] for o in orphans]
 
 
 def kill(hits, log=print):
@@ -216,7 +246,18 @@ def main():
         clear_stale_lock(fix=args.fix)
         return 0
     if not args.project_dir:
-        ap.error("project_dir is required (or pass --lock-only)")
+        if args.sweep_orphans:
+            swept = sweep_orphans(fix=args.fix)
+            if not swept:
+                print("no orphaned remotion browser trees (ppid 1) on this Mac")
+            elif not args.fix:
+                print("\n--fix to kill what is listed above")
+                return 1
+            else:
+                print(f"swept {len(swept)} orphaned browser tree(s)")
+            clear_stale_lock(fix=args.fix)
+            return 0
+        ap.error("project_dir is required (or pass --lock-only / --sweep-orphans)")
 
     hits = find(args.project_dir)
     if not hits:
@@ -246,9 +287,8 @@ def main():
         else:
             print("all render processes for this project are gone")
     if orphans and args.sweep_orphans and args.fix:
-        for o in orphans:
-            childproc.kill_tree(o["pid"])
-        print(f"swept {len(orphans)} orphaned browser tree(s)")
+        swept = sweep_orphans()
+        print(f"swept {len(swept)} orphaned browser tree(s)")
     clear_stale_lock(fix=args.fix)
     return 0
 

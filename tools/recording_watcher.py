@@ -132,6 +132,30 @@ def live_renders(cfg):
     return sum(1 for line in out.splitlines() if _counts(line))
 
 
+def sweep_orphan_browsers(cfg, dry):
+    """Kill remotion browser trees whose parent is gone (ppid 1), every cycle.
+
+    A chrome-headless-shell under init is never part of a live render — it only
+    gets there when the node driving it has died — so this can never abort work
+    (kill_render.orphan_browsers has the full argument). phase1_render.py sweeps
+    on its own exit paths; this catches what it cannot: a driver killed with
+    SIGKILL, a hand-run render killed in a Claude session, or a browser remotion
+    leaked past its 180s connect timeout after the driver had already gone
+    (2026-08-31: three trees resident for three days, each a full chrome fleet).
+    Zero tokens, one `ps`; runs before the hours window so overnight leftovers
+    are gone by morning."""
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import kill_render
+        killed = kill_render.sweep_orphans(
+            log=lambda m: log(cfg, f"ORPHAN-SWEEP {m}"), fix=not dry)
+        if killed and not dry:
+            log(cfg, f"ORPHAN-SWEEP killed {len(killed)} orphaned remotion browser "
+                     f"tree(s): {killed}")
+    except Exception as e:                  # a sweep failure must never cost the cycle
+        log(cfg, f"ORPHAN-SWEEP failed: {e}")
+
+
 def pid_alive(pid):
     """True if a process with this pid currently exists."""
     try:
@@ -792,14 +816,15 @@ def main():
                     help="run even outside the configured hours window")
     args = ap.parse_args()
     cfg = json.loads(Path(args.config).read_text())
-    if not args.force_hours and not within_hours(cfg):
-        return
     # single instance (flock auto-releases on exit/crash)
     lockf = open(cfg.get("instance_lock", "/tmp/recording-watcher.lock"), "w")
     try:
         fcntl.flock(lockf, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
         return  # another cycle still running (e.g. slow subprocess) — skip
+    sweep_orphan_browsers(cfg, args.dry_run)   # before the hours gate, on purpose
+    if not args.force_hours and not within_hours(cfg):
+        return
     run(cfg, args.dry_run)
 
 
