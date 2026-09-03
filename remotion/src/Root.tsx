@@ -34,6 +34,11 @@ export const RemotionRoot: React.FC = () => {
         captionBottomPx: 230,
         captionFontSize: 62,
         audioFrom: 0,
+        // zod 4 (pinned 2026-09-03 to match remotion 4.0.487): defaultProps must
+        // satisfy the schema's OUTPUT type, so every `.default()` field is listed.
+        theme: '',
+        captionAccent: '',
+        showCaptions: true,
       }}
       calculateMetadata={({props}: {props: VideoProps}) => ({
         durationInFrames: props.durationInFrames,
