@@ -139,6 +139,19 @@ forces a specific number; `--force` allows a duplicate. Run `bin/explainer2 cata
 anytime to see the derived count, next number, and per-project state — the folder
 is the source of truth, never a hand-typed counter.
 
+**Scaffold REFUSES a directory that already holds a finished episode (2026-09-03).**
+If the target dir contains `README.md`, `work/render_complete.json`, `uploads.json`
+or `handoff.json`, scaffold names the markers it found and exits non-zero instead of
+landing on top of them. The `mkdir` is `exist_ok=True`, so before this guard a run
+working from a stale "does this episode exist yet?" answer could author
+`script.json`/`deck.json`/`meta.json` straight over published work and get a success
+message for it (The Teardown 2026-09-03). **That refusal is the answer: the episode is
+done, stop.** `--force` overrides it, and exists for a deliberate re-scaffold only —
+never as a way past a surprise. A project that is merely mid-authoring (`project.json`
+plus the originating sentinel, no completion markers) still scaffolds normally, so
+recovering a run that died before the booth is unaffected. See
+`make_money/routine_changes/2026-09-03-ttd-stale-resume-check-clobbered-published-episode.md`.
+
 ### 2. Intel sweep (media plane)
 Write 4–6 search queries per the **query-expansion rules** in
 `references/blueprint-playbook.md` §1, then:

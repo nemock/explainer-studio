@@ -176,6 +176,41 @@ def cmd_scaffold(args):
         slug = wiki.slugify(args.slug)
         num = None
         out = Path(args.outdir).resolve() / f"{date.today().isoformat()}_{slug}"
+    # COMPLETION GUARD (2026-09-03). The mkdir below is exist_ok=True, so scaffold used to
+    # land silently on top of whatever was already in the directory and still report
+    # success. A run working from a STALE resume-check could therefore author
+    # script.json / deck.json / meta.json straight over a finished, published episode, and
+    # nothing anywhere would fail. That is exactly what happened to The Teardown
+    # 2026-09-03: the 9am fire originated, Dave recorded, the watcher rendered (10:36) and
+    # published (10:46). The same session resumed ~2h later still holding its opening
+    # "nothing matched" answer, re-scaffolded into the same dir, and overwrote all three
+    # source-of-record JSONs. Recovery was possible only because the render artifacts
+    # (work/segments.json, package/meta.json, work/remotion/props.json) happened to survive.
+    #
+    # This is the mirror of the originating sentinel written below: that one stops the
+    # WATCHER opening a booth on a project a run is still authoring; this one stops a RUN
+    # writing into a project that is already done. See
+    # make_money/routine_changes/2026-09-03-ttd-stale-resume-check-clobbered-published-episode.md
+    _done_markers = (
+        ("README.md", out / "README.md", "the episode is written up and was published or skipped"),
+        ("work/render_complete.json", out / "work" / "render_complete.json", "the render finished"),
+        ("uploads.json", out / "uploads.json", "the publish step ran"),
+        ("handoff.json", out / "handoff.json", "the render handoff was built"),
+    )
+    _found = [(name, why) for name, path, why in _done_markers if path.exists()]
+    if _found and not args.force:
+        lines = [f"REFUSING to scaffold: {out} already holds a finished episode.", ""]
+        lines += [f"  {name:28} — {why}" for name, why in _found]
+        lines += [
+            "",
+            "A scaffold here would overwrite the source-of-record JSONs of work that is",
+            "already done. If you got here from a resume-check that said 'nothing matched',",
+            "that answer is stale: re-run the check NOW, and if a project matches, STOP —",
+            "the episode is handled (published, or intentionally skipped).",
+            "",
+            "If you genuinely mean to re-scaffold over this, pass --force.",
+        ]
+        sys.exit("\n".join(lines))
     out.mkdir(parents=True, exist_ok=True)
     # `--theme paper` is a legacy shorthand for Dave's nemock paper world. The standalone
     # "paper" theme key is NOT recognized as a paper theme by the Remotion engine
@@ -536,7 +571,10 @@ def main(argv=None):
                                "from projects/ (highest + 1). A leading number is stripped if present.")
     s.add_argument("--number", type=int, default=None,
                    help="force a specific canonical number (default: auto = highest in projects/ + 1)")
-    s.add_argument("--force", action="store_true", help="allow a duplicate canonical number")
+    s.add_argument("--force", action="store_true",
+                   help="allow a duplicate canonical number, AND scaffold over a directory that "
+                        "already holds a finished episode (README.md / render_complete.json / "
+                        "uploads.json / handoff.json). Both are refusals by default.")
     s.add_argument("--title", default=None)
     s.add_argument("--outdir", default="projects")
     s.add_argument("--aspect", default="9:16", choices=list(ASPECTS))
