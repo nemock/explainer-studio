@@ -156,10 +156,23 @@ def collect_frames(proj, aspect, workdir):
     if not (vid.exists() and tl.exists()):
         return [], None
     timeline = json.loads(tl.read_text())
+    # The timeline is narration time; the mp4 opens with the intro (show title panel
+    # on the six personal shows since 2026-09-03, brand sting on deep dives). Read the
+    # offset back from the staged Remotion props (mirrors remotion_engine.intro_offset_s,
+    # inlined because this tool runs standalone) so each frame is sampled from the
+    # slide it names rather than ~2.4 s into the previous one.
+    off = 0.0
+    props = proj / "work" / "remotion" / "props.json"
+    if props.exists():
+        try:
+            pd = json.loads(props.read_text())
+            off = float(pd.get("audioFrom") or 0) / float(pd.get("fps") or 30)
+        except (OSError, ValueError):
+            off = 0.0
     workdir.mkdir(parents=True, exist_ok=True)
     made = []
     for i, s in enumerate(timeline["slides"], 1):
-        t = s["start"] + (s["end"] - s["start"]) * 0.6
+        t = off + s["start"] + (s["end"] - s["start"]) * 0.6
         dst = workdir / ("slide_%02d_%s.png" % (i, s["id"]))
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", "%.3f" % t,
                         "-i", str(vid), "-frames:v", "1", str(dst)], check=True)

@@ -56,8 +56,13 @@ def run(proj):
     warnings = []
     dead_air = []
     if video.exists():
+        # Freeze spans are mp4 time; words are narration time. The rendered file opens
+        # with the intro (show title panel / brand sting), so shift the words onto the
+        # mp4's clock before asking whether anyone was speaking (2026-09-03).
+        from .remotion_engine import intro_offset_s
+        off = intro_offset_s(proj)
         for (a, b) in _freeze_spans(video):
-            speaking = any(w["start"] < b and w["end"] > a for w in words)  # narration overlaps freeze
+            speaking = any(w["start"] + off < b and w["end"] + off > a for w in words)  # narration overlaps freeze
             if speaking and (b - a) >= 0.6:
                 dead_air.append({"start": round(a, 2), "end": round(b, 2), "seconds": round(b - a, 2)})
         if dead_air:

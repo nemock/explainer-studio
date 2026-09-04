@@ -25,6 +25,9 @@ import {PaperSetHook, PaperPopCard, PaperCounter} from './components/PaperSet';
 import {PaperStatement, PaperDefine, PaperPunch, PaperReframe} from './components/PaperText';
 // Circumvent scene family (2026-07-30): the paper IS the slide, no cards.
 import {CvgScene, CvgPunch, CvgList, CvgCompare, CvgSteps, CvgDefine, CvgCta, CvgReframe} from './components/Circumvent';
+// Show title panel for the six personal-show worlds (2026-09-03): the show's paper mark
+// + name on its own ground, inserted by the engine ahead of the hook.
+import {CvgTitle} from './components/CvgTitle';
 import {PaperStairs, PaperCompare, PaperSteps, PaperList, PaperBookCTA} from './components/PaperData';
 import {TearReveal} from './components/PaperWorld';
 import {DrawLine, Waterfall, Pictograph, Ring, Funnel} from './components/DataViz2';
@@ -56,6 +59,7 @@ const REGISTRY: Record<string, React.FC<any>> = {
   CvgScene,
   CvgPunch,
   CvgCta,
+  CvgTitle,
   CvgList,
   CvgCompare,
   CvgSteps,
@@ -154,7 +158,7 @@ const SceneWrap: React.FC<{durationInFrames: number; paper?: boolean; tear?: str
 // out on the page and lifts cleanly.
 const FULL_BLEED = new Set([
   'BrandSting', 'PaperSting', 'BRGPaperSting', 'PaperHook', 'PaperMonitor', 'Hero3D', 'Footage', 'KeepCard',
-  'CvgScene', 'CvgPunch', 'CvgCta', 'CvgList', 'CvgCompare', 'CvgSteps', 'CvgDefine', 'CvgReframe',
+  'CvgScene', 'CvgPunch', 'CvgCta', 'CvgTitle', 'CvgList', 'CvgCompare', 'CvgSteps', 'CvgDefine', 'CvgReframe',
   'PaperSetHook', 'PaperPopCard', 'PaperCounter', 'PaperStatement', 'PaperDefine',
   'PaperPunch', 'PaperStairs', 'PaperCompare', 'PaperSteps', 'PaperList', 'PaperBookCTA',
 ]);

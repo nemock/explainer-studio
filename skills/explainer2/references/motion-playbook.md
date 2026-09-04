@@ -420,6 +420,17 @@ full-bleed shot.
   `remotion/src/components/PaperSting.tsx`.
 - **BrandSting** — the prior wordmark intro/outro (scale-in + light sweep). Retained as a
   fallback; PaperSting is the default the engine inserts.
+- **CvgTitle** — the SHOW TITLE PANEL for the six personal-show worlds (`fwf`,
+  `mmt-tangerine`, `ftt-study`, `wsc-goldenrod`, `ttd-indigo`, `fmf-alarm`; 2026-09-03).
+  Those worlds carry no wordmark sting (branding isolation), so this is the show's own
+  name card: the locked paper mark settles onto the show's ground, the owning brand
+  rises as a kicker, then the show name, a cut-paper accent strip draws in, then "with
+  Dave Saunders". INTRO only, **2.4s, and that is the narration offset** (`audioFrom`);
+  the shows end on their own authored `cta` card, so no outro. Inserted by the engine
+  from `_SHOW_TITLE` in `remotion_engine.py` — nothing to author in a deck; opt out
+  per project with `"title_panel": false`. Never inserted on `circumvent`. Every tool
+  that maps timeline seconds onto the mp4 (stills, qa, `tools/frame_qc.py`) adds
+  `remotion_engine.intro_offset_s()`. Component: `remotion/src/components/CvgTitle.tsx`.
 - **Background drift / parallax** — ambient life under everything.
 
 ### G. Accents & ecosystem (use them — this is where videos *pop*)

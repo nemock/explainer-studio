@@ -403,6 +403,51 @@ def _papercraft_component(slide, t, kicker, accent, headline):
 _CVG_STYLE_THEMES = ("circumvent", "fwf", "mmt-tangerine", "ftt-study",
                      "wsc-goldenrod", "ttd-indigo", "fmf-alarm")
 
+# SHOW TITLE PANEL (2026-09-03, operator request — decision doc
+# make_money/routine_changes/2026-09-03-show-title-panels.md). The six personal-show
+# worlds carry NO wordmark bumper (see _NO_STING below: a bumper is another brand's
+# mark, and the branding-isolation rule keeps it off them), so until this table every
+# episode opened cold on its hook and was identifiable only by the kicker. This is the
+# show's OWN name card: its locked paper mark, the owning brand as kicker, the show
+# name, "with Dave Saunders". Rendered by CvgTitle inside the show's world tokens, so
+# the colours match the episode by construction. Circumvent is deliberately absent —
+# it is a client brand with its own open and close. Held 2.4 s (operator: keep it at
+# 2.4). Opt out per project with `"title_panel": false` in project.json.
+SHOW_TITLE_SECONDS = 2.4
+_SHOW_TITLE = {
+    "fwf": {"mark": "papercraft-fwf/mark_fwf.png", "kicker": "Founders Who Finish",
+            "title": "Daily\nFounder Tip", "sub": "with Dave Saunders"},
+    "mmt-tangerine": {"mark": "papercraft-mmt/mark_mmt.png", "kicker": "Base Reality Group",
+                      "title": "Monday\nMedTech", "sub": "with Dave Saunders"},
+    "ftt-study": {"mark": "papercraft-ftt/mark_ftt.png", "kicker": "Base Reality Group",
+                  "title": "Founder Tip\nTuesday", "sub": "with Dave Saunders"},
+    "wsc-goldenrod": {"mark": "papercraft-wsc/mark_wsc.png", "kicker": "Base Reality Group",
+                      "title": "Who Signs\nthe Check", "sub": "Wednesdays with Dave Saunders"},
+    # The Teardown's world accent is a deep orange; the panel takes the locked
+    # safety orange (#F2762E) so the kicker and strip read on the indigo ground.
+    "ttd-indigo": {"mark": "papercraft-ttd/mark_ttd.png", "kicker": "Base Reality Group",
+                   "title": "The\nTeardown", "sub": "Thursdays with Dave Saunders",
+                   "accent": "#F2762E"},
+    "fmf-alarm": {"mark": "papercraft-fmf/mark_fmf.png", "kicker": "Base Reality Group",
+                  "title": "Failure Modes\nFriday", "sub": "with Dave Saunders"},
+}
+
+
+def intro_offset_s(sp):
+    """Seconds of intro (title panel or brand sting) ahead of the narration in the
+    LAST render of this project, read back from the staged Remotion props. Every tool
+    that maps timeline seconds onto the rendered mp4 (stills, qa, tools/frame_qc.py)
+    must add this: the timeline is narration time, the mp4 is narration time plus the
+    intro. 0.0 when nothing has been rendered yet or the project has no intro."""
+    props = sp.work / "remotion" / "props.json"
+    try:
+        d = json.loads(props.read_text())
+    except (OSError, ValueError):
+        return 0.0
+    fps = float(d.get("fps") or 30)
+    return float(d.get("audioFrom") or 0) / fps
+
+
 # Per-theme closing wordmark, used ONLY as the last-resort fill for a content-less
 # `cta`/`payoff` slide (see _cta_fallback). Same brand-per-theme mapping the outro sting
 # uses below — kept in step with it, never a global default (branding-isolation rule).
@@ -1073,6 +1118,25 @@ def build_spec(sp):
                        "fields": outro_fields})
         audio_from = off
         total = INTRO + duration + OUTRO
+
+    # Show title panel for the six personal-show worlds (see _SHOW_TITLE). Intro only —
+    # these shows end on their own authored CTA card, so there is no outro. Same
+    # mechanics as the bumper above: every scene and word shifts by the panel length
+    # and the narration starts after it (audioFrom). The panel's `mark` ref is picked
+    # up by the papercraft-<show> staging scan in _render_one like any deck ref.
+    _title = _SHOW_TITLE.get(sp.data.get("theme", ""))
+    if _title and sp.data.get("title_panel", True):
+        INTRO = SHOW_TITLE_SECONDS
+        off = int(round(INTRO * fps))
+        for sc in scenes:
+            sc["from"] += off
+        for w in words:
+            w["start"] += INTRO
+            w["end"] += INTRO
+        scenes.insert(0, {"component": "CvgTitle", "from": 0, "durationInFrames": off,
+                          "fields": dict(_title)})
+        audio_from = off
+        total = INTRO + duration
 
     safe_bottom = float(sp.data.get("safe_bottom", 0.12)) + 0.04
     # Cut & Bond seats captions LOW in the bottom third (operator 2026-07-16: the default

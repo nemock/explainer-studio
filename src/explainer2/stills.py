@@ -32,11 +32,16 @@ def _run_remotion(proj, aspect, timeline):
     out.mkdir(exist_ok=True)
     for f in out.glob("*.png"):
         f.unlink()
+    # The timeline is narration time; the mp4 opens with the intro (show title panel
+    # or brand sting) ahead of it. Without this offset every still samples ~2.4 s
+    # early — the previous slide, still mid-transition (2026-09-03).
+    from .remotion_engine import intro_offset_s
+    off = intro_offset_s(proj)
     written = []
     for i, s in enumerate(slides, 1):
         name = f"slide_{i:02d}_{s['id']}.png"
         r = subprocess.run(
-            ["ffmpeg", "-y", "-v", "error", "-ss", f"{_settled_t(s, duration):.3f}",
+            ["ffmpeg", "-y", "-v", "error", "-ss", f"{off + _settled_t(s, duration):.3f}",
              "-i", str(video), "-frames:v", "1", str(out / name)],
             capture_output=True, text=True)
         if r.returncode != 0:
