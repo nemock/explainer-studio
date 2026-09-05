@@ -133,6 +133,57 @@ def _rewrite_tickets(mutate):
             pass
 
 
+def _stamp():
+    """Both timestamp forms for a lock/ticket/claim note.
+
+    `since` stays exactly as it was (HH:MM:SS) so every existing reader in every
+    codebase keeps working. `since_iso` adds the date, without which a note is
+    genuinely ambiguous: a lock taken a minute ago and one orphaned three days
+    ago render identically. On 2026-09-04 a live encode from another project was
+    reported as a stale lock for precisely that reason — the label happened to
+    contain an old date (a project named for its episode) and the timestamp had
+    no date to contradict it.
+    """
+    now = time.localtime()
+    return {"since": time.strftime("%H:%M:%S", now),
+            "since_iso": time.strftime("%Y-%m-%dT%H:%M:%S", now)}
+
+
+def note_age(rec):
+    """Seconds since `rec` was stamped, or None if it predates `since_iso`.
+
+    None means "cannot tell", which is the honest answer for a note written by
+    an older copy of this file — never treat it as zero.
+    """
+    iso = (rec or {}).get("since_iso")
+    if not iso:
+        return None
+    try:
+        return max(0.0, time.time() - time.mktime(
+            time.strptime(iso, "%Y-%m-%dT%H:%M:%S")))
+    except (ValueError, TypeError, OverflowError):
+        return None
+
+
+def _human_age(secs):
+    if secs < 90:
+        return f"{int(secs)}s"
+    if secs < 5400:
+        return f"{int(secs // 60)}m"
+    if secs < 172800:
+        return f"{int(secs // 3600)}h {int((secs % 3600) // 60)}m"
+    return f"{int(secs // 86400)}d {int((secs % 86400) // 3600)}h"
+
+
+def _since_text(rec):
+    """e.g. '20:39:59 (9m ago)'. Says so plainly when the note carries no date."""
+    clock = (rec or {}).get("since", "?")
+    age = note_age(rec)
+    if age is None:
+        return f"{clock} (undated note — age unknown)"
+    return f"{clock} ({_human_age(age)} ago)"
+
+
 def take_a_ticket(label):
     """Join the queue. Returns our ticket number."""
     mine = {}
@@ -140,7 +191,7 @@ def take_a_ticket(label):
     def _add(tickets):
         seq = max([t.get("seq", 0) for t in tickets] or [0]) + 1
         mine.update({"seq": seq, "pid": os.getpid(), "label": label,
-                     "since": time.strftime("%H:%M:%S")})
+                     **_stamp()})
         return tickets + [mine]
 
     _rewrite_tickets(_add)
@@ -325,7 +376,7 @@ def acquire(proj=None, label=None, log=print):
     drop_ticket(seq)
     try:
         fd.seek(0); fd.truncate()
-        fd.write(json.dumps({"pid": os.getpid(), "label": label, "since": time.strftime("%H:%M:%S")}))
+        fd.write(json.dumps({"pid": os.getpid(), "label": label, **_stamp()}))
         fd.flush()
     except Exception:
         pass
@@ -493,7 +544,7 @@ def claim_job(project_dir, kind="shorts", log=print, wait=False):
         fh.seek(0); fh.truncate()
         fh.write(json.dumps({"pid": os.getpid(), "kind": kind,
                              "project": str(project_dir),
-                             "since": time.strftime("%H:%M:%S")}))
+                             **_stamp()}))
         fh.flush()
     except Exception:
         pass                            # diagnostics only; the flock is the gate
@@ -598,6 +649,7 @@ def _holder():
         except Exception:
             alive = False
     data["alive"] = alive
+    data["age_secs"] = note_age(data)      # None when the note carries no date
     return data
 
 
@@ -645,17 +697,26 @@ def status():
     """Human-readable render-queue view: who holds the lock + every live render."""
     h = _holder()
     if h and h.get("alive"):
-        head = f"LOCK held by: {h.get('label', '?')} (pid {h['pid']}, since {h.get('since', '?')})"
+        head = (f"LOCK held by: {h.get('label', '?')} "
+                f"(pid {h['pid']}, since {_since_text(h)})")
     elif h and h.get("pid"):
-        head = f"LOCK free (stale note: {h.get('label', '?')}, pid {h['pid']} not alive)"
+        head = (f"LOCK free (stale note: {h.get('label', '?')}, "
+                f"pid {h['pid']} not alive, written {_since_text(h)})")
     else:
         head = "LOCK free"
     procs = _running_media()
     lines = [head]
+    # _running_media() matches explainer2's `cli media` invocation ONLY. waveform
+    # renders via generate.py and daily_beats via caption_clips/append_outro, so
+    # neither ever appears here. Say so rather than printing "no renders running"
+    # while two other codebases are encoding — the LOCK line above is the
+    # authoritative, codebase-agnostic signal, and its label names the holder.
     if procs:
-        lines.append(f"{len(procs)} render(s) live:")
+        lines.append(f"{len(procs)} explainer2 render(s) live:")
         for p in procs:
             lines.append(f"  • {p['project']} (pid {p['pid']}, up {p['etime']}) — {_last_log(p['dir'])}")
     else:
-        lines.append("no renders running")
+        lines.append("no explainer2 renders detected "
+                     "(does not cover waveform-studio or daily_beats — "
+                     "see the LOCK line above)")
     return "\n".join(lines)
