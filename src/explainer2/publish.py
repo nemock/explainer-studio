@@ -319,7 +319,11 @@ def _backfill_meta(proj, url):
     meta = json.loads(p.read_text())
     meta["youtube_url"] = url
     meta["posted"] = datetime.date.today().isoformat()
-    p.write_text(json.dumps(meta, indent=2))
+    # ensure_ascii=False + trailing newline, matching how every other operator-facing
+    # JSON in this repo is written (recorder.py's plan/script, promote.py's ledger).
+    # Bare json.dumps escaped the § in meta.json's own notes to § and dropped the
+    # final newline, so every publish dirtied the diff with two changes nobody made.
+    p.write_text(json.dumps(meta, indent=2, ensure_ascii=False) + "\n")
     touched = [str(p)]
 
     li = proj.dir / "package" / "linkedin.md"
