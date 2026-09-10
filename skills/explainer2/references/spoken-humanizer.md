@@ -122,6 +122,31 @@ Still legal: describing something other than his own candor as honest ("the auth
 own explanation is the honest one"), reporting what others were asked to do, and a
 mid-sentence casual "honestly" inside his own aside (CONSTRAINTS.md §1.10 texture).
 
+### A1d. Telegraphed virtue (announcing what the sentence should just do)
+Operator directive 2026-09-10, from the #59 booth. This is A1c's wider family. A1c bans
+claiming new *honesty*; the same move works with any virtue, and slips past a list aimed
+at "honest". Dave, on "I want to be careful here, because this isn't a video about a bad
+study": *"another one of those weird clichés that are becoming associated with AI-based
+writing. I'm not sure we need that kind of telegraphing into the rest of the sentence
+anyway. It feels like it might just be an unnecessary lead-in."*
+
+He is right on the mechanism. **Announcing that you are about to be careful presupposes
+you were careless up to now**, exactly as "let me be honest" indicts everything before
+it, and it spends a clause on a promise the next clause was going to keep anyway. The
+same script also carried "Seventy-five percent is still bad, and I want to be fair about
+that" — the sentence *is* the fairness; saying so adds nothing.
+
+Grep and delete: `i want to be careful`, `i want to be fair`, `let me be careful`,
+`let me be fair`, `i should be careful here`, `i'll try to be fair`, `i want to be
+precise`, `i want to be accurate`. **The repair is almost always deletion, not
+replacement** — apply the delete test, and if the sentence gets clearer, the lead-in was
+never doing work. Do not swap in a different connector; that was the failed instinct on
+the same script's cold open (see the `being clever about` entry in
+`tools/script_coherence.py`'s IDIOM table).
+
+Still legal: "to be fair" as an ordinary concessive mid-argument, and describing someone
+else's care ("the authors were careful about this").
+
 ### A2. Written-tell carryover — now covered by LINT.md
 General AI-tell removal (em/en dashes, curly quotes, AI vocabulary like delve,
 leverage, tapestry, underscore, intricate, pivotal, testament, vibrant, realm,
@@ -348,6 +373,11 @@ blocklist = [
     # "honestly" inside his own aside (CONSTRAINTS.md 1.10 texture).
     "my honest answer", "the honest truth", "honest opinion", "if i'm honest",
     "if i am honest", "honestly, my answer",
+    # A1d telegraphed virtue (2026-09-10, #59) — announcing the virtue the sentence
+    # should simply demonstrate. Repair is deletion, not a replacement connector.
+    "i want to be careful", "i want to be fair", "let me be careful", "let me be fair",
+    "i should be careful here", "i'll try to be fair", "i want to be precise",
+    "i want to be accurate",
 ]
 for s in d["segments"]:
     hits = [p for p in blocklist if p in s["text"].lower()]
