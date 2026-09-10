@@ -14,17 +14,16 @@ numbers spelled out for the TTS. The article fixes all of that. If you find
 yourself copying segments across with light edits, stop — you are transcribing,
 not writing.
 
-**VOICE SOURCE (binding, added 2026-07-26):** the article is written in the
-operator's mined voice via the HumanER skill. Before drafting, read
-`~/.claude/skills/humaner/CONSTRAINTS.md` (especially section 1.10, the written
-register) and the Substack dial in `~/.claude/skills/humaner/FORMATS.md`. The
-seven architecture tells in `~/.claude/skills/humaner/SKILL.md` are the failure
-modes that got this exact article type flagged 100% AI-generated (2026-07-25):
-max one landed line per piece, no coined frameworks or callback motifs, uneven
-paragraph rhythm, at least one parked digression, hedged recalled numbers vs
-exact cited ones, verified stories only, no manufactured intimacy. The `humaner`
-skill's LINT.md pass runs AFTER drafting as the mechanical AI-tell lint;
-CONSTRAINTS.md wins conflicts. Everything below layers on top of that voice source.
+**VOICE SOURCE (binding, added 2026-07-26; corrected 2026-09-10):** the article is
+drafted by invoking the `humaner` skill, which owns all writing quality. Its own order
+of authority applies and is not restated here: CRAFT.md is the North Star and writes,
+CONSTRAINTS.md breaks ties and carries the hard constraints, LINT.md runs last and
+only subtracts, and the fresh-eyes gate runs after everything else. Load the Substack
+dial in its FORMATS.md. (This paragraph used to point at a CONSTRAINTS section that was
+moved on 2026-08-04, say CONSTRAINTS wins conflicts, which is the inversion the skill's
+2026-07-31 ruling reversed, and require a parked digression, a quota the skill deleted
+on 2026-08-02. A restatement of the skill drifts; the skill does not.) Everything below
+layers on top of that.
 
 ---
 

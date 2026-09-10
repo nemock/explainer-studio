@@ -435,9 +435,10 @@ to date missed length on the first draft; the rule exists because it bites).
   (operator directive, 2026-06-19).** The `humaner` skill's LINT.md pass is tuned
   for *written* tells and lets **spoken** clichés through (the operator caught
   several on the teleprompter mid-record on #34). The spoken-humanizer playbook
-  is the source of truth for the spoken-specific cliché blocklist and for
-  **COMPEL** (hooks, rhythm, concreteness, momentum, register); general AI-tell
-  removal is LINT.md's job, not this playbook's. Read spoken-humanizer alongside
+  is the source of truth for **COMPEL** (hooks, rhythm, concreteness, momentum,
+  register). It no longer carries a cliché blocklist of its own: on 2026-09-10 its §A1
+  was converted to pointers, and every removal rule, spoken clichés included, is the
+  `humaner` skill's LINT.md (§12b, §12c, §4b, §3, §5, §6). Read spoken-humanizer alongside
   this playbook before drafting; run it as a pass before the booth (see §6).
 
 ## 6. Self-QA checklist (run before presenting the gate)
@@ -519,7 +520,8 @@ to date missed length on the first draft; the rule exists because it bites).
       adverb the ear attaches to the wrong word.
 - [ ] **Spoken-humanizer pass (mandatory since 2026-06-19, supersedes the old
       speakability pass):** run `references/spoken-humanizer.md` end to end before
-      the gate — **CUT** (grep the spoken-cliché blocklist; every hit rewritten)
+      the gate — **CUT** (the `humaner` skill's LINT.md pass in full, which owns every
+      removal rule; spoken-humanizer has carried no list of its own since 2026-09-10)
       and **COMPEL** (hook tests, cadence variety, concreteness, momentum) — then
       read every segment aloud and fix anything the operator would stumble on
       ("the company Square acquired"-style compressions, stacked clauses). This

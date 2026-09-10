@@ -6,8 +6,8 @@ rule of three, negative parallelism, staccato runs, nominalizations — run it,
 don't re-derive it here). A *spoken* script needs a second, **generative**
 half on top of that: it has to actually pull a listener and sound like a real
 person talking. Removal alone gives you clean-but-flat, which is its own
-failure. So this pass is mostly **COMPEL**, plus a short CUT list of clichés
-that are specific to spoken hooks (not general AI vocabulary), plus a process.
+failure. So this pass is mostly **COMPEL**, plus pointers for the CUT half, which
+the `humaner` skill's LINT.md owns in full, plus a process.
 
 These videos are read aloud by the operator from a teleprompter booth. The bar:
 the operator must NEVER be the one catching a cliché or a flat line on the
@@ -25,127 +25,37 @@ teleprompter mid-record. This pass is what guarantees that.
 
 ## A. CUT — remove what makes speech sound machine-made
 
-### A1. Spoken-cliché blocklist (grep these; rewrite every hit)
-When spoken, these read as AI throat-clearing. Hunt them and their cousins:
-- **Fake-suspense openers:** "here's the thing", "here's the kicker", "and here's
-  the kicker", "the truth is", "make no mistake", "let me be clear", "real talk",
-  "buckle up".
-- **"Nobody-talks-about" / secret-knowledge framing:** "the one X nobody argues
-  about / talks about", "the part nobody mentions", "what they don't tell you",
-  "what nobody tells you", "here's what nobody tells you", "this is what nobody
-  tells you", "the part the cheerleaders skip", "the dirty little secret", **and
-  its cousins that dodge the literal phrases above: "the part (almost) nobody says
-  out loud", "what nobody will just say to you", "the thing nobody else will tell
-  you", "the test/step (almost) everyone skips", "the part everyone misses", "the
-  secret nobody…".** All of it is the same move — claiming privileged/secret
-  knowledge — and it reads as *desperate*, which corrodes trust from the first
-  slide. *(Operator note, #35: if a thing is genuinely overlooked, misunderstood,
-  or misattributed, just SAY that plainly and factually — "this is widely
-  misattributed to Barnum" — and teach it.)* **Operator directive, #13 (2026-06-24):
-  never claim secret knowledge to manufacture a hook. The differentiator is the
-  operator's OWN voice, perspective, experience, humor, and the entertaining way
-  the video is made — "the seasoning on the meat that is me" — not a pretense that
-  no one else has ever said this. The same claim sourced to lived experience ("after
-  thirty years of building things, here's where I've landed…") is honest, warmer,
-  AND a stronger hook than "the part nobody says out loud." A real open loop still
-  works ("one thing I always check first") — just ground it in the operator's
-  practice, not in everyone-else-is-blind. Reaching for secret-knowledge framing is
-  the flat-earther register; we are the opposite of that.
-- **The groundless prevalence claim (operator directive 2026-08-05):** "most
-  founders have never heard of X", "most people don't realize", "few companies
-  know", "you've probably never heard of". This is the secret-knowledge move's
-  quieter cousin, and it slips past a blocklist aimed at the phrases above because
-  it names no "nobody" and sounds like a fact. **It IS a fact claim** — about what
-  a population knows — and we have not measured it. Dave, catching it in #50's
-  script after upload: *"They're typically disingenuous unless we have real data
-  showing that something is in fact overlooked... this is usually why people will
-  look at articles and immediately assume it's AI-generated."* On this channel the
-  cost is sharper than usual: the audience are practitioners, so a wrong claim
-  about what they know is falsified by the viewer's own experience mid-video.
-  **The repair is a downgrade from ignorance to judgment**, and it is nearly always
-  available: not "the committee most founders have never heard of" but "the
-  committee you underestimate, because winning the surgeon felt like the hard
-  part." That version is defensible, it does argumentative work, and it follows
-  from the beat before it instead of arriving as trivia. Full treatment in the
-  `humaner` skill's LINT.md §4b.
-- **Manufactured drama beats:** "let that sink in", "sit with that", "and that,
-  right there, is…", "plot twist", "but here's the twist", "and the twist?".
-- **Stock closers:** "at the end of the day", "the bottom line is", "so there you
-  have it".
-- **End-signalers (NEW 2026-06-21 — they tank end-retention; see script-playbook
-  §4.7):** "in conclusion", "to conclude", "let's recap", "to recap", "a quick
-  recap", "to wrap up", "wrapping up", "before you go", "before you click away",
-  "to sum up", "lastly". Any phrase that announces the video is ending tells the
-  viewer to leave. Don't recap and don't sign off — end on the comment question
-  and a single CTA.
-- **Ad-copy / hype:** "game changer", "in a world where", "imagine a world where",
-  "unlock the potential", "say goodbye to X and hello to Y", "the future of X is
-  here", "this isn't just X, it's Y", "we're not just X, we're Y", "what if you
-  could", "seamless, intuitive, powerful", "supercharge", "elevate", "revolutionize".
-- **Reflexive praise / transition tics:** "put it perfectly", "nailed it",
-  "couldn't have said it better".
+### A1. Spoken clichés — now covered by LINT.md (converted to pointers 2026-09-10)
 
-The throat-clearing rule: if a clause exists only to tee up the next one ("Here's
-the kicker:", "And the twist?"), delete it and just say the thing. A real person
-usually just says it. One genuinely in-voice "Look," or "Here's the thing" across
-a whole script can survive; a *pattern* of them cannot.
+This section carried its own blocklist from 2026-06 to 2026-09-10, plus a "reusable CUT
+scanner" that sessions copied out and ran. Both are gone. Every rule they held now lives
+in the `humaner` skill's LINT.md, which owns all removal, and this file keeps only the
+pointers, because a copied list drifts: on 2026-09-10 this section "discovered" *I want
+to be careful here* five days after LINT §12b already had it, and the two lists had
+been growing separately since August. New phrases go into LINT.md first, under a
+category with a test (LINT §12c, the transplant test), and never here
+(`~/.claude/skills/humaner/MAINTAINING.md` §2).
 
-### A1b. Honesty overclaims (false-modesty about having nothing to sell)
-The operator HAS a book, a site, and a newsletter (with masterclasses), named in
-the CTA. So any "nothing to sell" / "no course, no affiliate link" / "I've got
-nothing to sell you" claim is false and torches the credibility beat the instant
-the CTA arrives. Grep and rewrite every hit to the *paywall* framing (the answer
-isn't gated; given freely so you benefit) per script-playbook §4.3. Phrases to
-hunt: "nothing to sell", "nothing to sell you", "no course", "no affiliate",
-"not here to sell you", "i'm not selling".
+Where each thing this section used to hold now lives:
 
-### A1c. Honesty presuppositions (the "let me be honest now" trap)
-Operator directive 2026-06-22 (from NLP): announcing that you're *about to* be
-honest presupposes you WEREN'T honest before it — it quietly indicts the rest of
-the script. Never use it. Grep and rewrite every hit; just say the thing, or open
-the caveat directly ("Now, one caveat I don't want you to miss…"). Phrases to
-hunt: "to be honest", "to be honest with you", "i have to be honest", "i'll be
-honest", "let me be honest", "i'm going to be honest", "i owe you a piece of
-honesty", "owe you some honesty", "truth be told", "in all honesty", "honestly
-speaking", "to be real with you". (Bare "honestly," addressed to the VIEWER as a
-candor invitation — "Honestly, what's the one task you won't hand off?" — is fine;
-the ban is on the SPEAKER claiming new honesty about themselves.)
-
-**EXTENDED 2026-07-31 (#53): the ban covers the self-applied ADJECTIVE too**, not
-just the announcing phrases. Dave caught "my honest answer is almost never" and
-rewrote it to "it seems my answer is almost never": *"if you have to identify what
-you're saying right now as honest, then what does that mean about everything else
-you say?"* Also hunt: "my honest answer", "the honest truth", "honest opinion",
-"if I'm honest". Where a hedge is genuinely wanted, reach for UNCERTAINTY instead
-of honesty ("it seems my answer is…", "as best I can tell", "I'd have to say").
-Still legal: describing something other than his own candor as honest ("the authors'
-own explanation is the honest one"), reporting what others were asked to do, and a
-mid-sentence casual "honestly" inside his own aside (CONSTRAINTS.md §1.10 texture).
-
-### A1d. Telegraphed virtue (announcing what the sentence should just do)
-Operator directive 2026-09-10, from the #59 booth. This is A1c's wider family. A1c bans
-claiming new *honesty*; the same move works with any virtue, and slips past a list aimed
-at "honest". Dave, on "I want to be careful here, because this isn't a video about a bad
-study": *"another one of those weird clichés that are becoming associated with AI-based
-writing. I'm not sure we need that kind of telegraphing into the rest of the sentence
-anyway. It feels like it might just be an unnecessary lead-in."*
-
-He is right on the mechanism. **Announcing that you are about to be careful presupposes
-you were careless up to now**, exactly as "let me be honest" indicts everything before
-it, and it spends a clause on a promise the next clause was going to keep anyway. The
-same script also carried "Seventy-five percent is still bad, and I want to be fair about
-that" — the sentence *is* the fairness; saying so adds nothing.
-
-Grep and delete: `i want to be careful`, `i want to be fair`, `let me be careful`,
-`let me be fair`, `i should be careful here`, `i'll try to be fair`, `i want to be
-precise`, `i want to be accurate`. **The repair is almost always deletion, not
-replacement** — apply the delete test, and if the sentence gets clearer, the lead-in was
-never doing work. Do not swap in a different connector; that was the failed instinct on
-the same script's cold open (see the `being clever about` entry in
-`tools/script_coherence.py`'s IDIOM table).
-
-Still legal: "to be fair" as an ordinary concessive mid-argument, and describing someone
-else's care ("the authors were careful about this").
+- **Fake-suspense openers, manufactured drama beats, throat-clearing, telegraphed
+  virtue** (*here's the thing*, *let that sink in*, *plot twist*, *I want to be careful
+  here*, *I want to be fair about that*) → LINT §12b, both shapes, and §12c, the parent
+  category and its test. The repair is deletion, never a replacement connector.
+- **Secret-knowledge framing and the groundless prevalence claim** (*the part nobody
+  talks about*, *most founders have never heard of*) → LINT §4b. The positive half of
+  operator directive #13 (ground the hook in the operator's practice, not in
+  everyone-else-is-blind) is hook craft, not removal, and stays in B1 below.
+- **Ad-copy and hype, reflexive praise of a quoted source** (*game changer*, *imagine a
+  world where*, *put it perfectly*) → LINT §3.
+- **Stock closers and end-signalers** (*at the end of the day*, *to recap*, *before you
+  go*) → LINT §5. The retention reason they matter on video is script-playbook §4.7.
+- **Honesty presuppositions and the self-applied honest adjective** (*let me be honest*,
+  *my honest answer*, *if I'm honest*) → LINT §6, house additions, and CONSTRAINTS.md
+  Part 4. The repair is uncertainty, not honesty: *as best I can tell*.
+- **Honesty overclaims** (*nothing to sell*, *no course*, *no affiliate link*) →
+  CONSTRAINTS.md Part 4, identity guardrails: he has a book, a newsletter and a site.
+  The framing to use instead, the answer is not gated, is script-playbook §4.3.
 
 ### A2. Written-tell carryover — now covered by LINT.md
 General AI-tell removal (em/en dashes, curly quotes, AI vocabulary like delve,
@@ -191,8 +101,8 @@ class of error for text.
 ## B. COMPEL — make the speech pull the listener
 
 This is the half LINT.md doesn't have. Clean is necessary, not sufficient. The
-opening especially must compel — but the *lazy* way to compel is the §A1
-cliché list. Earn the same pull with substance.
+opening especially must compel — but the *lazy* way to compel is the cliché
+LINT §12b and §12c cut. Earn the same pull with substance.
 
 ### B1. Hook craft (the cold open) — the paradox, resolved
 We need an opening that compels people to keep watching, without sounding like
@@ -217,7 +127,16 @@ without the substance. Build the substance instead:
   involuntarily because they hit survival/identity tension — but ONLY when
   honest: a real pain the video really solves, a real viewer it really serves.
   The dishonest versions (manufactured fear, secret-knowledge framing,
-  drill-sergeant exclusion) are exactly what §A1 bans.
+  drill-sergeant exclusion) are exactly what LINT §4b and §12b ban.
+- **Never claim secret knowledge to manufacture a hook** (operator directive #13,
+  2026-06-24; kept here rather than in the removal pass because it is hook craft). The
+  differentiator is the operator's own voice, perspective, experience and humor, "the
+  seasoning on the meat that is me," not a pretense that no one else has ever said this.
+  The same claim sourced to lived experience ("after thirty years of building things,
+  here's where I've landed") is honest, warmer, and a stronger hook than "the part
+  nobody says out loud." A real open loop still works ("one thing I always check
+  first"); ground it in his practice, never in everyone-else-is-blind. If a thing is
+  genuinely overlooked or misattributed, say so plainly and factually, and teach it.
 
 Two tests every cold open must pass:
 - **Specificity test:** could this exact opening front a different video on
@@ -274,10 +193,10 @@ Two tests every cold open must pass:
 
 1. Draft per the script- and blueprint-playbooks (hook craft from B1 informs the
    cold open as you write).
-2. **CUT pass:** grep the A1 blocklist (spoken clichés) over every segment's
-   `text`; rewrite every hit. General AI-tell removal (old A2/A3) is the
-   `humaner` skill's LINT.md pass — run it separately (SKILL.md wires this into
-   the pre-booth gate).
+2. **CUT pass:** the `humaner` skill's LINT.md pass, in its own running order, over
+   every segment's `text` including each Short's hook and outro. It owns every removal
+   rule, spoken clichés included (§12b, §12c, §4b, §3, §5, §6); this file has carried no
+   list of its own since 2026-09-10. SKILL.md wires the pass into the pre-booth gate.
 3. **COMPEL pass:** run the B checklist. Rewrite flat openers, even cadence,
    abstract nouns, and any segment that doesn't earn its next line. Apply the two
    hook tests to seg 0.
@@ -343,53 +262,15 @@ Two tests every cold open must pass:
    forces a new caption page, a comma does not. Never leave a caption that reads as a
    typo in isolation.
 
-Reusable CUT scanner (write to a file; do not inline multi-line `-c`):
-```python
-import json, sys
-d = json.load(open(sys.argv[1]))
-blocklist = [
-    "here's the thing", "here's the kicker", "the truth is", "make no mistake",
-    "let me be clear", "real talk", "buckle up", "nobody argues about",
-    "nobody talks about", "they don't tell you", "nobody tells you", "cheerleaders skip",
-    # secret-knowledge cousins (#13, 2026-06-24) — same desperate move, dodges the phrases above
-    "says out loud", "nobody will just say", "nobody else will tell", "everyone skips",
-    "everybody skips", "everyone misses", "the secret nobody",
-    "dirty little secret", "let that sink in", "sit with that", "right there, is",
-    "plot twist", "here's the twist", "the twist?", "at the end of the day",
-    "bottom line is", "so there you have it", "game changer", "in a world where",
-    "imagine a world", "unlock the potential", "say goodbye to", "the future of",
-    "seamless", "supercharge", "revoluti", "put it perfectly", "nailed it",
-    "in conclusion", "to conclude", "let's recap", "to recap", "to wrap up",
-    "wrapping up", "before you go", "before you click away", "to sum up",
-    # honesty overclaims (A1b) — operator HAS a book/newsletter; never claim otherwise
-    "nothing to sell", "no course", "no affiliate", "not here to sell you",
-    # honesty presuppositions (A1c) — "be honest now" implies prior dishonesty
-    "to be honest", "i have to be honest", "i'll be honest", "let me be honest",
-    "i owe you a piece of honesty", "owe you some honesty", "truth be told",
-    "in all honesty", "to be real with you",
-    # A1c EXTENDED 2026-07-31 (#53): the self-applied ADJECTIVE carries the same
-    # presupposition. "my honest answer" -> "it seems my answer". Legal: describing
-    # someone ELSE's explanation as "the honest one", or a mid-sentence casual
-    # "honestly" inside his own aside (CONSTRAINTS.md 1.10 texture).
-    "my honest answer", "the honest truth", "honest opinion", "if i'm honest",
-    "if i am honest", "honestly, my answer",
-    # A1d telegraphed virtue (2026-09-10, #59) — announcing the virtue the sentence
-    # should simply demonstrate. Repair is deletion, not a replacement connector.
-    "i want to be careful", "i want to be fair", "let me be careful", "let me be fair",
-    "i should be careful here", "i'll try to be fair", "i want to be precise",
-    "i want to be accurate",
-]
-for s in d["segments"]:
-    hits = [p for p in blocklist if p in s["text"].lower()]
-    if hits:
-        print("card", s["id"] + 1, "(", s["slide"], "):", hits)
-```
+The reusable CUT scanner that sat here was removed 2026-09-10. A copied list drifts:
+it "discovered" *I want to be careful here* five days after LINT §12b had it. If a
+mechanical pre-pass is wanted, grep LINT.md's own **Watch** lines over the script, and
+remember that a grep finds only repeats. The check is the category read (LINT §12c,
+the transplant test), and the fresh-eyes reviewer runs it.
 
 ## Quick checklist (run before the gate)
-- [ ] CUT scanner returns clean (no A1 spoken-cliché blocklist hits).
-- [ ] `humaner` skill's LINT.md pass run — covers general AI-tell (em dashes,
-      curly quotes, AI vocabulary, forced triples, negative parallelism,
-      staccato runs, nominalizations/passive voice; old A2/A3).
+- [ ] `humaner` skill's LINT.md pass run in full, including the §12c transplant read.
+      It owns all removal, spoken clichés included; this file has no list of its own.
 - [ ] Cold open passes the specificity test AND the substance test.
 - [ ] Sentence length genuinely varies; no even mid-length drone.
 - [ ] Concrete nouns / real numbers / named people, not abstractions.

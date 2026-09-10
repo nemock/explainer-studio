@@ -221,7 +221,7 @@ views, eight words). When ranking candidates, annotate each with its
 tension(s); a candidate pulling two tensions honestly beats one pulling one.
 GUARDRAIL: tension-naming must stay honest — name a pain the video genuinely
 solves for a viewer the video genuinely serves. No manufactured fear, no
-manufactured tribalism (see spoken-humanizer §A1 secret-knowledge ban).
+manufactured tribalism (see humaner LINT §4b, and spoken-humanizer B1).
 
 **Check our own scoreboard before ranking (Learn, added 2026-07-03).** If
 `channel/learn/REPORT.md` exists, read it before finalizing the ranked list:
