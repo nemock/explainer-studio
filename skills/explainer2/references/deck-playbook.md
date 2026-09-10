@@ -253,8 +253,9 @@ corners beside the content:
   portrait there is no free corner, so the engine drops them with a `run.log` warning.
 - Until 2026-08-07 only `hook` slides forwarded `props`; everywhere else they were
   silently dropped. All paper types now carry them.
-- **Props are objects, not people.** The presenter is a separate automatic layer that
-  needs no deck authoring (motion-playbook §G2). Never author a `chibi/...` ref as a prop
+- **Props are objects, not people.** The presenter is a separate layer, **off by default
+  since 2026-09-10** and enabled only by `"presenter": {"enabled": true}` in
+  `project.json` (motion-playbook §G2). It is never authored from the deck. Never author a `chibi/...` ref as a prop
   — **engine-enforced since 2026-08-10**: `_stage_chibi` drops chibi refs found in
   `props` or in a slide `image`, with a `run.log` warning.
 - **Scope note (2026-08-10):** this section is the **`Paper*`** family. The **`Cvg*`**

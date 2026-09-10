@@ -84,8 +84,9 @@ The old instruction here — *join scenes as a bottom-corner cutout via `chibi/<
 deck refs* — is **withdrawn**. It predates the 2026-08-07 presenter layer, and it did not
 fail safe: `_stage_chibi` staged those refs and rendered Dave as a **prop**, at prop
 scale, standing in the set as furniture. That is now dropped with a `run.log` warning.
-Where the presenter does run (deep dives), it is automatic and needs no deck authoring:
-motion-playbook §G2.
+Where the presenter is eligible at all (deep dives), it is **off by default since
+2026-09-10** and runs only when a project sets `"presenter": {"enabled": true}`; it is
+never authored from the deck. See motion-playbook §G2.
 
 The chibi remains a separate private library and is NOT generated with this recipe;
 never try to redraw him via Magnific prompts.

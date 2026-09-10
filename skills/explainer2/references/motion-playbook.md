@@ -162,20 +162,33 @@ Each entry: **what · when · spec fields · motion · don't.**
 - **Timeline** — events appear along a line in time (auto item-synced).
 *Rule:* build in sync with the explanation; never reveal the whole diagram at once.
 
-### G2. The chibi presenter (IMPLEMENTED 2026-08-07 — on EVERY scene, automatic)
+### G2. The chibi presenter (OFF BY DEFAULT — opt in per project)
 
-> **SCOPE, 2026-08-10 — DEEP DIVES ONLY.** The presenter now runs on the
-> `nemock-deep-dive` theme and nothing else. The six personal-show worlds (`fwf`,
+> **SCOPE, 2026-08-10 — DEEP DIVES ONLY.** The presenter is *eligible* on the
+> `nemock-deep-dive` theme and nothing else (and since 2026-09-10 must still be opted in). The six personal-show worlds (`fwf`,
 > `mmt-tangerine`, `ftt-study`, `wsc-goldenrod`, `ttd-indigo`, `fmf-alarm`) are in
 > `CHIBI_NEVER` — a hard block a project file cannot switch on — until the operator
 > settles how a stand-in should work in a vertical frame. Everything below describes
 > the deep-dive behavior. See
 > `make_money/routine_changes/2026-08-10-booth-show-chibi-and-props-doc-correction.md`.
 
-Dave's cartoon stand-in stands beside the content on **every slide** of a landscape
-deep-dive render. This is automatic — the engine assigns a pose to every scene, so a
-deck needs no authoring at all to get it. Operator directive: *"if the chibis are only on
-one or two slides, then they don't actually make sense at all."*
+> **DEFAULT REVERSED, 2026-09-10 (operator directive). The presenter is OFF unless a
+> project explicitly asks for it.** Set `"presenter": {"enabled": true}` in
+> `project.json`; anything else, including omitting the key entirely, renders no chibi.
+> Dave, on finding one in every scene of #59's first render: *"completely suppress it
+> from automatic use. If I explicitly add it, there should probably be a flag that allows
+> it, but it is not a default style."*
+>
+> Why the code changed rather than just this page: `ON-CAMERA-COLD-OPEN.md` had **already**
+> excluded the presenter while the chibi experiment is unsettled, and #59 still rendered
+> twelve minutes of video with one in frame — because the exclusion lived in prose and the
+> default lived in code. A default beats a document every time.
+
+When it IS switched on, Dave's cartoon stand-in stands beside the content on **every**
+slide of a landscape deep-dive render — the engine assigns a pose to every scene, so the
+deck needs no further authoring. Operator directive on that half, unchanged: *"if the
+chibis are only on one or two slides, then they don't actually make sense at all."* The
+all-or-nothing rule governs how it looks once enabled; it is not a reason to enable it.
 
 - **You may author `"chibi": "<pose-filename>"` on any slide** to pick that scene's pose
   (no `chibi/` prefix needed, `.png` optional). Everything you don't author takes the
@@ -194,8 +207,12 @@ one or two slides, then they don't actually make sense at all."*
   the captions reserve it too. That is a layout guarantee, so you do not need to design
   around him — but note every slide's content is ~19% narrower than the full frame, which
   is why schematics should still spread across the canvas rather than crowd the right.
-- **Per project:** `"presenter": {"enabled": false}` in `project.json` opts out;
+- **Per project (OPT-IN):** `"presenter": {"enabled": true}` in `project.json` switches
+  it on. Omitting the key, or `{"enabled": false}`, renders no presenter.
   `"charHeightFrac"` (0.18–0.22, default 0.22) tunes his size.
+- **`CHIBI_THEMES` is now an allowlist, not an auto-on list.** Being on it makes a theme
+  *eligible*; the project must still opt in. Asking for a presenter on a theme outside it
+  is skipped with a `run.log` line.
 - **Never on Circumvent** (separate brand, hard rule), **never on the six personal-show
   worlds** (paused 2026-08-10, see the scope note above), and **skipped on portrait** — a
   9:16 lane would eat a third of the frame, so Shorts are unaffected.

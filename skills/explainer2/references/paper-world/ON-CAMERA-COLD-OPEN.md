@@ -57,7 +57,14 @@ of the desk, and the first slide assembles in the space that opens up. Alternati
 paper scene tears away along an existing act-boundary tear. Both keep continuity; a hard
 cut throws away the reason for building the set.
 
-## The chibi presenter is EXCLUDED (operator, 2026-08-12)
+## The chibi presenter is EXCLUDED (operator, 2026-08-12; enforced in code 2026-09-10)
+
+> **This section was true and got ignored anyway.** #59 shipped a first render with a
+> chibi in the corner of every non-figure scene, because this exclusion lived here in
+> prose while the engine defaulted it ON for the deep-dive theme. Dave caught it in the
+> frames. The presenter is now **off unless a project sets
+> `"presenter": {"enabled": true}`** (motion-playbook §G2), so the default enforces what
+> this page always said. Left standing as the reasoning behind the rule.
 
 Dave is experimenting with a set of chibi papercraft figures that resemble him, and they
 are **not to appear in these renders** while that experiment is unsettled. The library is

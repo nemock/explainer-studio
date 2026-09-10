@@ -57,6 +57,8 @@ CHIBI_ROTATION = (
 # operator settles how a stand-in should work in a vertical frame ("still experimenting
 # with their use; restrict to the deep dives for now"). Cut & Bond and the navy ISO world
 # are other looks entirely and were never on this list; a project may opt those in.
+# Themes ALLOWED to opt in. Being on this list no longer switches the presenter on by
+# itself (2026-09-10) — a project must also set "presenter": {"enabled": true}.
 CHIBI_THEMES = ("nemock-deep-dive",)
 
 # Themes that never carry Dave's stand-in. A hard rule, not a default: a project file
@@ -111,9 +113,23 @@ def _chibi_side(slide):
 def _assign_chibi(scenes, slides_by_id, seg_slides, data, log):
     """Put a presenter pose on every scene. Returns the `presenter` spec block (or None).
 
-    Opt out per project with "presenter": {"enabled": false} in project.json; tune the
-    size with "charHeightFrac" (brand spec 0.18-0.22 of frame height, the CHARACTER's
-    height rather than the pose canvas, which carries transparent padding).
+    OFF BY DEFAULT EVERYWHERE (operator directive 2026-09-10). Opt IN per project with
+    "presenter": {"enabled": true} in project.json; tune the size with "charHeightFrac"
+    (brand spec 0.18-0.22 of frame height, the CHARACTER's height rather than the pose
+    canvas, which carries transparent padding).
+
+    It used to default ON for every theme in CHIBI_THEMES, which meant a deep dive got a
+    chibi in the corner of every scene unless someone remembered to switch it off. Dave,
+    seeing it in #59's first render: "Suppress the chibi and re-render... completely
+    suppress it from automatic use. If I explicitly add it, there should probably be a
+    flag that allows it, but it is not a default style."
+
+    The reason this is a DEFAULT change rather than another per-project opt-out: the
+    ON-CAMERA-COLD-OPEN spec already excluded the presenter while the chibi experiment is
+    unsettled, and #59 still rendered fifteen minutes of video with one in frame, because
+    the exclusion lived in prose and the default lived in code. A default beats a document
+    every time. CHIBI_THEMES is now the list of themes ALLOWED to opt in; CHIBI_NEVER
+    still hard-blocks, and a project file cannot override it.
     """
     cfg = dict(data.get("presenter") or {})
     theme = data.get("theme", "")
@@ -123,9 +139,11 @@ def _assign_chibi(scenes, slides_by_id, seg_slides, data, log):
                 f"(deep dives only; see CHIBI_NEVER)")
         return None
     portrait = data["height"] > data["width"]
-    default_on = theme in CHIBI_THEMES and not portrait
-    enabled = bool(cfg.get("enabled", default_on))
-    if not enabled:
+    if not cfg.get("enabled"):
+        return None                      # opt-in only; silence is OFF
+    if theme not in CHIBI_THEMES:
+        log(f"remotion: chibi presenter requested but the {theme} theme is not in "
+            f"CHIBI_THEMES — skipped")
         return None
     if portrait:
         # 9:16 has no width to give away; the lane would eat a third of the frame.
