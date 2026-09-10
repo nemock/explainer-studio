@@ -144,6 +144,38 @@ IDIOM = {
 }
 
 
+# LINT.md §8: negative parallelism in its three shapes. All of them stage a misconception
+# and then correct it, which implies the reader was thinking wrong, so the rule is **at most
+# one per piece** and only where a real misconception is being corrected.
+#
+# The rule existed long before this check. What did not exist was anything that COUNTS, and
+# a cap nobody counts is not a cap: #59 reached the booth with five instances, and the
+# operator caught it by ear on card 3 ("The problem isn't the report. The problem is what
+# happened to it on the way to you."). LINT names the shape; every instance is individually
+# legal; nothing added them up.
+#
+# The third shape is the one that needs a sentence PAIR, because it stacks across a period
+# ("It is not being wrong. It's being convenient."), and that is the form our scripts
+# actually reach for.
+#
+# CARVE-OUT, and it must be declared rather than guessed. A segment may carry
+# "lint_allow": ["negative-parallelism"] to exempt itself; those are reported separately and
+# do not count against the cap. This exists because #59 card 28 quotes the source report's
+# own wording ("directionally accurate, based on individual interviews rather than official
+# company reporting") — a real exemption that no heuristic could distinguish from an authored
+# reframe, since a spoken script carries no quotation marks. Declaring it puts the judgment
+# in the script where a reader can audit it.
+NEGPAR_CAP = 1
+NEGPAR_INLINE = [
+    (r"\bnot (?:only|just|merely)\b[^.!?]*?(?:,\s*)?\b(?:but|it's|it is)\b", "not only X, but Y"),
+    (r"\b(?:isn't|is not|aren't|are not|wasn't|was not)\b[^.!?]*?\bbut\b", "not X, but Y"),
+    (r"\brather than\b", "X rather than Y"),
+]
+# sentence A negates a copula; sentence B immediately re-asserts one
+NEGPAR_A = re.compile(r"\b(?:isn't|is not|aren't|are not|wasn't|was not|not)\b", re.I)
+NEGPAR_B = re.compile(r"^(?:it's|it is|that's|that is|the \w+ is|the \w+'s)\b", re.I)
+
+
 def sentences(text):
     return [s.strip() for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s.strip()]
 
@@ -185,7 +217,11 @@ def main():
                         cards.append((f"card {len(cards) + 1} ({cut.get('slug', '?')} {role})",
                                       cut[role]))
 
+    # keyed exactly as the card list above, so a declared carve-out lands on the right card
+    allow_by_card = {f"card {sg['id'] + 1} (seg {sg['id']})": sg["lint_allow"]
+                     for sg in segs if sg.get("lint_allow")}
     fragments, openers, longs, colons, bare, british, doubled, idiom = [], [], [], [], [], [], [], []
+    negpar, negpar_declared = [], []
     empty = []
 
     for card, text in cards:
@@ -217,6 +253,20 @@ def main():
         for pat, us in IDIOM.items():
             for m_ in re.finditer(pat, text, re.I):
                 idiom.append(f"{card}: {m_.group(0)!r} -> {us}")
+
+        # LINT.md §8 negative parallelism, counted against a cap of one per script.
+        np_hits = []
+        for pat, shape in NEGPAR_INLINE:
+            for m_ in re.finditer(pat, text, re.I):
+                np_hits.append(f"{shape}: {m_.group(0).strip()!r}")
+        sents = sentences(text)
+        for a_, b_ in zip(sents, sents[1:]):
+            if NEGPAR_A.search(a_) and NEGPAR_B.match(b_.strip()):
+                np_hits.append(f"stacked across a period: {a_.strip()!r} / {b_.strip()!r}")
+        if np_hits:
+            declared = "negative-parallelism" in (allow_by_card.get(card) or [])
+            for h in np_hits:
+                (negpar_declared if declared else negpar).append(f"{card}: {h}")
 
         # A demonstrative followed by its own noun ("That meeting feels fine") is not a
         # pronoun hanging in space — it names the thing in the same breath. Only flag the
@@ -282,6 +332,22 @@ def main():
         print(f"\n  [{'FAIL' if hits else 'PASS'}] {label}: {len(hits)}")
         for h in hits:
             print(f"      {h}")
+
+    # A CAP, not a zero check: LINT.md §8 allows exactly one, so only the OVERAGE is a
+    # failure. Every instance is printed regardless, because the author has to choose which
+    # one survives, and that choice needs the list in front of them.
+    over = max(0, len(negpar) - NEGPAR_CAP)
+    bad += over
+    print(f"\n  [{'FAIL' if over else 'PASS'}] NEGATIVE PARALLELISM "
+          f"(LINT.md 8: at most {NEGPAR_CAP} per script): {len(negpar)}")
+    for h in negpar:
+        print(f"      {h}")
+    if over:
+        print(f"      -> {over} over the cap. Keep the one that corrects a real")
+        print("         misconception; rewrite the rest with an active verb and a concrete")
+        print("         noun (CRAFT.md 4), or state the fact and let the reader compare (6).")
+    for h in negpar_declared:
+        print(f"      [declared carve-out, not counted] {h}")
 
     if fragments:
         print("\n  NOTE: the parser mis-tags the odd verb as a noun ('span', 'promises'),")
