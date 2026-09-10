@@ -272,7 +272,11 @@ Two tests every cold open must pass:
    ```
    It flags verbless sentences, a count standing in for a noun ("deal with these
    forty" — forty *what*), cards opening on a bare pronoun or connective, sentences over
-   23 words, and mid-sentence colons. Exit 1 means fix before the booth; exit 2 means the
+   23 words, and mid-sentence colons. It also flags British spelling, British
+   vocabulary, and (since 2026-09-10) multi-word British **idiom/construction**. That
+   last table is a blocklist of what has actually reached a script, so it catches
+   repeats, not first offenses; the general "would an American say this out loud"
+   question belongs to the fresh-eyes reviewer, whose brief now asks for it. Exit 1 means fix before the booth; exit 2 means the
    check could not run (install spaCy — never proceed on a skipped coherence gate).
 
    **It covers EVERY card the booth will show — the script AND each Short's hook and

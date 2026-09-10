@@ -493,7 +493,13 @@ to date missed length on the first draft; the rule exists because it bites).
       reviewer (model `sonnet`, never the drafting tier), give it the finished script, the
       written brief, CRAFT.md, the architecture tells and the **Operator VO script** dial
       in FORMATS.md — and NOT CONSTRAINTS.md, which turns a craft reviewer into a mimicry
-      enforcer. Tell it to read the whole script aloud in one pass, and list the settled
+      enforcer. Tell it to read the whole script aloud in one pass, ASK IT EXPLICITLY
+      whether every line sounds like an American operator said it out loud (added
+      2026-09-10, #59: Dave rejected "I'm not being clever about that" at the script
+      gate, a construction whose every word is spelled identically in both dialects, so
+      the coherence tool's BRITISH and IDIOM tables could not have caught it before the
+      fact — a blocklist only knows what already shipped, and this general class needs a
+      reader), and list the settled
       carve-outs so it does not re-litigate them (deliberate repetition, verbatim quoted
       lines, numbers spelled out for captions, the composite company, the series CTA).
       Fix every finding or answer it in one line naming the carve-out. Cap at two rounds.

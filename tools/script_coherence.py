@@ -105,6 +105,44 @@ BRITISH = {
     "straightaway": "right away", "queueing": "lining up",
 }
 
+# The OTHER other half of U.S. English: multi-word CONSTRUCTION. BRITISH above is a
+# single-word lookup, so it cannot see an idiom, and on #59 (2026-09-10) the operator
+# rejected a cold open reading "I'm not being clever about that" — every word of which
+# is spelled identically on both sides of the Atlantic. Dave: "I don't think I've ever
+# said that in my life. Maybe that's something that someone in the UK might say, but
+# definitely not very common from an American English standpoint."
+#
+# HONEST LIMIT, stated here so nobody trusts this check further than it goes: a
+# blocklist catches PHRASES SOMEBODY ALREADY SHIPPED. It would not have caught that
+# cold open before the fact, because "being clever about" is not a standard British
+# idiom — it is just an odd construction. The general class ("does this sound like an
+# American said it out loud") needs the fresh-eyes reviewer, whose brief now asks for
+# it. This table is the mechanical half, and like BRITISH it earns its keep by
+# accreting whatever actually reaches a script.
+IDIOM = {
+    r"\bbeing clever about\b": "just say the thing (#59, 2026-09-10)",
+    r"\bdifferent to\b": "different from",
+    r"\bin future\b": "in the future",
+    r"\btakes? a decision\b": "make a decision",
+    r"\btook a decision\b": "made a decision",
+    r"\bin hospital\b": "in the hospital",
+    r"\bat university\b": "in college",
+    r"\bon the cards\b": "in the cards",
+    r"\bhave a go\b": "give it a try",
+    r"\bspot on\b": "exactly right",
+    r"\bstraight away\b": "right away",
+    r"\bw(?:as|ere) sat\b": "was sitting",
+    r"\bw(?:as|ere) stood\b": "was standing",
+    r"\b(?:I|you|we|they)'ve not\b": "haven't",
+    r"\bfull stop\b": "period",
+    r"\bgone missing\b": "disappeared",
+    r"\bdid wonder\b": "emphatic-do reads British; 'I wondered', or make it active",
+    r"\bkeen to\b": "eager to",
+    r"\bcar park\b": "parking lot",
+    r"\blorry\b": "truck",
+    r"\bpetrol\b": "gas",
+}
+
 
 def sentences(text):
     return [s.strip() for s in re.split(r"(?<=[.!?])\s+", text.strip()) if s.strip()]
@@ -147,7 +185,7 @@ def main():
                         cards.append((f"card {len(cards) + 1} ({cut.get('slug', '?')} {role})",
                                       cut[role]))
 
-    fragments, openers, longs, colons, bare, british, doubled = [], [], [], [], [], [], []
+    fragments, openers, longs, colons, bare, british, doubled, idiom = [], [], [], [], [], [], [], []
     empty = []
 
     for card, text in cards:
@@ -175,6 +213,10 @@ def main():
             us = BRITISH.get(w_.lower())
             if us:
                 british.append(f"{card}: {w_!r} -> {us!r}")
+
+        for pat, us in IDIOM.items():
+            for m_ in re.finditer(pat, text, re.I):
+                idiom.append(f"{card}: {m_.group(0)!r} -> {us}")
 
         # A demonstrative followed by its own noun ("That meeting feels fine") is not a
         # pronoun hanging in space — it names the thing in the same breath. Only flag the
@@ -231,7 +273,8 @@ def main():
         ("COLD-OPEN VIOLATIONS (card opens on a bare pronoun)", openers),
         (f"BREATHLESS (over {MAX_UNBROKEN}w with no pause, or over {MAX_WORDS}w total)", longs),
         ("MID-SENTENCE COLONS", colons),
-        ("BRITISH SPELLING (U.S. English is binding, CONSTRAINTS.md 4.0)", british),        ("DOUBLED WORD/PHRASE (an edit artifact, not emphasis)", doubled),
+        ("BRITISH SPELLING (U.S. English is binding, CONSTRAINTS.md 4.0)", british),
+        ("BRITISH IDIOM/CONSTRUCTION (a blocklist of what has actually shipped)", idiom),        ("DOUBLED WORD/PHRASE (an edit artifact, not emphasis)", doubled),
     ]
     bad = 0
     for label, hits in groups:
