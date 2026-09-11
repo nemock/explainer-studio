@@ -66,6 +66,14 @@ def run(proj):
         licenses = json.loads((proj.dir / "assets" / "licenses.json").read_text())
 
     operator_voice = proj.data.get("voice_source", "kokoro") == "operator"
+    # The disclosure flag must describe the AUDIO, not which code path assembled it.
+    # voice_source="operator" only means "per-segment files already exist in
+    # voiceover/" — normally booth takes, but a project can supply synthetic audio
+    # that way too. `voice_synthetic` in project.json states the truth explicitly;
+    # without it the old inference stands, so every existing project is unchanged.
+    synthetic_audio = proj.data.get("voice_synthetic")
+    if synthetic_audio is None:
+        synthetic_audio = not operator_voice
     manifest = {
         "schema_version": "2.0",
         "generator": {"tool": "explainer2", "version": __version__},
@@ -83,7 +91,7 @@ def run(proj):
         "status": {"ready_for_post": ready, "per_aspect": per_aspect,
                    "length_warning": length_warning, "blank_slides": blank_slides},
         "ai_disclosure": {
-            "ai_generated_audio": not operator_voice, "ai_generated_visuals": True,
+            "ai_generated_audio": bool(synthetic_audio), "ai_generated_visuals": True,
             "recommended_label": "creator-disclosed", "c2pa_embedded": False,
         },
         "per_platform": meta.get("per_platform", []),
