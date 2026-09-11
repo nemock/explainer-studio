@@ -435,6 +435,16 @@ full-bleed shot.
   stylized from Dave's real D-rocket logo). **The intro length is the narration offset —
   now 3.5s (was 2.5s); see memory [[gag-splice-sting-offset]].** Component:
   `remotion/src/components/PaperSting.tsx`.
+  - **`"sting": "outro"` drops the OPENING bumper and keeps the closing mark (2026-09-11,
+    operator directive).** Dave, on #59: *"I'd like to remove the opening slide with the
+    rocket ship landing. I think it's just creating too much dead air, and given the nature
+    of YouTube viewers these days, it's too much of an opportunity to switch off."* The
+    retention argument applies to the opening only, so `false` (which kills both ends) was
+    the wrong lever. With `"outro"`, `audioFrom` becomes 0 and the narration starts on frame
+    one — an on-camera cold open lands on Dave's face with no runway at all.
+  - **Consequence for anything mapping timeline seconds onto the mp4:** `intro_offset_s()`
+    returns 0 for such a project. It already reads the STAGED props rather than assuming a
+    constant, so stills/qa/frame_qc stay correct; hand-rolled frame math does not.
 - **BrandSting** — the prior wordmark intro/outro (scale-in + light sweep). Retained as a
   fallback; PaperSting is the default the engine inserts.
 - **CvgTitle** — the SHOW TITLE PANEL for the six personal-show worlds (`fwf`,

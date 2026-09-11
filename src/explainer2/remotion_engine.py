@@ -1089,8 +1089,20 @@ def build_spec(sp):
     # wants a wordmark bumper. Without this entry plg-guide falls to the legacy `else`
     # below and gets FOUNDERS WHO FINISH / davesaunders.net stamped on a series that is
     # explicitly not the book brand — the same cross-brand leak guarded against above.
+    # `sting` takes three values (the third added 2026-09-11, operator directive):
+    #   true / omitted on landscape -> intro AND outro
+    #   false                       -> neither
+    #   "outro"                     -> OUTRO ONLY; the opening bumper is dropped.
+    # Dave, on #59: "I'd like to remove the opening slide with the rocket ship landing. I
+    # think it's just creating too much dead air, and given the nature of YouTube viewers
+    # these days, it's too much of an opportunity to switch off." That reasoning is about
+    # the OPENING only — a closing wordmark costs no retention, because the video is over —
+    # so it gets its own value rather than forcing `false` and silently dropping the brand
+    # mark he did not ask to lose.
     _NO_STING = ("wte-guide", "plg-guide") + _CVG_STYLE_THEMES
-    if sp.data.get("theme") not in _NO_STING and sp.data.get("sting", width >= height):
+    _sting = sp.data.get("sting", width >= height)
+    _intro_on = bool(_sting) and _sting != "outro"
+    if sp.data.get("theme") not in _NO_STING and _sting:
         # The sting is THEME-KEYED (branding isolation, operator direction 2026-07-15).
         # Each channel owns its brand; nothing here is a global default.
         #   nemock-deep-dive (Dave's deep dives) -> paper-launch PaperSting + davesaunders.net
@@ -1123,14 +1135,17 @@ def build_spec(sp):
             intro_comp, intro_fields = "BrandSting", {"title": "FOUNDERS WHO FINISH"}
             outro_comp = "BrandSting"
             outro_fields = {"title": "FOUNDERS WHO FINISH", "subtitle": "davesaunders.net"}
+        if not _intro_on:
+            INTRO = 0.0                      # "outro": narration starts at t=0
         off = int(round(INTRO * fps))
         for sc in scenes:
             sc["from"] += off
         for w in words:
             w["start"] += INTRO
             w["end"] += INTRO
-        scenes.insert(0, {"component": intro_comp, "from": 0, "durationInFrames": off,
-                          "fields": intro_fields})
+        if _intro_on:
+            scenes.insert(0, {"component": intro_comp, "from": 0, "durationInFrames": off,
+                              "fields": intro_fields})
         scenes.append({"component": outro_comp, "from": off + int(round(duration * fps)),
                        "durationInFrames": int(round(OUTRO * fps)),
                        "fields": outro_fields})
