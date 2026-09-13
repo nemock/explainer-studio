@@ -755,15 +755,29 @@ def studio_candidates(show):
 
 
 def studio_rendered(proj):
-    """Phase 1 already ran for THIS recording: render_complete.json is at least as new
-    as record_done.json. A re-record after a render clears that (the launcher unlinks
-    the sentinel at relaunch and Finish writes a fresh one), so the project comes back
-    for another Phase 1 — which is right: the timeline changed underneath the video."""
+    """Somebody already rendered THIS recording — skip it.
+
+    Not just the driver's own render_complete.json: a session that renders by hand
+    (`media --only narrate,align` then `render`) never writes that sentinel, and on the
+    first live cycle (2026-09-13 13:14) the watcher queued Product Leadership module-05
+    for a second full render two days after its session had produced video/ and a
+    manifest. So any media output newer than record_done.json counts: work/results.json
+    (every `media` run ends by writing it), the root manifest.json, or a rendered mp4
+    under video/. A re-record after a render produces a newer record_done.json, so the
+    project comes back for another Phase 1 — right, because the timeline changed."""
     try:
-        return ((proj / "work" / "render_complete.json").stat().st_mtime
-                >= (proj / "work" / "record_done.json").stat().st_mtime)
+        done = (proj / "work" / "record_done.json").stat().st_mtime
     except OSError:
         return False
+    outputs = [proj / "work" / "render_complete.json", proj / "work" / "results.json",
+               proj / "manifest.json"] + list((proj / "video").glob("*.mp4"))
+    for f in outputs:
+        try:
+            if f.stat().st_mtime >= done:
+                return True
+        except OSError:
+            continue
+    return False
 
 
 def run_studio(cfg, show, dry, spawned):
