@@ -6,8 +6,14 @@ intended"). Change record: `make_money/routine_changes/2026-09-13-booth-waiter-r
 Deviations from the plan as written: A2 has no `work/on_finish.cmd` hook (not needed
 until Phase B), the origin file is `work/booth_origin.json` (`booth_session.json` was
 already the booth's wrap report), and A5 (reaper gate) was dropped because `--wait`
-now refuses inside a session, so there is no waiter tree to spare. **Phase B and C
-remain a plan.**
+now refuses inside a session, so there is no waiter tree to spare.
+
+**Phase B IMPLEMENTED 2026-09-13** (operator: "Proceed with Phase B"). Change record:
+`make_money/routine_changes/2026-09-13-studio-joins-the-recording-watcher.md`. As built:
+`run_studio()` in the watcher, `--profile studio` in `phase1_render.py`, the
+`explainer-studio` entry in shows.json (`ignore_hours: true`, candidates by Finish-sentinel
+mtime under `project_globs`), `work/RESUME.md` + notification + deep link at render end.
+B3 (auto-resume via `claude --resume -p`) deliberately NOT built. Phase C docs done with A and B.
 
 ## 1. What is actually happening
 

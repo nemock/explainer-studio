@@ -56,7 +56,18 @@ this driver never gets to see (SIGKILL on the driver, hand-run renders).
 with script.json (scriptguard.py), in which case this exits non-zero with
 BLOCKED.md written and no sentinel, so Phase 2 never publishes.
 
-Usage: phase1_render.py --explainer <bin> <project_dir>
+Studio profile (2026-09-13, docs/booth-finish-local-plan.md Phase B). `--profile studio`
+runs the explainer2 deep-dive / masterclass / promo chain instead of the booth-show
+verbs: one `explainer2 media` (narrate, align, remotion render, manifest, qa under the
+render lock), then `explainer2 shorts` when shorts/plan.json exists. No stills, handoff,
+validate, or frame_qc: those belong to the studio session's Package step, which needs
+copy a human writes. A shorts refusal or failure does NOT fail the run — the long-form
+render is the expensive, irreplaceable part — it is recorded in the sentinel and in
+work/RESUME.md, which the driver writes for the session to read first when it is
+resumed. The driver then posts a macOS notification and, when the booth was opened from
+an interactive desktop session (work/booth_origin.json), deep-links that session forward.
+
+Usage: phase1_render.py --explainer <bin> [--profile shows|studio] <project_dir>
 """
 import argparse
 import json
@@ -272,10 +283,151 @@ def run_verb(cmd):
     return rc
 
 
+def _read_json(path):
+    try:
+        return json.loads(Path(path).read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def studio_announce(proj, title, text):
+    """Notification + deep link back to the originating desktop session (same handoff
+    recorder.py makes at Finish). Best-effort; never raises."""
+    origin = _read_json(Path(proj) / "work" / "booth_origin.json")
+    name = origin.get("name")
+    if name:
+        text = f"{text} Resume session {name}."
+    safe = lambda v: str(v).replace("\\", " ").replace('"', "'")
+    try:
+        subprocess.run(["/usr/bin/osascript", "-e",
+                        f'display notification "{safe(text)}" with title "{safe(title)}"'],
+                       capture_output=True, timeout=15)
+    except Exception:
+        pass
+    sid = origin.get("session_id")
+    if sid and origin.get("kind") == "interactive" and origin.get("entrypoint") == "claude-desktop":
+        try:
+            subprocess.run(["/usr/bin/open", f"claude://code/continue?session={sid}"],
+                           capture_output=True, timeout=15)
+        except Exception:
+            pass
+
+
+def write_resume_md(proj, wall_s, shorts_note):
+    """work/RESUME.md: the handoff the resumed session reads FIRST (SKILL §6/§7).
+
+    Everything a session used to re-derive after the waiter fired — what rendered, what
+    QA said, what the booth flagged, what is left — in one file, so a fresh or resumed
+    session can pick up cold without re-running twenty minutes of render."""
+    proj = Path(proj)
+    pj = _read_json(proj / "project.json")
+    done = _read_json(proj / "work" / "record_done.json")
+    adlib = _read_json(proj / "work" / "adlib_report.json")
+    results = _read_json(proj / "work" / "results.json")
+    origin = _read_json(proj / "work" / "booth_origin.json")
+    exit_ = _read_json(proj / "work" / "booth_exit.json")
+    qa = results.get("qa") or {}
+    warnings = qa.get("warnings") if isinstance(qa, dict) else None
+    if warnings is None and isinstance(qa, dict):
+        warnings = [f"{k}: {v}" for k, v in qa.items()]
+    lines = [
+        "<!-- written by tools/phase1_render.py --profile studio; the recording watcher -->",
+        f"# RESUME — {pj.get('title', proj.name)}",
+        "",
+        f"Recording finished {exit_.get('at', '(unknown time)')}; Phase 1 rendered by the "
+        f"launchd recording watcher in {wall_s:.0f}s with zero tokens.",
+        "",
+        "## Already done — do NOT re-run",
+        "",
+        "- `explainer2 media`: narrate, align, render (remotion), manifest, qa "
+        "— details in `work/results.json`, video under `video/`.",
+        f"- `explainer2 shorts`: {shorts_note}",
+        "",
+        "## Recording",
+        "",
+        f"- cards recorded: {len(done.get('recorded', []))} of {done.get('segments', '?')}"
+        + (f"; missing: {done.get('missing')}" if done.get("missing") else ""),
+        f"- adlib re-record flags: {adlib.get('rerecord') or 'none'}"
+        + (f"; unchecked: {adlib.get('unchecked')}" if adlib.get("unchecked") else "")
+        + (f"; worst drift {adlib.get('worst_drift'):.2f}" if isinstance(adlib.get("worst_drift"), (int, float)) else ""),
+        "",
+        "## QA (from `work/results.json`)",
+        "",
+    ]
+    if warnings:
+        lines += [f"- {w}" for w in warnings]
+    else:
+        lines += ["- no QA warnings recorded"]
+    lines += [
+        "",
+        "## Next (skills/explainer2/SKILL.md)",
+        "",
+        "1. §7: read the QA warnings above; fix what is fixable. Re-render only if you "
+        "changed something (`bin/explainer2 render <dir>`; align first if any take changed).",
+        "2. §7b: review `work/adlib_report.json` — noise vs real drift.",
+        "3. §8 Package: run the `humaner` skill first, then article, share copy, thumbnail, "
+        "validate. Shorts: if the line above says deferred or failed, run "
+        "`bin/explainer2 shorts <dir>` yourself.",
+        "",
+        f"Origin session: {origin.get('name') or '(none recorded)'}"
+        + (f" ({origin.get('session_id')})" if origin.get("session_id") else ""),
+        "",
+    ]
+    (proj / "work" / "RESUME.md").write_text("\n".join(lines))
+
+
+def run_studio(proj, exp, t0):
+    """The studio chain. Returns the exit code; writes the sentinel on success."""
+    rc = run_verb([exp, "media", proj])
+    if rc != 0:
+        streak = record_failure(proj, "media", rc)
+        print(f"[phase1] FAILED: media exited {rc} — no render_complete.json written "
+              f"(same failure {streak}x running)", flush=True)
+        _reap(f"media exited {rc}")
+        if streak == 1:                # later identical failures: the watcher's
+            studio_announce(proj, "Render failed",   # render-blocked notice covers them
+                            f"{Path(proj).name}: media exited {rc}. "
+                            f"See the watcher's render log.")
+        return rc
+    shorts_note = "no shorts/plan.json — nothing to cut"
+    if (Path(proj) / "shorts" / "plan.json").exists():
+        src = run_verb([exp, "shorts", proj])
+        if src == 0:
+            shorts_note = "cut OK — see shorts/"
+        else:
+            # Admission refused (another job holds the engine) or a real failure.
+            # Either way the long-form is done; the session cuts the Shorts itself.
+            shorts_note = (f"NOT cut (exited {src}) — run `bin/explainer2 shorts <dir>` "
+                           f"after checking `render-status`")
+            print(f"[phase1] shorts exited {src} — long-form is complete, recording "
+                  f"the Shorts as deferred", flush=True)
+            _reap(f"shorts exited {src}")
+    clear_failure(proj)
+    wall = time.time() - t0
+    sentinel = Path(proj) / "work" / "render_complete.json"
+    sentinel.parent.mkdir(parents=True, exist_ok=True)
+    sentinel.write_text(json.dumps({"ts": int(time.time()), "wall_clock_s": round(wall, 1),
+                                    "driver": "phase1_render.py", "profile": "studio",
+                                    "shorts": shorts_note}))
+    try:
+        write_resume_md(proj, wall, shorts_note)
+    except Exception as e:                       # the handoff note must never undo a
+        print(f"[phase1] could not write RESUME.md: {e}", flush=True)   # finished render
+    print(f"[phase1] OK — wrote {sentinel} in {wall:.0f}s", flush=True)
+    _reap("render complete")
+    studio_announce(proj, "Render finished",
+                    f"{_read_json(Path(proj) / 'project.json').get('title', Path(proj).name)}"
+                    f" rendered in {wall / 60:.0f} min. Read work/RESUME.md.")
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("project_dir")
     ap.add_argument("--explainer", required=True, help="path to the explainer2 CLI")
+    ap.add_argument("--profile", default="shows", choices=["shows", "studio"],
+                    help="shows = booth-show verbs (default); studio = explainer2 deep "
+                         "dive / masterclass / promo chain (media + shorts, RESUME.md)")
     args = ap.parse_args()
 
     for s in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
@@ -284,6 +436,8 @@ def main():
     proj = str(Path(args.project_dir).resolve())
     _child["proj"] = proj                 # _reap needs this from the signal handler
     exp = args.explainer
+    if args.profile == "studio":
+        return run_studio(proj, exp, time.time())
 
     # Which aspects this project actually renders. Read ONCE: the stills verb and
     # frame_qc below both key off it, and both must agree with what `media` produced.

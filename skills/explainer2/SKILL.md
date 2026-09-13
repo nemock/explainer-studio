@@ -277,6 +277,20 @@ body line).
     and app restarts kill silently (a third of 60 waiters since June never reported
     back); `--wait` now refuses to run inside a Claude session. Full write-up:
     `docs/booth-finish-local-plan.md`.
+  - **The render runs while you are away, with zero tokens (Phase B, 2026-09-13).**
+    The launchd recording watcher (`tools/recording_watcher.py`, config
+    `make_money/recording_watcher/shows.json`, entry `explainer-studio`) polls every
+    five minutes for a Finish sentinel under `explainer-content/projects` and the
+    masterclass series dirs. On DONE it checks `voice_source` is operator, holds if
+    the booth flagged any card `rerecord` (notifies once), runs the scriptguard, then
+    launches `phase1_render.py --profile studio` detached: `media` (narrate, align,
+    render, manifest, qa) and `shorts`. When it finishes it writes
+    **`work/RESUME.md`**, notifies, and deep-links this session again. **On resume,
+    read `work/RESUME.md` FIRST.** If it exists, or `work/render_complete.json` is
+    newer than `work/record_done.json`, the render is done: do NOT run `media` or
+    `render` again; go to §7's QA review and §7b. If it does not exist yet, check
+    `bin/explainer2 render-status` before starting a render by hand — the watcher may
+    be mid-render or queued behind the render cap.
   - Script edits during a session need NO restart (Booth 2.0): the booth
     hot-reloads `script.json` on refresh, and the operator can edit lines
     inline in the booth (writes back to the script with a backup). **An edited
@@ -332,6 +346,13 @@ changed (numerals spelled out, punctuation), assert that instead of re-recording
 guard — the video will then say something other than what the script says.
 
 ### 7. Media pipeline
+**Operator-voiced projects: the watcher has usually done this already.** If
+`work/RESUME.md` exists (written by `phase1_render.py --profile studio`, see §6), read it
+and skip to the QA-warnings review below; re-render only after a fix. The commands
+here are for Kokoro-tier projects, for re-renders after a fix, and for the case where
+the watcher held the render (re-record flags, scriptguard block, or `render-status`
+shows it queued).
+
 Run the light stages inline, then launch the heavy render **detached**:
 ```
 bin/explainer2 media --only narrate,align <project_dir>   # quick, foreground

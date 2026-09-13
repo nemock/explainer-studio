@@ -28,6 +28,19 @@ checks are accidentally re-enabled; completions are never retried blindly (the
 claim's stale-reclaim handles a dead worker); the watcher itself is single-instance
 via flock. Config (private, operator-specific) lives outside this public repo.
 
+Studio mode (2026-09-13, explainer2/docs/booth-finish-local-plan.md Phase B). A show
+entry with "mode": "studio" is the explainer2 studio itself — deep dives, masterclass
+episodes, promos — whose booth a live Claude session opens and whose finish used to be
+watched by an in-session waiter that the session reaper killed. Studio candidates are
+project dirs under the entry's "project_globs" that have a work/record_done.json newer
+than lookback_days; the watcher never opens or relaunches a studio booth (the session
+does that) and never spawns a Claude process for it. On DONE it runs the same guards as
+the shows (voice_source must be operator, adlib re-record flags, scriptguard,
+render-blocked, crash-loop, the render cap), then launches phase1_render.py
+--profile studio, which writes work/RESUME.md and deep-links the operator's session
+back when the render is done. A studio entry may set "ignore_hours": true, because a
+render at 23:00 disturbs nobody and the operator wants it waiting in the morning.
+
 Usage: recording_watcher.py --config /path/to/shows.json [--dry-run] [--force-hours]
 """
 import argparse
@@ -655,10 +668,12 @@ def launch_render(cfg, show, proj):
     render_log = logdir / f"{show['id']}_{stamp}_render.log"
     driver = cfg.get("phase1_driver") or str(
         Path(cfg["launch_booth"]).parent / "phase1_render.py")
+    cmd = ["/usr/bin/caffeinate", "-ims", cfg["python"], driver,
+           str(proj), "--explainer", cfg["explainer_bin"]]
+    if show.get("mode") == "studio":
+        cmd += ["--profile", "studio"]
     child = subprocess.Popen(
-        ["/usr/bin/caffeinate", "-ims", cfg["python"], driver,
-         str(proj), "--explainer", cfg["explainer_bin"]],
-        cwd=cfg["claude_cwd"], env=render_env(cfg), start_new_session=True,
+        cmd, cwd=cfg["claude_cwd"], env=render_env(cfg), start_new_session=True,
         stdout=render_log.open("w"), stderr=subprocess.STDOUT)
     write_lock(proj, child.pid)  # hold the claim for the render's lifetime
     bump_attempts(proj, "render")
@@ -694,10 +709,153 @@ def spawn_completion(cfg, show, proj, dry):
     return child.pid
 
 
-def run(cfg, dry):
+def notify_once(proj, marker, fp, title, text):
+    """One macOS notification per distinct (marker, fingerprint), not per cycle.
+    Returns True when it fired. The marker lives in work/ so it travels with the
+    project and is cleared naturally when the situation changes (new fingerprint)."""
+    f = Path(proj) / "work" / marker
+    try:
+        if f.exists() and f.read_text().strip() == fp:
+            return False
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(fp)
+    except OSError:
+        pass
+    safe = lambda v: str(v).replace("\\", " ").replace('"', "'")
+    subprocess.run(["/usr/bin/osascript", "-e",
+                    f'display notification "{safe(text)[:200]}" with title "{safe(title)}"'],
+                   check=False, capture_output=True)
+    return True
+
+
+def studio_candidates(show):
+    """Studio project dirs with a Finish sentinel inside the lookback, newest Finish
+    first. A project is a dir with project.json + script.json; SKIPPED.md opts out.
+    Dates come from the sentinel's mtime, not the dir name: masterclass episodes are
+    named module-NN and have no date to parse."""
+    import glob as _glob
+    cutoff = time.time() - show.get("lookback_days", 3) * 86400
+    out = []
+    for pattern in show.get("project_globs", []):
+        for d in _glob.glob(pattern):
+            p = Path(d)
+            if not (p.is_dir() and (p / "project.json").exists()
+                    and (p / "script.json").exists()):
+                continue
+            if (p / "SKIPPED.md").exists():
+                continue
+            done = p / "work" / "record_done.json"
+            try:
+                m = done.stat().st_mtime
+            except OSError:
+                continue
+            if m >= cutoff:
+                out.append((m, p))
+    return [p for _, p in sorted(out, reverse=True)]
+
+
+def studio_rendered(proj):
+    """Phase 1 already ran for THIS recording: render_complete.json is at least as new
+    as record_done.json. A re-record after a render clears that (the launcher unlinks
+    the sentinel at relaunch and Finish writes a fresh one), so the project comes back
+    for another Phase 1 — which is right: the timeline changed underneath the video."""
+    try:
+        return ((proj / "work" / "render_complete.json").stat().st_mtime
+                >= (proj / "work" / "record_done.json").stat().st_mtime)
+    except OSError:
+        return False
+
+
+def run_studio(cfg, show, dry, spawned):
+    """One cycle of the studio branch. Returns the updated `spawned` flag.
+
+    Mirrors the shows' DONE path minus everything that assumes an unattended routine:
+    no PENDING heartbeat, no NOT_OPEN relaunch (the session owns the booth), no phase-2
+    Claude spawn (the operator resumes the session; RESUME.md is the handoff)."""
+    for proj in studio_candidates(show):
+        if studio_rendered(proj):
+            continue                                     # done for this recording
+        lk = read_lock(proj)
+        if lk and pid_alive(lk.get("pid")):
+            continue                                     # our own render, in flight
+        try:
+            pj = json.loads((proj / "project.json").read_text())
+        except Exception:
+            pj = {}
+        # voice_source guard. scaffold defaults to kokoro; if nobody flipped it, `media`
+        # would synthesize TTS over the operator's real takes (memory: caught on #37).
+        # An unattended render is exactly where nobody would notice.
+        if pj.get("voice_source") != "operator":
+            fp = f"voice_source:{pj.get('voice_source')}"
+            if notify_once(proj, "studio_voice_notified", fp, "Recording watcher",
+                           f"{proj.name}: recorded, but project.json voice_source is "
+                           f"'{pj.get('voice_source')}', not operator — NOT rendering."):
+                log(cfg, f"STUDIO-VOICE {show['id']}: {proj.name} DONE but voice_source="
+                         f"{pj.get('voice_source')!r}; not rendering over real takes")
+            continue
+        # adlib re-record flags: the booth's live drift check said a card needs the mic
+        # again. The session used to judge these after the waiter fired; unattended,
+        # the safe call is to hold the render and say so once.
+        try:
+            adlib = json.loads((proj / "work" / "adlib_report.json").read_text())
+        except Exception:
+            adlib = {}
+        flagged = adlib.get("rerecord") or []
+        if flagged:
+            cards = ", ".join(str(int(i) + 1) for i in flagged)     # booth card numbers
+            fp = f"rerecord:{cards}"
+            if notify_once(proj, "studio_rerecord_notified", fp, "Recording watcher",
+                           f"{proj.name}: booth flagged card(s) {cards} for re-record — "
+                           f"render on hold until they are re-recorded or accepted."):
+                log(cfg, f"STUDIO-RERECORD {show['id']}: {proj.name} cards {cards} "
+                         f"flagged; not rendering (relaunch the booth, or render by hand)")
+            continue
+        if spawned:
+            log(cfg, f"{show['id']}: {proj.name} DONE but work was already started "
+                     f"this cycle — next cycle picks it up")
+            return spawned
+        rblocked, rfp, rwhy = render_blocked(proj)
+        if rblocked:
+            log(cfg, f"RENDER-BLOCKED {show['id']}: {proj.name} — {rwhy}; NOT relaunching "
+                     f"phase 1 (see {proj / 'BLOCKED.md'})")
+            if not dry:
+                write_render_blocked_md(cfg, show, proj, rfp, rwhy)
+                notify_render_blocked_once(cfg, show, proj, rfp, rwhy)
+            continue
+        ok, why = script_guard_ok(cfg, proj)
+        if not ok:
+            log(cfg, f"BLOCKED {show['id']}: {proj.name} — script.json changed after "
+                     f"recording; NOT rendering. {why} (see {proj / 'BLOCKED.md'})")
+            continue
+        looping, n = crashlooping(proj, "render")
+        if looping:
+            log(cfg, f"RENDER-CRASHLOOP {show['id']}: {proj.name} phase-1 launched {n}x "
+                     f"with no render_complete.json — retrying after backoff")
+            continue
+        cap = cfg.get("max_concurrent_renders", DEFAULT_MAX_CONCURRENT_RENDERS)
+        running = live_renders(cfg)
+        if running >= cap:
+            log(cfg, f"RENDER-CAP {show['id']}: {proj.name} ready to render but {running} "
+                     f"render(s) already running (cap {cap}) — deferring to a later cycle")
+            continue
+        if dry:
+            log(cfg, f"[DRY-RUN] {show['id']}: {proj.name} DONE, no render yet — would "
+                     f"launch RENDER (phase 1, studio profile)")
+        else:
+            launch_render(cfg, show, proj)
+        spawned = True
+    return spawned
+
+
+def run(cfg, dry, in_hours=True):
     spawned = False
     for show in cfg["shows"]:
         if not show.get("enabled", True):
+            continue
+        if not in_hours and not show.get("ignore_hours"):
+            continue
+        if show.get("mode") == "studio":
+            spawned = run_studio(cfg, show, dry, spawned)
             continue
         for proj in candidates(show):
             state, full = booth(cfg, ["--status"], proj)
@@ -879,9 +1037,9 @@ def main():
     except BlockingIOError:
         return  # another cycle still running (e.g. slow subprocess) — skip
     sweep_orphan_browsers(cfg, args.dry_run)   # before the hours gate, on purpose
-    if not args.force_hours and not within_hours(cfg):
-        return
-    run(cfg, args.dry_run)
+    # The hours window is per show now: a studio entry with ignore_hours renders at
+    # night; everything else still sleeps outside the window.
+    run(cfg, args.dry_run, in_hours=args.force_hours or within_hours(cfg))
 
 
 if __name__ == "__main__":
