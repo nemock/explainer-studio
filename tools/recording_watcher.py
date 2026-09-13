@@ -807,6 +807,18 @@ def run_studio(cfg, show, dry, spawned):
                 log(cfg, f"STUDIO-VOICE {show['id']}: {proj.name} DONE but voice_source="
                          f"{pj.get('voice_source')!r}; not rendering over real takes")
             continue
+        # deck.json is what the remotion engine renders. The SKILL puts the deck before
+        # the booth, but the operator may record first and the session author the deck
+        # after (#67, 2026-09-13: the first live studio cycle ran narrate + align for
+        # three minutes and then died at render on the missing file, and would have
+        # retried every cycle). Wait for the deck; say so once.
+        if not (proj / "deck.json").exists():
+            if notify_once(proj, "studio_deck_notified", "no-deck", "Recording watcher",
+                           f"{proj.name}: recording finished, but there is no deck.json "
+                           f"yet — the render starts as soon as the deck is authored."):
+                log(cfg, f"STUDIO-NODECK {show['id']}: {proj.name} DONE but no deck.json; "
+                         f"waiting for the session to author the deck")
+            continue
         # adlib re-record flags: the booth's live drift check said a card needs the mic
         # again. The session used to judge these after the waiter fired; unattended,
         # the safe call is to hold the render and say so once.
