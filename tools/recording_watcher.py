@@ -380,12 +380,36 @@ def within_hours(cfg):
     return cfg["hours"]["start"] <= now <= cfg["hours"]["end"]
 
 
+STUCK_MAX_DAYS = 30
+
+
+def stuck(proj):
+    """True if a guard has parked this project: a render_failure.json (deterministic
+    render block) or a BLOCKED.md (render block, script/audio staleness, publish gate).
+
+    Such a project must stay visible PAST the lookback window. Every block promises
+    a way back — "delete render_failure.json", "a probe gets through every 6h",
+    "run unstick_stale_script.py" — and every one of those needs the watcher to still
+    be looking. FTT 2026-09-01 was repaired on 09-13, twelve days old; the watcher had
+    stopped considering it on 09-08 (lookback 6), so the fix would never have launched
+    and BLOCKED.md's recovery text was false. MMT 2026-09-07 was one morning from the
+    same fate. See routine_changes/2026-09-13-mmt-meta-per-platform-dict-shape.md."""
+    return ((Path(proj) / "work" / "render_failure.json").exists()
+            or (Path(proj) / "BLOCKED.md").exists())
+
+
 def candidates(show):
-    """Newest-first unpublished project dirs within the lookback window."""
+    """Newest-first unpublished project dirs within the lookback window — plus any
+    stuck project (see stuck()) up to STUCK_MAX_DAYS old, so a block never silently
+    outlives the window. The ceiling exists because a stuck project is probed with a
+    full render every RENDER_BLOCK_PROBE_SECS; a block nobody fixes for a month should
+    stop costing renders and become a human's problem via BLOCKED.md alone."""
     root = Path(show["outputs_dir"])
     if not root.exists():
         return []
-    cutoff = date.today() - timedelta(days=show.get("lookback_days", 7))
+    today = date.today()
+    cutoff = today - timedelta(days=show.get("lookback_days", 7))
+    stuck_cutoff = today - timedelta(days=STUCK_MAX_DAYS)
     out = []
     for p in root.iterdir():
         if not p.is_dir():
@@ -397,7 +421,9 @@ def candidates(show):
             d = date.fromisoformat(m.group(1))
         except ValueError:
             continue
-        if d < cutoff or d > date.today():
+        if d > today:
+            continue
+        if d < cutoff and not (d >= stuck_cutoff and stuck(p)):
             continue
         if (p / "README.md").exists() or (p / "SKIPPED.md").exists():
             continue
