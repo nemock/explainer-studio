@@ -26,6 +26,16 @@ def run(proj):
     meta = {}
     if (proj.dir / "meta.json").exists():
         meta = json.loads((proj.dir / "meta.json").read_text())
+    # per_platform is a LIST of {"platform": ..., "caption": ...} entries — that is
+    # what handoff, validate and the payload builders iterate. Twice (FTT 2026-09-01,
+    # MMT 2026-09-07) an authoring run wrote it as a dict keyed by platform instead;
+    # this stage passed it through, and phase 1 then crashed at `handoff` on
+    # `'str' object has no attribute 'get'` AFTER a full render, 25 launches running.
+    # Accept the dict form here, at the one place meta.json is read, so a shape slip
+    # in authoring costs nothing downstream.
+    pp = meta.get("per_platform")
+    if isinstance(pp, dict):
+        meta["per_platform"] = [{"platform": k, **v} for k, v in pp.items()]
     mux = {}
     if (proj.work / "metrics_mux.json").exists():
         mux = json.loads((proj.work / "metrics_mux.json").read_text()).get("aspects", {})
