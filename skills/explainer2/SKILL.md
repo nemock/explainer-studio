@@ -264,13 +264,19 @@ body line).
   tab (`--no-open` for headless launches). `--stop` takes it down.
   The operator records in the browser; takes save to `voiceover/` as they go (a
   restart never loses recorded takes). When done, `python3 tools/launch_booth.py --stop <project_dir>` — **pass the project.** Bare `--stop` kills EVERY booth in the 8765-8794 pool, which on 2026-09-02 took out an unrelated ig_carousel booth that had been open since 07:23 alongside the one being closed. The scoped form matches on the running `explainer2.cli record <project>` process, so a stale `work/booth_port` cannot point it at somebody else's booth.
-  - **Finish signal (operator directive 2026-06-23): right after READY, start the
-    waiter as a harness BACKGROUND task** — `python3 tools/launch_booth.py --wait
-    <project_dir>` via `run_in_background`. The booth writes `work/record_done.json`
-    when the operator clicks the green "Finish & render" button, and the waiter
-    returns the instant that file appears — so the harness notifies you that
-    recording is done, no polling and no asking. The sentinel is durable: if the
-    waiter dies on suspension, re-run `--wait` or just check for the file.
+  - **Finish signal (rewritten 2026-09-13; replaces the 2026-06-23 waiter directive):
+    the session does NOT wait.** After READY, tell the operator the booth is open and
+    what happens at Finish, then **end the turn**. No `--wait`, no background task, no
+    `ScheduleWakeup`, no polling. The booth writes `work/record_done.json` when the
+    operator clicks the green "Finish & render" button, posts a macOS notification,
+    and brings this session forward (`claude://code/continue?session=<id>`; the
+    launcher recorded the session in `work/booth_origin.json`). When you are
+    resumed, run `python3 tools/launch_booth.py --status <project_dir>` once: DONE
+    with the finish JSON, PENDING (still recording), or NOT_OPEN. Why: the old
+    in-session waiter was a child of the session process, which the session reaper
+    and app restarts kill silently (a third of 60 waiters since June never reported
+    back); `--wait` now refuses to run inside a Claude session. Full write-up:
+    `docs/booth-finish-local-plan.md`.
   - Script edits during a session need NO restart (Booth 2.0): the booth
     hot-reloads `script.json` on refresh, and the operator can edit lines
     inline in the booth (writes back to the script with a backup). **An edited

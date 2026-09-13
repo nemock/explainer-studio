@@ -27,6 +27,8 @@ Usage:
   python3 tools/launch_booth.py --no-shorts <project_dir> # deepdive/masterclass with NO Shorts this run
                                                           # (without it, a missing shorts/plan.json REFUSES to launch)
   python3 tools/launch_booth.py --wait <project_dir>     # block until the green Finish button
+                                                        # (plain terminal only; REFUSES inside
+                                                        # a Claude session — see The Finish signal)
   python3 tools/launch_booth.py --status <project_dir>   # DONE / PENDING / NOT_OPEN (instant)
                                                         # PENDING only for a booth that
                                                         # identifies as THIS project
@@ -51,11 +53,24 @@ home port is already held (a same-family project, or an overflow), the launcher
 falls back to the next free port in the 8765..8794 pool rather than failing an
 unattended fire. The chosen URL is printed and recorded in <project>/work/booth_port.
 
-The Finish signal: the booth writes <project>/work/record_done.json when the operator
-clicks "Finish & render". Run `--wait` as a harness-tracked background task right after
-launching the booth; it returns the moment that file appears, so the harness notifies the
-agent that recording is done. The sentinel is durable, so even if the waiter dies (app
-suspend), the signal isn't lost: re-run `--wait`, `--status`, or just check for the file.
+The Finish signal (rewritten 2026-09-13, docs/booth-finish-local-plan.md): the booth
+writes <project>/work/record_done.json when the operator clicks "Finish & render", posts a
+macOS notification, and brings the originating desktop session forward with a
+`claude://code/continue?session=<id>` deep link. The launcher records that session in
+<project>/work/booth_origin.json at launch (from CLAUDE_CODE_SESSION_ID + the
+~/.claude/sessions/<pid>.json record, so it knows the session is interactive and what it
+is called). The SESSION DOES NOT WAIT: it ends its turn after READY and, when resumed,
+runs `--status` (instant, durable).
+
+Why the in-session waiter was retired: from 2026-06-23 to 2026-09-13 the SKILL armed
+`--wait` as a harness background task. That task is a child of the session's CLI process,
+and two things kill that process without telling anyone — the session reaper
+(~/.claude/reaper/session_reaper.py, which TERMs any desktop session whose transcript is
+45 min quiet and whose subtree burns no CPU, i.e. exactly a session waiting on the mic)
+and desktop-app restarts. Of 60 waiters armed since June, about a third never reported
+back. The sentinel was never lost; the session just had to be told by hand. `--wait`
+therefore refuses to run when CLAUDE_CODE_SESSION_ID is set. From a plain terminal it
+still blocks until Finish, scoped to THIS project's booth, with no 6-hour cap.
 """
 import hashlib
 import json
@@ -254,6 +269,47 @@ def _clear_originating(proj):
         pass
 
 
+def _origin_info():
+    """The Claude session this launcher is running inside, or None from a plain shell
+    or a launchd relaunch. CLAUDE_CODE_SESSION_ID names the session; the matching
+    ~/.claude/sessions/<pid>.json record says whether it is an interactive desktop
+    session (the only kind worth deep-linking back to at Finish) and what the app
+    calls it. A missing or unreadable record degrades to id-only, never to an error."""
+    sid = os.environ.get("CLAUDE_CODE_SESSION_ID", "").strip()
+    if not sid:
+        return None
+    info = {"session_id": sid, "kind": None, "entrypoint": None, "name": None,
+            "cwd": None, "launched_at": time.strftime("%Y-%m-%d %H:%M:%S")}
+    for f in Path.home().joinpath(".claude", "sessions").glob("*.json"):
+        try:
+            meta = json.loads(f.read_text())
+        except (OSError, ValueError):
+            continue
+        if meta.get("sessionId") != sid:
+            continue
+        for k in ("kind", "entrypoint", "name", "cwd"):
+            info[k] = meta.get(k)
+        break
+    return info
+
+
+def _write_origin(proj):
+    """Record the originating session in work/booth_origin.json (2026-09-13). Written on
+    every launch path, including "already open": the newest launcher is the session
+    that wants the Finish deep link. Removed when there is no session, so a launchd
+    relaunch cannot leave a stale record pointing at a session that has moved on."""
+    f = Path(proj) / "work" / "booth_origin.json"
+    info = _origin_info()
+    try:
+        if info is None:
+            f.unlink(missing_ok=True)
+        else:
+            f.parent.mkdir(exist_ok=True)
+            f.write_text(json.dumps(info, indent=2))
+    except OSError:
+        pass
+
+
 def _pop_tab(url):
     """Open the booth URL as a tab in the operator's Chrome via macOS `open`.
     Fire-and-forget: no automation, no tab control — the OS hands the URL to
@@ -379,6 +435,7 @@ def start(project, open_tab=True, allow_no_shorts=False):
     for cand in _booth_ports_in_use():
         if _booth_serves_project(cand, proj):
             _clear_originating(proj)
+            _write_origin(proj)
             print(f"booth already open for this project -> http://127.0.0.1:{cand}/")
             if open_tab:
                 _pop_tab(f"http://127.0.0.1:{cand}/")
@@ -389,6 +446,7 @@ def start(project, open_tab=True, allow_no_shorts=False):
     (proj / "work").mkdir(exist_ok=True)
     (proj / "work" / "record_done.json").unlink(missing_ok=True)
     _clear_originating(proj)
+    _write_origin(proj)
 
     pref = _preferred_port(proj)
     ordered = [pref] + [p for p in ALL_PORTS if p != pref]
@@ -520,19 +578,40 @@ def _pid_alive(pid):
     return True
 
 
-def wait(project, max_seconds=6 * 3600):
+def wait(project, max_seconds=24 * 3600, grace=60):
     """Block until the booth's Finish sentinel appears, then print it and return 0.
-    Returns 2 if the booth process disappears before finishing (crash / early stop)."""
+
+    Plain-terminal tool only. Inside a Claude session it refuses (exit 2): the session
+    is not the waiter any more — the booth notifies and deep-links back at Finish, and
+    the session runs --status when it is resumed. See the module docstring.
+
+    Liveness is scoped to THIS project's booth. The old check ("any port in the pool
+    listening?") returned 2 the moment a scoped --stop + relaunch opened a five-second
+    gap (2026-07-03). Now a booth that is gone with no sentinel gets `grace` seconds to
+    come back before this gives up. Returns 2 if it does not, 3 on max_seconds."""
+    if os.environ.get("CLAUDE_CODE_SESSION_ID"):
+        print("REFUSING to wait inside a Claude session.")
+        print("  The session is not the booth's waiter (retired 2026-09-13): a background")
+        print("  task here dies with the session process (session reaper, app restarts),")
+        print("  and the Finish signal is durable anyway. End the turn. The booth notifies")
+        print("  and reopens this session at Finish; on resume, run --status.")
+        return 2
     proj = Path(project).resolve()
     marker = proj / "work" / "record_done.json"
-    for i in range(max_seconds):
+    missing_since = None
+    for _ in range(max_seconds):
         if marker.exists():
             print("RECORD FINISHED:", marker.read_text()); return 0
-        # every ~5s, check the booth is still alive; if it's gone with no marker, stop waiting
-        if i % 5 == 0 and i > 2 and not _booth_ports_in_use():
+        alive = any(_booth_project(pt) == proj for pt in _booth_ports_in_use())
+        if alive:
+            missing_since = None
+        elif missing_since is None:
+            missing_since = time.time()
+        elif time.time() - missing_since >= grace:
             if marker.exists():
                 print("RECORD FINISHED:", marker.read_text()); return 0
-            print("booth exited WITHOUT a finish marker (crashed or stopped early)"); return 2
+            print(f"booth for {proj.name} gone for {grace}s with no finish marker "
+                  f"(crashed or stopped early)"); return 2
         time.sleep(1)
     print(f"waiter timed out after {max_seconds}s with no Finish"); return 3
 

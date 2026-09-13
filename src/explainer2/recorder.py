@@ -195,13 +195,64 @@ def _render_active():
         return False
 
 
+def _announce_finish(proj, work_dir, result):
+    """Tell the operator, and their Claude session, that recording is done (2026-09-13).
+
+    Zero tokens, runs in the booth process, which is alive exactly until Finish. Two
+    best-effort OS handoffs: a macOS notification, and — only when the launcher recorded
+    an INTERACTIVE desktop session in work/booth_origin.json — an `open` of the app's
+    `claude://code/continue?session=<id>` deep link so the operator lands back in the
+    session that opened the booth. Nothing here can fail the Finish: the sentinel is
+    already on disk before this runs, and every step swallows its own errors.
+
+    Why not a waiter in the session: see docs/booth-finish-local-plan.md. A harness
+    background task is a child of the session's CLI process, and the session reaper
+    (45 min of quiet transcript + no CPU = a session at the mic) killed it silently."""
+    title = str(proj.data.get("title", proj.dir.name))[:80]
+    rec, miss = len(result.get("recorded", [])), len(result.get("missing", []))
+    flagged = []
+    try:
+        flagged = json.loads((work_dir / "adlib_report.json").read_text()).get("rerecord", [])
+    except Exception:
+        pass
+    origin = {}
+    try:
+        origin = json.loads((work_dir / "booth_origin.json").read_text())
+    except Exception:
+        pass
+    text = f"{title}: {rec} card(s) recorded"
+    if miss:
+        text += f", {miss} missing"
+    if flagged:
+        text += f", {len(flagged)} flagged for re-record"
+    name = origin.get("name")
+    text += f". Resume session {name}." if name else ". Resume your session."
+    safe = lambda v: str(v).replace("\\", " ").replace('"', "'")
+    try:
+        subprocess.run(["/usr/bin/osascript", "-e",
+                        f'display notification "{safe(text)}" with title "Recording finished"'],
+                       capture_output=True, timeout=15)
+    except Exception:
+        pass
+    sid = origin.get("session_id")
+    if sid and origin.get("kind") == "interactive" and origin.get("entrypoint") == "claude-desktop":
+        try:
+            subprocess.run(["/usr/bin/open", f"claude://code/continue?session={sid}"],
+                           capture_output=True, timeout=15)
+            print(f"FINISH: reopened session {name or sid}", flush=True)
+        except Exception:
+            pass
+
+
 def run(proj, open_browser=True):
     vdir = proj.voiceover_dir
-    # Finish signal (operator directive 2026-06-23): the booth runs DETACHED so it survives
+    # Finish signal (2026-06-23, reshaped 2026-09-13): the booth runs DETACHED so it survives
     # the operator going AFK, which hides the old "process returns on Finish" signal from the
-    # harness. So drop a durable sentinel file when the green button is clicked — a waiter
-    # (tools/launch_booth.py --wait) watches for it and notifies. Clear any stale one now so
-    # the waiter only fires for THIS session.
+    # harness. So drop a durable sentinel file when the green button is clicked. Until
+    # 2026-09-13 a harness background task (launch_booth.py --wait) watched for it; that task
+    # died with the session process (session reaper, app restarts), so now THIS process does
+    # the telling: _announce_finish() posts a notification and deep-links the originating
+    # session forward. Clear any stale sentinel now so --status can't see a previous run's.
     work_dir = proj.dir / "work"; work_dir.mkdir(exist_ok=True)
     done_marker = work_dir / "record_done.json"
     done_marker.unlink(missing_ok=True)
@@ -746,5 +797,6 @@ def run(proj, open_browser=True):
          "script_digest": scriptguard.script_digest(
              [s for s in seg_list if not s.get("plan_slug")])}))
     print("RECORD DONE:", json.dumps(result))
+    _announce_finish(proj, work_dir, result)   # notification + deep link; never fails Finish
     _stamp_exit("finished")   # distinguishes a clean Finish from a death in the log
     return result
