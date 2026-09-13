@@ -398,18 +398,45 @@ def stuck(proj):
             or (Path(proj) / "BLOCKED.md").exists())
 
 
+def last_activity(proj):
+    """Newest mtime across work/ and its direct children (the pipeline's scratch:
+    takes, alignment, render markers, failure records), or the project dir's own.
+
+    Once a human clears a block, the markers stuck() keys on are gone, and the
+    project is back to being an ordinary old directory — still unpublished, still
+    outside the window, and phase 2 would never be spawned for it (FTT 2026-09-01,
+    repaired 09-13 twelve days old). Recent activity is the honest signal that a
+    project is in flight: a render just ran, a booth just wrote takes, a failure
+    record was just rewritten. Abandoned projects go quiet and age out on their own;
+    the four FWF dailies of 2026-08-14..17, recorded and never published, have not
+    been touched since August and must stay out."""
+    p = Path(proj)
+    w = p / "work"
+    try:
+        ts = [p.stat().st_mtime]
+        if w.is_dir():
+            ts.append(w.stat().st_mtime)
+            ts.extend(c.stat().st_mtime for c in w.iterdir())
+        return max(ts)
+    except OSError:
+        return 0.0
+
+
 def candidates(show):
-    """Newest-first unpublished project dirs within the lookback window — plus any
-    stuck project (see stuck()) up to STUCK_MAX_DAYS old, so a block never silently
-    outlives the window. The ceiling exists because a stuck project is probed with a
-    full render every RENDER_BLOCK_PROBE_SECS; a block nobody fixes for a month should
-    stop costing renders and become a human's problem via BLOCKED.md alone."""
+    """Newest-first unpublished project dirs within the lookback window — plus, up to
+    STUCK_MAX_DAYS old, any project that is stuck (see stuck()) or has had pipeline
+    activity inside the window (see last_activity()), so a block or a recovery never
+    silently outlives the window. The ceiling exists because a stuck project is
+    probed with a full render every RENDER_BLOCK_PROBE_SECS; a block nobody fixes for
+    a month should stop costing renders and become a human's problem via BLOCKED.md."""
     root = Path(show["outputs_dir"])
     if not root.exists():
         return []
     today = date.today()
-    cutoff = today - timedelta(days=show.get("lookback_days", 7))
+    lookback = timedelta(days=show.get("lookback_days", 7))
+    cutoff = today - lookback
     stuck_cutoff = today - timedelta(days=STUCK_MAX_DAYS)
+    active_since = time.time() - lookback.total_seconds()
     out = []
     for p in root.iterdir():
         if not p.is_dir():
@@ -423,8 +450,11 @@ def candidates(show):
             continue
         if d > today:
             continue
-        if d < cutoff and not (d >= stuck_cutoff and stuck(p)):
-            continue
+        if d < cutoff:
+            if d < stuck_cutoff:
+                continue
+            if not (stuck(p) or last_activity(p) >= active_since):
+                continue
         if (p / "README.md").exists() or (p / "SKIPPED.md").exists():
             continue
         out.append((d, p))
