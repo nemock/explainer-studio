@@ -24,6 +24,8 @@ frozen and untouched — routines simply call THIS script instead of v1's
 Usage:
   python3 tools/launch_booth.py <project_dir>            # start detached, wait for READY, pop the tab
   python3 tools/launch_booth.py --no-open <project_dir>  # same, but don't open a browser tab
+  python3 tools/launch_booth.py --no-shorts <project_dir> # deepdive/masterclass with NO Shorts this run
+                                                          # (without it, a missing shorts/plan.json REFUSES to launch)
   python3 tools/launch_booth.py --wait <project_dir>     # block until the green Finish button
   python3 tools/launch_booth.py --status <project_dir>   # DONE / PENDING / NOT_OPEN (instant)
                                                         # PENDING only for a booth that
@@ -286,7 +288,7 @@ def _booth_serves_project(port, proj):
         return False
 
 
-def start(project, open_tab=True):
+def start(project, open_tab=True, allow_no_shorts=False):
     proj = Path(project).resolve()
     if not (proj / "project.json").exists() or not (proj / "script.json").exists():
         print(f"not a bookable project (need project.json + script.json): {proj}")
@@ -308,10 +310,43 @@ def start(project, open_tab=True):
     # without the Short hooks, needing a second sitting each time — the exact failure the
     # preflight was built for in the first place. A series episode ships Shorts like any
     # deep dive; the content type was never the thing that mattered.
-    if _ctype in ("deepdive", "masterclass") and not (proj / "shorts" / "plan.json").exists():
-        print("WARNING: no shorts/plan.json — this booth will show the main script ONLY.")
-        print("         The native Short hooks/outros will NOT be recordable in this session.")
-        print("         Author shorts/plan.json first (shorts-playbook) unless you intend no Shorts.")
+    #
+    # 2026-09-13: WARNING promoted to a REFUSAL (operator directive, #67). The warning
+    # above has now failed three times in the same way — #52 (2026-07-28, the reason it
+    # was built), both plg-guide modules (2026-08-24), and #67. In every case the session
+    # read the warning, judged it, and launched anyway; on #67 it even surfaced the
+    # warning to the operator as a question and opened the booth while waiting for the
+    # answer. A warning a caller may reason past is not a control — it is a note. The
+    # deliberate no-Shorts run stays possible, but it now has to be SAID (--no-shorts)
+    # rather than assumed by silence.
+    #
+    # SCOPE, deliberately narrow: this reads content_type EXPLICITLY and fires only when
+    # the field literally says deepdive/masterclass. The six unattended booth shows
+    # (Founder_Tip_Tuesday, Monday MedTech, The Teardown, Who Signs The Check, Failure
+    # Modes Friday, cvg-explainer) omit content_type entirely — 113 projects surveyed on
+    # 2026-09-13, not one sets it — so they are structurally exempt and CANNOT be blocked
+    # by this gate. Do not "improve" this by inferring the type from aspect ratio: 16:9
+    # infers to deepdive, which would hand a blocking prompt to every unattended weekday
+    # run and stall it until a human noticed.
+    _missing_plan = (
+        _ctype in ("deepdive", "masterclass")
+        and not (proj / "shorts" / "plan.json").exists()
+    )
+    if _missing_plan and not allow_no_shorts:
+        print(f"REFUSING to launch: no shorts/plan.json for a {_ctype}.")
+        print()
+        print("  The booth builds its cards from script.json + shorts/plan.json. With no")
+        print("  plan, the native Short hooks and outros are not recordable — and they can")
+        print("  only ever be recorded in the operator's voice, in this sitting. Launching")
+        print("  now buys a second booth pass later, which is the failure this exists to stop.")
+        print()
+        print("  Fix:      author shorts/plan.json (references/shorts-playbook.md, SKILL.md §5c),")
+        print("            then re-run this command.")
+        print("  Genuine   pass --no-shorts to launch without them. Say it on purpose;")
+        print("  no-Shorts don't let silence decide.")
+        return 1
+    if _missing_plan:
+        print(f"NOTE: no shorts/plan.json for this {_ctype} — launching anyway (--no-shorts).")
 
     # A series episode owes its continuity-ledger entry BEFORE the booth, not after. The
     # ledger's own rule says so ("append when the script goes final — before the booth,
@@ -503,18 +538,26 @@ def wait(project, max_seconds=6 * 3600):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) >= 2 and sys.argv[1] == "--stop":
-        stop(sys.argv[2] if len(sys.argv) >= 3 else None)
-    elif len(sys.argv) == 3 and sys.argv[1] == "--wait":
-        sys.exit(wait(sys.argv[2]))
-    elif len(sys.argv) == 3 and sys.argv[1] == "--status":
-        sys.exit(status(sys.argv[2]))
-    elif len(sys.argv) == 3 and sys.argv[1] == "--claim":
-        sys.exit(claim(sys.argv[2]))
-    elif len(sys.argv) == 3 and sys.argv[1] == "--no-open":
-        sys.exit(start(sys.argv[2], open_tab=False))
-    elif len(sys.argv) == 2 and not sys.argv[1].startswith("-"):
-        sys.exit(start(sys.argv[1]))
+    # --no-shorts is pulled out first so it composes with --no-open and with the bare
+    # form, without disturbing the positional shapes below (argv is sys.argv[1:], so
+    # every index here is the old one minus one).
+    argv = sys.argv[1:]
+    allow_no_shorts = "--no-shorts" in argv
+    if allow_no_shorts:
+        argv = [a for a in argv if a != "--no-shorts"]
+
+    if len(argv) >= 1 and argv[0] == "--stop":
+        stop(argv[1] if len(argv) >= 2 else None)
+    elif len(argv) == 2 and argv[0] == "--wait":
+        sys.exit(wait(argv[1]))
+    elif len(argv) == 2 and argv[0] == "--status":
+        sys.exit(status(argv[1]))
+    elif len(argv) == 2 and argv[0] == "--claim":
+        sys.exit(claim(argv[1]))
+    elif len(argv) == 2 and argv[0] == "--no-open":
+        sys.exit(start(argv[1], open_tab=False, allow_no_shorts=allow_no_shorts))
+    elif len(argv) == 1 and not argv[0].startswith("-"):
+        sys.exit(start(argv[0], allow_no_shorts=allow_no_shorts))
     else:
         print(__doc__)
         sys.exit(2)

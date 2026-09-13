@@ -221,6 +221,14 @@ budget blocks the script gate; paste the tally into PLAYBOOK's deck notes.**
 No separate operator gate — the deck is seen in the rendered video at the
 Package gate.
 
+**The deck is NOT the last thing before the booth — §5c is (added 2026-09-13).**
+`shorts/plan.json` is authored in this same step, and a deep dive does not open
+the booth without it. On #67 a session read §5b, took "No separate operator
+gate" as the end of pre-production, and opened the booth with no plan; the six
+shorts hook/outro cards were therefore missing and the booth had to be stopped
+and relaunched. Nothing in §5c was unclear — it was simply never reached. Read
+on before you launch.
+
 ### 5c. Shorts plan (generation plane — author at the Script stage, BEFORE the booth)
 Read `references/shorts-playbook.md`, then author `shorts/plan.json` (3 cuts, each
 with a native `hook` + `outro`). This MUST happen before recording, because the
