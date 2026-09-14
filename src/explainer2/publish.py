@@ -304,6 +304,56 @@ def set_privacy(video_id=None, project_dir=None, channel=None, privacy="private"
             "privacyStatus": status["privacyStatus"], "publishAt": status.get("publishAt")}
 
 
+def set_thumbnail(video_id=None, project_dir=None, channel=None, thumb=None):
+    """Replace the thumbnail on an ALREADY-uploaded video. `run()` sets thumbnail A at
+    upload time and there was no way back: a thumbnail revised afterwards stayed local
+    while the old one stayed live (modules 3 and 4 of the Product Leadership series,
+    2026-09-14). Same channel guard as --fire; same <2MB auto-compress as the upload
+    path. Defaults to the project's meta.json `thumbnails.a`."""
+    from .project import Project
+    proj = None
+    if project_dir:
+        proj = Project.load(project_dir)
+        key = resolve_channel(proj, explicit=channel or None)
+        video_id = video_id or _video_id_from_meta(proj)
+    else:
+        key = (channel or DEFAULT_CHANNEL).lstrip("@")
+    if not video_id:
+        return {"aborted": True, "reason": "no video id (pass --video-id, or a project dir "
+                "whose package/meta.json has youtube_url)"}
+    if thumb:
+        tp = Path(thumb)
+    elif proj is not None:
+        rel = (_meta(proj).get("thumbnails") or {}).get("a")
+        if not rel:
+            return {"aborted": True, "reason": "meta.json has no thumbnails.a; pass --thumb <path>"}
+        tp = proj.dir / "package" / rel
+    else:
+        return {"aborted": True, "reason": "pass --thumb <path> when targeting by --video-id"}
+    if not tp.exists():
+        return {"aborted": True, "reason": f"thumbnail not found: {tp}"}
+    reg = load_registry()
+    if key not in reg:
+        return {"aborted": True, "reason": f"channel '{key}' not authorized",
+                "fix": f"explainer2 publish --authorize --channel {key}"}
+    yt = _service(key, interactive=False)
+    live = _channel_of(yt)
+    if not live or live["id"] != reg[key]["id"]:
+        return {"aborted": True, "reason": "channel guard: token no longer matches registry",
+                "expected": reg[key], "got": live}
+    cur = yt.videos().list(part="snippet", id=video_id).execute().get("items", [])
+    if not cur:
+        return {"aborted": True, "reason": f"video {video_id} not found on channel '{key}' "
+                f"({live['title']}) — wrong channel or wrong id?"}
+    upload_thumb, tw = _thumb_for_upload(str(tp))
+    from googleapiclient.http import MediaFileUpload
+    yt.thumbnails().set(videoId=video_id, media_body=MediaFileUpload(upload_thumb)).execute()
+    return {"ok": True, "video_id": video_id, "channel": live,
+            "title": cur[0]["snippet"]["title"],
+            "thumbnail": str(tp) + ("" if upload_thumb == str(tp) else " (auto-compressed)"),
+            "warnings": [tw] if tw else []}
+
+
 def _backfill_meta(proj, url):
     """Close the loop: write youtube_url + posted date into package/meta.json,
     and replace the `<URL>` placeholders in linkedin.md with the live link.

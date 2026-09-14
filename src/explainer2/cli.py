@@ -510,6 +510,10 @@ def cmd_publish(args):
                                              channel=args.channel, privacy=args.set_privacy,
                                              when=args.when), indent=2))
         return
+    if args.set_thumbnail:
+        print(json.dumps(publish.set_thumbnail(video_id=args.video_id, project_dir=args.project_dir,
+                                               channel=args.channel, thumb=args.thumb), indent=2))
+        return
     if not args.authorize and not args.project_dir:
         print("publish needs a project_dir (or --authorize --channel <key>, or --set-privacy)")
         return 1
@@ -747,6 +751,12 @@ def main(argv=None):
                           "or --video-id. Same channel guard as --fire.")
     pub.add_argument("--video-id", default=None,
                      help="explicit video id for --set-privacy (else read from the project's meta.json)")
+    pub.add_argument("--set-thumbnail", action="store_true",
+                     help="replace the thumbnail on an ALREADY-uploaded video (a revised thumbnail "
+                          "otherwise stays local while the old one stays live). Uses the project's "
+                          "meta thumbnails.a unless --thumb. Same channel guard as --fire.")
+    pub.add_argument("--thumb", default=None,
+                     help="explicit thumbnail path for --set-thumbnail (else meta.json thumbnails.a)")
     pub.set_defaults(func=cmd_publish)
 
     va = sub.add_parser("validate", help="check the manifest is a complete handoff contract")
