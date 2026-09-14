@@ -5,10 +5,15 @@ import {useInk, PAPER_SHADOW} from '../ink';
 import {PaperSheet} from './PaperNote';
 
 // motion-playbook §2B — a number that counts to its figure and a bar that fills/drains,
-// landing on the narration cue. fields: {kicker, from, to, prefix, label, labelNeg, cue:[a,b]}
-const fmt = (n: number, prefix = '') => {
+// landing on the narration cue. fields: {kicker, from, to, prefix, suffix, label, labelNeg, cue:[a,b]}
+// `suffix` carries the "%" the engine parses off the deck value. Without it every
+// percentage authored as a `stat` drew as a bare number — 111 slides across the catalog
+// before 2026-09-14. `decimals` keeps an authored "2.3%" from rounding to "2".
+const fmt = (n: number, prefix = '', suffix = '', decimals = 0) => {
   const neg = n < 0;
-  return (neg ? '−' : '') + prefix + Math.abs(Math.round(n)).toLocaleString('en-US');
+  return (neg ? '−' : '') + prefix +
+    Math.abs(n).toLocaleString('en-US', {minimumFractionDigits: decimals,
+                                         maximumFractionDigits: decimals}) + suffix;
 };
 
 export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
@@ -18,6 +23,8 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
   const from = fields.from ?? 0;
   const to = fields.to ?? 0;
   const prefix = fields.prefix ?? '';
+  const suffix = fields.suffix ?? '';
+  const decimals = (String(fields.to ?? '').split('.')[1] || '').length;
   // count happens over the cue window (fraction of the scene), default mid-scene.
   // cueFrames.land (a narration cue resolved by the Python spec-builder — author
   // `"cues": {"land": "<spoken phrase>"}` on the slide) makes the counter LAND on
@@ -74,7 +81,7 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
           fontVariantNumeric: 'tabular-nums',
         }}
       >
-        {fmt(value, prefix)}
+        {fmt(value, prefix, suffix, decimals)}
       </div>
       {/* On paper themes the meter is two laid paper strips rather than two flat pills, so a
           StatCounter sitting between taped figures and real notes stays in the same material

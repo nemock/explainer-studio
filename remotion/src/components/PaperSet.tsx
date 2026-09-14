@@ -178,7 +178,17 @@ export const PaperPopCard: React.FC<{fields: any; durationInFrames: number}> = (
 // PaperCounter — a stat as a stack of paper chips (spec §7 "stat"). Chips slap
 // down in sequence and the LAST chip lands exactly on the cue; the number tag
 // counts with the chips and flicks on the landing; the key light snaps tight.
-// fields: {value, suffix?, label, kicker, cueFrames:{land}}
+// fields: {value, prefix?, suffix?, label, kicker, cueFrames:{land}}
+// NOTE: `label` is the line under the number. This component never reads `subkicker`
+// — the engine's stat branch doesn't pass one (remotion_engine.py `_scene_for`), so a
+// subkicker authored on a numeric stat is a dead field. Non-numeric stats ("6.7M",
+// "2 of 6") never reach here at all; they fall through to the headline treatment,
+// which reads subkicker and ignores label. Opposite contracts, same deck type.
+const counterFmt = (n: number, prefix = '', suffix = '', decimals = 0) =>
+  (n < 0 ? '−' : '') + prefix +
+  Math.abs(n).toLocaleString('en-US', {minimumFractionDigits: decimals,
+                                       maximumFractionDigits: decimals}) + suffix;
+
 export const PaperCounter: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
   const W = useWorld();
   const frame = useCurrentFrame();
@@ -192,7 +202,10 @@ export const PaperCounter: React.FC<{fields: any; durationInFrames: number}> = (
   const nChips = Math.min(8, Math.max(3, Math.round(value / 10)));
   const chipAt = (i: number) => land - (nChips - 1 - i) * 6;
   const landed = Array.from({length: nChips}, (_, i) => frame >= chipAt(i)).filter(Boolean).length;
-  const shown = Math.round(value * (landed / nChips));
+  // Keep the authored precision: Math.round alone drew an authored 2.3% as "2".
+  const decimals = (String(value).split('.')[1] || '').length;
+  const raw = value * (landed / nChips);
+  const shown = decimals ? Number(raw.toFixed(decimals)) : Math.round(raw);
   const chipW = width * (portrait ? 0.34 : 0.2), chipH = height * 0.062;
 
   return (
@@ -232,7 +245,7 @@ export const PaperCounter: React.FC<{fields: any; durationInFrames: number}> = (
         <PaperCard id={`num:${fields.label ?? fields.value ?? ''}`} style={{padding: `${height * 0.025}px ${width * 0.03}px`, borderRadius: 22,
                            boxShadow: `0 ${height * 0.02}px ${height * 0.045}px ${W.shadow}`}}>
           <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.15, lineHeight: 1, color: W.ink, fontVariantNumeric: 'tabular-nums'}}>
-            {fields.prefix || ''}{shown}{fields.suffix || ''}
+            {counterFmt(shown, fields.prefix || '', fields.suffix || '', decimals)}
           </div>
         </PaperCard>
         {fields.label ? (

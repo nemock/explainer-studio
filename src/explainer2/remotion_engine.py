@@ -208,17 +208,32 @@ def _assign_chibi(scenes, slides_by_id, seg_slides, data, log):
 
 
 def _parse_stat(value):
-    """Parse a deck stat value ('−$1,000', '$500', '93%') -> (to:float, prefix:str) or None."""
+    """Parse a deck stat value ('−$1,000', '$500', '93%') -> (to:float, prefix:str,
+    suffix:str) or None when the value is not a plain magnitude.
+
+    FULL MATCH, not a search (2026-09-14). This used to `re.search` the first number out
+    of the string and only refuse when a letter followed a digit, so anything numeric-ish
+    and letter-free was accepted and then rendered as that first number alone. A scan of
+    all 445 decks on this machine found 93 stat slides shipping a truncated value:
+    '6:48' drew `6` while the narration said six forty-eight, '40–86%' drew `40`, 'Q2 2026'
+    drew `2`, 'ASTM D975' drew `975`, 'June 30, 2026' drew `30`, '8 / 8' drew `8`. A range,
+    a timecode, a date and a part number are not magnitudes and there is no honest counter
+    form for them — they belong in the headline treatment, which draws the authored string
+    verbatim (the fall-through both callers already have).
+
+    The suffix comes back too: the callers passed `prefix` but never `%`, so every
+    percentage authored as a `stat` lost its sign on screen — 111 slides across the
+    catalog, '85%' drawn as `85`."""
     if not value:
         return None
     s = str(value).replace("−", "-").replace(",", "").strip()
-    prefix = "$" if "$" in s else ""
-    m = re.search(r"-?\d+(?:\.\d+)?", s)
-    if not m:
+    if not re.fullmatch(r"-?\$?\d+(?:\.\d+)?%?", s):
         return None
-    if re.search(r"\d\s*[a-zA-Z]", s) and "%" not in s:  # unit-suffixed magnitudes ($500M) — skip
-        return None
-    return float(m.group(0)), prefix
+    # Take the sign from the string, not from the number match: on "-$1000" the `$` sits
+    # between the sign and the digits, so a `-?\d+` search skips past the minus and the
+    # value came back POSITIVE — on the very example this docstring advertises.
+    num = float(re.search(r"\d+(?:\.\d+)?", s).group(0))
+    return (-num if s.startswith("-") else num), ("$" if "$" in s else ""), ("%" if "%" in s else "")
 
 
 def _items(slide):
@@ -387,9 +402,9 @@ def _papercraft_component(slide, t, kicker, accent, headline):
         parsed = _parse_stat(slide.get("value"))
         if not parsed:
             return None
-        to, prefix = parsed
+        to, prefix, suffix = parsed
         return "PaperCounter", {"kicker": kicker, "value": to, "prefix": prefix,
-                                "label": slide.get("label", "")}
+                                "suffix": suffix, "label": slide.get("label", "")}
     if t in ("steps", "flow"):
         return "PaperSteps", {"kicker": kicker, "steps": _items(slide)}
     if t == "list":
@@ -835,8 +850,9 @@ def _scene_for(slide, theme="", warn=None):
     if t == "stat":
         parsed = _parse_stat(slide.get("value"))
         if parsed:
-            to, prefix = parsed
+            to, prefix, suffix = parsed
             return "StatCounter", {"kicker": kicker, "from": 0, "to": to, "prefix": prefix,
+                                   "suffix": suffix,
                                    "label": slide.get("label", ""), "subkicker": slide.get("subkicker", "")}
         return "KineticHeadline", {"kicker": kicker, "headline": slide.get("value") or headline,
                                    "accent": accent, "accentRed": accent2,
