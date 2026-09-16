@@ -143,7 +143,7 @@ def build_plan(proj, channel, privacy="private", when=None):
             "privacyStatus": body["status"]["privacyStatus"],
             "publishAt": body["status"].get("publishAt"),
             "madeForKids": body["status"]["selfDeclaredMadeForKids"],
-            "playlist": meta.get("playlist"),
+            "playlist": _playlist_for(proj, meta, warnings),
             "thumbnail_A": str(thumb_a_path) if thumb_a_path else None,
         },
         "browser_todo": _browser_checklist(meta, thumb_b, alt_title, chan or {"handle": channel}),
@@ -151,6 +151,37 @@ def build_plan(proj, channel, privacy="private", when=None):
         "warnings": warnings,
         "_body": body,
     }
+
+
+#: A deep dive joins this playlist at upload. Standing operator rule since 2026-06-12
+#: (SKILL.md 8, channel/CATALOG.md). Keyed on the EXPLICIT content_type so the six
+#: unattended shows, which omit the field entirely, are never touched by this default.
+_DEFAULT_PLAYLIST = {"deepdive": "Deep Dives", "masterclass": "Deep Dives"}
+
+
+def _playlist_for(proj, meta, warnings):
+    """The playlist the API adds the upload to.
+
+    Was `meta.get("playlist")` alone, which made a standing rule depend on a hand-typed
+    JSON key. It decayed exactly as that always does: #47 through #53 carry the key and
+    #54 through #59 do not, so six consecutive deep dives were published without ever
+    joining Deep Dives. The break is at #54, the session that was interrupted and also
+    shipped a wrong upload order; the habit went with it and nothing noticed for six
+    videos, because nothing was watching.
+
+    meta still wins when it is set, including an explicit null to mean "no playlist".
+    """
+    if "playlist" in meta:
+        return meta.get("playlist")
+    ctype = (proj.data or {}).get("content_type", "") or ""
+    default = _DEFAULT_PLAYLIST.get(ctype)
+    if default:
+        warnings.append(
+            f"meta.json has no 'playlist' key; defaulting to '{default}' for content_type "
+            f"'{ctype}' (standing rule 2026-06-12). Set \"playlist\": null in meta.json to "
+            f"publish without one."
+        )
+    return default
 
 
 def _browser_checklist(meta, thumb_b, alt_title, chan):
