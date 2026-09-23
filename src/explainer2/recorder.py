@@ -694,8 +694,20 @@ def run(proj, open_browser=True):
                     ok = False
                 self._send(200 if ok else 400, json.dumps({"ok": ok}))
             elif p.path == "/done":
+                # Report first, THEN signal done (2026-09-23). This handler runs on a
+                # daemon thread and the main thread exits within one poll of
+                # state["done"], so a report still being built when done was set died
+                # with the process: no booth_session.json, no adlib_report.json, no
+                # traceback, and a failed fetch in the page. The 8-15 card daily booths
+                # won that race by about a second; every 100-card Product Leadership
+                # module lost it, and RESUME.md read the missing report as "none".
+                try:
+                    rep = wrap_report()
+                except Exception as e:     # a broken report must never block Finish
+                    rep = None
+                    print(f"BOOTH WRAP REPORT FAILED: {e!r}", flush=True)
+                self._send(200, json.dumps({"ok": True, "report": rep}))
                 state["done"] = True
-                self._send(200, json.dumps({"ok": True, "report": wrap_report()}))
             else:
                 self._send(404, b"{}")
 

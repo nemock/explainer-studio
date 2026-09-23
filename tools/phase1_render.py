@@ -323,6 +323,13 @@ def write_resume_md(proj, wall_s, shorts_note):
     pj = _read_json(proj / "project.json")
     done = _read_json(proj / "work" / "record_done.json")
     adlib = _read_json(proj / "work" / "adlib_report.json")
+    # The booth writes the report just before record_done.json, so one older than that
+    # by minutes belongs to an earlier session. Reading a missing or stale report as
+    # "none" is how module 6 of the Product Leadership series showed a clean drift check
+    # that never ran (2026-09-23).
+    rep_p, done_p = proj / "work" / "adlib_report.json", proj / "work" / "record_done.json"
+    adlib_fresh = bool(adlib) and not (done_p.exists() and rep_p.exists()
+                                       and rep_p.stat().st_mtime < done_p.stat().st_mtime - 120)
     results = _read_json(proj / "work" / "results.json")
     origin = _read_json(proj / "work" / "booth_origin.json")
     exit_ = _read_json(proj / "work" / "booth_exit.json")
@@ -347,9 +354,12 @@ def write_resume_md(proj, wall_s, shorts_note):
         "",
         f"- cards recorded: {len(done.get('recorded', []))} of {done.get('segments', '?')}"
         + (f"; missing: {done.get('missing')}" if done.get("missing") else ""),
-        f"- adlib re-record flags: {adlib.get('rerecord') or 'none'}"
-        + (f"; unchecked: {adlib.get('unchecked')}" if adlib.get("unchecked") else "")
-        + (f"; worst drift {adlib.get('worst_drift'):.2f}" if isinstance(adlib.get("worst_drift"), (int, float)) else ""),
+        (f"- adlib re-record flags: {adlib.get('rerecord') or 'none'}"
+         + (f"; unchecked: {adlib.get('unchecked')}" if adlib.get("unchecked") else "")
+         + (f"; worst drift {adlib.get('worst_drift'):.2f}" if isinstance(adlib.get("worst_drift"), (int, float)) else "")
+         if adlib_fresh else
+         "- adlib report: NONE for this session, so the drift check did not run. "
+         "Run `bin/explainer2 adlib <dir>` before trusting the takes."),
         "",
         "## QA (from `work/results.json`)",
         "",

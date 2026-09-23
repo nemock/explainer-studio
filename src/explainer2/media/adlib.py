@@ -44,7 +44,11 @@ def _num_words(n):
 
 
 def _norm_words(text):
-    text = text.lower().replace("%", " percent ")
+    # Apostrophes are never audible, so they can't be drift: "Meridian's" transcribed as
+    # "meridians" scored 0.33 on a three-word card and flagged a clean take for
+    # re-record (2026-09-23), which parks the watcher's render. Deleted, not spaced,
+    # so contractions stay one token; the curly form goes too.
+    text = text.lower().replace("'", "").replace("’", "").replace("%", " percent ")
     text = re.sub(r"(\d),(\d)", r"\1\2", text)          # 1,000 → 1000
     text = re.sub(r"[^a-z0-9' ]", " ", text)
     out = []

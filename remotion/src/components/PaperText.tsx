@@ -151,9 +151,12 @@ export const PaperPunch: React.FC<{fields: any; durationInFrames?: number}> = ({
             {/* One word, always on one line. The height-only size ran a long word past the
                 card edge (the same overflow the Cvg punch had to cap); 900-weight glyphs
                 run ~0.58em, so cap to the card's inner width. At 16:9 the cap only binds
-                past ~15 characters — where it used to overflow anyway. */}
+                past ~15 characters — where it used to overflow anyway. A "bad" punch caps
+                tighter: its warning sticker hangs 0.055W past the card's corner, and at the
+                0.82 cap a long word pushed it off the frame edge (plg-guide module 6,
+                2026-09-23: four slides). Only capped words shrink; short ones are untouched. */}
             <div style={{fontFamily: BRAND.font, fontWeight: 900,
-                         fontSize: Math.min(height * 0.16, (width * 0.82) / Math.max(1, (fields.word || '').length * 0.58)),
+                         fontSize: Math.min(height * 0.16, (width * (bad ? 0.72 : 0.82)) / Math.max(1, (fields.word || '').length * 0.58)),
                          lineHeight: 1.02,
                          color: W.ink, textTransform: 'uppercase', textAlign: 'center', whiteSpace: 'pre-line',
                          // embossed stamp: paper pressed by the letters

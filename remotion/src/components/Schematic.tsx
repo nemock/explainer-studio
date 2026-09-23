@@ -51,6 +51,12 @@ const tiltFor = (id: string) => ((seedFrom(id) % 7) - 3) * 0.7; // ~ -2.1°..+2.
 export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
   const frame = useCurrentFrame();
   const {fps, width: W, height: H} = useVideoConfig();
+  // Sizes (type, padding, strokes) scale off the SHORT side, the paper world's M
+  // (usePaperLayout); positions stay frame fractions of W and H. Sizing off H set 58px
+  // type in a 184px note on a 9:16 Short: labels wrapped to five lines, the paper fit
+  // grew each note into a strip ~900px tall, and the strips covered the kicker
+  // (plg-guide module 6, 2026-09-23). In 16:9, U === H, so landscape is unchanged.
+  const U = Math.min(W, H);
   const ink = useInk();
   const nodes: any[] = fields.nodes || [];
   const edges: any[] = fields.edges || [];
@@ -113,17 +119,17 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
   //              empty canvas, so bigger notes are cheap and read better.
   const nodeBox = (n: any) => {
     const w = (n.w ?? 0.2) * W;
-    const padX = H * 0.014;                    // matches the rendered horizontal padding
+    const padX = U * 0.014;                    // matches the rendered horizontal padding
     const inner = Math.max(1, w - padX * 2);
-    const fLabel = H * 0.03, fSub = H * 0.02;  // must track the font sizes used below
+    const fLabel = U * 0.03, fSub = U * 0.02;  // must track the font sizes used below
     // rough wrapped-line count: chars * (em width) / usable width, min 1 line
     const linesOf = (txt: any, f: number, em: number) =>
       Math.max(1, Math.ceil((String(txt ?? '').length * f * em) / inner));
     const lLab = linesOf(n.label, fLabel, 0.55);        // 900-weight runs wide
     const lSub = n.sub ? linesOf(n.sub, fSub, 0.50) : 0;
     // slightly generous line-heights vs the render (1.08/1.1) so we never under-size
-    const content = lLab * fLabel * 1.10 + (lSub ? H * 0.006 + lSub * fSub * 1.15 : 0);
-    let h = Math.max(H * 0.085, content + H * 0.028);   // + breathing room top/bottom
+    const content = lLab * fLabel * 1.10 + (lSub ? U * 0.006 + lSub * fSub * 1.15 : 0);
+    let h = Math.max(U * 0.085, content + U * 0.028);   // + breathing room top/bottom
     if (n.shape === 'square') h = Math.max(h, w);       // true square, real-post-it look
     if (n.h) h = n.h * H;                               // explicit override wins
     // Paper mode: the substrate's real aspect sets the height, so the generated paper is
@@ -148,7 +154,7 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
       const b = nodeBox(n);
       const dr = gen.rectangle(b.x, b.y, b.w, b.h,
         {seed: seedFrom(`node:${n.id}`), roughness: 1.6, bowing: 1.2,
-         stroke: kindColor(n.kind, (ink.danger ?? BRAND.red)), strokeWidth: Math.max(2.5, H * 0.004)});
+         stroke: kindColor(n.kind, (ink.danger ?? BRAND.red)), strokeWidth: Math.max(2.5, U * 0.004)});
       m.set(n.id, gen.toPaths(dr).map((p) => ({d: p.d})));
     });
     return m;
@@ -166,7 +172,7 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
       const [x1, y1, x2, y2] = [a.x * W, a.y * H, b.x * W, b.y * H];
       const dr = gen.line(x1, y1, x2, y2, {
         seed: seedFrom(`edge:${e.from}->${e.to}`), roughness: 2, bowing: 2.4,
-        stroke: ink.body, strokeWidth: Math.max(3, H * 0.0055),
+        stroke: ink.body, strokeWidth: Math.max(3, U * 0.0055),
       });
       const d = gen.toPaths(dr).map((p) => p.d).join(' ');
       m.set(`${e.from}->${e.to}`, {d, len: Math.hypot(x2 - x1, y2 - y1) * 2.4});
@@ -180,7 +186,7 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
       {fields.kicker ? (
         <div style={{position: 'absolute', top: '6%', left: 0, right: 0, textAlign: 'center',
                      fontFamily: BRAND.font, color: ink.accent, fontWeight: 800,
-                     fontSize: H * 0.030, letterSpacing: 4, textTransform: 'uppercase',
+                     fontSize: U * 0.030, letterSpacing: 4, textTransform: 'uppercase',
                      opacity: spring({frame, fps, config: {damping: 18}})}}>
           {fields.kicker}
         </div>
@@ -206,11 +212,11 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
             const len = Math.hypot(x2 - x1, y2 - y1);
             const angle = Math.atan2(y2 - y1, x2 - x1);
             const color = kindColor(e.kind, (ink.danger ?? BRAND.red));
-            const head = Math.max(14, H * 0.024);
+            const head = Math.max(14, U * 0.024);
             if (ink.paper) {
               // hand-drawn navy Sharpie connector, drawn on with the reveal
               const re = roughEdges.get(`${e.from}->${e.to}`);
-              const sw = Math.max(3, H * 0.0055);
+              const sw = Math.max(3, U * 0.0055);
               return (
                 <g key={i}>
                   {re ? (
@@ -232,19 +238,19 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
             return (
               <g key={i}>
                 <line x1={x1} y1={y1} x2={hx} y2={hy} stroke={color}
-                      strokeWidth={Math.max(2.5, H * 0.0045)} strokeLinecap="round"
-                      strokeDasharray={`${H * 0.012} ${H * 0.011}`}
+                      strokeWidth={Math.max(2.5, U * 0.0045)} strokeLinecap="round"
+                      strokeDasharray={`${U * 0.012} ${U * 0.011}`}
                       style={{filter: `drop-shadow(0 0 8px ${color}55)`}} />
-                <g opacity={t > 0.92 ? 1 : 0} stroke={color} strokeWidth={Math.max(2.5, H * 0.0045)}
+                <g opacity={t > 0.92 ? 1 : 0} stroke={color} strokeWidth={Math.max(2.5, U * 0.0045)}
                    strokeLinecap="round" fill="none">
                   <line x1={x2} y1={y2} x2={x2 - head * Math.cos(angle - 0.45)} y2={y2 - head * Math.sin(angle - 0.45)} />
                   <line x1={x2} y1={y2} x2={x2 - head * Math.cos(angle + 0.45)} y2={y2 - head * Math.sin(angle + 0.45)} />
                 </g>
                 {e.label && len > W * 0.08 ? (
-                  <text x={(x1 + x2) / 2} y={(y1 + y2) / 2 - H * 0.012} textAnchor="middle"
+                  <text x={(x1 + x2) / 2} y={(y1 + y2) / 2 - U * 0.012} textAnchor="middle"
                         opacity={t > 0.85 ? 1 : 0}
                         style={{fontFamily: BRAND.font, fontStyle: 'italic', fontWeight: 700,
-                                fontSize: H * 0.021, fill: color}}>
+                                fontSize: U * 0.021, fill: color}}>
                     {e.label}
                   </text>
                 ) : null}
@@ -258,7 +264,7 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
             if (frame < at) return null;
             return (sketchPaths.get(n.id) || []).map((p, j) => (
               <path key={`${n.id}${j}`} d={p.d} fill="none" stroke={kindColor(n.kind, (ink.danger ?? BRAND.red))}
-                    strokeWidth={Math.max(2.5, H * 0.004)} strokeLinecap="round" opacity={e} />
+                    strokeWidth={Math.max(2.5, U * 0.004)} strokeLinecap="round" opacity={e} />
             ));
           }) : null}
         </svg>
@@ -296,17 +302,17 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
                   aspect={b.w / b.h}
                   family={b.fit?.family}
                   pastel={pastel}
-                  shadow={`0 ${Math.round(H * 0.012)}px ${Math.round(H * 0.022)}px rgba(12,4,24,.34)`}
+                  shadow={`0 ${Math.round(U * 0.012)}px ${Math.round(U * 0.022)}px rgba(12,4,24,.34)`}
                 >
-                  <div style={{padding: `0 ${H * 0.022}px`, textAlign: 'center'}}>
-                    <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: H * 0.03,
+                  <div style={{padding: `0 ${U * 0.022}px`, textAlign: 'center'}}>
+                    <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: U * 0.03,
                                  color: '#2c1e4e', lineHeight: 1.08}}>
                       {n.label}
                     </div>
                     {n.sub ? (
-                      <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: H * 0.02,
+                      <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: U * 0.02,
                                    color: darken(NOTE_PASTEL[pastel], 0.42),
-                                   marginTop: H * 0.006, lineHeight: 1.1}}>
+                                   marginTop: U * 0.006, lineHeight: 1.1}}>
                         {n.sub}
                       </div>
                     ) : null}
@@ -320,20 +326,20 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
             <div key={n.id} style={{
               position: 'absolute', left: b.x, top: b.y, width: b.w, height: b.h,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              borderRadius: 16, padding: `0 ${H * 0.014}px`, textAlign: 'center',
+              borderRadius: 16, padding: `0 ${U * 0.014}px`, textAlign: 'center',
               background: fields.sketch ? 'rgba(9,13,28,.72)' : ink.cardBg,
               border: fields.sketch ? 'none' : `2px solid ${color}66`,
               boxShadow: ink.paper && !fields.sketch ? PAPER_SHADOW : `0 18px 60px rgba(0,0,0,.45)`,
               opacity: e,
               transform: `translateY(${interpolate(e, [0, 1], [22, 0])}px) scale(${interpolate(e, [0, 1], [0.88, 1])})`,
             }}>
-              <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: H * 0.03,
+              <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: U * 0.03,
                            color: fields.sketch ? BRAND.white : ink.body, lineHeight: 1.08}}>
                 {n.label}
               </div>
               {n.sub ? (
-                <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: H * 0.02,
-                             color: color, marginTop: H * 0.006, lineHeight: 1.1}}>
+                <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: U * 0.02,
+                             color: color, marginTop: U * 0.006, lineHeight: 1.1}}>
                   {n.sub}
                 </div>
               ) : null}
@@ -356,8 +362,8 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
             <div key={`el${i}`} style={{
               position: 'absolute', left: mx * W, top: my * H, transform: 'translate(-50%, -50%)',
               color: ink.body, borderRadius: 8,
-              padding: `${H * 0.007}px ${H * 0.017}px`, whiteSpace: 'nowrap',
-              fontFamily: BRAND.font, fontStyle: 'italic', fontWeight: 800, fontSize: H * 0.02,
+              padding: `${U * 0.007}px ${U * 0.017}px`, whiteSpace: 'nowrap',
+              fontFamily: BRAND.font, fontStyle: 'italic', fontWeight: 800, fontSize: U * 0.02,
               boxShadow: '0 4px 14px rgba(0,0,0,.2)',
               opacity: interpolate(t, [0.9, 1], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}),
             }}>

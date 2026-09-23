@@ -298,6 +298,14 @@ underline and renders as a red or green bar floating on blank paper. Two consequ
 - **Don't add a second mark just to look thorough.** One focal mark that lands beats two where
   the second has no subject. The annotation-coverage floor counts *slides*, not marks, so
   dropping a bogus second mark costs nothing.
+- **An underline is drawn AT its `at` y, so `at` goes just BELOW the subject.** Authored at a
+  bar's measured centre, it draws straight through the bar and reads as a strike-through:
+  "One. The focus." with the focus line crossed out (Product Leadership modules 5 and 6,
+  caught on frames 2026-09-23). Measure the subject's bottom edge and add ~0.035.
+- **`strike` and `arrow` take `from`/`to`, never `at`+`w`.** A strike authored like a circle
+  collapses to a zero-length line at the image centre and draws nothing, while the census
+  still counts the slide as annotated. Module 6 shipped five. The per-kind field contract is
+  in `FigureMarks` (`remotion/src/components/Media.tsx`); a deck builder can assert it.
 
 **A DOCUMENT FIGURE MUST CARRY ITS WORDS — use `pageText` (2026-08-14, operator-caught).**
 The "no text, no words, no logos" clause is a constraint on the GENERATOR, not on the slide:
