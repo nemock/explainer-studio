@@ -106,20 +106,36 @@ def video_metadata(video_id, max_comments=12):
     }
 
 
+# Caption tracks to try, one yt-dlp call each, most original first. YouTube's
+# machine-translated `en` auto track (tlang=en) is often 429-rate-limited, and
+# yt-dlp fetches it BEFORE `en-orig` when both are requested, so one combined
+# `--sub-langs "en.*,en"` call aborted with nothing on disk (#68, 2026-09-24).
+SUB_ATTEMPTS = [
+    ("--write-auto-subs", "en-orig"),  # original-language English ASR
+    ("--write-subs", "en.*"),          # manual English subs (en, en-US, en-GB)
+    ("--write-auto-subs", "en"),       # translated track: last resort only
+]
+
+
 def download_transcript(video_id, dest_dir: Path):
     """Auto-caption transcript → plain text with [m:ss] markers each ~30s.
     Returns the txt path or None."""
     dest_dir.mkdir(parents=True, exist_ok=True)
     out_tpl = str(dest_dir / f"{video_id}.%(ext)s")
-    cmd = [YTDLP, "--no-warnings", "--ignore-config", "--skip-download",
-           "--write-auto-subs", "--write-subs", "--sub-langs", "en.*,en",
-           "--sub-format", "json3", "-o", out_tpl,
-           f"https://www.youtube.com/watch?v={video_id}"]
-    try:
-        subprocess.run(cmd, capture_output=True, text=True, timeout=TIMEOUT_S)
-    except subprocess.TimeoutExpired:
-        return None
-    sub = next(iter(dest_dir.glob(f"{video_id}*.json3")), None)
+    sub = None
+    for sub_flag, langs in SUB_ATTEMPTS:
+        cmd = [YTDLP, "--no-warnings", "--ignore-config", "--skip-download",
+               sub_flag, "--sub-langs", langs,
+               "--sub-format", "json3", "-o", out_tpl,
+               f"https://www.youtube.com/watch?v={video_id}"]
+        try:
+            subprocess.run(cmd, capture_output=True, text=True, timeout=TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            pass
+        # Ignore the exit code: a track written before a later error still counts.
+        sub = next(iter(sorted(dest_dir.glob(f"{video_id}*.json3"))), None)
+        if sub:
+            break
     if not sub:
         return None
     try:
