@@ -350,7 +350,8 @@ to date missed length on the first draft; the rule exists because it bites).
    Merging a short bridge beat or dropping a sub-30s outro beat is a fine editorial
    call; shipping a chapter whose title doesn't match its frame is not. And a
    description that *promises* chapters without carrying them is worse than one that
-   says nothing — modules 1 and 2 shipped that promise unkept.
+   says nothing — modules 1 and 2 shipped that promise unkept (both given their chapters
+   2026-09-24).
 9. **Define terms as you use them — comprehension IS retention (operator directive
    2026-07-14).** An undefined term the viewer doesn't know blocks them from
    following everything after it: they quietly tune out, so it's a retention leak,
