@@ -228,6 +228,10 @@ motion-playbook §5/§2H). What you author in `deck.json`:
   stays locked on its subject as the shot pans/zooms (a frame-space `annotations` circle
   drifts off a moving subject — that's the bug it fixes, motion-playbook §2H, 2026-07-17).
   Measure the subject's fraction off the actual image file. Counts toward annotation coverage.
+  Each kind takes its own geometry: `at` for circle/box/underline, `from`/`to` for
+  arrow/strike. The render refuses a mark authored with the other kind's fields
+  (`BLOCKED-MARKS.md`, 2026-09-23), because the renderer would otherwise put it at the image
+  centre without an error.
 - **`figure` guided tours:** `moves[]{to:{x,y,scale}, cue}` pans/zooms the framed
   image region-to-region as the narration discusses each part;
   `assemble{pieces[]{clip:[x,y,w,h], cue}}` builds the image in cued pieces;

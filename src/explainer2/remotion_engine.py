@@ -885,6 +885,83 @@ def _scene_for(slide, theme="", warn=None):
                                "stage": slide.get("stage")}
 
 
+# FIGURE MARK FIELD CONTRACT (2026-09-23). FigMark in remotion/src/components/Media.tsx
+# reads `at` for circle/box/underline and `from`/`to` for arrow/strike, and puts any point
+# it cannot find at the image centre. So a mark authored with the other kind's fields never
+# errors. It draws in the wrong place, or not at all:
+#   strike as at+w        Product Leadership module 6, first render: five zero-length lines
+#                         at the centre that drew nothing, on slides the census counted as
+#                         annotated
+#   underline as from/to  modules 3 (s15 s22 s33 s35 s67 s70) and 4 (s42), both published:
+#                         module 3's video shows a stray line across the middle of the
+#                         figure on s15 and s33
+# deck_census, slidecheck, qa and validate passed all twelve. build_spec therefore REFUSES a
+# mark its kind cannot draw, and the render reports it the way scriptguard and timelineguard
+# report theirs: BLOCKED-MARKS.md in the project, a non-zero exit, nothing downstream.
+# `w`/`h` stay optional because FigMark defaults them; only the geometry that decides WHERE
+# a mark lands is enforced. Keep this table in step with FigMark, where an absent kind is a
+# circle.
+MARK_FIELDS = {"circle": ("at",), "box": ("at",), "underline": ("at",),
+               "arrow": ("from", "to"), "strike": ("from", "to")}
+MARKS_BLOCKED_NAME = "BLOCKED-MARKS.md"
+
+
+class MalformedMarkError(RuntimeError):
+    """Raised by build_spec when a figure/footage mark breaks MARK_FIELDS."""
+
+    def __init__(self, problems):
+        self.problems = problems
+        n = len(problems)
+        super().__init__(
+            f"{n} figure mark{'s' if n != 1 else ''} break{'s' if n == 1 else ''} the per-kind "
+            f"field contract and would draw in the wrong place or not at all — refusing to "
+            f"render:\n  " + "\n  ".join(problems))
+
+
+def _is_point(v):
+    return (isinstance(v, (list, tuple)) and len(v) == 2
+            and all(isinstance(c, (int, float)) and not isinstance(c, bool) for c in v))
+
+
+def _mark_problems(sid, marks):
+    """One line per mark that breaks MARK_FIELDS, naming the slide, the mark's index and the
+    field. Empty when every mark will draw where it was authored."""
+    if not isinstance(marks, list):
+        return [f"{sid}: `marks` must be a list of mark objects, got {type(marks).__name__}"]
+    out = []
+    for i, mk in enumerate(marks):
+        where = f"{sid}: marks[{i}]"
+        if not isinstance(mk, dict):
+            out.append(f"{where} is not a mark object: {mk!r}")
+            continue
+        kind = mk.get("kind") or "circle"
+        need = MARK_FIELDS.get(kind) if isinstance(kind, str) else None
+        if need is None:
+            out.append(f"{where} has kind {kind!r}, which FigureMarks does not draw (it "
+                       f"renders as a circle); use one of {', '.join(MARK_FIELDS)}")
+            continue
+        missing = [f for f in need if f not in mk]
+        if missing:
+            if need == ("at",):
+                why = ("it draws at `at` [x, y] (+ `w`/`h`), so without it the mark lands on "
+                       "the image centre")
+                if "from" in mk or "to" in mk:
+                    why += "; `from`/`to` are read only by arrow and strike"
+            elif len(missing) == 2:
+                why = ("it draws from `from` [x, y] to `to` [x, y], never `at`+`w`; as "
+                       "authored it is a zero-length line at the image centre and draws nothing")
+            else:
+                why = ("it draws from `from` [x, y] to `to` [x, y]; the missing end snaps to "
+                       "the image centre")
+            out.append(f"{where} {kind} is missing "
+                       f"{' and '.join(f'`{f}`' for f in missing)} — {why}")
+        for f in need:
+            if f in mk and not _is_point(mk[f]):
+                out.append(f"{where} {kind} `{f}` must be an [x, y] pair of numbers (0-1 of "
+                           f"the image), got {mk[f]!r}")
+    return out
+
+
 def build_spec(sp):
     seg = json.loads((sp.work / "segments.json").read_text())
     fps = sp.fps
@@ -897,6 +974,7 @@ def build_spec(sp):
     # (e.g. a content-less closing card). Surfaced as spec["_warnings"] and logged by
     # _render_one, same as every sync warning collected below.
     warnings = []
+    mark_problems = []
     scenes = []
     for i, s in enumerate(segs):
         start = s["start"]
@@ -904,6 +982,9 @@ def build_spec(sp):
         slide = slides_by_id.get(s["slide"], {})
         comp, fields = _scene_for(slide, theme=sp.data.get("theme", ""),
                                   warn=warnings.append)
+        # Only marks the type map passed through can draw, so those are the ones checked
+        # (MARK_FIELDS above). Collected across the whole deck and raised once, below.
+        mark_problems += _mark_problems(s["slide"], fields.get("marks") or [])
         sc = {"component": comp, "from": int(round(start * fps)),
               "durationInFrames": max(1, int(round((end - start) * fps))), "fields": fields}
 
@@ -924,6 +1005,8 @@ def build_spec(sp):
         if slide.get("transition") == "tear":
             sc["tear"] = True
         scenes.append(sc)
+    if mark_problems:
+        raise MalformedMarkError(mark_problems)
 
     words = []
     al = sp.work / "alignment.json"
@@ -1432,6 +1515,65 @@ def render(sp, log=print, frames=None, out=None):
     return combined
 
 
+def _marks_blocked_text(sp, problems):
+    n = len(problems)
+    L = [f"# BLOCKED: malformed figure marks ({sp.dir.name})", "",
+         f"**{n} figure mark{'s' if n != 1 else ''} in `deck.json` break{'s' if n == 1 else ''} "
+         f"the per-kind field contract.**", "",
+         "`FigureMarks` (`remotion/src/components/Media.tsx`) reads `at` for circle, box and",
+         "underline and `from`/`to` for arrow and strike, and puts any point it cannot find at",
+         "the image centre. The render would NOT fail: a `strike` authored as `at`+`w` draws",
+         "nothing, and an `underline` authored as `from`/`to` draws a stray line across the",
+         "middle of the figure.", "",
+         "## Marks to fix", ""]
+    L += [f"- {p}" for p in problems]
+    L += ["", "## The contract", "",
+          "| kind | draws from | optional |", "|---|---|---|",
+          "| `circle`, `box` | `at`: [x, y] | `w`, `h` |",
+          "| `underline` | `at`: [x, y], just below the subject | `w` |",
+          "| `arrow`, `strike` | `from`: [x, y] and `to`: [x, y] | |", "",
+          "Coordinates are 0-1 of the image (motion-playbook §2H).", "",
+          "## Fix", ""]
+    if sp.data.get("derived_from"):
+        # shorts.build_derived puts each cut at <parent>/shorts/<slug> and rewrites its deck
+        # from the parent's on every run, so the fix belongs in the parent.
+        L += [f"This is a Short. Its slides are copied from the parent project "
+              f"`{sp.data['derived_from']}` on every Shorts run, so fix the marks in the "
+              f"parent's `deck.json` (or in the script that builds it), then re-cut:", "",
+              "```bash",
+              f"/Volumes/Casima/claudeCode/explainer2/bin/explainer2 shorts "
+              f"'{sp.dir.parent.parent}' --only {sp.dir.name}",
+              "```", ""]
+    else:
+        L += ["Fix the marks in `deck.json` (or in the script that builds it), then render:", "",
+              "```bash",
+              f"/Volumes/Casima/claudeCode/explainer2/bin/explainer2 render '{sp.dir}'",
+              "```", "",
+              "If the recording watcher launched this render, it relaunches phase 1 by itself",
+              "on its retry schedule once the deck is fixed.", ""]
+    L += ["The next render whose marks all pass deletes this file.", ""]
+    return "\n".join(L)
+
+
+def _build_spec_guarded(sp, log=print):
+    """build_spec for a real render. A malformed mark is refused the way the media guards
+    refuse: BLOCKED-MARKS.md in the project naming every bad mark, a BLOCKED log line, and
+    the error re-raised so the render stage fails and nothing downstream runs. A build whose
+    marks all pass deletes the file, so a fixed deck never looks blocked."""
+    blocked = sp.dir / MARKS_BLOCKED_NAME
+    try:
+        spec = build_spec(sp)
+    except MalformedMarkError as e:
+        blocked.write_text(_marks_blocked_text(sp, e.problems))
+        log(f"marks-guard: BLOCKED — {len(e.problems)} figure mark(s) break the per-kind "
+            f"field contract; wrote {blocked.name} — refusing to render")
+        raise
+    if blocked.exists():
+        blocked.unlink()
+        log(f"marks-guard: previous {blocked.name} cleared — every figure mark carries its fields")
+    return spec
+
+
 def _render_one(sp, log=print, frames=None, out=None):
     """Render `sp` via Remotion -> the final muxed mp4. `frames` (e.g. '0-2400') renders a
     range for fast preview. The heavy headless render should be wrapped by the render-lock."""
@@ -1439,7 +1581,7 @@ def _render_one(sp, log=print, frames=None, out=None):
         raise RuntimeError(
             f"Remotion engine not installed: run `npm install` in {REMOTION_DIR} "
             f"(or use --engine deck). The motion engine needs the Node toolchain.")
-    spec = build_spec(sp)
+    spec = _build_spec_guarded(sp, log)
     for w in spec.pop("_warnings", []):
         log(f"remotion: sync WARNING {w}")
     stage = sp.work / "remotion"

@@ -302,10 +302,17 @@ underline and renders as a red or green bar floating on blank paper. Two consequ
   bar's measured centre, it draws straight through the bar and reads as a strike-through:
   "One. The focus." with the focus line crossed out (Product Leadership modules 5 and 6,
   caught on frames 2026-09-23). Measure the subject's bottom edge and add ~0.035.
-- **`strike` and `arrow` take `from`/`to`, never `at`+`w`.** A strike authored like a circle
-  collapses to a zero-length line at the image centre and draws nothing, while the census
-  still counts the slide as annotated. Module 6 shipped five. The per-kind field contract is
-  in `FigureMarks` (`remotion/src/components/Media.tsx`); a deck builder can assert it.
+- **`strike` and `arrow` take `from`/`to`, never `at`+`w`; `circle`, `box` and `underline`
+  take `at`, never `from`/`to`.** `FigureMarks` puts any point it cannot find at the image
+  centre. A strike authored like a circle collapses to a zero-length line there and draws
+  nothing, while the census still counts the slide as annotated (module 6's first render had
+  five). An underline authored like a strike draws a stray line across the middle of the
+  figure (published modules 3 and 4 have seven). **`build_spec` enforces the per-kind field
+  contract since 2026-09-23:** a mark missing its kind's fields, or carrying an unknown
+  `kind`, stops the render with `MalformedMarkError` naming the slide and the field, and
+  writes `BLOCKED-MARKS.md` into the project. Fix the deck (or its build script) and render
+  again. `w`/`h` stay optional. The table is `MARK_FIELDS` in `remotion_engine.py`; keep it
+  in step with `FigMark` in `remotion/src/components/Media.tsx`.
 
 **A DOCUMENT FIGURE MUST CARRY ITS WORDS — use `pageText` (2026-08-14, operator-caught).**
 The "no text, no words, no logos" clause is a constraint on the GENERATOR, not on the slide:
