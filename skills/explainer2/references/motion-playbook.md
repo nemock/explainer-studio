@@ -317,9 +317,17 @@ underline and renders as a red or green bar floating on blank paper. Two consequ
   the second has no subject. The annotation-coverage floor counts *slides*, not marks, so
   dropping a bogus second mark costs nothing.
 - **An underline is drawn AT its `at` y, so `at` goes just BELOW the subject.** Authored at a
-  bar's measured centre, it draws straight through the bar and reads as a strike-through:
+  bar's measured center, it draws straight through the bar and reads as a strike-through:
   "One. The focus." with the focus line crossed out (Product Leadership modules 5 and 6,
   caught on frames 2026-09-23). Measure the subject's bottom edge and add ~0.035.
+- **Measure the subject's center x as well as its edges, and size a `circle` for overshoot.**
+  Product Leadership module 5 shipped with every mark on its page figure centered at x 0.455
+  or 0.470 when the lines measured 0.496, and was re-rendered and re-uploaded over it
+  (2026-09-24). A `circle` is a rough ellipse (roughness 2.2) and draws about 10% wider than
+  its nominal `w`: around a rule 0.406 wide, `w` 0.46 ran onto the page's torn edges, while
+  0.42 cleared both the rule's ends and the page. Size a circle against its subject AND the
+  edge of whatever the subject sits on. A full-frame 800 px preview is too coarse to show a
+  few pixels of overshoot, so crop the rendered frame around the mark and preview the crop.
 - **`strike` and `arrow` take `from`/`to`, never `at`+`w`; `circle`, `box` and `underline`
   take `at`, never `from`/`to`.** `FigureMarks` puts any point it cannot find at the image
   centre. A strike authored like a circle collapses to a zero-length line there and draws
