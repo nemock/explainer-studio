@@ -7,6 +7,9 @@ export const BRAND = {
   red: '#ff4d4d',
   green: '#3ddc84',
   white: '#f5f7ff',
+  // Hand-drawn caution ink for annotations and figure marks (2026-09-24). Paper worlds
+  // deepen it at the call site, as they do red.
+  amber: '#ffb020',
   font: '-apple-system, "Helvetica Neue", Arial, sans-serif',
 };
 

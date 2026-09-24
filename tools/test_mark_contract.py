@@ -20,6 +20,9 @@ renders (2026-09-24):
     underline authored from/to   #48 s11 s12 s14 s21, its trust-it-less Short    frame centre
     color amber / navy           ISO 14971 modules 9-12 (24), #48 s11 s13         drew nothing
 
+Amber became a real ink the same day (both overlays), so it is asserted as VALID below; navy
+and any other colour outside green/red/white/amber are still refused.
+
 Asserted here, against a throwaway project:
   - build_spec raises MalformedMarkError naming the slide and the missing field, for both
     mark shapes and for every route a mark reaches the spec by (figure, footage, a direct
@@ -223,8 +226,8 @@ BAD_ANNS = [
     (annotated("a05", "figure", {"kind": "doodle", "name": "misc/star", "w": 0.1},
                image="x.png"),
      "a05: annotations[0] doodle is missing `at`"),
-    (annotated("a06", "stat", {"kind": "circle", "at": [0.5, 0.4], "color": "amber"}),
-     "a06: annotations[0] circle has color 'amber'"),             # ISO 14971 modules 9-12
+    (annotated("a06", "stat", {"kind": "circle", "at": [0.5, 0.4], "color": "orange"}),
+     "a06: annotations[0] circle has color 'orange'"),            # no such ink: invisible
     (annotated("a07", "statement", {"kind": "circle", "at": [0.3, 0.5]},   # valid, not named
                {"kind": "arrow", "from": [0.5, 0.82], "to": [0.5, 0.62], "color": "navy"}),
      "a07: annotations[1] arrow has color 'navy'"),               # #48 s13: right place, unseen
@@ -242,6 +245,7 @@ GOOD_ANNS = [
     {"kind": "strike", "from": [0.3, 0.5], "to": [0.7, 0.5], "color": None},  # null: default
     {"kind": "doodle", "name": "misc/star", "at": [0.7, 0.3], "w": 0.12, "rotate": -8,
      "reveal": "wipe", "color": "white"},
+    {"kind": "circle", "at": [0.2, 0.7], "w": 0.1, "color": "amber"},  # ISO 14971's ink
 ]
 NAVY_MARK = {"kind": "circle", "at": [0.5, 0.5], "color": "navy"}   # FigMark: the accent
 GOOD_ANN_SLIDES = [annotated("g01", "statement", *GOOD_ANNS[:3]),
@@ -367,5 +371,6 @@ if failures:
     sys.exit(1)
 print(f"PASS — {len(BAD)} malformed marks and {len(BAD_ANNS) - 1} malformed annotations refused "
       f"(BLOCKED-MARKS.md written, then cleared; the census fails them too), "
-      f"{len(GOOD_MARKS)} valid mark kinds and {len(GOOD_ANNS)} valid annotation kinds untouched, "
+      f"{len(GOOD_MARKS)} valid marks and {len(GOOD_ANNS)} valid annotations (every kind and "
+      f"ink) untouched, "
       f"{checked} real project(s) build clean")

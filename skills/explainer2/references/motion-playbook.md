@@ -230,8 +230,8 @@ Any slide can carry `annotations: [...]` — an overlay ON TOP of the scene, dra
 0-1 FULL-FRAME space, each element firing on a spoken cue. Two families, freely mixed:
 - **Vector (rough.js, seeded — true draw-on):** `arrow` (`from`→`to`, auto arrowhead),
   `circle` (`at`+`w`/`h`), `underline` (`at`+`w`), `strike` (`from`→`to`), `box`
-  (`at`+`w`/`h`). Options: `color: green|red|white` (default green), `label` (small
-  italic tag near the target), `cue: "<spoken phrase>"`.
+  (`at`+`w`/`h`). Options: `color: green|red|white|amber` (default green; amber since
+  2026-09-24), `label` (small italic tag near the target), `cue: "<spoken phrase>"`.
 - **Doodle stamps (`kind: "doodle"`)** — the operator's licensed **CopyDoodles**
   library (real Sharpie scans): `name` from `library/doodles/manifest.json`
   (106 pieces: arrows/ovals/boxes/brackets/bullets/crossouts/lines/misc/numbers/
@@ -249,13 +249,16 @@ frame-space annotations for editorial arrows.
 **The render refuses an annotation it cannot draw where it was authored (2026-09-24).**
 `AnnotateOverlay` puts a missing point at the FRAME centre, draws NOTHING for a `kind` it
 does not know or for no `kind` at all (a figure mark with no kind is a circle; an
-annotation is not), and draws nothing for any `color` other than `green`, `red` or `white`.
-None of that errors. On published renders: #67's two strikes authored as `at`+`w` crossed
-nothing out, #48's underlines authored as `from`/`to` drew at the frame centre (one
-through a headline, two through a viewer quote), and 26 annotations coloured `amber`
-(ISO 14971 modules 9–12) or `navy` (#48) never appeared. `build_spec` now checks every
-rendered slide's `annotations` against the same per-kind contract as figure `marks`
-(below), plus `doodle` → `at`, plus the colour palette, and stops the render with
+annotation is not), and draws nothing for a `color` it has no ink for. None of that
+errors. On published renders: #67's two strikes authored as `at`+`w` crossed nothing out,
+#48's underlines authored as `from`/`to` drew at the frame centre (one through a headline,
+two through a viewer quote), and 26 annotations coloured `amber` (ISO 14971 modules 9–12)
+or `navy` (#48) never appeared. Amber became a real ink the same day, for annotations and
+figure marks alike (`BRAND.amber` on navy, deepened on paper), so the palette is now
+`green`, `red`, `white` and `amber`, and the ISO modules' amber draws from their next
+render. `build_spec` now checks every rendered slide's `annotations` against the same
+per-kind contract as figure `marks` (below), plus `doodle` → `at`, plus the colour
+palette, and stops the render with
 `MalformedMarkError` and `BLOCKED-MARKS.md`. `deck_census.py` fails the same deck before
 narrate and align. The tables are `ANNOTATION_FIELDS` and `ANNOTATION_COLORS` in
 `remotion_engine.py`; keep them in step with `useRoughPaths`/`DoodleAnn` and `colorsFor` in
@@ -290,7 +293,7 @@ slide instead. Each mark renders inside the image's own moving container, so it 
 locked on its subject as the shot moves. Same hand-drawn kinds and cue contract as
 annotations, but coords are **0-1 of the IMAGE** (not the frame):
 `marks: [{kind: circle|arrow|underline|box|strike, at:[x,y] (circle/box/underline) or
-from/to (arrow/strike), w?, h?, color?: green|red|white, cue: "<verbatim phrase>"}]`.
+from/to (arrow/strike), w?, h?, color?: green|red|white|amber, cue: "<verbatim phrase>"}]`.
 Measure `at` off the actual generated image (open it and read the subject's fraction).
 Rule of thumb: **anything you'd circle/point-at ON the art → `marks`; editorial marks on
 stable text (a headline, a caption) → frame-space `annotations`.** `marks` count toward the

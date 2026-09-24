@@ -223,10 +223,11 @@ motion-playbook §5/§2H). What you author in `deck.json`:
   point at the thing being said, not as decoration. `annotations` are FRAME-space —
   they do NOT move with a figure/footage Ken Burns. Each kind takes its own geometry
   (`at` for circle/box/underline/doodle, `from`/`to` for arrow/strike), every annotation
-  names its `kind`, and `color` is `green`, `red` or `white` or left out. Anything else
-  draws at the frame centre or not at all, so `deck_census.py` fails it and the render
-  refuses it (`BLOCKED-MARKS.md`, 2026-09-24). #48, one of its Shorts and #67 shipped
-  seven with the wrong geometry, and 26 `amber`/`navy` annotations never appeared.
+  names its `kind`, and `color` is `green`, `red`, `white` or `amber`, or left out.
+  Anything else draws at the frame centre or not at all, so `deck_census.py` fails it and
+  the render refuses it (`BLOCKED-MARKS.md`, 2026-09-24). #48, one of its Shorts and #67
+  shipped seven with the wrong geometry, and 26 `amber`/`navy` annotations never appeared
+  (amber has been a real ink since that day).
 - **`marks: [...]`** — the IMAGE-space twin of annotations, for pointing at something
   INSIDE a `figure`/`footage`'s art (a face, a robot, a chart). Same kinds + cue contract,
   but `at`/`from`/`to` are **0-1 of the IMAGE**, and the mark rides the Ken Burns so it

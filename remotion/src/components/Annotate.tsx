@@ -11,7 +11,7 @@ import {Ink, useInk} from '../ink';
 //     precise point-to-point geometry with true stroke draw-on
 //   doodle kind: an operator-licensed CopyDoodles stamp (real Sharpie scans), tinted
 //     via CSS mask, revealed with a pop or wipe
-// Every annotation: {kind, cueFrame, color?: 'green'|'red'|'white', label?} plus
+// Every annotation: {kind, cueFrame, color?: 'green'|'red'|'white'|'amber', label?} plus
 // per-kind geometry in 0-1 frame space: from/to (arrow, strike), at+w/h (circle, box,
 // underline, doodle). cueFrame is resolved by the Python spec-builder from a spoken
 // phrase — the React side stays a pure function of frame.
@@ -35,16 +35,19 @@ const seedFrom = (s: string) => {
 // green on navy, indigo in the BRG world; `white` means "the body ink" — white on navy,
 // deep ink on cream (plain white is invisible on paper). `red` darkens on paper because
 // (ink.danger ?? (ink.paper ? '#c2352b' : BRAND.red)) is tuned to glow on navy and washes out on cream.
+// `amber` (2026-09-24) deepens on paper the same way; ISO 14971 modules 9-12 had authored it
+// 24 times before it existed, and every one of those drew nothing.
 const colorsFor = (ink: Ink): Record<string, string> => ({
   green: ink.accent,
   red: (ink.danger ?? (ink.paper ? '#c2352b' : BRAND.red)),
   white: ink.body,
+  amber: ink.paper ? '#b7791f' : BRAND.amber,
 });
 
 type Ann = {
   kind: 'arrow' | 'circle' | 'underline' | 'strike' | 'box' | 'doodle';
   cueFrame: number;
-  color?: 'green' | 'red' | 'white';
+  color?: 'green' | 'red' | 'white' | 'amber';
   label?: string;
   from?: [number, number];
   to?: [number, number];

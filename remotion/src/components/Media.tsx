@@ -22,9 +22,11 @@ const FigMark: React.FC<{m: any; i: number}> = ({m, i}) => {
   const VW = 1000, VH = 562, sw = VH * 0.013;
   const ink = useInk();
   // 'green' means "the world's accent" — indigo in the BRG world, studio green on navy;
-  // 'white' means "the body ink", which is a deep ink on the cream paper worlds.
+  // 'white' means "the body ink", which is a deep ink on the cream paper worlds. 'amber'
+  // (2026-09-24) matches the annotation overlay's. Any other colour falls back to the accent.
   const color = m.color === 'red' ? (ink.danger ?? (ink.paper ? '#c2352b' : BRAND.red))
-              : m.color === 'white' ? ink.body : ink.accent;
+              : m.color === 'white' ? ink.body
+              : m.color === 'amber' ? (ink.paper ? '#b7791f' : BRAND.amber) : ink.accent;
   const {paths, length, tip} = React.useMemo(() => {
     const gen = rough.generator();
     const opts = {seed: markSeed(`${m.kind}:${i}:${m.at}:${m.from}:${m.to}`), roughness: 2.2,

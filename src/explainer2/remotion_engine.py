@@ -916,10 +916,12 @@ MARK_FIELDS = {"circle": ("at",), "box": ("at",), "underline": ("at",),
 #                         centre, one through a headline, two through a viewer quote
 #   color amber / navy    ISO 14971 modules 9-12 and two of their Shorts (24), #48 s11 s13 (2):
 #                         nothing drew (s11 is also an underline without `at`)
+# Amber became a real ink the same day (operator, 2026-09-24: BRAND.amber, deepened on paper,
+# in both colorsFor and FigMark), so those 24 draw from their next render; navy is refused.
 # The same _mark_problems checks both layers (_MARK_LAYERS below). Keep ANNOTATION_FIELDS in
 # step with useRoughPaths and DoodleAnn, and ANNOTATION_COLORS with colorsFor.
 ANNOTATION_FIELDS = {**MARK_FIELDS, "doodle": ("at",)}
-ANNOTATION_COLORS = ("green", "red", "white")
+ANNOTATION_COLORS = ("green", "red", "white", "amber")
 MARKS_BLOCKED_NAME = "BLOCKED-MARKS.md"
 
 # What each layer's renderer does with what it is given, keyed by the deck field. `default`
@@ -1572,7 +1574,7 @@ def _marks_blocked_text(sp, problems):
          "the centre. The render would NOT fail: a `strike` authored as `at`+`w` draws nothing,",
          "and an `underline` authored as `from`/`to` draws a stray line across the middle. An",
          "annotation fails more quietly still: a kind the overlay does not know, or no `kind`,",
-         "draws nothing, and so does a `color` other than green, red or white.", "",
+         f"draws nothing, and so does a `color` outside {', '.join(ANNOTATION_COLORS)}.", "",
          "## To fix", ""]
     L += [f"- {p}" for p in problems]
     L += ["", "## The contract", "",
@@ -1582,7 +1584,8 @@ def _marks_blocked_text(sp, problems):
           "| `arrow`, `strike` | `from`: [x, y] and `to`: [x, y] | |",
           "| `doodle` (annotations only) | `at`: [x, y] | `w`, `rotate` |", "",
           "Coordinates are 0-1 of the image for `marks` and of the frame for `annotations`",
-          "(motion-playbook §2H). An annotation's `color` is `green`, `red` or `white`, or left",
+          f"(motion-playbook §2H). An annotation's `color` is one of "
+          f"{', '.join(ANNOTATION_COLORS)}, or left",
           "out. A mark with no `kind` is a circle; an annotation with no `kind` draws nothing.", "",
           "## Fix", ""]
     if sp.data.get("derived_from"):
