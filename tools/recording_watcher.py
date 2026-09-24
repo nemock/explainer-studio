@@ -337,14 +337,51 @@ def notify_render_blocked_once(cfg, show, proj, fp, why):
     ], check=False)
 
 
+def publish_block_file(proj):
+    """Honour a work/publish_block.json written by a publish run that blocked for a
+    reason `explainer2 validate` does not test. Returns (blocked, fingerprint, reason).
+
+    Schema: {"watch": "<path relative to proj>", "was": "<that file's exact text>",
+             "reason": "..."}. The block holds while `watch` still reads as `was`;
+    anything that rewrites it (a re-render rewrites work/render_complete.json)
+    retires the block with no human in the loop. `was` is the literal text rather
+    than a digest so that a run writing this file by hand can fill it in without
+    hashing anything. A missing or unreadable watch file reads as changed, so a
+    half-written block fails open rather than parking the project forever."""
+    f = proj / "work" / "publish_block.json"
+    try:
+        d = json.loads(f.read_text())
+        watched = (proj / d["watch"]).read_text()
+    except (OSError, ValueError, KeyError):
+        return False, "", ""
+    if watched != d["was"]:
+        return False, "", ""             # the artifact moved; re-test the gate
+    fp = hashlib.sha256(watched.encode()).hexdigest()[:16]
+    return True, fp, str(d.get("reason", "publish gate (non-validate)"))[:300]
+
+
 def publish_blocked(proj):
     """A prior publish run hit the Step-8 validate gate, wrote BLOCKED.md, and
     exited cleanly — no README, so the crashloop guard keeps respawning it on
     backoff forever. The verdict is deterministic: re-spawning an LLM run on an
     unchanged work/validate.json re-derives the identical block (the 2026-08-24
     MMT episode burned 14 publish runs this way). Skip the spawn until
-    validate.json actually changes. Returns (blocked, fingerprint, reason)."""
+    validate.json actually changes. Returns (blocked, fingerprint, reason).
+
+    Not every publish gate is a validate gate. Robot Roundup's 180 s Shorts wall
+    lives only in SKILL prose — `--min-length` is the only length the toolchain
+    knows — so rrp-2026-09-23 blocked at 180.37 s with validate.json reading
+    {"ok": true}, and this guard read that BLOCKED.md as stale. A publish run that
+    blocks for a reason validate cannot see drops work/publish_block.json naming
+    the artifact its verdict was read off; while that artifact is unchanged the
+    verdict is unchanged, so the spawn is skipped. Re-rendering rewrites the
+    artifact and the block lifts on its own — the same way back render_failure
+    has, so a block can never outlive its cause."""
     bl = proj / "BLOCKED.md"
+    if bl.exists():
+        pb, fp, why = publish_block_file(proj)
+        if pb:
+            return True, fp, why
     vj = proj / "work" / "validate.json"
     if not bl.exists() or not vj.exists():
         return False, "", ""

@@ -160,6 +160,14 @@ def run(proj):
         if not pp.get("caption"):
             issues.append(f"per_platform '{plat}' has no caption")
 
+    # Length ceiling (2026-09-24). Until now the only length the toolchain tested was the
+    # minimum, so rrp-2026-09-23 rendered 180.37 s against a 180 s Shorts wall and this
+    # returned ok. A show sets the ceiling with `scaffold --max-length`; exclusive.
+    dur = m.get("duration_s")
+    if proj.max_length and dur and dur >= proj.max_length:
+        issues.append(f"duration {dur}s is not under max_length {proj.max_length}s — "
+                      f"cut a segment and re-render")
+
     issues += _package_issues(proj)
     content_issues, advisories = _package_content_issues(proj, m)
     issues += content_issues

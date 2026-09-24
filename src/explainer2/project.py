@@ -68,6 +68,8 @@ class Project:
     @property
     def min_length(self): return self.data.get("min_length")
     @property
+    def max_length(self): return self.data.get("max_length")  # exclusive: must render UNDER it
+    @property
     def fps(self): return int(self.data.get("fps", 30))
     @property
     def voice(self): return self.data.get("voice", "af_heart")

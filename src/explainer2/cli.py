@@ -235,6 +235,8 @@ def cmd_scaffold(args):
         proj["number"] = num
     if min_length:
         proj["min_length"] = min_length
+    if args.max_length:
+        proj["max_length"] = args.max_length
     if not args.no_music:
         # Resolve the bed PER CHANNEL: explicit --music wins; else the theme's own bed
         # (THEME_MUSIC); else the global fallback. --music-gain (when given) overrides the
@@ -610,6 +612,9 @@ def main(argv=None):
     s.add_argument("--aspects", default=None, help="comma list to render simultaneously, e.g. '9:16,1:1'")
     s.add_argument("--min-length", type=int, default=None, dest="min_length",
                    help="minimum playback seconds (sets manifest length_warning if unmet)")
+    s.add_argument("--max-length", type=int, default=None, dest="max_length",
+                   help="playback ceiling in seconds; the render must come in UNDER it "
+                        "(e.g. 180 for the Shorts wall). Fails validate if not.")
     s.add_argument("--music", default=None,
                    help="background music path (default: the channel's own bed, resolved from --theme)")
     s.add_argument("--music-gain", type=float, default=None, dest="music_gain",

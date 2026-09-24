@@ -57,6 +57,13 @@ def run(proj):
     if proj.min_length and duration and duration < proj.min_length:
         length_warning = f"duration {duration}s is under min_length {proj.min_length}s — deepen the script"
         ready = False
+    # The ceiling (2026-09-24). Robot Roundup's first episode rendered 180.37 s against a
+    # 180 s Shorts wall that lived only in SKILL prose, and validate said ok. getattr so
+    # a caller's minimal project stand-in without the attribute keeps working.
+    max_length = getattr(proj, "max_length", None)
+    if max_length and duration and duration >= max_length:
+        length_warning = f"duration {duration}s is not under max_length {max_length}s — cut a segment"
+        ready = False
 
     # Does every rendered slide actually SHOW something? Four times (stat/statgrid
     # 2026-08-12, reframe 2026-08-20, ring 2026-08-24) a deck shipped a blank card and

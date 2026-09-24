@@ -1,0 +1,16 @@
+{
+  "asset": "rrp_arm_mark",
+  "world": "Robot Roundup (rides the goldenrod paper world, paper-world-rrp/STYLE.md).",
+  "role": "Show mark (memetic logo) for thumbnails, title cards, stings, and the mandatory CTA slide. Locked by the operator 2026-09-18 from a 4-take proof (take 3).",
+  "generated": "2026-09-18",
+  "generator": "Magnific, model gpt-2 (100 cr x 4 takes), style-anchored to 8ahgUPJIrU (the WSC mark source render, the goldenrod world's canonical style reference), then images_remove_background (3 cr). 403 credits total.",
+  "prompt": "Layered cut-paper collage illustration, handmade papercraft style with visibly torn and cleanly-cut paper edges and soft drop shadows between stacked paper layers. Subject: a single articulated industrial robot arm seen from the side, three straight segments joined by two round pivot joints, rising from a small flat round base, with an open two-finger gripper at the top. Centered emblem-like composition on a plain empty goldenrod paper background, generous margins on all sides. Editorial explainer / storybook aesthetic, flat and clean. Color palette strictly: goldenrod-yellow paper background (#F2C94C), deep ledger-green paper for figures and linework (#1F3D2E), and a single copper paper accent (#A4551E) used sparingly. Generous negative space, calm composition, no text, no words, no writing, no signatures, no numbers, no logos.",
+  "selection_note": "Take 3 chosen on legibility at mark size, which is the only test that matters for a mark: its gripper is the widest and most open of the four, so the silhouette still reads as a robot arm at ~96px on the CTA card. It also has the most visibly torn paper edges (most papercraft of the set) and the heaviest base, so it sits rather than floats. Take 1 was the runner-up (cleanest cuts, boldest copper joints, but the gripper closes up small). Take 2's gripper reads as a bent stick small. Take 4 was ruled out on palette: its accent rendered as a saturated orange rather than the world's copper #A4551E.",
+  "assets": [
+    {"file": "rrp_arm_mark.png", "creation": "6Ap7RzWiJO", "source_creation": "p8FnZ4Jehw", "px": [1024, 1024], "mode": "RGBA", "runtime_copy": "remotion/public/papercraft-rrp/mark_rrp.png"},
+    {"file": "rrp_arm_mark_source.png", "creation": "p8FnZ4Jehw", "px": [1024, 1024], "mode": "RGB"}
+  ],
+  "rejected_takes": ["dtqWANFXSL", "KL4CmdAkqp", "4RVgxqq9Aa"],
+  "palette_caveat": "Generated on the goldenrod ground because Robot Roundup took the Wednesday slot and currently renders on theme key wsc-goldenrod. If the show is ever given its own palette key, this mark is regenerated with it. Tracked in make_money/routine_changes/2026-09-18-youtube-channel-analysis-and-cuts.md.",
+  "disclosure": "Stylized non-photoreal art: ai_generated_visuals true, synthetic false."
+}
