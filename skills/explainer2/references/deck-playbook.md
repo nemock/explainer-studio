@@ -350,8 +350,9 @@ every `accent`/`accent2`/`mark` token is a substring of its headline/title; no
       the image's moving container, so they ride the Ken Burns and stay on-subject
       ([[annotation-marks-land-on-subject]]). Place them by OPENING the actual image and
       reading the subject's position, never by estimating; verify with a still before the
-      full render. If the census's annotation-coverage floor is short, add an image-space
-      mark to another figure — never satisfy it by putting an underline back on a text card.
+      full render (Read its `tools/frame_preview.py` preview, SKILL hard rule 9). If the
+      census's annotation-coverage floor is short, add an image-space mark to another
+      figure — never satisfy it by putting an underline back on a text card.
 - [ ] Long segments (>20s) carry a mid-scene motion beat — an annotation, a cued
       stage, or a figure move — so no shot sits static through speech (QA's
       longest-shot warning is the tell).

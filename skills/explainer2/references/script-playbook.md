@@ -342,9 +342,10 @@ to date missed length on the first draft; the rule exists because it bites).
    - **A `beat` marks where a section starts, which is not always what the viewer
      sees there.** Extract a frame at each mark **+2s** (sampling exactly on the mark
      catches the outgoing slide mid-transition), tile them into one contact sheet,
-     and read it once. On module 3 this moved a boundary: the beat labelled "Scope is
-     company size" opened on the ProductCon critique, and the scope argument didn't
-     start for another 48 seconds. It shipped as two chapters instead of one.
+     and read it once, as a `tools/frame_preview.py` preview rather than the full-res
+     sheet (SKILL hard rule 9). On module 3 this moved a boundary: the beat labelled
+     "Scope is company size" opened on the ProductCon critique, and the scope argument
+     didn't start for another 48 seconds. It shipped as two chapters instead of one.
 
    Merging a short bridge beat or dropping a sub-30s outro beat is a fine editorial
    call; shipping a chapter whose title doesn't match its frame is not. And a

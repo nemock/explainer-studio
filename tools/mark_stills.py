@@ -16,8 +16,16 @@ coordinate. Two rules follow, and this tool enforces the second:
      tiles the frames into work/mark_stills.png. LOOK at every tile: name the thing
      each circle sits on. "Roughly there" at thumbnail size is how misses shipped.
 
+Read the sheet through its preview, never the ~1900 px sheet itself (SKILL hard rule 9:
+full-res Reads bloat the session transcript). The preview's tiles are ~260 px wide (less
+past fifteen scenes), which is thumbnail size again, so wherever you can't name what a
+circle sits on, preview that scene's own frame:
+    python3 tools/frame_preview.py <project_dir>/work/mark_stills/mark_NN.png
+gives an 800 px view, wider than the tile in the full-res sheet.
+
 Usage:  python3 tools/mark_stills.py <project_dir>
-Writes: <project_dir>/work/mark_stills.png  (+ per-scene frames in work/mark_stills/)
+Writes: <project_dir>/work/mark_stills.png, its preview work/previews/mark_stills_preview.jpg
+        (+ per-scene frames in work/mark_stills/)
 
 Prereq: narrate+align have run (build_spec needs work/segments.json + alignment).
 """
@@ -29,8 +37,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from explainer2.project import Project           # noqa: E402
 from explainer2 import remotion_engine as E      # noqa: E402
+from frame_preview import DEFAULT_MAX, make_preview  # noqa: E402
 
 REMO = Path(__file__).resolve().parents[1] / "remotion"
 
@@ -111,7 +121,10 @@ def main():
         d.text((x + 2, y + CH + 4), f"{i:02d} {label}", fill=(255, 255, 255))
     final = pdir / "work" / "mark_stills.png"
     sheet.save(final)
-    print(f"\n{final}")
+    preview = make_preview(final, None, DEFAULT_MAX)
+    print(f"\nsheet:   {final}")
+    print(f"preview: {preview}")
+    print("Read the preview, never the sheet (SKILL hard rule 9).")
 
 
 if __name__ == "__main__":

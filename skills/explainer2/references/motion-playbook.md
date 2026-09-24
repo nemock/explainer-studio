@@ -371,8 +371,11 @@ rules now:
 2. **Verify with `python3 tools/mark_stills.py <project_dir>`** (after narrate+align).
    It renders every mark-carrying scene through the real engine at the frame where its
    last mark has finished drawing and tiles the REAL frames into `work/mark_stills.png`.
-   Read every tile and name the thing each mark sits on. This is the gate; a raw-art
-   sheet is not.
+   Read the preview it prints (`work/previews/mark_stills_preview.jpg`), never the
+   ~1900 px sheet (SKILL hard rule 9), and name the thing each mark sits on in every
+   tile. Where a tile is too small to say, preview that scene's own frame
+   (`python3 tools/frame_preview.py <project_dir>/work/mark_stills/mark_NN.png`) and Read
+   that. This is the gate; a raw-art sheet is not.
 
 **A SCHEMATIC ANNOTATION DOES NOT FOLLOW THE SCHEMATIC CAMERA (2026-08-14, operator-caught).**
 `annotations` are FRAME-space; the schematic's `camera` translates and zooms the nodes under
