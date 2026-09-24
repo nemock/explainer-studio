@@ -246,6 +246,21 @@ words (set `cue` to the phrase being said); keep labels ≥ caption size; on `fi
 slides prefer the figure's own image-space `moves`/`highlight` for document work and
 frame-space annotations for editorial arrows.
 
+**The render refuses an annotation it cannot draw where it was authored (2026-09-24).**
+`AnnotateOverlay` puts a missing point at the FRAME centre, draws NOTHING for a `kind` it
+does not know or for no `kind` at all (a figure mark with no kind is a circle; an
+annotation is not), and draws nothing for any `color` other than `green`, `red` or `white`.
+None of that errors. On published renders: #67's two strikes authored as `at`+`w` crossed
+nothing out, #48's underlines authored as `from`/`to` drew at the frame centre (one
+through a headline, two through a viewer quote), and 26 annotations coloured `amber`
+(ISO 14971 modules 9–12) or `navy` (#48) never appeared. `build_spec` now checks every
+rendered slide's `annotations` against the same per-kind contract as figure `marks`
+(below), plus `doodle` → `at`, plus the colour palette, and stops the render with
+`MalformedMarkError` and `BLOCKED-MARKS.md`. `deck_census.py` fails the same deck before
+narrate and align. The tables are `ANNOTATION_FIELDS` and `ANNOTATION_COLORS` in
+`remotion_engine.py`; keep them in step with `useRoughPaths`/`DoodleAnn` and `colorsFor` in
+`remotion/src/components/Annotate.tsx`.
+
 **Figure `title` ALWAYS renders (fixed 2026-07-28).** A figure's `title` used to render
 *only* when `imageFromFrac` was also set; authored without it, the headline was silently
 discarded — no warning, census still passed, render still succeeded, the line just never
@@ -305,9 +320,9 @@ underline and renders as a red or green bar floating on blank paper. Two consequ
 - **`strike` and `arrow` take `from`/`to`, never `at`+`w`; `circle`, `box` and `underline`
   take `at`, never `from`/`to`.** `FigureMarks` puts any point it cannot find at the image
   centre. A strike authored like a circle collapses to a zero-length line there and draws
-  nothing, while the census still counts the slide as annotated (module 6's first render had
-  five). An underline authored like a strike draws a stray line across the middle of the
-  figure (published modules 3 and 4 have seven). **`build_spec` enforces the per-kind field
+  nothing, and until 2026-09-24 the census still counted the slide as annotated (module 6's
+  first render had five). An underline authored like a strike draws a stray line across the
+  middle of the figure (published modules 3 and 4 have seven). **`build_spec` enforces the per-kind field
   contract since 2026-09-23:** a mark missing its kind's fields, or carrying an unknown
   `kind`, stops the render with `MalformedMarkError` naming the slide and the field, and
   writes `BLOCKED-MARKS.md` into the project. Fix the deck (or its build script) and render
@@ -558,6 +573,8 @@ The floor (all MUST pass):
 5. **Annotations on ≥ 1/3 of slides** (vector arrows/circles/underlines or
    doodle stamps), each with a `cue` on the exact spoken phrase. The
    hand-drawn layer is the channel's personality; a bare deck reads corporate.
+   Only a mark or annotation the renderer can draw where it was authored counts
+   (§2H contract; since 2026-09-24 the census applies the engine's own check).
 6. **Narration cues resolve on every deck: a deck with `cues: 0` authored
    fields is a failed deck.** Auto item-sync covers list-ish types, but
    counters, schematics, figures, and annotations need authored phrases.
@@ -571,7 +588,9 @@ The floor (all MUST pass):
 python3 tools/deck_census.py <project_dir>
 ```
 It prints slide-type counts, text-type %, max text run, annotation coverage,
-cue count, and PASS/FAIL per rule above. Fix fails before rendering.
+cue count, and PASS/FAIL per rule above. It also FAILs, and lists, every figure mark
+and annotation the renderer cannot draw where it was authored, the same ones the render
+would refuse (§2H). Fix fails before rendering.
 
 ## 5. The spec contract (data in, motion out)
 

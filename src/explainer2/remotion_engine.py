@@ -903,19 +903,49 @@ def _scene_for(slide, theme="", warn=None):
 # circle.
 MARK_FIELDS = {"circle": ("at",), "box": ("at",), "underline": ("at",),
                "arrow": ("from", "to"), "strike": ("from", "to")}
+
+# ANNOTATION CONTRACT (2026-09-24). Frame-space `annotations` break the same way.
+# AnnotateOverlay (remotion/src/components/Annotate.tsx) reads the same geometry per kind,
+# plus `at` for a doodle stamp, and puts a point it cannot find at the FRAME centre. Two
+# failures are quieter than FigMark's: a kind outside this table, an absent one included,
+# matches no branch there and draws NOTHING (FigMark would draw a circle), and a `color`
+# outside its palette has no ink at all, so the mark is invisible (FigMark falls back to the
+# accent). On published renders, past every check:
+#   strike as at+w        #67 s14 s29: meant to cross out "90%" and "Absolute"; nothing drew
+#   underline as from/to  #48 s11 s12 s14 s21 and its trust-it-less Short: lines at the frame
+#                         centre, one through a headline, two through a viewer quote
+#   color amber / navy    ISO 14971 modules 9-12 and two of their Shorts (24), #48 s11 s13 (2):
+#                         nothing drew (s11 is also an underline without `at`)
+# The same _mark_problems checks both layers (_MARK_LAYERS below). Keep ANNOTATION_FIELDS in
+# step with useRoughPaths and DoodleAnn, and ANNOTATION_COLORS with colorsFor.
+ANNOTATION_FIELDS = {**MARK_FIELDS, "doodle": ("at",)}
+ANNOTATION_COLORS = ("green", "red", "white")
 MARKS_BLOCKED_NAME = "BLOCKED-MARKS.md"
+
+# What each layer's renderer does with what it is given, keyed by the deck field. `default`
+# is the kind an absent `kind` becomes (None: an absent kind draws nothing). `colors` is the
+# palette a `color` must come from (None: any colour draws, because FigMark falls back to
+# the accent).
+_MARK_LAYERS = {
+    "marks": {"fields": MARK_FIELDS, "default": "circle", "space": "image",
+              "renderer": "FigureMarks", "unknown": "it renders as a circle", "colors": None},
+    "annotations": {"fields": ANNOTATION_FIELDS, "default": None, "space": "frame",
+                    "renderer": "AnnotateOverlay", "unknown": "nothing appears",
+                    "colors": ANNOTATION_COLORS},
+}
 
 
 class MalformedMarkError(RuntimeError):
-    """Raised by build_spec when a figure/footage mark breaks MARK_FIELDS."""
+    """Raised by build_spec when a figure/footage mark breaks MARK_FIELDS, or a slide's
+    frame-space annotation breaks ANNOTATION_FIELDS or ANNOTATION_COLORS."""
 
     def __init__(self, problems):
         self.problems = problems
         n = len(problems)
         super().__init__(
-            f"{n} figure mark{'s' if n != 1 else ''} break{'s' if n == 1 else ''} the per-kind "
-            f"field contract and would draw in the wrong place or not at all — refusing to "
-            f"render:\n  " + "\n  ".join(problems))
+            f"{n} figure mark/annotation problem{'s' if n != 1 else ''}: "
+            f"{'each' if n != 1 else 'it'} would draw in the wrong place or not at all — "
+            f"refusing to render:\n  " + "\n  ".join(problems))
 
 
 def _is_point(v):
@@ -923,42 +953,54 @@ def _is_point(v):
             and all(isinstance(c, (int, float)) and not isinstance(c, bool) for c in v))
 
 
-def _mark_problems(sid, marks):
-    """One line per mark that breaks MARK_FIELDS, naming the slide, the mark's index and the
-    field. Empty when every mark will draw where it was authored."""
+def _mark_problems(sid, marks, key="marks"):
+    """One line per entry of a slide's `marks` (the default) or `annotations` (key=
+    "annotations") that its renderer cannot draw where it was authored, naming the slide,
+    the entry's index and the field. Empty when every entry will draw where it was
+    authored. The rules per layer are _MARK_LAYERS."""
+    layer = _MARK_LAYERS[key]
+    fields, space, renderer = layer["fields"], layer["space"], layer["renderer"]
     if not isinstance(marks, list):
-        return [f"{sid}: `marks` must be a list of mark objects, got {type(marks).__name__}"]
+        return [f"{sid}: `{key}` must be a list of mark objects, got {type(marks).__name__}"]
     out = []
     for i, mk in enumerate(marks):
-        where = f"{sid}: marks[{i}]"
+        where = f"{sid}: {key}[{i}]"
         if not isinstance(mk, dict):
             out.append(f"{where} is not a mark object: {mk!r}")
             continue
-        kind = mk.get("kind") or "circle"
-        need = MARK_FIELDS.get(kind) if isinstance(kind, str) else None
+        kind = mk.get("kind") or layer["default"]
+        need = fields.get(kind) if isinstance(kind, str) else None
         if need is None:
-            out.append(f"{where} has kind {kind!r}, which FigureMarks does not draw (it "
-                       f"renders as a circle); use one of {', '.join(MARK_FIELDS)}")
+            what = f"has kind {kind!r}" if kind else "has no `kind`"
+            out.append(f"{where} {what}, which {renderer} does not draw ({layer['unknown']}); "
+                       f"use one of {', '.join(fields)}")
             continue
         missing = [f for f in need if f not in mk]
         if missing:
             if need == ("at",):
-                why = ("it draws at `at` [x, y] (+ `w`/`h`), so without it the mark lands on "
-                       "the image centre")
+                why = (f"it draws at `at` [x, y] (+ `w`/`h`), so without it the mark lands on "
+                       f"the {space} centre")
                 if "from" in mk or "to" in mk:
                     why += "; `from`/`to` are read only by arrow and strike"
             elif len(missing) == 2:
-                why = ("it draws from `from` [x, y] to `to` [x, y], never `at`+`w`; as "
-                       "authored it is a zero-length line at the image centre and draws nothing")
+                why = (f"it draws from `from` [x, y] to `to` [x, y], never `at`+`w`; as "
+                       f"authored it is a zero-length line at the {space} centre and draws "
+                       f"nothing")
             else:
-                why = ("it draws from `from` [x, y] to `to` [x, y]; the missing end snaps to "
-                       "the image centre")
+                why = (f"it draws from `from` [x, y] to `to` [x, y]; the missing end snaps to "
+                       f"the {space} centre")
             out.append(f"{where} {kind} is missing "
                        f"{' and '.join(f'`{f}`' for f in missing)} — {why}")
         for f in need:
             if f in mk and not _is_point(mk[f]):
                 out.append(f"{where} {kind} `{f}` must be an [x, y] pair of numbers (0-1 of "
-                           f"the image), got {mk[f]!r}")
+                           f"the {space}), got {mk[f]!r}")
+        # A falsy colour is the default ink, as `a.color || 'green'` reads it.
+        color = mk.get("color")
+        if layer["colors"] and color and color not in layer["colors"]:
+            out.append(f"{where} {kind} has color {color!r}, which {renderer} has no ink for, "
+                       f"so it draws invisible; use {', '.join(layer['colors'])} or leave "
+                       f"it out")
     return out
 
 
@@ -983,8 +1025,12 @@ def build_spec(sp):
         comp, fields = _scene_for(slide, theme=sp.data.get("theme", ""),
                                   warn=warnings.append)
         # Only marks the type map passed through can draw, so those are the ones checked
-        # (MARK_FIELDS above). Collected across the whole deck and raised once, below.
+        # (MARK_FIELDS above). Annotations draw over ANY scene (step 4 below), so every
+        # rendered slide's are checked (ANNOTATION_FIELDS). Collected across the whole deck
+        # and raised once, below.
         mark_problems += _mark_problems(s["slide"], fields.get("marks") or [])
+        mark_problems += _mark_problems(s["slide"], slide.get("annotations") or [],
+                                        "annotations")
         sc = {"component": comp, "from": int(round(start * fps)),
               "durationInFrames": max(1, int(round((end - start) * fps))), "fields": fields}
 
@@ -1517,60 +1563,67 @@ def render(sp, log=print, frames=None, out=None):
 
 def _marks_blocked_text(sp, problems):
     n = len(problems)
-    L = [f"# BLOCKED: malformed figure marks ({sp.dir.name})", "",
-         f"**{n} figure mark{'s' if n != 1 else ''} in `deck.json` break{'s' if n == 1 else ''} "
-         f"the per-kind field contract.**", "",
-         "`FigureMarks` (`remotion/src/components/Media.tsx`) reads `at` for circle, box and",
-         "underline and `from`/`to` for arrow and strike, and puts any point it cannot find at",
-         "the image centre. The render would NOT fail: a `strike` authored as `at`+`w` draws",
-         "nothing, and an `underline` authored as `from`/`to` draws a stray line across the",
-         "middle of the figure.", "",
-         "## Marks to fix", ""]
+    L = [f"# BLOCKED: malformed figure marks or annotations ({sp.dir.name})", "",
+         f"**{n} problem{'s' if n != 1 else ''} with the figure `marks` or frame-space "
+         f"`annotations` in `deck.json`.** Each would draw in the wrong place or not at all.", "",
+         "`FigureMarks` (`remotion/src/components/Media.tsx`, image space) and `AnnotateOverlay`",
+         "(`remotion/src/components/Annotate.tsx`, frame space) read `at` for circle, box and",
+         "underline and `from`/`to` for arrow and strike, and put any point they cannot find at",
+         "the centre. The render would NOT fail: a `strike` authored as `at`+`w` draws nothing,",
+         "and an `underline` authored as `from`/`to` draws a stray line across the middle. An",
+         "annotation fails more quietly still: a kind the overlay does not know, or no `kind`,",
+         "draws nothing, and so does a `color` other than green, red or white.", "",
+         "## To fix", ""]
     L += [f"- {p}" for p in problems]
     L += ["", "## The contract", "",
           "| kind | draws from | optional |", "|---|---|---|",
           "| `circle`, `box` | `at`: [x, y] | `w`, `h` |",
           "| `underline` | `at`: [x, y], just below the subject | `w` |",
-          "| `arrow`, `strike` | `from`: [x, y] and `to`: [x, y] | |", "",
-          "Coordinates are 0-1 of the image (motion-playbook §2H).", "",
+          "| `arrow`, `strike` | `from`: [x, y] and `to`: [x, y] | |",
+          "| `doodle` (annotations only) | `at`: [x, y] | `w`, `rotate` |", "",
+          "Coordinates are 0-1 of the image for `marks` and of the frame for `annotations`",
+          "(motion-playbook §2H). An annotation's `color` is `green`, `red` or `white`, or left",
+          "out. A mark with no `kind` is a circle; an annotation with no `kind` draws nothing.", "",
           "## Fix", ""]
     if sp.data.get("derived_from"):
         # shorts.build_derived puts each cut at <parent>/shorts/<slug> and rewrites its deck
         # from the parent's on every run, so the fix belongs in the parent.
         L += [f"This is a Short. Its slides are copied from the parent project "
-              f"`{sp.data['derived_from']}` on every Shorts run, so fix the marks in the "
+              f"`{sp.data['derived_from']}` on every Shorts run, so fix them in the "
               f"parent's `deck.json` (or in the script that builds it), then re-cut:", "",
               "```bash",
               f"/Volumes/Casima/claudeCode/explainer2/bin/explainer2 shorts "
               f"'{sp.dir.parent.parent}' --only {sp.dir.name}",
               "```", ""]
     else:
-        L += ["Fix the marks in `deck.json` (or in the script that builds it), then render:", "",
+        L += ["Fix them in `deck.json` (or in the script that builds it), then render:", "",
               "```bash",
               f"/Volumes/Casima/claudeCode/explainer2/bin/explainer2 render '{sp.dir}'",
               "```", "",
               "If the recording watcher launched this render, it relaunches phase 1 by itself",
               "on its retry schedule once the deck is fixed.", ""]
-    L += ["The next render whose marks all pass deletes this file.", ""]
+    L += ["The next render whose marks and annotations all pass deletes this file.", ""]
     return "\n".join(L)
 
 
 def _build_spec_guarded(sp, log=print):
-    """build_spec for a real render. A malformed mark is refused the way the media guards
-    refuse: BLOCKED-MARKS.md in the project naming every bad mark, a BLOCKED log line, and
-    the error re-raised so the render stage fails and nothing downstream runs. A build whose
-    marks all pass deletes the file, so a fixed deck never looks blocked."""
+    """build_spec for a real render. A malformed mark or annotation is refused the way the
+    media guards refuse: BLOCKED-MARKS.md in the project naming every one, a BLOCKED log
+    line, and the error re-raised so the render stage fails and nothing downstream runs. A
+    build whose marks and annotations all pass deletes the file, so a fixed deck never looks
+    blocked."""
     blocked = sp.dir / MARKS_BLOCKED_NAME
     try:
         spec = build_spec(sp)
     except MalformedMarkError as e:
         blocked.write_text(_marks_blocked_text(sp, e.problems))
-        log(f"marks-guard: BLOCKED — {len(e.problems)} figure mark(s) break the per-kind "
-            f"field contract; wrote {blocked.name} — refusing to render")
+        log(f"marks-guard: BLOCKED — {len(e.problems)} figure mark/annotation problem(s); "
+            f"wrote {blocked.name} — refusing to render")
         raise
     if blocked.exists():
         blocked.unlink()
-        log(f"marks-guard: previous {blocked.name} cleared — every figure mark carries its fields")
+        log(f"marks-guard: previous {blocked.name} cleared — every figure mark and annotation "
+            f"will draw")
     return spec
 
 

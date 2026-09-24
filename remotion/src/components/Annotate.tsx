@@ -15,6 +15,10 @@ import {Ink, useInk} from '../ink';
 // per-kind geometry in 0-1 frame space: from/to (arrow, strike), at+w/h (circle, box,
 // underline, doodle). cueFrame is resolved by the Python spec-builder from a spoken
 // phrase — the React side stays a pure function of frame.
+// Nothing here errors on a bad annotation: a missing point lands on the frame centre, and
+// an unknown (or absent) kind or a colour outside colorsFor draws nothing. So build_spec
+// refuses them instead (ANNOTATION_FIELDS / ANNOTATION_COLORS in remotion_engine.py,
+// 2026-09-24). Add a kind or a colour here and there together, or the render refuses it.
 //
 // Determinism: rough.js is ALWAYS seeded (hash of geometry + index); no randomness.
 

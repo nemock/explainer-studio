@@ -221,7 +221,12 @@ motion-playbook §5/§2H). What you author in `deck.json`:
   or `{kind: doodle, name: "<category>/<name>" from library/doodles/manifest.json,
   at, w, color?, reveal: pop|wipe, cue}`. One focal annotation at a time; use them to
   point at the thing being said, not as decoration. `annotations` are FRAME-space —
-  they do NOT move with a figure/footage Ken Burns.
+  they do NOT move with a figure/footage Ken Burns. Each kind takes its own geometry
+  (`at` for circle/box/underline/doodle, `from`/`to` for arrow/strike), every annotation
+  names its `kind`, and `color` is `green`, `red` or `white` or left out. Anything else
+  draws at the frame centre or not at all, so `deck_census.py` fails it and the render
+  refuses it (`BLOCKED-MARKS.md`, 2026-09-24). #48, one of its Shorts and #67 shipped
+  seven with the wrong geometry, and 26 `amber`/`navy` annotations never appeared.
 - **`marks: [...]`** — the IMAGE-space twin of annotations, for pointing at something
   INSIDE a `figure`/`footage`'s art (a face, a robot, a chart). Same kinds + cue contract,
   but `at`/`from`/`to` are **0-1 of the IMAGE**, and the mark rides the Ken Burns so it
@@ -231,7 +236,7 @@ motion-playbook §5/§2H). What you author in `deck.json`:
   Each kind takes its own geometry: `at` for circle/box/underline, `from`/`to` for
   arrow/strike. The render refuses a mark authored with the other kind's fields
   (`BLOCKED-MARKS.md`, 2026-09-23), because the renderer would otherwise put it at the image
-  centre without an error.
+  centre without an error, and since 2026-09-24 `deck_census.py` fails it too.
 - **`figure` guided tours:** `moves[]{to:{x,y,scale}, cue}` pans/zooms the framed
   image region-to-region as the narration discusses each part;
   `assemble{pieces[]{clip:[x,y,w,h], cue}}` builds the image in cued pieces;

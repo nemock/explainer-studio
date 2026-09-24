@@ -3,7 +3,8 @@
 
 Tallies a project's deck.json against the quantified floor that exists because #18
 shipped as a narrated PowerPoint (14/22 text slides, 0 data-viz, 0 cues). Run before
-every render; paste the tally into PLAYBOOK deck-gate notes. Pure stdlib, read-only.
+every render; paste the tally into PLAYBOOK deck-gate notes. Read-only; stdlib plus the
+render's own mark contract from src/explainer2/remotion_engine.py (stdlib-only itself).
 
 Usage: python3 tools/deck_census.py <project_dir>
 Exit code: 0 = floor passed, 1 = floor failed (advisories never fail the run).
@@ -12,6 +13,11 @@ import json
 import re
 import sys
 from pathlib import Path
+
+# The render's own contract for figure `marks` and frame-space `annotations`, imported
+# rather than re-derived so the census and build_spec cannot disagree about what draws.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+from explainer2.remotion_engine import _mark_problems  # noqa: E402
 
 # Typography-only slide types (motion-playbook §4b census definition).
 TEXT_TYPES = {"statement", "reframe", "punch", "quote", "highlight", "define", "list"}
@@ -117,7 +123,22 @@ def main():
         run = run + 1 if f else 0
         max_run = max(max_run, run)
 
-    annotated = sum(1 for s in slides if s.get("annotations") or s.get("marks"))
+    # A mark or annotation the renderer cannot draw where it was authored lands on the
+    # centre or draws nothing, and build_spec refuses the deck for it (BLOCKED-MARKS.md).
+    # So it does not count toward the floor, and it fails the census, which runs before
+    # narrate and align instead of after them. #67's two strikes authored as at+w counted
+    # as annotated here and drew nothing (2026-09-24).
+    mark_problems = []
+    annotated = 0
+    for s in slides:
+        sid = s.get("id", "?")
+        drawable = False
+        for key in ("annotations", "marks"):
+            items = s.get(key) or []
+            mark_problems += _mark_problems(sid, items, key)
+            if isinstance(items, list):
+                drawable = drawable or any(not _mark_problems(sid, [x], key) for x in items)
+        annotated += drawable
     cued = sum(1 for s in slides if slide_has_cues(s))
     dataviz = sum(types.get(t, 0) for t in DATA_VIZ_TYPES)
     teaching = sum(types.get(t, 0) for t in TEACHING_TYPES)
@@ -153,11 +174,15 @@ def main():
         (f"annotated slides {annotated}/{n} (need ≥ 1/3)", annotated * 3 >= n),
         (f"slides with authored narration cues {cued} (need ≥ 1; 0 = failed deck)", cued >= 1),
         (f"slides that would render blank: {', '.join(blank) if blank else 'none'}", not blank),
+        (f"marks/annotations that would draw in the wrong place or not at all: "
+         f"{len(mark_problems) or 'none'}", not mark_problems),
     ]
     ok = True
     for label, passed in checks:
         ok &= passed
         print(f"  [{'PASS' if passed else 'FAIL'}] {label}")
+    for p in mark_problems:  # under the last check, which is theirs
+        print(f"         {p}")
     print(f"  [info] data-viz slides: {dataviz} · footage slides: {footage}")
     if number_offenders:
         print(f"  [ADVISORY] segments speaking numbers on text-only slides "
