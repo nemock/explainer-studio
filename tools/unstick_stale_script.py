@@ -25,12 +25,24 @@ punctuation, a typo fix that does not change what is said). It re-stamps those
 segments' text records to the current script text instead of throwing takes away.
 Use it deliberately — it is an assertion that you listened.
 
+Shorts hook/outro cards (2026-09-25) are handled the same way. They are named by
+their booth card id (the number the booth shows as "Card N" minus one, same as a
+segment id) or by their stem, e.g. `--accept 40` or
+`--accept short_ten-lives_hook`. `--fix` moves a stale Short take aside as
+`<stem>.oldtext.bak`, and also moves its alternate takes (`<stem>.takeN.wav`) whose
+own stamp does not match the current plan text, so the booth cannot promote an
+old-text take back into place. It deletes that cut's rendered mp4s
+(`shorts/<slug>/video/`), and leaves the long-form mp4s alone unless a long-form
+segment was stale too. `--accept` re-stamps the current take only; alternate takes
+keep their own stamps, since accepting is an assertion about the audio you heard.
+
 Usage:
   unstick_stale_script.py <project_dir>                      # report only
   unstick_stale_script.py <project_dir> --fix                # do the recovery
   unstick_stale_script.py <project_dir> --fix --relaunch-booth
   unstick_stale_script.py <project_dir> --accept 3,7         # keep those takes
   unstick_stale_script.py <project_dir> --accept all
+  unstick_stale_script.py <project_dir> --accept short_ten-lives_hook   # a Short card by stem
 """
 import argparse
 import subprocess
@@ -65,32 +77,67 @@ def report(proj, rep):
     for row in rep["segments"]:
         if row["status"] in ("match", "exempt"):
             continue
-        print(f"  segment {row['id']} [{row['status']}] slide={row.get('slide')} "
+        print(f"  {_label(row)} [{row['status']}] slide={row.get('slide')} "
               f"({row['stem']}.wav)")
         if row["status"] == "stale":
+            src = "shorts/plan.json" if row.get("kind") == "short" else "script.json"
             print(f"      recorded ({row.get('source')}): {row.get('recorded_text', '')[:120]}")
-            print(f"      current  script.json     : {row.get('current_text', '')[:120]}")
+            print(f"      current  {src:<16}: {row.get('current_text', '')[:120]}")
     print()
 
 
 def accept(proj, rep, ids):
-    """Re-stamp the given segments' text records to the current script text."""
+    """Re-stamp the given cards' text records to the current script / plan text."""
     stale = {r["id"]: r for r in rep["segments"] if r["status"] in ("stale", "unstamped")}
+    by_stem = {r["stem"]: r["id"] for r in stale.values()}
     if ids == ["all"]:
         ids = sorted(stale)
     else:
-        ids = [int(i) for i in ids]
+        ids = [_resolve(i, by_stem) for i in ids]
     done = []
     for sid in ids:
         row = stale.get(sid)
         if row is None:
-            print(f"  segment {sid}: not stale or unstamped — skipped")
+            print(f"  card {sid}: not stale or unstamped — skipped")
             continue
         scriptguard.stamp(proj.voiceover_dir, row["stem"], row["current_text"],
                           seg_id=sid, slide=row.get("slide"), source="operator-accepted")
         done.append(sid)
-        print(f"  segment {sid}: accepted — audio kept, text record re-stamped")
+        print(f"  {_label(row)}: accepted — audio kept, text record re-stamped")
     return done
+
+
+def _resolve(token, by_stem):
+    """A card id ("40") or a stem ("short_ten-lives_hook", ".wav" optional)."""
+    if token.isdigit():
+        return int(token)
+    stem = token[:-4] if token.endswith(".wav") else token
+    return by_stem.get(stem, token)   # unknown -> the caller reports it skipped
+
+
+def _label(row):
+    if row.get("kind") == "short":
+        return f"short card {row['id']} (booth Card {row['id'] + 1})"
+    return f"segment {row['id']}"
+
+
+def _move_old_takes(vdir, row):
+    """A Short card's alternate takes recorded against the old text go aside too, so
+    the booth's take picker cannot promote one back into place. A take whose own stamp
+    matches the current plan text stays: it is a valid take of the new line."""
+    for take in sorted(vdir.glob(f"{row['stem']}.take*.wav")):
+        tstem = take.name[:-4]
+        tmeta = scriptguard.read_meta(vdir, tstem)
+        if tmeta and tmeta.get("text_sha256") and (
+                scriptguard.text_hash(tmeta.get("text", ""))
+                == scriptguard.text_hash(row["current_text"])):
+            continue
+        dst = _free_name(vdir / f"{tstem}.oldtext.bak")
+        take.rename(dst)
+        print(f"  {_label(row)}: {take.name} -> {dst.name}")
+        mp = scriptguard.meta_path(vdir, tstem)
+        if mp.exists():
+            mp.rename(_free_name(vdir / f"{tstem}.oldtext.meta.json"))
 
 
 def fix(proj, rep, relaunch=False):
@@ -107,10 +154,12 @@ def fix(proj, rep, relaunch=False):
             dst = _free_name(vdir / f"{row['stem']}.oldtext.bak")
             wav.rename(dst)
             moved.append(row["id"])
-            print(f"  segment {row['id']}: {wav.name} -> {dst.name} (needs a re-record)")
+            print(f"  {_label(row)}: {wav.name} -> {dst.name} (needs a re-record)")
         meta = scriptguard.meta_path(vdir, row["stem"])
         if meta.exists():
             meta.rename(_free_name(vdir / f"{row['stem']}.oldtext.meta.json"))
+        if row.get("kind") == "short":
+            _move_old_takes(vdir, row)
 
     # 2. the Finish signal — the watcher must not re-fire Phase 1 on it
     done = work / "record_done.json"
@@ -126,8 +175,16 @@ def fix(proj, rep, relaunch=False):
             p.unlink()
             print(f"  cleared work/{name}")
 
-    # 4. mp4s built from the mismatched audio
-    for mp4 in sorted(list((proj.dir / "video").glob("*.mp4")) + list(work.glob("video_*.mp4"))):
+    # 4. mp4s built from the mismatched audio. A stale Short card taints only its own
+    #    cut; the long-form goes only when a long-form segment was stale.
+    stale_rows = [r for r in rep["segments"] if r["status"] == "stale"]
+    mp4s = []
+    if any(r.get("kind") != "short" for r in stale_rows):
+        mp4s += list((proj.dir / "video").glob("*.mp4")) + list(work.glob("video_*.mp4"))
+    for slug in sorted({r["plan_slug"] for r in stale_rows if r.get("kind") == "short"}):
+        cut = proj.dir / "shorts" / slug
+        mp4s += list((cut / "video").glob("*.mp4")) + list((cut / "work").glob("video_*.mp4"))
+    for mp4 in sorted(mp4s):
         mp4.unlink()
         print(f"  deleted {mp4.relative_to(proj.dir)} (built from mismatched audio)")
 
@@ -143,7 +200,8 @@ def fix(proj, rep, relaunch=False):
         print("\nrelaunching the booth…")
         subprocess.run([sys.executable, str(LAUNCH_BOOTH), str(proj.dir)])
     elif moved:
-        print(f"\nRe-record segment(s) {moved} in the booth, then click Finish:")
+        print(f"\nRe-record card(s) {moved} (booth Card {[i + 1 for i in moved]}) "
+              f"in the booth, then click Finish:")
         print(f"  python3 {LAUNCH_BOOTH} '{proj.dir}'")
     return moved
 
@@ -155,8 +213,8 @@ def main():
     ap.add_argument("--fix", action="store_true",
                     help="move the stale takes aside and clear the watcher's locks")
     ap.add_argument("--accept", default=None,
-                    help="comma list of segment ids (or 'all') whose AUDIO is still "
-                         "correct — re-stamps their text record instead of re-recording")
+                    help="comma list of card ids, Short stems, or 'all' whose AUDIO is "
+                         "still correct — re-stamps their text record instead of re-recording")
     ap.add_argument("--relaunch-booth", action="store_true", dest="relaunch",
                     help="with --fix: reopen the booth when done")
     args = ap.parse_args()

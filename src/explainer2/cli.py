@@ -475,6 +475,17 @@ def cmd_shorts(args):
     # wait=False: an interactive/ad-hoc shorts run should say so and stop rather
     # than sit in a queue. Unattended callers that must not drop a run pass
     # wait=True (daily_beats does).
+    # Same text guard as cmd_media, which now also checks the Shorts hook/outro takes
+    # against shorts/plan.json (scriptguard._check_shorts). A standalone `shorts` run
+    # after `media` must not be the way a rewritten hook ships over its old audio.
+    proj = Project.load(args.project_dir)
+    try:
+        scriptguard.enforce(proj, log=lambda m: _log(proj, m))
+    except scriptguard.StaleScriptError as e:
+        print(json.dumps({"blocked": "stale_script", "reason": e.report["reason"],
+                          "stale_segments": e.report["stale"],
+                          "blocked_file": str(scriptguard.blocked_path(proj))}, indent=2))
+        return 1
     claim = renderlock.claim_job(args.project_dir, kind="shorts", wait=False)
     if claim is None:
         return 1

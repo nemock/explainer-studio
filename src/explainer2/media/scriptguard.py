@@ -48,6 +48,10 @@ Segments carrying `adlib_applied` (set by `explainer2 adlib --apply`, which
 rewrites script text to match what was actually SPOKEN) are exempt: there the
 text was deliberately conformed to the audio, which is the opposite of this bug.
 
+Shorts hook/outro takes (`voiceover/short_<slug>_{hook,outro}.wav`) get the same
+content-hash check against shorts/plan.json (2026-09-25, `_check_shorts`). Their rows
+carry `kind: "short"` and their booth card id, and a stale one blocks like a segment.
+
 Escape hatch, because a guard that cannot be turned off is its own outage:
 `--allow-stale-script` on the CLI, or EXPLAINER_ALLOW_STALE_SCRIPT=1. Both log
 loudly. The supported fix is `tools/unstick_stale_script.py`, which moves the
@@ -248,6 +252,10 @@ def check(proj):
             report["stale"].append(sid)
         report["segments"].append(row)
 
+    # The mtime layer is about script.json, so it weighs long-form segments only.
+    seg_unstamped = list(report["unstamped"])
+    _check_shorts(proj, report)
+
     report["newest_audio_mtime"] = newest_audio
     if report["script_mtime"] and newest_audio:
         report["mtime_suspect"] = report["script_mtime"] > newest_audio + MTIME_SLACK_S
@@ -255,16 +263,16 @@ def check(proj):
     if report["stale"]:
         report["ok"] = False
         report["reason"] = (
-            f"{len(report['stale'])} segment(s) were recorded against different script "
-            f"text: {report['stale']}")
-    elif (report["mtime_suspect"] and report["unstamped"]
+            f"{len(report['stale'])} card(s) were recorded against different text than "
+            f"script.json / shorts/plan.json now says: {report['stale']}")
+    elif (report["mtime_suspect"] and seg_unstamped
             and not report["script_unchanged_since_finish"]):
         report["ok"] = False
         report["reason"] = (
             f"script.json was modified after the last recording "
-            f"({_ago(report['script_mtime'], newest_audio)}) and {len(report['unstamped'])} "
+            f"({_ago(report['script_mtime'], newest_audio)}) and {len(seg_unstamped)} "
             f"recorded segment(s) carry no recorded-text record to check against: "
-            f"{report['unstamped']}")
+            f"{seg_unstamped}")
     elif report["mtime_suspect"]:
         report["reason"] = (
             "script.json is newer than the audio, but its spoken content is unchanged "
@@ -272,8 +280,58 @@ def check(proj):
             + (", and the Finish digest still matches" if report["script_unchanged_since_finish"] else "")
             + ") — a reformat or a no-op save, not a content change")
     else:
-        report["reason"] = "audio matches script.json"
+        report["reason"] = "audio matches script.json" + (
+            " and shorts/plan.json" if any(r.get("kind") == "short" for r in report["segments"])
+            else "")
     return report
+
+
+def _check_shorts(proj, report):
+    """Shorts hook/outro takes against shorts/plan.json (2026-09-25).
+
+    The booth records each cut's hook and outro as `voiceover/short_<slug>_<role>.wav`
+    and stamps them exactly like segments, but the text lives in shorts/plan.json, not
+    script.json, and nothing read those stamps. On 2026-09-25 (#69) a hook was rewritten
+    after Finish and the `shorts` stage would have rendered the old hook audio under the
+    new hook captions.
+
+    Card ids and stems come from the booth's own card builder, so `--accept 40` means
+    the card the booth shows as "Card 41". Only a stamped take can be stale; an
+    unstamped one is reported but does not block. Unstamped Short takes come from
+    projects recorded before stamping began (2026-08-10), which have already shipped,
+    and the mtime layer is about script.json."""
+    from ..recorder import _load_segments
+    try:
+        cards, _ = _load_segments(proj)
+    except (OSError, ValueError, KeyError):
+        return
+    for card in cards:
+        if not card.get("plan_slug"):
+            continue
+        stem = card["clip"]
+        row = {"id": card["id"], "kind": "short", "slide": card.get("slide"), "stem": stem,
+               "plan_slug": card["plan_slug"], "plan_role": card["plan_role"],
+               "current_text": norm_text(card.get("text"))}
+        wav = Path(proj.voiceover_dir) / f"{stem}.wav"
+        if not wav.exists():
+            row["status"] = "not_recorded"
+            report["not_recorded"].append(card["id"])
+            report["segments"].append(row)
+            continue
+        row["audio_mtime"] = wav.stat().st_mtime
+        meta = read_meta(proj.voiceover_dir, stem)
+        if not (meta and meta.get("text_sha256")):
+            row["status"] = "unstamped"
+            report["unstamped"].append(card["id"])
+        elif text_hash(meta.get("text", "")) == text_hash(row["current_text"]):
+            row["status"] = "match"
+            row["source"] = f"meta:{meta.get('source', 'booth')}"
+        else:
+            row["status"] = "stale"
+            row["source"] = f"meta:{meta.get('source', 'booth')}"
+            row["recorded_text"] = norm_text(meta.get("text", ""))
+            report["stale"].append(card["id"])
+        report["segments"].append(row)
 
 
 def _ago(newer, older):
@@ -301,9 +359,10 @@ def write_blocked(proj, report):
     """Name the specific stale segments and both texts, then leave the file where
     the operator (and the next agent to open this project) will see it."""
     L = [f"# BLOCKED — {proj.dir.name}", "",
-         f"`explainer2 media` refused to render at {_stamp_line(report['checked_at'])}.", "",
+         f"`explainer2` refused to render at {_stamp_line(report['checked_at'])}.", "",
          f"**{report['reason']}**", "",
-         "The recorded narration does not say what `script.json` now says. Forced",
+         "The recorded narration does not say what `script.json` (or, for a Short card,",
+         "`shorts/plan.json`) now says. Forced",
          "alignment does not fail on a mismatch — it silently mismaps the new text onto",
          "the old audio and the episode publishes saying the old words. See",
          "`src/explainer2/media/scriptguard.py` for the incident this guard came from.", ""]
@@ -315,12 +374,19 @@ def write_blocked(proj, report):
 
     stale_rows = [r for r in report["segments"] if r["status"] == "stale"]
     if stale_rows:
-        L += ["## Stale segments", ""]
+        L += ["## Stale cards", ""]
         for r in stale_rows:
-            L += [f"### segment {r['id']} (slide `{r.get('slide')}`, `voiceover/{r['stem']}.wav`)", "",
+            if r.get("kind") == "short":
+                head = (f"### Short card {r['id']} (booth Card {r['id'] + 1}, `{r.get('slide')}`, "
+                        f"`voiceover/{r['stem']}.wav`)")
+                src = f"`shorts/plan.json` `{r['plan_slug']}.{r['plan_role']}`"
+            else:
+                head = f"### segment {r['id']} (slide `{r.get('slide')}`, `voiceover/{r['stem']}.wav`)"
+                src = "`script.json`"
+            L += [head, "",
                   f"Recorded text (source: `{r.get('source')}`) — this is what the audio says:", "",
                   "```", r.get("recorded_text", ""), "```", "",
-                  "Current `script.json` text — this is what the video would claim:", "",
+                  f"Current {src} text — this is what the video would claim:", "",
                   "```", r.get("current_text", ""), "```", ""]
 
     if report["unstamped"] and not report["ok"] and not stale_rows:
@@ -328,12 +394,13 @@ def write_blocked(proj, report):
               "These segments are recorded but carry no record of the text they were",
               "recorded against (no `voiceover/<stem>.meta.json`, and `work/adlib_report.json`",
               "predates their audio or is missing), so the guard cannot prove they are current:", "",
-              *[f"- segment {i}" for i in report["unstamped"]], ""]
+              *[f"- segment {r['id']}" for r in report["segments"]
+                if r["status"] == "unstamped" and r.get("kind") != "short"], ""]
 
     L += ["## Recovery", "",
-          "Move the stale takes aside so the booth asks for them again (the audio and its",
-          "alternate takes are preserved as `seg_NNN.oldtext.bak`), clear the watcher's",
-          "locks, and relaunch the booth:", "",
+          "Move the stale takes aside so the booth asks for them again (the audio is",
+          "preserved as `<stem>.oldtext.bak`; a Short card's old-text alternate takes move",
+          "aside with it), clear the watcher's locks, and relaunch the booth:", "",
           "```bash",
           f"python3 /Volumes/Casima/claudeCode/explainer2/tools/unstick_stale_script.py "
           f"'{proj.dir}' --fix --relaunch-booth",

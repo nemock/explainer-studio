@@ -80,6 +80,8 @@ conflict for the operator. Do not skip steps because they seem obvious.
    ships saying the old ones. If a line must change after recording, the segment
    must be RE-RECORDED. `explainer2 media` now enforces this: it refuses to run,
    writes `BLOCKED.md` naming the stale segments, and exits non-zero (§7a).
+   The same holds for a Short's `hook`/`outro` in `shorts/plan.json` once the
+   booth has recorded it; `media` and `shorts` both block on it (2026-09-25).
 9. **Visual QA Reads previews, never full-res renders (2026-08-25).** Before
    Reading ANY rendered image for verification — a `remotion still` frame, an
    extracted post-render frame, a thumbnail, a cutout — downscale it first with
@@ -365,6 +367,20 @@ changed (numerals spelled out, punctuation), assert that instead of re-recording
 `--accept <ids|all>`. Re-check with `bin/explainer2 media <dir> --recheck` (exit
 0/1; deletes `BLOCKED.md` when it passes). `--allow-stale-script` overrides the
 guard — the video will then say something other than what the script says.
+
+**Shorts hook/outro cards are guarded too (2026-09-25).** The booth records them as
+`voiceover/short_<slug>_{hook,outro}.wav` and stamps them like segments; the guard
+compares each stamp against the current `cuts[].hook` / `cuts[].outro` in
+`shorts/plan.json`. A mismatch blocks `media` (the whole render, long-form included)
+and `explainer2 shorts`, with `BLOCKED.md` showing both texts. Before this, a hook
+rewritten after Finish on #69 passed the guard and `shorts` would have rendered the old
+hook audio under the new captions. Name a Short card to the recovery tool by its card id
+or its stem: `--accept 40` (the card the booth shows as **Card 41**; ids are 0-based)
+or `--accept short_ten-lives_hook`. `--fix` moves the stale take aside, moves any
+alternate `.takeN` takes stamped with the old text, deletes that cut's
+`shorts/<slug>/video/*.mp4`, and leaves the long-form mp4 alone unless a long-form
+segment was stale as well. `--accept` re-stamps the current take only. An unstamped
+Short take is reported and does not block.
 
 ### 7. Media pipeline
 **Operator-voiced projects: the watcher has usually done this already.** If
