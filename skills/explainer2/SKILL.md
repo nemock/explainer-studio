@@ -56,7 +56,8 @@ conflict for the operator. Do not skip steps because they seem obvious.
    - **`explainer2 publish`** uploads the finished video to YouTube (OAuth, channel
      `nemock`). Default privacy is `private`; we normally ship `--privacy unlisted` for
      the operator's review. This is standard for every deep dive, not an exception to argue
-     about. Altered-content and the pinned comment remain manual browser steps.
+     about. The AI-use disclosure (Studio: Details > Show more > "AI use", labeled
+     "Altered content" until Sept 2026) and the pinned comment remain manual browser steps.
    - **`explainer2 promote`** re-shares already-published Shorts via Blotato (PRD N1).
 
    The rule that still binds: nothing auto-posts, and neither command runs without the
