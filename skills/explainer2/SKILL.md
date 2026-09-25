@@ -578,6 +578,17 @@ the **Remotion motion engine by default** (kinetic hook, synced captions, animat
 motion-playbook.md), with `--engine deck` for the legacy deck look. A cut with no
 hook/outro falls back to the legacy lift + silent end-card.
 
+**A Short reuses the long-form's slides, so a wide document `figure` needs a portrait
+twin (2026-09-25).** A 2.8:1 docshot renders as a ~640×230 strip in 9:16, and #69's
+'ten-lives' and 'the-checkbox' Shorts showed court text nobody could read on a phone,
+zooms included. Before cutting Shorts, every `figure` on a slide the plan lifts that
+carries text (a PDF excerpt, a web grab) gets `image_9x16` (≈1:1 to 4:5, from
+`tools/docshot_portrait.py`), plus `marks_9x16` and `moves_9x16` measured off THAT image.
+`shorts` swaps them in and never carries landscape marks onto the portrait image.
+Fields, the width rule and the fallbacks: deck-playbook §4b. Then frame-check each Short
+at 800 px previews (hard rule 9) and read `shorts: ... WARNING` lines in the output: a
+dropped landscape mark or move is reported there.
+
 ### 8b. Article (generation plane — written companion)
 Read `references/article-playbook.md` IN FULL, then write the read-not-heard
 companion essay to `package/article.md`: the SAME content and arc as the script,

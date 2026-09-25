@@ -10,16 +10,20 @@ import {PaperSheet, Tape} from './PaperNote';
 // (unlike the frame-space AnnotateOverlay, which sits over the whole scene and drifts off a
 // panning subject). Coords are 0-1 of the image; the SVG viewBox (16:9) maps them linearly to
 // the contained image box. cueFrame is resolved from a spoken phrase by the Python spec-builder.
+// `aspect` (a Short's portrait variant, 2026-09-25): the viewBox takes the IMAGE's shape
+// instead of 16:9. Stretched onto a square image, the 16:9 box scaled rough.js's bow and
+// jitter ~1.8x vertically and a long thin box wobbled through the very line it rang (#69 s21).
+// Absent (every landscape figure), the viewBox and every stroke are exactly as before.
 const MARK_COLOR: Record<string, string> = {green: BRAND.green, red: BRAND.red, white: BRAND.white};
 const markSeed = (s: string) => {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
   return ((h >>> 0) % 2147483645) + 1;
 };
-const FigMark: React.FC<{m: any; i: number}> = ({m, i}) => {
+const FigMark: React.FC<{m: any; i: number; vh?: number}> = ({m, i, vh = 562}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
-  const VW = 1000, VH = 562, sw = VH * 0.013;
+  const VW = 1000, VH = vh, sw = 562 * 0.013;
   const ink = useInk();
   // 'green' means "the world's accent" — indigo in the BRG world, studio green on navy;
   // 'white' means "the body ink", which is a deep ink on the cream paper worlds. 'amber'
@@ -54,7 +58,7 @@ const FigMark: React.FC<{m: any; i: number}> = ({m, i}) => {
                         {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   if (frame < (m.cueFrame ?? 0)) return null;
   const tipO = interpolate(t, [0.8, 1], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
-  const hl = Math.max(18, VH * 0.05);
+  const hl = Math.max(18, 562 * 0.05);
   return (
     <>
       {paths.map((p, j) => (
@@ -102,12 +106,13 @@ const FigurePageType: React.FC<{pageText?: any; height: number; ink: any}> = ({p
   );
 };
 
-const FigureMarks: React.FC<{marks?: any[]}> = ({marks}) => {
+const FigureMarks: React.FC<{marks?: any[]; aspect?: number}> = ({marks, aspect}) => {
   if (!marks || !marks.length) return null;
+  const vh = aspect && aspect > 0 ? Math.round(1000 / aspect) : 562;
   return (
-    <svg viewBox="0 0 1000 562" preserveAspectRatio="none"
+    <svg viewBox={`0 0 1000 ${vh}`} preserveAspectRatio="none"
          style={{position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none'}}>
-      {marks.map((m, i) => <FigMark key={i} m={m} i={i} />)}
+      {marks.map((m, i) => <FigMark key={i} m={m} i={i} vh={vh} />)}
     </svg>
   );
 };
@@ -270,14 +275,14 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
                 </div>
               );
             })}
-            <FigureMarks marks={marks} />
+            <FigureMarks marks={marks} aspect={fields.imageAspect} />
           </div>
         ) : tour ? (
-          <div style={{position: 'relative', ...tour}}>{img}<FigurePageType pageText={fields.pageText} height={height} ink={ink} /><FigureMarks marks={marks} /></div>
+          <div style={{position: 'relative', ...tour}}>{img}<FigurePageType pageText={fields.pageText} height={height} ink={ink} /><FigureMarks marks={marks} aspect={fields.imageAspect} /></div>
         ) : autoKen ? (
-          <div style={{position: 'relative', ...autoKen}}>{img}<FigurePageType pageText={fields.pageText} height={height} ink={ink} /><FigureMarks marks={marks} /></div>
+          <div style={{position: 'relative', ...autoKen}}>{img}<FigurePageType pageText={fields.pageText} height={height} ink={ink} /><FigureMarks marks={marks} aspect={fields.imageAspect} /></div>
         ) : (
-          <div style={{position: 'relative'}}>{img}<FigurePageType pageText={fields.pageText} height={height} ink={ink} /><FigureMarks marks={marks} /></div>
+          <div style={{position: 'relative'}}>{img}<FigurePageType pageText={fields.pageText} height={height} ink={ink} /><FigureMarks marks={marks} aspect={fields.imageAspect} /></div>
         )}
         {hl ? (
           <div style={{position: 'absolute', top: `${hl.top ?? 30}%`, left: `${hl.left ?? 6}%`, height: `${hl.height ?? 12}%`, width: `${hlW}%`, background: ink.accentWash, borderRadius: 8}} />

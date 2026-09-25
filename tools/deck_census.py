@@ -138,6 +138,11 @@ def main():
             mark_problems += _mark_problems(sid, items, key)
             if isinstance(items, list):
                 drawable = drawable or any(not _mark_problems(sid, [x], key) for x in items)
+        # A Short's portrait marks (shorts._portrait_slide) become that Short's `marks`, so
+        # they meet the same contract; checked here, before the booth, rather than only when
+        # a Short renders. They do not count toward the long-form's floor.
+        mark_problems += [p.replace(": marks", ": marks_9x16", 1)
+                          for p in _mark_problems(sid, s.get("marks_9x16") or [], "marks")]
         annotated += drawable
     cued = sum(1 for s in slides if slide_has_cues(s))
     dataviz = sum(types.get(t, 0) for t in DATA_VIZ_TYPES)

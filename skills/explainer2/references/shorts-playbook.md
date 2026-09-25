@@ -178,3 +178,6 @@ Rapid cutting is a known trade-off; revisit only if retention data demands it.
 - [ ] Hook/outro lines are short-form native and appear NOWHERE in the long-form script.
 - [ ] `hook_accent` tokens are substrings of `hook_headline`.
 - [ ] Ran the hook/outro through the spoken-humanizer (no clichés, no end-signalers).
+- [ ] Every text-bearing `figure` a cut lifts (a PDF excerpt, a web grab) has a portrait
+      twin: `image_9x16` + `marks_9x16` + `moves_9x16` in the parent deck (deck-playbook §4b).
+      A wide docshot copied verbatim is an illegible strip in 9:16 (#69, 2026-09-25).

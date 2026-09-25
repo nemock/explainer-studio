@@ -200,6 +200,38 @@ dropped on the slide"). Do it as framed `figure` slides, not raw dumps:
   quote. The motion-graphic cards stay dominant; the document lands the proof.
 - **Copyright:** short fair-use excerpts with on-slide attribution only (same
   posture as the script). Never reproduce the whole document.
+- **A figure a Short will use gets a portrait twin (2026-09-25).** A Short copies
+  its slides from this deck, and a wide document crop (#69's are padded to 2.8:1)
+  becomes a thin strip in the 9:16 frame: #69's 'ten-lives' and 'the-checkbox'
+  Shorts rendered court text nobody could read on a phone, `moves` zooms included.
+  So any `figure` on a slide that `shorts/plan.json` lifts carries:
+  - `image_9x16` — a tall crop, about 1:1 to 4:5. Build it with
+    `python3 tools/docshot_portrait.py <doc.pdf> <out_9x16.png> --focus "<phrase>"
+    --span "<first quoted line>" --span "<last quoted line>" --width-pt 230 --ar 1.0`.
+    **The WIDTH of the crop sets the type size, not its aspect.** The Short's
+    mount is width-limited (about 640 px of image on the 1080 px frame), so a
+    full-width court line of ~80 characters is ~6 pt on a phone however it is
+    padded. The helper takes a window of ~35-45 characters around the focus
+    (200-280 pt of a 12 pt page), keeps the page's own line breaks (it rewraps
+    nothing), paints out words the side edges would slice, and pads to the aspect.
+    The tall canvas is what gives a `moves_9x16` zoom a real viewport instead of a
+    strip. A raster source (a web grab) is cropped by hand the same way; #69's
+    `work/portrait_docshots.py` does both.
+  - `marks_9x16` — measured off the PORTRAIT image (the helper prints the focus
+    mark in image space, its height capped at 0.9 × the line pitch so the ring
+    does not strike the neighbouring lines), never mapped from the landscape crop.
+    For a raster grab, measure the ink bbox inside a band that stays within the
+    crop: PIL pads past the edge with black, which reads as ink (#69 s06 first
+    measured 1.02 wide).
+  - `moves_9x16` — the portrait tour. A zoom of ~1.2-1.35 onto the focus row is
+    the legibility lever; hold `x`/`y` within `[0.5/scale, 1 - 0.5/scale]` so the
+    view stays on the canvas, and cap the scale at `0.9 / mark.w` so the ring fits.
+  `bin/explainer2 shorts` swaps these in (`shorts._portrait_slide`). With
+  `image_9x16` set, any landscape `marks`/`moves`/`highlight`/`assemble`/`pageText`
+  WITHOUT a `_9x16` twin is dropped with a warning, since it was measured off the
+  other image. Without `image_9x16`, a `marks_9x16`/`moves_9x16` still applies, to
+  the landscape image. The long-form ignores every `_9x16` field, and
+  `deck_census.py` checks `marks_9x16` against the same contract as `marks`.
 
 ## 4c. Narration cues + the annotation layer (Remotion engine, 2026-07-04)
 

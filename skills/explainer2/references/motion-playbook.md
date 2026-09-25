@@ -450,6 +450,26 @@ that actually ships.)*
 - **CodeType / Terminal** — typed code or terminal output (AI/tech beats).
 *Rule:* short fair-use excerpts, cited on-screen; crop tight (see deck-playbook §4b).
 
+**Document figures in a Short need a portrait twin (2026-09-25).** `Figure` sizes the
+image to its mount, and the mount is at most ~76% of the frame width, so on 9:16 the
+image is ~640 px wide whatever its shape. A 2.8:1 document crop therefore renders about
+640×230, and a `moves` zoom inside that box magnifies a two-line window: #69's Shorts
+showed illegible court text at 1.55×. Type size on a phone comes from how many
+characters the crop's WIDTH spans; the portrait canvas is what lets a zoom show several
+whole lines. So a figure a Short lifts carries `image_9x16` (built with
+`tools/docshot_portrait.py`), with `marks_9x16` and `moves_9x16` measured off that image,
+and `shorts._portrait_slide` swaps them in (deck-playbook §4b has the fields and the
+fallback rules). `FigureMarks` already maps 0-1 image space onto whatever box the image
+draws in, but it drew in a fixed 16:9 viewBox stretched with
+`preserveAspectRatio="none"`. On #69's square crops that scaled rough.js's bow and jitter
+~1.8× vertically, and s21's long thin box wobbled straight through the sentence it rang.
+So `_portrait_slide` also sets `imageAspect` (read off the portrait PNG), and
+`FigureMarks` sizes its viewBox to the image's shape when that field is present. Stroke
+width and arrowhead size stay pinned to the old 562-unit scale. Landscape figures carry
+no `imageAspect` and draw exactly as before. On single-spaced text also keep a ring's `h`
+within the line pitch (`docshot_portrait.py` caps it at 0.9 × pitch), or its edges strike
+the lines above and below. Crop the rendered frame around the mark and preview the crop.
+
 ### E. Media & compositing (the safe replacement for hand-rolled ffmpeg B-roll)
 - **Footage** — full-bleed licensed B-roll with deterministic Ken Burns.
 - **Cutaway** — B-roll over a window inside the scene (before/after framing).

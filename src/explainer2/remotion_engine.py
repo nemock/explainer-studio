@@ -868,6 +868,9 @@ def _scene_for(slide, theme="", warn=None):
                           "imageFromFrac": slide.get("imageFromFrac", 0),
                           "moves": slide.get("moves", []), "assemble": slide.get("assemble"),
                           "marks": slide.get("marks", []),
+                          # set by shorts._portrait_slide on a portrait variant only, so the
+                          # marks' viewBox takes the image's shape (FigureMarks, Media.tsx)
+                          "imageAspect": slide.get("imageAspect"),
                           # type rendered ON the page (FigurePageType). Generated paper art
                           # has no text, so a document slide needs this to say anything.
                           "pageText": slide.get("pageText")}
@@ -1593,7 +1596,9 @@ def _marks_blocked_text(sp, problems):
         # from the parent's on every run, so the fix belongs in the parent.
         L += [f"This is a Short. Its slides are copied from the parent project "
               f"`{sp.data['derived_from']}` on every Shorts run, so fix them in the "
-              f"parent's `deck.json` (or in the script that builds it), then re-cut:", "",
+              f"parent's `deck.json` (or in the script that builds it), then re-cut. A "
+              f"slide that carries `marks_9x16` shows those in a Short instead of "
+              f"`marks`, so fix that field:", "",
               "```bash",
               f"/Volumes/Casima/claudeCode/explainer2/bin/explainer2 shorts "
               f"'{sp.dir.parent.parent}' --only {sp.dir.name}",

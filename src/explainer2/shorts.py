@@ -32,6 +32,7 @@ import time
 
 import numpy as np
 import soundfile as sf
+from PIL import Image
 
 from .project import Project, ASPECTS
 from . import deckbuild, manifest, renderlock, remotion_engine
@@ -90,6 +91,41 @@ def _outro_slide(cut, ending):
             "transition": "rise"}
 
 
+# Portrait variants (2026-09-25). A document-excerpt `figure` is cropped wide for the 16:9
+# long-form (#69's extractor pads to 2.8:1), and a Short used to copy it verbatim, so in
+# the 9:16 frame the mount became a thin strip and the court text was illegible at phone
+# size even with a `moves` zoom (#69 'ten-lives' / 'the-checkbox'). A slide may carry a
+# portrait twin of each IMAGE-SPACE field, `<field>_9x16`, which a Short uses in place of
+# the landscape one. `marks`, `moves`, `highlight`, `assemble` and `pageText` are all
+# measured in the image's own 0-1 space, so once `image_9x16` swaps the picture the
+# landscape values are NOT carried over: they were measured off a different image and would
+# land in the wrong place. Without `image_9x16`, a `marks_9x16`/`moves_9x16` still applies,
+# to the landscape image (a harder zoom for the narrow frame, say).
+IMAGE_SPACE = ("marks", "moves", "highlight", "assemble", "pageText")
+
+
+def _portrait_slide(slide, warnings, root=None):
+    """The slide as a Short shows it. The landscape deck and render never read `_9x16`
+    fields; this is the only place they take effect. `root` (the parent project dir)
+    resolves the portrait image so its aspect can reach FigureMarks: drawn in the old fixed
+    16:9 viewBox, a mark on a square image wobbled ~1.8x vertically, through its own line."""
+    s = {k: v for k, v in slide.items() if not k.endswith("_9x16")}
+    if slide.get("image_9x16"):
+        s["image"] = slide["image_9x16"]
+        f = root / slide["image_9x16"] if root else None
+        if f is not None and f.exists():
+            with Image.open(f) as im:
+                s["imageAspect"] = round(im.width / im.height, 4)
+        for k in IMAGE_SPACE:
+            if f"{k}_9x16" not in slide and s.pop(k, None):
+                warnings.append(f"{slide['id']}: has image_9x16 but no {k}_9x16, so its "
+                                f"landscape {k} is dropped (measured off the other image)")
+    for k in IMAGE_SPACE:
+        if f"{k}_9x16" in slide:
+            s[k] = slide[f"{k}_9x16"]
+    return s
+
+
 def build_derived(parent: Project, cut):
     """Create the derived project dir + narration/segments/deck/project files.
     Returns (Project, duration_s, warnings[])."""
@@ -131,7 +167,7 @@ def build_derived(parent: Project, cut):
     for pid in cut["segments"]:
         ps = by_id[pid]
         a, b = int(ps["start"] * sr), int(ps["end"] * sr)
-        add(mono[a:b], ps["text"], dict(slides_by_id[ps["slide"]]))
+        add(mono[a:b], ps["text"], _portrait_slide(slides_by_id[ps["slide"]], warnings, parent.dir))
         parts.append(gap); cursor += GAP
 
     # 3) OUTRO — recorded spoken outro (default loops back to the hook). Falls back to the
