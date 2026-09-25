@@ -99,13 +99,16 @@ conflict for the operator. Do not skip steps because they seem obvious.
 - Projects: `projects/<date>_<slug>/` under the repo root.
 - Talk-time library (operator's voice): pass
   `--library /Volumes/Casima/claudeCode/make_money/talk_time` to `talktime`.
-- **Session hygiene (2026-08-25): one session per video/module/episode.** Start
-  a FRESH Claude session for each new video (or masterclass episode), and
-  archive the session once that module ships. Week-spanning sessions accumulate
-  every image ever Read into one transcript file (140–170 MB observed), which
-  the desktop app re-parses whole on open — the other half of the RAM blowup
-  hard rule 9 addresses. State lives in the project dir + PLAYBOOK.md, not the
-  conversation, so a fresh session loses nothing.
+- **Session hygiene (revised 2026-09-25): compact, never archive.** A new video
+  (or masterclass episode) may continue in the same session, and production
+  sessions are never archived: continuity is worth more than a small transcript,
+  and archiving has lost it before (operator, 2026-09-25). When a session gets
+  long, compact it. The bloat risk is real: every image Read is embedded in the
+  transcript (140–170 MB observed on 2026-08-25, re-parsed whole by the desktop
+  app on open), and hard rule 9 (previews only) is what controls it. The earlier
+  "one session per module, archive at ship" wording came from the 2026-08-25
+  memory fix, not from the operator. Keep durable state in the project dir anyway,
+  because that is what survives compaction.
 
 ## Content types (canonized 2026-07-06 — pick ONE before scaffolding)
 

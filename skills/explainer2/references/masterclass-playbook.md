@@ -128,12 +128,14 @@ before the booth; validate). On top of that:
    viewer should feel the format snap into place. Record series-standing
    decisions (accent color, thumbnail layout, structure quirks) in the series
    CLAUDE.md the first time they're made; never re-decide per episode.
-6. **One session per episode (2026-08-25).** Run each episode in a FRESH
-   Claude session and archive it when the episode ships — never let a session
-   span multiple episodes or weeks. Long-lived sessions accumulate every image
-   ever Read into one 100+ MB transcript that OOMs the desktop app on open
-   (SKILL "Session hygiene"). The series outline, series CLAUDE.md, and each
-   project dir carry all cross-episode state; a fresh session loses nothing.
+6. **Sessions (revised 2026-09-25).** An episode may continue in the same
+   session as the one before it, and a production session is never archived:
+   archiving has lost continuity before (operator, 2026-09-25). Compact when a
+   session gets long. The image-bloat risk behind the old "fresh session per
+   episode, archive at ship" wording is handled by SKILL hard rule 9 (previews
+   only; SKILL "Session hygiene"). The series outline, series CLAUDE.md, ledger
+   and each project dir still carry all cross-episode state, which is what
+   survives compaction.
 
 ## 5. Length and depth
 
