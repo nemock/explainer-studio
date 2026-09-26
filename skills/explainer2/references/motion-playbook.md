@@ -399,7 +399,8 @@ above, closed for the Paper\* family after two more shipped on the Product Leade
   them. `PaperCompare` now draws `title` between the kicker and the trays, its
   `accent` words coloured, styled like the Figure persistent title above: same size, weight,
   measure and 0.075 clearance, on the paper type scale in portrait. `delta` renders through
-  `PaperCompare` too but still does not pass a title (below).
+  `PaperCompare` too, and its `title`/`accent` pass through the same way (same day; #55 and
+  #56 had lost three).
 - **`highlight` `mark`.** The paper map passed `accent` only, while the classic map has
   always read `mark` first, so 14 highlights in modules 1, 3, 4 and 6 (12 more on the deep
   dives) showed their marked words in plain ink. The paper map now reads `mark`, then
@@ -430,7 +431,7 @@ here next. The fields they drop are:
 
 - `subkicker` on `punch`, `stat`, `statgrid`, `compare`, `reframe` and the hook
 - `kicker` on `quote` and `oncamera`
-- `delta`'s `title`, `accent`, `kind` and `change` badge
+- `delta`'s `kind` and `change` badge (#56 s37's change note is an editorial line)
 - a `stat`'s `title`, `accent` and `kind`, a `statgrid`'s `accent`, a `statement`'s `accent2`
 - the closing card's `badge` and `accent2`: Product Leadership modules 1–3's
   like-and-subscribe badge never rendered

@@ -107,6 +107,9 @@ substrings of the text they accent or nothing highlights.
   where the SHAPE of the numbers is the whole point.
 - **`diagram`** → `bars[]` of `{value, label, kind?(muted|bad)}` (bar chart).
 - **`delta`** → `from`/`from_label` → `to`/`to_label` + `kind` + `change` badge.
+  On the paper themes it renders as two trays, from and to, under an optional `title`
+  (+ `accent`) drawn like a compare's. Its `kind` and `change` badge have no paper rendering,
+  so the render refuses them there (`BLOCKED-FIELDS.md`); say the change in the `title`.
 - **`waterfall`** → `start{label,value}` / `steps[]{label,value,kind}` / `end{}`.
 - **`timeline`** → `events[]` of `{date, label}`.
 - **`matrix`** → `x_axis[lo,hi]`, `y_axis[lo,hi]`, `points[]{x,y,label,kind}` (2×2).

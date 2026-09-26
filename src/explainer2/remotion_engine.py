@@ -382,13 +382,15 @@ def _papercraft_component(slide, t, kicker, accent, headline):
         # the way a Figure's persistent title colours them. Until 2026-09-26 this passed
         # kicker/left/right only and PaperCompare never read a title, so 16 Product
         # Leadership compares (module 5: 5, module 6: 11) and 5 on #55 rendered without
-        # their line, e.g. module 6's "Scoring the thing your strategy is built on". `delta`
-        # below renders through PaperCompare too and still passes no title.
+        # their line, e.g. module 6's "Scoring the thing your strategy is built on".
         return "PaperCompare", {"kicker": kicker, "title": slide.get("title", ""),
                                 "accent": accent, "left": slide.get("left", {}),
                                 "right": slide.get("right", {})}
     if t == "delta":
-        return "PaperCompare", {"kicker": kicker,
+        # Same component, same header line: a delta's `title` + `accent` pass through as a
+        # compare's do (2026-09-26; #55 s08 s63 and #56 s37 had lost theirs). Its `kind` and
+        # `change` badge still have no paper rendering, so the dropped-field guard refuses them.
+        return "PaperCompare", {"kicker": kicker, "title": slide.get("title", ""), "accent": accent,
                                 "left": {"title": slide.get("from_label", ""), "value": slide.get("from", "")},
                                 "right": {"title": slide.get("to_label", ""), "value": slide.get("to", "")}}
     # The last four types with no papercraft equivalent (2026-08-12). reframe gets a real

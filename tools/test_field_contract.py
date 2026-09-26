@@ -14,8 +14,8 @@ the Product Leadership series, found 2026-09-26:
 
 Asserted here, against throwaway projects:
   - the type map: a highlight's `mark` becomes PaperStatement's accent on every theme that
-    reaches the paper map (and `accent` still works without one), and a compare hands
-    `title` and `accent` to PaperCompare;
+    reaches the paper map (and `accent` still works without one), and a compare or a delta
+    hands `title` and `accent` to PaperCompare;
   - build_spec raises DroppedFieldError naming the slide, the field and the component, for
     each shape found on published decks: a compare's subkicker, a quote's kicker, a quote's
     headline shadowed by its `quote`, a closing card's badge, a hook's marks, a punch's
@@ -92,6 +92,7 @@ def census(d):
 LEFT = {"title": "The email", "value": "Every term scores", "kind": "bad"}
 RIGHT = {"title": "The bet", "value": "Believing isn't a number", "kind": "good"}
 TITLE = "Scoring the thing your strategy is built on"          # module 6 s28, published
+DELTA_TITLE = "Fifteen where there used to be two and a half."  # #56 s37, published
 for theme in PAPER_MAP_THEMES:
     comp, f = E._scene_for({"type": "highlight", "headline": "It was one window.",
                             "mark": ["one window"]}, theme=theme)
@@ -105,6 +106,13 @@ for theme in PAPER_MAP_THEMES:
                             "left": LEFT, "right": RIGHT}, theme=theme)
     if comp != "PaperCompare" or f.get("title") != TITLE or f.get("accent") != ["your strategy"]:
         failures.append(f"{theme}: compare `title`/`accent` did not reach PaperCompare: "
+                        f"{comp} {f!r}")
+    # delta renders through the same component and carries the same header (#56 s37)
+    comp, f = E._scene_for({"type": "delta", "from": "2.5%", "from_label": "October 2025",
+                            "to": "15.8%", "to_label": "1 July 2026", "title": DELTA_TITLE,
+                            "accent": ["two and a half"]}, theme=theme)
+    if comp != "PaperCompare" or f.get("title") != DELTA_TITLE or f.get("accent") != ["two and a half"]:
+        failures.append(f"{theme}: delta `title`/`accent` did not reach PaperCompare: "
                         f"{comp} {f!r}")
 
 
@@ -355,7 +363,7 @@ if failures:
     for f in failures:
         print("  -", f)
     sys.exit(1)
-print(f"PASS — compare titles and highlight marks reach their paper components on "
+print(f"PASS — compare and delta titles and highlight marks reach their paper components on "
       f"{len(PAPER_MAP_THEMES)} themes; {len(BAD)} dropped fields refused (BLOCKED-FIELDS.md "
       f"written, then cleared; the census fails them too); {len(GOOD)} slides with nothing "
       f"dropped pass; {len(handed)} Paper* components read what they are handed "
