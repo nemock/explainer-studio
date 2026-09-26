@@ -4,7 +4,8 @@
 Tallies a project's deck.json against the quantified floor that exists because #18
 shipped as a narrated PowerPoint (14/22 text slides, 0 data-viz, 0 cues). Run before
 every render; paste the tally into PLAYBOOK deck-gate notes. Read-only; stdlib plus the
-render's own mark contract from src/explainer2/remotion_engine.py (stdlib-only itself).
+render's own mark and dropped-field contracts from src/explainer2/remotion_engine.py
+(stdlib-only itself). Reads project.json for the theme, which decides the components.
 
 Usage: python3 tools/deck_census.py <project_dir>
 Exit code: 0 = floor passed, 1 = floor failed (advisories never fail the run).
@@ -14,10 +15,11 @@ import re
 import sys
 from pathlib import Path
 
-# The render's own contract for figure `marks` and frame-space `annotations`, imported
-# rather than re-derived so the census and build_spec cannot disagree about what draws.
+# The render's own contracts for figure `marks` and frame-space `annotations`, and for
+# authored fields a paper component never receives, imported rather than re-derived so the
+# census and build_spec cannot disagree about what draws.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from explainer2.remotion_engine import _mark_problems  # noqa: E402
+from explainer2.remotion_engine import _dropped_field_problems, _mark_problems  # noqa: E402
 
 # Typography-only slide types (motion-playbook §4b census definition).
 TEXT_TYPES = {"statement", "reframe", "punch", "quote", "highlight", "define", "list"}
@@ -144,6 +146,17 @@ def main():
         mark_problems += [p.replace(": marks", ": marks_9x16", 1)
                           for p in _mark_problems(sid, s.get("marks_9x16") or [], "marks")]
         annotated += drawable
+    # A field the slide's paper component never receives is not on screen, and build_spec
+    # refuses the deck for it (BLOCKED-FIELDS.md). Modules 5 and 6's compare titles and four
+    # modules' highlight marks shipped that way, past this census (2026-09-26). Which
+    # component a slide gets depends on the theme, so a missing project.json checks as ''.
+    try:
+        theme = json.loads((pdir / "project.json").read_text()).get("theme", "")
+    except (OSError, ValueError):
+        theme = ""
+    field_problems = []
+    for s in slides:
+        field_problems += _dropped_field_problems(s.get("id", "?"), s, theme)
     cued = sum(1 for s in slides if slide_has_cues(s))
     dataviz = sum(types.get(t, 0) for t in DATA_VIZ_TYPES)
     teaching = sum(types.get(t, 0) for t in TEACHING_TYPES)
@@ -171,23 +184,26 @@ def main():
 
     print(f"deck census — {pdir.name}  ({n} slides)")
     print("  types: " + ", ".join(f"{t}:{c}" for t, c in sorted(types.items(), key=lambda x: -x[1])))
+    # (label, passed, the problem lines printed under it)
     checks = [
-        (f"text-type slides {text_count}/{n} = {text_pct:.0f}% (cap 40%)", text_pct <= 40),
-        (f"longest text-type run {max_run} (cap 2)", max_run <= 2),
-        (f"schematic/figure slides {teaching} (need ≥{teaching_needed} ≈ one per act)", teaching >= teaching_needed),
-        (f"hero cold open (first slide type=hook|oncamera): {has_hook}; midroll punch present: {has_punch}", has_hook and has_punch),
-        (f"annotated slides {annotated}/{n} (need ≥ 1/3)", annotated * 3 >= n),
-        (f"slides with authored narration cues {cued} (need ≥ 1; 0 = failed deck)", cued >= 1),
-        (f"slides that would render blank: {', '.join(blank) if blank else 'none'}", not blank),
+        (f"text-type slides {text_count}/{n} = {text_pct:.0f}% (cap 40%)", text_pct <= 40, []),
+        (f"longest text-type run {max_run} (cap 2)", max_run <= 2, []),
+        (f"schematic/figure slides {teaching} (need ≥{teaching_needed} ≈ one per act)", teaching >= teaching_needed, []),
+        (f"hero cold open (first slide type=hook|oncamera): {has_hook}; midroll punch present: {has_punch}", has_hook and has_punch, []),
+        (f"annotated slides {annotated}/{n} (need ≥ 1/3)", annotated * 3 >= n, []),
+        (f"slides with authored narration cues {cued} (need ≥ 1; 0 = failed deck)", cued >= 1, []),
+        (f"slides that would render blank: {', '.join(blank) if blank else 'none'}", not blank, []),
         (f"marks/annotations that would draw in the wrong place or not at all: "
-         f"{len(mark_problems) or 'none'}", not mark_problems),
+         f"{len(mark_problems) or 'none'}", not mark_problems, mark_problems),
+        (f"authored fields their paper component never receives: "
+         f"{len(field_problems) or 'none'}", not field_problems, field_problems),
     ]
     ok = True
-    for label, passed in checks:
+    for label, passed, problems in checks:
         ok &= passed
         print(f"  [{'PASS' if passed else 'FAIL'}] {label}")
-    for p in mark_problems:  # under the last check, which is theirs
-        print(f"         {p}")
+        for p in problems:
+            print(f"         {p}")
     print(f"  [info] data-viz slides: {dataviz} · footage slides: {footage}")
     if number_offenders:
         print(f"  [ADVISORY] segments speaking numbers on text-only slides "

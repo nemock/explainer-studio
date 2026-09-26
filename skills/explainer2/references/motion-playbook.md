@@ -386,7 +386,57 @@ noticed for ten days. Two consequences:
 
 Same failure class as the `figure`-`title`-without-`imageFromFrac` bug above and the
 `source`/`source_url` passthrough gap: an authored field silently dropped by the type map,
-where the absence of a warning reads as success.
+where the absence of a warning reads as success. **On the paper themes the render now
+refuses hook `marks` outright** (next paragraph); the census rule above still applies on
+the midnight Hero3D hook, which that check does not cover.
+
+**The paper map refuses a field its component never receives (2026-09-26).** The class
+above, closed for the Paper\* family after two more shipped on the Product Leadership series:
+
+- **`compare` `title` + `accent`.** `_papercraft_component` passed `{kicker, left, right}`
+  and `PaperCompare` never read a title, so 16 compares in modules 5 and 6 (5 more on #55)
+  lost their header line, module 6's "Scoring the thing your strategy is built on" among
+  them. `PaperCompare` now draws `title` between the kicker and the trays, its
+  `accent` words coloured, styled like the Figure persistent title above: same size, weight,
+  measure and 0.075 clearance, on the paper type scale in portrait. `delta` renders through
+  `PaperCompare` too but still does not pass a title (below).
+- **`highlight` `mark`.** The paper map passed `accent` only, while the classic map has
+  always read `mark` first, so 14 highlights in modules 1, 3, 4 and 6 (12 more on the deep
+  dives) showed their marked words in plain ink. The paper map now reads `mark`, then
+  `accent`.
+
+`build_spec` now refuses the whole shape: `DroppedFieldError`, **`BLOCKED-FIELDS.md`** naming
+the slide, the field and the component, a non-zero exit, nothing downstream. `deck_census.py`
+fails the same deck before narrate and align. There is no field table to keep in step: the
+check asks the type map itself whether taking each authored field away, or changing it,
+changes the scene. So it also catches a fallback that can never show (a quote's `headline`
+behind its `quote`), unless both fields say the same words. Exempt, because something else
+reads them: `cues`, `annotations`, `source`/`source_url`, `transition`, the `chibi*` presenter
+fields, and every `*_9x16` Shorts twin. Paper\* components only; the classic and Cvg maps are
+not checked. A refused field is one of three things: words a field of this type does show
+(move them there), words no field of this type shows (an engine change, so ask first), or a
+leftover (delete it).
+
+`tools/test_field_contract.py` is the regression. It also reads each Paper\* component's
+source to check that every field the map hands it is read, since the compare title was
+dropped on both sides. Two gaps there are recorded, not fixed, because closing them changes
+how shipped slides look: `PaperReframe` strikes the whole `before` line instead of the
+`strike` words, and `PaperBookCTA` draws its headline without its `accent`.
+
+**Now loud, not yet fixed.** On 2026-09-26, 25 built projects would stop on
+`BLOCKED-FIELDS.md` if re-rendered, all of them published or finished (Product Leadership
+module 7 is clean). Modules 3 and 4, #48 and #67, already blocked on their marks, would stop
+here next. The fields they drop are:
+
+- `subkicker` on `punch`, `stat`, `statgrid`, `compare`, `reframe` and the hook
+- `kicker` on `quote` and `oncamera`
+- `delta`'s `title`, `accent`, `kind` and `change` badge
+- a `stat`'s `title`, `accent` and `kind`, a `statgrid`'s `accent`, a `statement`'s `accent2`
+- the closing card's `badge` and `accent2`: Product Leadership modules 1–3's
+  like-and-subscribe badge never rendered
+- hook `marks`
+
+Each needs a deck edit or an engine change before that project renders again.
 
 **SUPERSEDED 2026-08-08 (#56): the PIL-on-raw-art contact sheet is DEAD as a verification
 method. Author marks from MEASUREMENT; verify on RENDERED FRAMES.** The #55 contact sheet

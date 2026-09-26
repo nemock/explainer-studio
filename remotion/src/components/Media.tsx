@@ -122,7 +122,8 @@ const FigureMarks: React.FC<{marks?: any[]; aspect?: number}> = ({marks, aspect}
 // phrases that include punctuation the token splitter in ./colorize would choke on.
 // `accentColor` is the world's ONE accent (studio green on navy, indigo in the BRG world) —
 // pass ink.accent from the caller so figures never hard-code a green that is off-brand here.
-const figColorize = (text: string, accents: string[] = [], accents2: string[] = [],
+// Exported for PaperCompare's title (2026-09-26), which is styled as Figure's persistent one.
+export const figColorize = (text: string, accents: string[] = [], accents2: string[] = [],
                      accentColor: string = BRAND.green,
                      dangerColor: string = BRAND.red) => {
   if (!text) return null;

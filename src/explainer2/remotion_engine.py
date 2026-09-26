@@ -357,8 +357,16 @@ def _papercraft_scene(slide, t, kicker, accent, headline):
 
 def _papercraft_component(slide, t, kicker, accent, headline):
     """deck type -> (Paper* component, fields). See _papercraft_scene, its only caller."""
-    if t in ("statement", "highlight"):
+    if t == "statement":
         return "PaperStatement", {"kicker": kicker, "headline": headline, "accent": accent,
+                                  "subkicker": slide.get("subkicker", "")}
+    if t == "highlight":
+        # A highlight names the words it pops in `mark` (deck-playbook §Text slides), and
+        # the classic branch below has always read it first. This one passed `accent` alone
+        # until 2026-09-26, so every highlight authored the documented way rendered in plain
+        # ink: Product Leadership modules 1, 3, 4 and 6 (14 slides), 12 on the deep dives.
+        return "PaperStatement", {"kicker": kicker, "headline": headline,
+                                  "accent": slide.get("mark") or accent,
                                   "subkicker": slide.get("subkicker", "")}
     if t == "quote":
         return "PaperStatement", {"headline": slide.get("quote") or headline,
@@ -370,7 +378,14 @@ def _papercraft_component(slide, t, kicker, accent, headline):
         return "PaperPunch", {"word": slide.get("word") or headline, "kicker": kicker,
                               "kind": slide.get("kind", "")}
     if t == "compare":
-        return "PaperCompare", {"kicker": kicker, "left": slide.get("left", {}),
+        # `title` is the header between the kicker and the trays, its `accent` words coloured
+        # the way a Figure's persistent title colours them. Until 2026-09-26 this passed
+        # kicker/left/right only and PaperCompare never read a title, so 16 Product
+        # Leadership compares (module 5: 5, module 6: 11) and 5 on #55 rendered without
+        # their line, e.g. module 6's "Scoring the thing your strategy is built on". `delta`
+        # below renders through PaperCompare too and still passes no title.
+        return "PaperCompare", {"kicker": kicker, "title": slide.get("title", ""),
+                                "accent": accent, "left": slide.get("left", {}),
                                 "right": slide.get("right", {})}
     if t == "delta":
         return "PaperCompare", {"kicker": kicker,
@@ -1009,6 +1024,107 @@ def _mark_problems(sid, marks, key="marks"):
     return out
 
 
+# DROPPED-FIELD CONTRACT (2026-09-26). The mark failure one layer up: a field authored in
+# deck.json that the type map never hands to its component. Nothing errors, deck_census
+# passes, the render succeeds, and the words are simply not on screen. Found on the Product
+# Leadership series, published:
+#   compare `title` + `accent`  modules 5 and 6 (16 slides), 5 more on #55.
+#                               The map passed {kicker, left, right} and PaperCompare never
+#                               read a title, so module 6 lost lines like "Scoring the thing
+#                               your strategy is built on".
+#   highlight `mark`            modules 1, 3, 4 and 6 (14), 12 more on the deep dives. The
+#                               map passed `accent` only, so the marked words were plain ink.
+# The same shape as figure `title` without imageFromFrac (2026-07-28), `source_url`
+# (2026-08-12), oncamera `patches` (2026-08-14) and hook `marks` (#55), each fixed for its
+# one field. This closes the shape for the paper family: build_spec REFUSES a slide whose
+# Paper* component never receives one of its authored fields, and the render reports it the
+# way the mark guard does (BLOCKED-FIELDS.md, a non-zero exit, nothing downstream).
+#
+# There is no table to keep in step: _dropped_field_problems asks the type map itself. A
+# field is received when taking it away, or changing it, changes what _scene_for emits.
+# That covers fallbacks too (a quote's `headline` is never shown while `quote` is set,
+# unless the two say the same words) and a value equal to its default (an oncamera `set`
+# naming the default monitor is still read). The guard sees what a component RECEIVES;
+# whether the component then draws it is the component's side, which is why PaperCompare
+# had to learn `title` the same day.
+FIELDS_BLOCKED_NAME = "BLOCKED-FIELDS.md"
+
+# Read by something other than the type map, so a slide that carries them is not dropping
+# them: the slide's identity; build_spec's own passes (cue phrases, frame-space annotations,
+# the universal citation line, the tear transition); and _assign_chibi's presenter poses.
+# shorts._portrait_slide reads every `*_9x16` twin, checked by suffix below.
+_READ_OUTSIDE_TYPE_MAP = ("id", "type", "cues", "annotations", "source", "source_url",
+                          "transition", "chibi", "chibiSide", "chibiFlip")
+
+
+class DroppedFieldError(RuntimeError):
+    """Raised by build_spec when a slide carries a field its Paper* component never
+    receives (the DROPPED-FIELD CONTRACT above)."""
+
+    def __init__(self, problems):
+        self.problems = problems
+        n = len(problems)
+        what = ("1 authored field never reaches its paper component: it would" if n == 1 else
+                f"{n} authored fields never reach their paper components: each would")
+        super().__init__(f"{what} be missing from the video — refusing to render:\n  "
+                         + "\n  ".join(problems))
+
+
+class _Probe:
+    """A value no deck field can equal: what _perturbed leaves where a value was."""
+
+
+def _perturbed(v):
+    """`v` with the same shape and a different value."""
+    if isinstance(v, bool):
+        return not v
+    if isinstance(v, (int, float)):
+        return v + 1
+    if isinstance(v, str):
+        return v + chr(0x2063)       # INVISIBLE SEPARATOR: not whitespace, so .strip() keeps it
+    if isinstance(v, list):
+        return v + [_Probe()]
+    if isinstance(v, dict):
+        return {**v, "_probe": _Probe()}
+    return _Probe()
+
+
+def _dropped_field_problems(sid, slide, theme=""):
+    """One line per field authored on `slide` that its Paper* component never receives,
+    naming the slide, the field and the component. Empty for any other component, for a
+    slide that names its component directly (its `fields` are the component's own), and
+    when every authored field arrives. The rule is the DROPPED-FIELD CONTRACT above."""
+    if not isinstance(slide, dict) or slide.get("component"):
+        return []
+
+    def emit(s):
+        # no-op warn: each probe would otherwise log the cta fallback again
+        return _scene_for(s, theme=theme, warn=lambda _m: None)
+
+    base = emit(slide)
+    if not base[0].startswith("Paper"):
+        return []
+
+    def received(k, v):
+        if emit({kk: vv for kk, vv in slide.items() if kk != k}) != base:
+            return True              # taking it away changes the scene
+        try:
+            return emit({**slide, k: _perturbed(v)}) != base   # so does changing it
+        except Exception:            # the map did arithmetic or a lookup on it: read
+            return True
+
+    got, dropped = [], []
+    for k, v in slide.items():
+        if k in _READ_OUTSIDE_TYPE_MAP or k.endswith("_9x16") or v in (None, "", [], {}):
+            continue
+        (got if received(k, v) else dropped).append(k)
+    # A field shadowed by one carrying the same value is a duplicate, not a drop: a punch
+    # with `word` and `headline` both "Focus." still says "Focus." (the word wins).
+    return [f"{sid}: `{k}` is authored on this {slide.get('type') or 'untyped'} slide, but "
+            f"{base[0]} never receives it, so it would not appear on screen"
+            for k in dropped if not any(slide[k] == slide[g] for g in got)]
+
+
 def build_spec(sp):
     seg = json.loads((sp.work / "segments.json").read_text())
     fps = sp.fps
@@ -1022,6 +1138,7 @@ def build_spec(sp):
     # _render_one, same as every sync warning collected below.
     warnings = []
     mark_problems = []
+    field_problems = []
     scenes = []
     for i, s in enumerate(segs):
         start = s["start"]
@@ -1036,6 +1153,10 @@ def build_spec(sp):
         mark_problems += _mark_problems(s["slide"], fields.get("marks") or [])
         mark_problems += _mark_problems(s["slide"], slide.get("annotations") or [],
                                         "annotations")
+        # And every authored field the type map never hands to a Paper* component
+        # (DROPPED-FIELD CONTRACT above). Raised after the marks, so a deck with both is
+        # blocked on its marks first; deck_census lists both at once, before narrate.
+        field_problems += _dropped_field_problems(s["slide"], slide, sp.data.get("theme", ""))
         sc = {"component": comp, "from": int(round(start * fps)),
               "durationInFrames": max(1, int(round((end - start) * fps))), "fields": fields}
 
@@ -1058,6 +1179,8 @@ def build_spec(sp):
         scenes.append(sc)
     if mark_problems:
         raise MalformedMarkError(mark_problems)
+    if field_problems:
+        raise DroppedFieldError(field_problems)
 
     words = []
     al = sp.work / "alignment.json"
@@ -1614,13 +1737,63 @@ def _marks_blocked_text(sp, problems):
     return "\n".join(L)
 
 
+def _fields_blocked_text(sp, problems):
+    n = len(problems)
+    L = [f"# BLOCKED: authored fields that never reach the screen ({sp.dir.name})", "",
+         f"**{n} field{'s' if n != 1 else ''} in `deck.json` that the slide's paper component "
+         f"never receives.** Each would be missing from the video.", "",
+         "`_papercraft_component` (`src/explainer2/remotion_engine.py`) builds each Paper*",
+         "component's fields from the slide, and a field it does not pass along is dropped",
+         "without a warning. The render would NOT fail: the slide renders, minus that line.",
+         "Product Leadership module 6 shipped eleven compare slides without their titles",
+         "this way (motion-playbook §2H; the DROPPED-FIELD CONTRACT comment above",
+         "`_dropped_field_problems`).", "",
+         "## To fix", ""]
+    L += [f"- {p}" for p in problems]
+    L += ["", "## Each field is one of three cases", "",
+          "1. **It should be on screen, and this slide type has a field that shows it.** Move",
+          "   the words there (deck-playbook §2 lists each type's fields), or change the slide",
+          "   to a type that shows what it is saying.",
+          "2. **It should be on screen, and no field of this type shows it.** That is an engine",
+          "   change, not a deck edit: pass it in `_papercraft_component` and draw it in the",
+          "   component under `remotion/src/components/`. Ask the operator before making it.",
+          "3. **It was never meant to be seen** (a leftover, or a field from the legacy deck",
+          "   engine). Delete it from the slide.", "",
+          "## Fix", ""]
+    if sp.data.get("derived_from"):
+        L += [f"This is a Short. Its slides are copied from the parent project "
+              f"`{sp.data['derived_from']}` on every Shorts run, so fix them in the "
+              f"parent's `deck.json` (or in the script that builds it), then re-cut:", "",
+              "```bash",
+              f"/Volumes/Casima/claudeCode/explainer2/bin/explainer2 shorts "
+              f"'{sp.dir.parent.parent}' --only {sp.dir.name}",
+              "```", ""]
+    else:
+        L += ["Fix them in `deck.json` (or in the script that builds it), then render:", "",
+              "```bash",
+              f"/Volumes/Casima/claudeCode/explainer2/bin/explainer2 render '{sp.dir}'",
+              "```", "",
+              "If the recording watcher launched this render, it relaunches phase 1 by itself",
+              "on its retry schedule once the deck is fixed.", ""]
+    L += ["The next render whose authored fields all reach their components deletes this "
+          "file.", ""]
+    return "\n".join(L)
+
+
 def _build_spec_guarded(sp, log=print):
-    """build_spec for a real render. A malformed mark or annotation is refused the way the
-    media guards refuse: BLOCKED-MARKS.md in the project naming every one, a BLOCKED log
-    line, and the error re-raised so the render stage fails and nothing downstream runs. A
-    build whose marks and annotations all pass deletes the file, so a fixed deck never looks
-    blocked."""
+    """build_spec for a real render. A malformed mark or annotation, or an authored field no
+    paper component receives, is refused the way the media guards refuse: BLOCKED-MARKS.md
+    or BLOCKED-FIELDS.md in the project naming every one, a BLOCKED log line, and the error
+    re-raised so the render stage fails and nothing downstream runs. A build that passes a
+    check deletes that check's file, so a fixed deck never looks blocked."""
     blocked = sp.dir / MARKS_BLOCKED_NAME
+    fields_blocked = sp.dir / FIELDS_BLOCKED_NAME
+
+    def clear(path, guard, why):
+        if path.exists():
+            path.unlink()
+            log(f"{guard}: previous {path.name} cleared — {why}")
+
     try:
         spec = build_spec(sp)
     except MalformedMarkError as e:
@@ -1628,10 +1801,15 @@ def _build_spec_guarded(sp, log=print):
         log(f"marks-guard: BLOCKED — {len(e.problems)} figure mark/annotation problem(s); "
             f"wrote {blocked.name} — refusing to render")
         raise
-    if blocked.exists():
-        blocked.unlink()
-        log(f"marks-guard: previous {blocked.name} cleared — every figure mark and annotation "
-            f"will draw")
+    except DroppedFieldError as e:
+        # build_spec raises this only once every mark has passed
+        clear(blocked, "marks-guard", "every figure mark and annotation will draw")
+        fields_blocked.write_text(_fields_blocked_text(sp, e.problems))
+        log(f"fields-guard: BLOCKED — {len(e.problems)} authored field(s) no paper component "
+            f"receives; wrote {fields_blocked.name} — refusing to render")
+        raise
+    clear(blocked, "marks-guard", "every figure mark and annotation will draw")
+    clear(fields_blocked, "fields-guard", "every authored field reaches its component")
     return spec
 
 

@@ -53,6 +53,13 @@ honors `accent`/`accent2`), `subkicker` (a line under the content), `source`
 (citation pinned bottom-left), and `transition` (`rise` (default) / `fade` /
 `pop` / `slide`; `punch` defaults to `pop`).
 
+**That promise is the legacy deck engine's. On the Remotion paper themes, not every type
+shows every common field** (a `quote` has no `kicker`, a `punch` or `stat` no `subkicker`).
+A field the slide's Paper\* component never receives would be missing from the video, so
+`deck_census.py` fails it and the render refuses it (`BLOCKED-FIELDS.md`, 2026-09-26). The
+census line names the slide, the field and the component. Move the words to a field that
+type shows, or delete the field (motion-playbook §2H).
+
 `accent` / `accent2` are arrays of **words that appear in the headline/title**;
 the engine highlights matching tokens (indigo / secondary). They must be
 substrings of the text they accent or nothing highlights.
@@ -103,7 +110,10 @@ substrings of the text they accent or nothing highlights.
 - **`waterfall`** → `start{label,value}` / `steps[]{label,value,kind}` / `end{}`.
 - **`timeline`** → `events[]` of `{date, label}`.
 - **`matrix`** → `x_axis[lo,hi]`, `y_axis[lo,hi]`, `points[]{x,y,label,kind}` (2×2).
-- **`compare`** → `left{title,value,kind}` vs `right{title,value,kind}`.
+- **`compare`** → `left{title,value,kind}` vs `right{title,value,kind}`, plus an optional
+  `title` (+ `accent`): the header line above the two sides. On the paper themes it renders
+  like a figure's persistent title (2026-09-26; until then the map dropped it, and 16
+  Product Leadership compares shipped without their line).
 - **`schematic`** *(Remotion engine only, 2026-07-04)* → the guided node/edge diagram:
   `nodes[]{id, label, sub?, x, y, w?, kind?(good|bad|neutral)}` (x/y/w in 0–1 frame
   space, YOU author the layout), `edges[]{from, to, label?, kind?}`,

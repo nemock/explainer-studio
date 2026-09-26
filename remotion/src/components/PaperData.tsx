@@ -1,8 +1,10 @@
 import React from 'react';
-import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
+import {AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
+import {useInk, PAPER_SHADOW} from '../ink';
 import {useWorld, CameraMove, PLANE, Plane, PaperTable, PaperCard, PaperProps, usePaperLayout, resolveCamera, usePlace, popupStyle, placeStyle, flick, usePaperPush} from './PaperWorld';
 import {PaperSheet} from './PaperNote';
+import {figColorize} from './Media';
 
 // Papercraft Motion — data & structure family (papercraft-motion-spec.md §7).
 // Charts are physical objects: stairs pop up step by step and a paper pawn
@@ -104,12 +106,14 @@ export const PaperStairs: React.FC<{fields: any; durationInFrames: number}> = ({
 // ---------------------------------------------------------------------------
 // PaperCompare — two paper trays popup left then right; the "bad" side sits in
 // harder shadow with a plum header strip (the palette carries the judgment).
-// fields: {left:{title,value,kind}, right:{title,value,kind}, cueFrames:{l?,r?}}
+// fields: {kicker, title?, accent?, left:{title,value,kind}, right:{title,value,kind}, cueFrames:{l?,r?}}
 export const PaperCompare: React.FC<{fields: any; durationInFrames?: number}> = ({fields, durationInFrames = 300}) => {
   const push = usePaperPush(durationInFrames);
   const W = useWorld();
+  const ink = useInk();
   const frame = useCurrentFrame();
   const {fps, width} = useVideoConfig();
+  const titleIn = spring({frame, fps, config: {damping: 18, stiffness: 90}});  // Figure's kIntro
   // Portrait stacks the two trays top/bottom — the same collision CvgCompare fixed: two
   // columns in a 1080-wide frame are too narrow to hold a tray's own words.
   const {portrait, M: height, reserve} = usePaperLayout();
@@ -164,6 +168,22 @@ export const PaperCompare: React.FC<{fields: any; durationInFrames?: number}> = 
       <PaperProps items={fields.props} />
       <Kicker text={fields.kicker} height={height} />
       <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve, ...push}}>
+        {fields.title ? (
+          // The header line (2026-09-26; the type map dropped it until then). Styled as
+          // Figure's persistent title in Media.tsx, so a compare and a figure on the same page
+          // read as one voice: same weight, size, leading, shadow, accent colouring and
+          // entrance spring, and the same 0.075 clearance below it (Figure's clears its
+          // mount's tape; here it gives the trays the same air). `height` is this family's
+          // type scale, which in landscape IS the frame height Figure sizes from, so a
+          // landscape title matches Figure's to the pixel; portrait tracks M like every other
+          // paper size. The measure is Figure's too: its scene pads 6% a side, and the title
+          // pads another 4% of what is left.
+          <div style={{textAlign: 'center', maxWidth: width * 0.88 * 0.92, fontFamily: BRAND.font, color: ink.body,
+                       fontWeight: 900, fontSize: height * 0.042, lineHeight: 1.16, opacity: titleIn,
+                       marginBottom: height * 0.075, textShadow: ink.paper ? PAPER_SHADOW : '0 3px 18px rgba(0,0,0,.6)'}}>
+            {figColorize(fields.title, fields.accent, [], ink.accent)}
+          </div>
+        ) : null}
         <div style={{display: 'flex', flexDirection: portrait ? 'column' : 'row',
                      gap: portrait ? height * 0.05 : width * 0.05, width: '100%',
                      justifyContent: 'center', alignItems: portrait ? 'center' : 'stretch'}}>
