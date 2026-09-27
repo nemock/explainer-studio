@@ -619,10 +619,8 @@ Rules:
   with the sharpest line, not setup.
 - **Short.** A few short paragraphs per option, then the video URL, then **3 to 5
   hashtags** (operator directive 2026-08-03, raised from ~3; trim for other
-  platforms). This overrides the HumanER LinkedIn dial's "0-3, if any" — that
-  dial describes his organic commentary posts, where a hashtag pile reads as
-  reach-chasing; a share post for a published video is a different job and 3 to 5
-  is the working range.
+  platforms). The count is set here, not by HumanER: hashtags are packaging, and
+  HumanER dropped its hashtag counts on 2026-09-27 to stay a writing skill.
 - **ALL THREE options carry the URL.** Each one is a standalone paste, so each
   needs the link inside it. Do not write "link in the comments" and do not put
   the URL only in the header: the header line is a convenience for the operator,
