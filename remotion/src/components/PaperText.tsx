@@ -179,11 +179,53 @@ export const PaperPunch: React.FC<{fields: any; durationInFrames?: number}> = ({
   );
 };
 
+// The before line as runs of plain and struck text. `strike` names the words being negated,
+// and decks author it two ways, both the deck contract (deck-playbook §2, `reframe`):
+//   inside `before`  "Define it by its activities" + "activities": struck in place, and the
+//                    rest of the line stands
+//   after `before`   the legacy three-part form, "Being the bottleneck isn't" + "a flaw": the
+//                    phrase follows `before` on the same line, struck, as the legacy deck
+//                    engine and CvgReframe draw it
+// A list is read phrase by phrase (first occurrence, any case). null when nothing is authored.
+type Run = {text: string; struck: boolean};
+const strikeRuns = (beforeText: string, strike: any): Run[] | null => {
+  const phrases: string[] = (Array.isArray(strike) ? strike : [strike])
+    .filter((p: any) => typeof p === 'string' && p.trim());
+  if (!phrases.length) return null;
+  const low = beforeText.toLowerCase();
+  const spans: [number, number][] = [];
+  const trailing: string[] = [];
+  for (const p of phrases) {
+    const i = low.indexOf(p.toLowerCase());
+    if (i < 0) trailing.push(p);
+    else if (!spans.some(([a, b]) => i < b && i + p.length > a)) spans.push([i, i + p.length]);
+  }
+  spans.sort((x, y) => x[0] - y[0]);
+  const runs: Run[] = [];
+  let at = 0;
+  for (const [a, b] of spans) {
+    if (a > at) runs.push({text: beforeText.slice(at, a), struck: false});
+    runs.push({text: beforeText.slice(a, b), struck: true});
+    at = b;
+  }
+  if (at < beforeText.length) runs.push({text: beforeText.slice(at), struck: false});
+  for (const p of trailing) {
+    if (runs.length) runs.push({text: ' ', struck: false});
+    runs.push({text: p, struck: true});
+  }
+  return runs;
+};
+
 // reframe -> the before line on a card, struck through, and the after line on a second
 // card below it. Added 2026-08-12: `reframe` was one of six types with no papercraft
 // equivalent, so on plg-guide it fell through to the classic map and drew bare type on the
 // ground. Art cannot carry this one — the whole beat is a sentence turning into a different
 // sentence — so the magnific element here is the paper the two lines are written on.
+// Only the `strike` words are struck (2026-09-27, operator; see strikeRuns). Until then this
+// component received `strike` and never read it: it struck the whole line, so "Define it by
+// its activities" lost the point of naming "activities", and the four slides written in the
+// three-part form never showed their struck phrase at all. With no `strike` authored, the
+// whole `before` line is what is negated, drawn as it always was.
 // fields: {kicker, before, strike, after}
 export const PaperReframe: React.FC<{fields: any; durationInFrames?: number}> = ({fields, durationInFrames = 300}) => {
   const push = usePaperPush(durationInFrames);
@@ -198,6 +240,16 @@ export const PaperReframe: React.FC<{fields: any; durationInFrames?: number}> = 
   // the strike draws across the old line, then the new card lands on top of the beat
   const struck = interpolate(frame, [hit + 12, hit + 22], [0, 1],
                              {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const fade = interpolate(struck, [0, 1], [1, 0.42]);
+  const beforeText: string = fields.before || '';
+  const runs = strikeRuns(beforeText, fields.strike);
+  // what the line prints, so the fit below also covers a phrase that follows `before`
+  const line = runs ? runs.map((r) => r.text).join('') : beforeText;
+  // the strike is a torn rust strip laid over the words, not a text-decoration — it has to
+  // read as something placed on the paper
+  const strip: React.CSSProperties = {position: 'absolute', left: 0, top: '52%', height: Math.max(3, height * 0.008),
+                                      width: '100%', background: W.accent, borderRadius: 2,
+                                      transform: `scaleX(${struck.toFixed(3)})`, transformOrigin: 'left center'};
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <PaperTable seed={fields.after || 'reframe'} tightenAt={hit} />
@@ -216,15 +268,18 @@ export const PaperReframe: React.FC<{fields: any; durationInFrames?: number}> = 
               — which spans 100% of the line box — overran with it. */}
           <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 900,
                        fontSize: Math.min(height * 0.055,
-                                          (width * 0.62) / Math.max(1, (fields.before || '').length * 0.52)),
+                                          (width * 0.62) / Math.max(1, line.length * 0.52)),
                        lineHeight: 1.1, color: W.ink, textAlign: 'center',
-                       opacity: interpolate(struck, [0, 1], [1, 0.42])}}>
-            {fields.before}
-            {/* the strike is a torn rust strip laid over the line, not a text-decoration —
-                it has to read as something placed on the paper */}
-            <div style={{position: 'absolute', left: 0, top: '52%', height: Math.max(3, height * 0.008),
-                         width: '100%', background: W.accent, borderRadius: 2,
-                         transform: `scaleX(${struck.toFixed(3)})`, transformOrigin: 'left center'}} />
+                       opacity: runs ? 1 : fade}}>
+            {runs ? runs.map((r, i) => (r.struck ? (
+              // each struck phrase fades and takes its own strip, sized to its own words;
+              // inline-block keeps a phrase on one line so its strip cannot split
+              <span key={i} style={{position: 'relative', display: 'inline-block', opacity: fade}}>
+                {r.text}<span style={strip} />
+              </span>
+            ) : <React.Fragment key={i}>{r.text}</React.Fragment>)) : (
+              <>{beforeText}<div style={strip} /></>
+            )}
           </div>
         </PaperCard>
         </div>

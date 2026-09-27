@@ -752,9 +752,9 @@ export const CvgDefine: React.FC<{fields: any}> = ({fields}) => {
 // 2026-08-12; the catch-all has now swallowed three types, so anything added to the deck
 // vocabulary needs a branch here, not a fall-through.
 //
-// All three authored fields render, which the Paper* version does not do — PaperReframe
-// accepts `strike` and never draws it, striking the whole `before` line instead. The
-// three-part reading is what the decks actually author: `before` is the lead-in that
+// All three authored fields render. (PaperReframe struck the whole `before` line and never
+// drew `strike` until 2026-09-27; it now strikes only the `strike` words, whether they sit
+// inside `before` or follow it.) The three-part reading here: `before` is the lead-in that
 // stands, `strike` is the phrase being negated, `after` is what replaces it. A deck that
 // omits `strike` falls back to the two-part reading and strikes `before` itself.
 export const CvgReframe: React.FC<{fields: any}> = ({fields}) => {

@@ -76,6 +76,12 @@ substrings of the text they accent or nothing highlights.
   (`good`→accent / `bad`→accent2). For the biggest energy beat (often the
   midroll seam).
 - **`reframe`** → `before` + `strike` (struck-through) + `after`. "X → Y".
+  `strike` names the words being negated. Put them inside `before` ("Define it by its
+  activities" + `strike`: "activities") and only those words are struck, with the rest of
+  the line standing; or, in the legacy three-part form, leave them out of `before` and they
+  follow it on the same line, struck. A list strikes each phrase. With no `strike`, the whole
+  `before` line is struck. (Paper themes read it this way since 2026-09-27; before that
+  they struck the whole line and never showed `strike`.)
 - **`quote`** → `quote` (falls back to `headline`) + `attribution`. For verbatim
   lines (e.g. a book quote). Put the attribution as the source.
 - **`define`** → `term` + `definition`.

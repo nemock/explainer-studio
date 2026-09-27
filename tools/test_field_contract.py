@@ -273,12 +273,10 @@ with tempfile.TemporaryDirectory() as tmp:
 # --- 3) the component side: a field the map hands over that the component never reads ---
 # The engine guard sees what a component RECEIVES. Half of the compare bug was the other
 # side: PaperCompare was never written to read a title. This reads each Paper* component's
-# source and asks the same question of it. KNOWN_UNREAD are the gaps open on 2026-09-26,
-# left for the operator because closing them changes how shipped slides look; a fix that
-# reads the field must delete its entry here.
+# source and asks the same question of it. KNOWN_UNREAD are the gaps still open, left for
+# the operator because closing them changes how shipped slides look; a fix that reads the
+# field must delete its entry here (PaperReframe's `strike` was the first, 2026-09-27).
 KNOWN_UNREAD = {
-    ("PaperReframe", "strike"): "strikes the whole `before` line, not the `strike` words "
-                                "(36 slides author one)",
     ("PaperBookCTA", "accent"): "draws the closing headline in plain ink (41 closing cards "
                                 "and Short outros author one)",
 }
@@ -367,4 +365,5 @@ print(f"PASS — compare and delta titles and highlight marks reach their paper 
       f"{len(PAPER_MAP_THEMES)} themes; {len(BAD)} dropped fields refused (BLOCKED-FIELDS.md "
       f"written, then cleared; the census fails them too); {len(GOOD)} slides with nothing "
       f"dropped pass; {len(handed)} Paper* components read what they are handed "
-      f"({len(KNOWN_UNREAD)} known gaps); {checked} real project(s) build clean")
+      f"({len(KNOWN_UNREAD)} known gap{'' if len(KNOWN_UNREAD) == 1 else 's'}); "
+      f"{checked} real project(s) build clean")

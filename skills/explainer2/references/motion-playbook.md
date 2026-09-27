@@ -420,9 +420,12 @@ leftover (delete it).
 
 `tools/test_field_contract.py` is the regression. It also reads each Paper\* component's
 source to check that every field the map hands it is read, since the compare title was
-dropped on both sides. Two gaps there are recorded, not fixed, because closing them changes
-how shipped slides look: `PaperReframe` strikes the whole `before` line instead of the
-`strike` words, and `PaperBookCTA` draws its headline without its `accent`.
+dropped on both sides. One gap there is recorded, not fixed, because closing it changes how
+shipped slides look: `PaperBookCTA` draws its headline without its `accent`. The other,
+`PaperReframe` striking the whole `before` line and never drawing `strike`, was closed on
+2026-09-27 at the operator's request: it now strikes only the `strike` words, in place when
+they sit inside `before` and appended after it in the legacy three-part form (#21, #58 and
+#59 had never shown theirs). A reframe with no `strike` renders exactly as it did.
 
 **Now loud, not yet fixed.** On 2026-09-26, 25 built projects would stop on
 `BLOCKED-FIELDS.md` if re-rendered, all of them published or finished (Product Leadership
