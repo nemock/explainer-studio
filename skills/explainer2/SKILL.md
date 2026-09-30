@@ -54,8 +54,10 @@ conflict for the operator. Do not skip steps because they seem obvious.
    both long-standing — this rule does NOT block them** (clarified 2026-08-04, because the
    old flat "never post anywhere" wording contradicted a month of normal practice):
    - **`explainer2 publish`** uploads the finished video to YouTube (OAuth, channel
-     `nemock`). Default privacy is `private`; we normally ship `--privacy unlisted` for
-     the operator's review. This is standard for every deep dive, not an exception to argue
+     `nemock`). **Every upload lands UNLISTED** for the operator's review: `--fire` defaults to
+     `unlisted` (operator directive 2026-09-30), and nothing in this pipeline passes `--privacy
+     private`. #67-#69 went up private because a session copied the previous video's
+     meta.json; `privacy_intent` in meta.json is a record, never the switch. This is standard for every deep dive, not an exception to argue
      about. The AI-use disclosure (Studio: Details > Show more > "AI use", labeled
      "Altered content" until Sept 2026) and the pinned comment remain manual browser steps.
    - **`explainer2 promote`** re-shares already-published Shorts via Blotato (PRD N1).

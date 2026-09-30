@@ -748,8 +748,8 @@ def main(argv=None):
                          "the API-blind steps (end screen, pinned comment, 'AI use' disclosure)")
     pub.add_argument("project_dir", nargs="?", help="omit only with --authorize")
     pub.add_argument("--fire", action="store_true", help="actually upload (default: dry-run plan)")
-    pub.add_argument("--privacy", choices=["public", "unlisted", "private"], default="private",
-                     help="visibility on --fire (default: private — pass public to go live)")
+    pub.add_argument("--privacy", choices=["public", "unlisted", "private"], default="unlisted",
+                     help="visibility on --fire (default: unlisted for review; flip with --set-privacy public)")
     pub.add_argument("--when", help="RFC3339 UTC timestamp to schedule (forces private + publishAt)")
     pub.add_argument("--channel", default=None,
                      help="target channel KEY; overrides project.json 'youtube_channel' "

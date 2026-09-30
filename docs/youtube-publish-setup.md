@@ -76,7 +76,7 @@ channel" fallback — the wrong-channel mistake is structurally impossible.
 # dry run — prints the exact API payload + the Chrome checklist (safe, no upload)
 bin/explainer2 publish <project_dir>
 
-# upload PRIVATE (default), then finish in Chrome
+# upload UNLISTED (default since 2026-09-30), then finish in Chrome
 bin/explainer2 publish <project_dir> --fire
 
 # upload PUBLIC
@@ -90,8 +90,9 @@ bin/explainer2 publish <project_dir> --set-privacy public         # video id rea
 bin/explainer2 publish --set-privacy public --video-id <id> --channel waveform
 ```
 
-The recommended first-fire flow: `--fire --privacy unlisted` → eyeball it in Studio →
-`--set-privacy public`. `--set-privacy` runs the same channel guard as `--fire` (it will
+The standard flow: `--fire` (unlisted by default) → finish the Studio steps and eyeball it →
+`--set-privacy public`. Unlisted, unlike private, has comments open, so the pinned sources
+comment can be posted before the flip. `--set-privacy` runs the same channel guard as `--fire` (it will
 not touch a video unless the loaded token's real channel id matches the registry).
 
 **What `--fire` sets via the API:** file, title, description (with chapters), tags,
@@ -157,5 +158,6 @@ worked around per project.
   ships unset and must be set BY HAND in Studio every upload (Details → Show more → AI use,
   formerly "Altered content"). Select **"No"** for our real-voice + deterministic-motion videos (an AI-assisted
   thumbnail does not require disclosure). TTS projects: decide per YouTube's synthetic-content policy.
-- Safety: dry-run by default; `--fire` defaults to **private**; it refuses to fire
+- Safety: dry-run by default; `--fire` defaults to **unlisted** (since 2026-09-30; `--when` still
+  forces private + publishAt); it refuses to fire
   while any blocking warning (missing file, unauthorized channel) is unresolved.

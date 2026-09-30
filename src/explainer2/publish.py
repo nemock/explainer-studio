@@ -25,7 +25,9 @@ MULTI-CHANNEL (the Blotato model, done locally):
   Net: the Binaural generator's projects target "waveform" and can never leak onto
   the main channel; FWF projects target "nemock" and never touch Waveform.
 
-Dry-run by DEFAULT; --fire uploads. --fire defaults to privacyStatus=private.
+Dry-run by DEFAULT; --fire uploads. --fire defaults to privacyStatus=UNLISTED (operator
+directive 2026-09-30: every upload lands unlisted for review; --when still forces
+private + publishAt, and --privacy private remains available on request).
 The google-api-python-client import is LAZY so dry-run needs no deps/creds.
 """
 import json
@@ -69,7 +71,7 @@ def _meta(proj):
 
 
 # ------------------------------------------------------------------ planning
-def build_plan(proj, channel, privacy="private", when=None):
+def build_plan(proj, channel, privacy="unlisted", when=None):
     """Pure: derive the exact API payload + browser checklist. No network/deps."""
     meta = _meta(proj)
     reg = load_registry()
@@ -480,7 +482,7 @@ def authorize(key, force_rebind=False):
 
 
 # ------------------------------------------------------------------ entry point
-def run(project_dir=None, fire=False, privacy="private", when=None,
+def run(project_dir=None, fire=False, privacy="unlisted", when=None,
         channel=None, do_authorize=False, force_rebind=False):
     # --authorize is project-independent
     if do_authorize:
@@ -496,7 +498,7 @@ def run(project_dir=None, fire=False, privacy="private", when=None,
         out = {k: v for k, v in plan.items() if k != "_body"}
         out["dry_run"] = True
         out["note"] = ("DRY RUN. Re-run with --fire to upload. --fire defaults to "
-                       "privacyStatus=private; pass --privacy public to go live.")
+                       "privacyStatus=unlisted; flip it with --set-privacy public after review.")
         return out
 
     if plan["warnings"]:
