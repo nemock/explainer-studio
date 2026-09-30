@@ -765,6 +765,30 @@ def notify_once(proj, marker, fp, title, text):
     return True
 
 
+def log_skip(cfg, proj, key, msg, every=HEARTBEAT_LOG_EVERY_S):
+    """Log a skip decision for a DONE studio project without flooding the log.
+
+    A new decision (a different `key`) is logged at once; the same decision again at
+    most every `every` seconds, or never again when `every` is None. Before 2026-09-30
+    two studio skips were silent, and #70 sat unrendered for two hours with nothing in
+    watcher.log to say the watcher had even looked at it. The marker lives in work/
+    beside notify_once's, so it travels with the project."""
+    f = Path(proj) / "work" / "watcher_skip.json"
+    now = time.time()
+    try:
+        prev = json.loads(f.read_text())
+    except Exception:
+        prev = {}
+    if prev.get("key") == key and (
+            every is None or now - float(prev.get("at") or 0) < every):
+        return
+    log(cfg, msg)
+    try:
+        f.write_text(json.dumps({"key": key, "at": now}))
+    except OSError:
+        pass                     # the log line is written; the throttle is a nicety
+
+
 def studio_candidates(show):
     """Studio project dirs with a Finish sentinel inside the lookback, newest Finish
     first. A project is a dir with project.json + script.json; SKIPPED.md opts out.
@@ -801,20 +825,34 @@ def studio_rendered(proj):
     manifest. So any media output newer than record_done.json counts: work/results.json
     (every `media` run ends by writing it), the root manifest.json, or a rendered mp4
     under video/. A re-record after a render produces a newer record_done.json, so the
-    project comes back for another Phase 1 — right, because the timeline changed."""
+    project comes back for another Phase 1 — right, because the timeline changed.
+
+    Only artifacts written AFTER a render finished count (2026-09-30). A bare mp4 under
+    video/ used to count too, but the encoder writes that file while it renders, so a
+    render killed partway leaves a partial mp4 newer than record_done.json. #70
+    claude-nine-loops was stopped with kill_render.py at 14:20 to fix deck.json; the
+    partial mp4 read as "rendered", the project was skipped without a log line for two
+    hours, and module-07 took the render slot at 15:42. results.json counts only when
+    its media run got through `render` (`media --only narrate,align` writes one too).
+
+    Returns a short description of the evidence (truthy), or "" if there is none."""
     try:
         done = (proj / "work" / "record_done.json").stat().st_mtime
     except OSError:
-        return False
-    outputs = [proj / "work" / "render_complete.json", proj / "work" / "results.json",
-               proj / "manifest.json"] + list((proj / "video").glob("*.mp4"))
-    for f in outputs:
+        return ""
+    for f in (proj / "work" / "render_complete.json", proj / "manifest.json",
+              proj / "work" / "results.json"):
         try:
-            if f.stat().st_mtime >= done:
-                return True
-        except OSError:
+            m = f.stat().st_mtime
+            if m < done:
+                continue
+            if f.name == "results.json" and "render" not in json.loads(f.read_text()):
+                continue
+        except (OSError, ValueError, AttributeError, TypeError):
             continue
-    return False
+        return (f"{f.relative_to(proj)} "
+                f"({datetime.fromtimestamp(m).strftime('%Y-%m-%d %H:%M:%S')})")
+    return ""
 
 
 def run_studio(cfg, show, dry, spawned):
@@ -824,11 +862,18 @@ def run_studio(cfg, show, dry, spawned):
     no PENDING heartbeat, no NOT_OPEN relaunch (the session owns the booth), no phase-2
     Claude spawn (the operator resumes the session; RESUME.md is the handoff)."""
     for proj in studio_candidates(show):
-        if studio_rendered(proj):
-            continue                                     # done for this recording
+        evidence = studio_rendered(proj)
+        if evidence:                                     # done for this recording
+            log_skip(cfg, proj, f"rendered:{evidence}",
+                     f"STUDIO-RENDERED {show['id']}: {proj.name} — {evidence} is newer "
+                     f"than work/record_done.json; not rendering again", every=None)
+            continue
         lk = read_lock(proj)
-        if lk and pid_alive(lk.get("pid")):
-            continue                                     # our own render, in flight
+        if lk and pid_alive(lk.get("pid")):              # our own render, in flight
+            log_skip(cfg, proj, f"worker:{lk.get('pid')}",
+                     f"{show['id']}: {proj.name} DONE, worker pid {lk.get('pid')} "
+                     f"still active — backing off")
+            continue
         try:
             pj = json.loads((proj / "project.json").read_text())
         except Exception:
@@ -905,6 +950,10 @@ def run_studio(cfg, show, dry, spawned):
             log(cfg, f"[DRY-RUN] {show['id']}: {proj.name} DONE, no render yet — would "
                      f"launch RENDER (phase 1, studio profile)")
         else:
+            if lk:          # a render was started here before and did not finish
+                log(cfg, f"STUDIO-RELAUNCH {show['id']}: {proj.name} — earlier phase-1 "
+                         f"worker pid {lk.get('pid')} is gone and left no completed "
+                         f"render for this recording; relaunching")
             launch_render(cfg, show, proj)
         spawned = True
     return spawned
