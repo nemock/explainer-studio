@@ -153,6 +153,9 @@ const SceneWrap: React.FC<{durationInFrames: number; paper?: boolean; tear?: str
 //  - the papercraft table family: PaperTable IS their frame, so it must run edge to edge.
 //    They hold the caption band back inside themselves instead — usePaperLayout's `reserve`,
 //    plus min-dimension type and stacked portrait layouts (the pass they got 2026-08-07).
+//    A new Paper* scene that paints PaperTable or reads `reserve` joins this set in the same
+//    change. PaperReframe (2026-08-12) did not, so every portrait reframe was reserved twice
+//    and sat pinned at the top over an empty middle third until 2026-09-30.
 //
 // Everything else (the Cut & Bond chemistry kit, figures, text scenes, data viz) lays content
 // out on the page and lifts cleanly.
@@ -160,7 +163,7 @@ const FULL_BLEED = new Set([
   'BrandSting', 'PaperSting', 'BRGPaperSting', 'PaperHook', 'PaperMonitor', 'Hero3D', 'Footage', 'KeepCard',
   'CvgScene', 'CvgPunch', 'CvgCta', 'CvgTitle', 'CvgList', 'CvgCompare', 'CvgSteps', 'CvgDefine', 'CvgReframe',
   'PaperSetHook', 'PaperPopCard', 'PaperCounter', 'PaperStatement', 'PaperDefine',
-  'PaperPunch', 'PaperStairs', 'PaperCompare', 'PaperSteps', 'PaperList', 'PaperBookCTA',
+  'PaperPunch', 'PaperReframe', 'PaperStairs', 'PaperCompare', 'PaperSteps', 'PaperList', 'PaperBookCTA',
 ]);
 
 // Paper worlds whose sheet is BRG's cooler cream (#f5f0eb) rather than the FWF/nemock

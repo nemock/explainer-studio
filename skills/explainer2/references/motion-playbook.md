@@ -63,6 +63,13 @@ Read this file before authoring any video's motion spec.
   everywhere so the whole video feels like one system. Exits are quick fades.
 - **Safe areas:** 9:16 keeps the bottom ~14% clear for captions; 16:9 keeps a lower-third
   band. Captions sit above the safe inset.
+- **Portrait inset and `FULL_BLEED`:** in 9:16, `Video.tsx` lifts every scene off the bottom
+  third except the ones in its `FULL_BLEED` set, which own the whole frame. A new
+  self-composing Paper\* scene (one that paints `PaperTable` or holds the caption band back
+  itself with `usePaperLayout`'s `reserve`) **joins `FULL_BLEED` in the same change**. Left
+  out, it is squeezed into the top two-thirds and then lifts itself again. `PaperReframe` was
+  left out from 2026-08-12 to 2026-09-30, and every portrait reframe on the paper themes sat
+  pinned at the top over an empty middle third.
 - **Loop-safety (shorts):** the last frame should hand back to the first (no hard stop).
 
 ## 2. The expression catalog (the vocabulary)
