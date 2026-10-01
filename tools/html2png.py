@@ -57,8 +57,16 @@ if __name__ == "__main__":
     ap.add_argument("--allow-underfill", action="store_true",
                     help="render even though the page does not fill the viewport")
     a = ap.parse_args()
+    # Every render on this Mac goes through the machine-global render lock, whatever its
+    # length (operator directive 2026-10-01), and this launches headless Chromium. Only
+    # the CLI takes the lock, so a caller already holding it can still import render().
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+    from explainer2 import renderlock
+    lock = renderlock.acquire(label=f"html2png:{Path(a.out).name}")
     try:
         print(render(a.src, a.out, a.width, a.height, a.allow_underfill))
     except UnderfilledPage as e:
         print(f"ERROR: {e}", file=sys.stderr)
         raise SystemExit(2)
+    finally:
+        renderlock.release(lock)

@@ -295,6 +295,9 @@ If a brand has no `thumbnail` block, use the §0/§2 defaults.
 python tools/html2png.py <project>/package/thumbnails/thumb_a.html \
   <project>/package/thumbnails/thumb_a.png --width 1280 --height 720
 ```
+This is a render (headless Chromium), so it takes the machine-wide render lock itself
+(2026-10-01). Run A and B as ONE detached job, one after the other, never as parallel
+tool calls and never in the session's foreground (SKILL hard rule 7).
 (2× device scale is built in for crisp text.)
 
 **A/B Test & Compare is RETIRED (operator directive, 2026-07-26).** Dave: "we

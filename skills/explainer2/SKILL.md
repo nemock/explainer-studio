@@ -76,6 +76,8 @@ conflict for the operator. Do not skip steps because they seem obvious.
    - every Shorts cut or re-cut: ONE detached `bin/explainer2 shorts <dir> --plan
      <subset>` job, never two, never `--only` jobs side by side;
    - `tools/mark_stills.py`, which takes the lock itself since 2026-10-01;
+   - `tools/html2png.py` (thumbnail cards, figure artifacts), which also takes the lock
+     itself since 2026-10-01; render both cards in ONE detached job, A then B;
    - any ad-hoc `npx remotion still` or ffmpeg encode, via `renderlock.run_locked`
      with the detached launcher pattern in §7.
    Never launch render jobs as parallel tool calls, and never in the session's
