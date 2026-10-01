@@ -70,13 +70,22 @@ conflict for the operator. Do not skip steps because they seem obvious.
    pull, the research wiki, or the talk-time library. No invented numbers.
 6. **Numbers are spelled out in scripts** ("five hundred", not "500") — TTS
    and captions both need words.
-7. **The heavy render launches DETACHED; everything else runs foreground.** The
-   light media stages (narrate/align/deck) and all other CLI verbs run
-   synchronously in the foreground. The one exception is the deep-dive render: it
-   exceeds the Bash 10-min cap and a harness-backgrounded encode dies on
-   app-suspend, so launch it detached via `bin/explainer2 render` (§7) and check
-   progress on re-invocation. Never write a polling loop (global CLAUDE.md shell
-   rules).
+7. **Every render goes through the render lock and launches DETACHED, whatever its
+   length (operator directive 2026-10-01).** This covers:
+   - the long-form render (`bin/explainer2 render`, §7);
+   - every Shorts cut or re-cut: ONE detached `bin/explainer2 shorts <dir> --plan
+     <subset>` job, never two, never `--only` jobs side by side;
+   - `tools/mark_stills.py`, which takes the lock itself since 2026-10-01;
+   - any ad-hoc `npx remotion still` or ffmpeg encode, via `renderlock.run_locked`
+     with the detached launcher pattern in §7.
+   Never launch render jobs as parallel tool calls, and never in the session's
+   foreground. A foreground job queued on the lock still holds its imports inside the
+   desktop app. On 2026-10-01 that froze Claude Desktop, and the force-quit killed two
+   renders, one of them another session's. Before launching, check
+   `bin/explainer2 render-status`, `/tmp/explainer-render.tickets`, and the output
+   files' mtimes against the change you are rendering for. The light media stages
+   (narrate/align/deck) and the non-rendering CLI verbs run synchronously in the
+   foreground. Never write a polling loop (global CLAUDE.md shell rules).
 8. **NEVER edit `script.json` after the operator has recorded it** (added
    2026-08-10, after a near-miss). Forced alignment does not fail on a text/audio
    mismatch — it silently maps the new words onto the old audio and the video

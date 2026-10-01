@@ -40,6 +40,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from explainer2.project import Project           # noqa: E402
 from explainer2 import remotion_engine as E      # noqa: E402
+from explainer2 import renderlock                # noqa: E402
 from frame_preview import DEFAULT_MAX, make_preview  # noqa: E402
 
 REMO = Path(__file__).resolve().parents[1] / "remotion"
@@ -86,26 +87,37 @@ def main():
 
     print(f"{len(targets)} mark-carrying scenes")
     tiles = []
-    for i, (comp, fields, dur, frame) in enumerate(targets):
-        props = {"width": 1920, "height": 1080, "fps": spec["fps"],
-                 "durationInFrames": dur, "audio": "", "words": [],
-                 "scenes": [{"component": comp, "from": 0,
-                             "durationInFrames": dur, "fields": fields}],
-                 "captionBottomPx": 194, "captionFontSize": 28, "audioFrom": 0,
-                 "theme": spec.get("theme", ""), "captionAccent": ""}
-        pf = outdir / f"props_{i:02d}.json"
-        pf.write_text(json.dumps(props))
-        out = outdir / f"mark_{i:02d}.png"
-        r = subprocess.run(["npx", "remotion", "still", "Video", str(out),
-                            f"--props={pf}", f"--frame={frame}",
-                            f"--public-dir={pub}", "--log=error"],
-                           cwd=REMO, capture_output=True, text=True)
-        label = Path(fields.get("image") or comp).stem
-        print(f"  {i:02d} {label:<22} frame {frame}: {'ok' if r.returncode == 0 else 'FAIL'}")
-        if r.returncode == 0:
-            tiles.append((label, out))
-        else:
-            print(r.stderr[-500:])
+    # Every render on this Mac goes through the machine-global render lock, whatever its
+    # length (operator directive 2026-10-01). Each still below launches headless Chrome,
+    # so this loop is a render like any other, and until that date it ran unlocked
+    # beside whatever long-form render was encoding.
+    lock = renderlock.acquire(proj, label=f"mark_stills:{pdir.name}")
+    try:
+        for i, (comp, fields, dur, frame) in enumerate(targets):
+            # "words": [] renders the scene WITHOUT the burned-in captions, so a caption
+            # that covers a marked subject cannot show up here. Check that on frames of
+            # the rendered mp4 (PLG module 7, 2026-10-01: s98's circled chip was hidden).
+            props = {"width": 1920, "height": 1080, "fps": spec["fps"],
+                     "durationInFrames": dur, "audio": "", "words": [],
+                     "scenes": [{"component": comp, "from": 0,
+                                 "durationInFrames": dur, "fields": fields}],
+                     "captionBottomPx": 194, "captionFontSize": 28, "audioFrom": 0,
+                     "theme": spec.get("theme", ""), "captionAccent": ""}
+            pf = outdir / f"props_{i:02d}.json"
+            pf.write_text(json.dumps(props))
+            out = outdir / f"mark_{i:02d}.png"
+            r = subprocess.run(["npx", "remotion", "still", "Video", str(out),
+                                f"--props={pf}", f"--frame={frame}",
+                                f"--public-dir={pub}", "--log=error"],
+                               cwd=REMO, capture_output=True, text=True)
+            label = Path(fields.get("image") or comp).stem
+            print(f"  {i:02d} {label:<22} frame {frame}: {'ok' if r.returncode == 0 else 'FAIL'}")
+            if r.returncode == 0:
+                tiles.append((label, out))
+            else:
+                print(r.stderr[-500:])
+    finally:
+        renderlock.release(lock)
 
     from PIL import Image, ImageDraw
     CW = 620
