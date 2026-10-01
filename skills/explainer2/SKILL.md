@@ -83,7 +83,10 @@ conflict for the operator. Do not skip steps because they seem obvious.
    desktop app. On 2026-10-01 that froze Claude Desktop, and the force-quit killed two
    renders, one of them another session's. Before launching, check
    `bin/explainer2 render-status`, `/tmp/explainer-render.tickets`, and the output
-   files' mtimes against the change you are rendering for. The light media stages
+   files' mtimes against the change you are rendering for. Queuing a render never
+   needs the operator's go-ahead: when a render is needed, put it through the lock
+   (operator, 2026-10-01: "That is the unconditional workflow: all renders go through
+   the queuing system"). The light media stages
    (narrate/align/deck) and the non-rendering CLI verbs run synchronously in the
    foreground. Never write a polling loop (global CLAUDE.md shell rules).
 8. **NEVER edit `script.json` after the operator has recorded it** (added
