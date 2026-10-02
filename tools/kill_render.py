@@ -107,10 +107,11 @@ def _why(cmd, proj, props):
     immediately after the verb and end on an argument boundary.
     """
     for driver in ("explainer2.cli", "explainer.cli"):
-        marker = f"{driver} media "
-        i = cmd.find(marker)
-        if i != -1 and _arg_at(cmd, i + len(marker), proj):
-            return "media"
+        for verb in ("media", "shorts"):      # shorts added 2026-10-01: it was invisible here
+            marker = f"{driver} {verb} "
+            i = cmd.find(marker)
+            if i != -1 and _arg_at(cmd, i + len(marker), proj):
+                return verb
     marker = "phase1_render.py "
     i = cmd.find(marker)
     if i != -1 and _arg_at(cmd, i + len(marker), proj):
@@ -119,6 +120,11 @@ def _why(cmd, proj, props):
     i = cmd.find(marker)
     if i != -1 and _arg_at(cmd, i + len(marker), props):
         return "remotion"                         # npx/node render of THIS project
+    # A Short renders from its own derived project under <proj>/shorts/<slug>/, so its
+    # props path is not the parent's. Without this a killed `shorts` job left its
+    # remotion tree running and this tool reported "no render processes found".
+    if i != -1 and cmd.startswith(proj + "/shorts/", i + len(marker)):
+        return "remotion-short"
     return None
 
 

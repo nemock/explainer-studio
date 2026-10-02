@@ -358,7 +358,7 @@ def blocked_path(proj):
 def write_blocked(proj, report):
     """Name the specific stale segments and both texts, then leave the file where
     the operator (and the next agent to open this project) will see it."""
-    L = [f"# BLOCKED — {proj.dir.name}", "",
+    L = [_OWN_MARK, f"# BLOCKED — {proj.dir.name}", "",
          f"`explainer2` refused to render at {_stamp_line(report['checked_at'])}.", "",
          f"**{report['reason']}**", "",
          "The recorded narration does not say what `script.json` (or, for a Short card,",
@@ -422,13 +422,30 @@ def write_blocked(proj, report):
     return p
 
 
+_OWN_MARK = "<!-- script-guard -->"
+# BLOCKED.md files this guard may delete: its own (marked, or recognised by the sentence
+# every version of write_blocked has opened with) and the watcher's render-block, whose
+# recovery text promises it disappears once a render gets going again.
+_CLEARABLE = (_OWN_MARK, "`explainer2` refused to render at", "<!-- render-blocked -->")
+
+
 def clear_blocked(proj):
     """Remove a BLOCKED.md left by an earlier run once the project checks clean —
-    otherwise a resolved block would sit there forever looking unresolved."""
+    otherwise a resolved block would sit there forever looking unresolved.
+
+    Only a block this guard (or the watcher's render-block) wrote. Until 2026-10-01 this
+    unlinked ANY BLOCKED.md, so a publish run's block, or a deliberate hold, vanished the
+    next time anything ran `media` on the project, taking with it the only statement of
+    why the episode had not gone out."""
     p = blocked_path(proj)
-    existed = p.exists()
+    try:
+        head = p.read_text(errors="replace")[:1200]
+    except OSError:
+        return False
+    if not any(m in head for m in _CLEARABLE):
+        return False
     p.unlink(missing_ok=True)
-    return existed
+    return True
 
 
 # ---------------------------------------------------------------- enforcement

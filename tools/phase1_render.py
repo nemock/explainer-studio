@@ -70,8 +70,10 @@ an interactive desktop session (work/booth_origin.json), deep-links that session
 Usage: phase1_render.py --explainer <bin> [--profile shows|studio] <project_dir>
 """
 import argparse
+import hashlib
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -238,7 +240,35 @@ def verb_name(cmd):
     return cmd[1] if len(cmd) > 1 else cmd[0]
 
 
-def record_failure(proj, verb, rc):
+_FAIL_RE = re.compile(r"^\d\d:\d\d:\d\d FAIL\s+(\w+):\s*(.*)$")
+
+
+def failure_detail(proj, since=None):
+    """(stage, error text) of the last `FAIL  <stage>: …` line `explainer2 media` wrote
+    to work/run.log during THIS launch, or ("", "").
+
+    run.log carries a time of day and no date, so a stale FAIL from an earlier launch is
+    ruled out by the file's mtime: if nothing wrote to it since this launch began, there
+    is no failure line of ours in it. Numbers are stripped from the text before it is
+    fingerprinted, so a message that embeds a count or a pid still matches itself."""
+    log = Path(proj) / "work" / "run.log"
+    try:
+        if since is not None and log.stat().st_mtime < since:
+            return "", ""
+        lines = log.read_text(errors="replace").splitlines()[-200:]
+    except OSError:
+        return "", ""
+    floor = time.strftime("%H:%M:%S", time.localtime(since)) if since is not None else None
+    for line in reversed(lines):
+        if floor and re.match(r"^\d\d:\d\d:\d\d ", line) and line[:8] < floor:
+            break                                        # written before this launch began
+        m = _FAIL_RE.match(line)
+        if m:
+            return m.group(1), re.sub(r"\d+", "N", m.group(2)).strip()
+    return "", ""
+
+
+def record_failure(proj, verb, rc, since=None):
     """Write work/render_failure.json so the watcher can tell a transient crash from
     a verb that can never succeed here.
 
@@ -248,7 +278,13 @@ def record_failure(proj, verb, rc):
     nothing in the loop could tell that from a flaky render worth retrying. A run that
     fails somewhere new resets the streak, because that is genuinely new information."""
     f = Path(proj) / "work" / "render_failure.json"
+    stage, detail = failure_detail(proj, since)
+    # The fingerprint names the failing STAGE and its error (2026-10-01). "media:1" alone
+    # covered every way `media` can fail, so the watcher could not tell one broken take
+    # failing identically from six different flakes, and waited for six before it spoke.
     fp = f"{verb}:{rc}"
+    if stage:
+        fp += f":{stage}:{hashlib.sha1(detail.encode()).hexdigest()[:10]}"
     prev = {}
     try:
         prev = json.loads(f.read_text())
@@ -257,7 +293,8 @@ def record_failure(proj, verb, rc):
     streak = prev.get("streak", 0) + 1 if prev.get("fp") == fp else 1
     try:
         f.parent.mkdir(parents=True, exist_ok=True)
-        f.write_text(json.dumps({"fp": fp, "verb": verb, "rc": rc,
+        f.write_text(json.dumps({"fp": fp, "verb": verb, "rc": rc, "stage": stage,
+                                 "detail": detail[:300],
                                  "streak": streak, "ts": int(time.time())}))
     except OSError as e:                      # a failure record that cannot be written
         print(f"[phase1] could not write {f}: {e}", flush=True)   # must not mask the
@@ -390,7 +427,7 @@ def run_studio(proj, exp, t0):
     """The studio chain. Returns the exit code; writes the sentinel on success."""
     rc = run_verb([exp, "media", proj])
     if rc != 0:
-        streak = record_failure(proj, "media", rc)
+        streak = record_failure(proj, "media", rc, since=t0)
         print(f"[phase1] FAILED: media exited {rc} — no render_complete.json written "
               f"(same failure {streak}x running)", flush=True)
         _reap(f"media exited {rc}")
@@ -494,7 +531,7 @@ def main():
     for cmd in verbs:
         rc = run_verb(cmd)
         if rc != 0:
-            streak = record_failure(proj, verb_name(cmd), rc)
+            streak = record_failure(proj, verb_name(cmd), rc, since=t0)
             print(f"[phase1] FAILED: {cmd[1]} exited {rc} — no render_complete.json "
                   f"written, Phase 2 will not publish "
                   f"(same failure {streak}x running)", flush=True)

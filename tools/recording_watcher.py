@@ -55,6 +55,16 @@ import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+# The render queue (src/explainer2/jobqueue.py). Phase-1 renders are SUBMITTED to it
+# when the config says "use_render_queue": true, so the watcher, every routine and every
+# Claude session share one ordered queue. If the module cannot be imported the watcher
+# launches phase 1 itself, exactly as it did before 2026-10-01.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+try:
+    from explainer2 import jobqueue
+except Exception:                                   # noqa: BLE001 - never cost the cycle
+    jobqueue = None
+
 DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})_")
 
 # Crashloop guard, both phases: a worker that dies in seconds gets relaunched
@@ -73,10 +83,18 @@ DATE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})_")
 # sailed straight past it.
 CRASHLOOP_AFTER = 3
 CRASHLOOP_RETRY_SECS = 30 * 60  # ~every 6th 5-minute cycle
-# Phase 1 failing at the same verb with the same rc this many launches running is a
-# verdict, not a flake: stop relaunching and write BLOCKED.md. With the backoff above
-# that is ~3 hours, against the 26 hours and 31 launches FWF 2026-08-31 burned.
-RENDER_BLOCK_AFTER = 6
+# Phase 1 failing identically this many launches running is a verdict, not a flake:
+# stop relaunching and write BLOCKED.md. It was 6 until 2026-10-01, when the fingerprint
+# was only "verb:rc" and too coarse to trust sooner. The Teardown that day re-ran the
+# same align error six times over two hours before anyone was told. The fingerprint now
+# carries the failing STAGE and its error text (phase1_render.record_failure), so three
+# identical failures, about fifteen minutes, is evidence enough.
+RENDER_BLOCK_AFTER = 3
+# A failure in a stage that reads the RECORDING is not a flake at all: the same take
+# fails the same way every time, and only the operator at the microphone can fix it.
+# Two identical failures there is the verdict, and he is told by text message.
+AUDIO_STAGES = ("narrate", "align")
+RENDER_BLOCK_AFTER_AUDIO = 2
 # ...but never block permanently. A fix landing in the renderer or a SKILL leaves no
 # trace the watcher can see, so a block with no way back would need a human even after
 # the cause was gone. One probe launch this often re-tests it: the probe clears
@@ -189,14 +207,61 @@ def read_lock(proj):
         return None
 
 
-def write_lock(proj, pid):
+def write_lock(proj, pid, job=None):
     f = Path(proj) / "work" / "publish_lock.json"
     f.parent.mkdir(parents=True, exist_ok=True)
-    f.write_text(json.dumps({"pid": pid, "ts": time.time()}))
+    rec = {"pid": pid, "ts": time.time()}
+    if job:
+        rec["job"] = job             # a queued phase-1 has no pid until the runner starts it
+    f.write_text(json.dumps(rec))
+
+
+def use_queue(cfg):
+    """Phase 1 goes through the render queue: opted in by config, module importable,
+    and the queue installed on this machine."""
+    try:
+        return bool(cfg.get("use_render_queue")) and jobqueue is not None and jobqueue.enabled()
+    except Exception:
+        return False
+
+
+def worker_alive(lk):
+    """Is the worker this publish_lock names still in flight? A lock written for a
+    queued render carries a job id and is alive while that job is queued or running."""
+    if not lk:
+        return False
+    if lk.get("job") and jobqueue is not None:
+        try:
+            return jobqueue.job_active(lk["job"])
+        except Exception:
+            return False
+    return pid_alive(lk.get("pid"))
+
+
+def worker_name(lk):
+    return f"render job {lk['job']}" if (lk or {}).get("job") else f"worker pid {(lk or {}).get('pid')}"
 
 
 def render_done(proj):
-    return (Path(proj) / "work" / "render_complete.json").exists()
+    """A finished render OF THE CURRENT RECORDING.
+
+    Existence alone was the test until 2026-10-01, and nothing ever deleted the
+    sentinel. So when a publish was blocked or crash-looping and the operator
+    re-recorded a card, the new record_done.json made the booth report DONE again, this
+    still answered True, and phase 1 was skipped: the watcher would have published the
+    render with the OLD audio the moment the block lifted, with no scriptguard in the
+    way (that check only runs on the phase-1 branch). A sentinel older than the
+    recording it claims to cover is not a render of that recording. The studio branch
+    has made the same comparison since 2026-09-13 (studio_rendered)."""
+    w = Path(proj) / "work"
+    try:
+        rendered = (w / "render_complete.json").stat().st_mtime
+    except OSError:
+        return False
+    try:
+        return rendered >= (w / "record_done.json").stat().st_mtime
+    except OSError:
+        return True                  # no Finish marker on disk: nothing to compare against
 
 
 def attempts_path(proj, kind="render"):
@@ -257,12 +322,121 @@ def render_blocked(proj):
     except (OSError, ValueError):
         return False, "", ""
     streak = d.get("streak", 0)
-    if streak < RENDER_BLOCK_AFTER:
+    need = RENDER_BLOCK_AFTER_AUDIO if d.get("stage") in AUDIO_STAGES else RENDER_BLOCK_AFTER
+    if streak < need:
         return False, "", ""
     if time.time() - d.get("ts", 0) >= RENDER_BLOCK_PROBE_SECS:
         return False, "", ""            # probe window: let one launch re-test it
-    return True, d.get("fp", ""), (f"{d.get('verb', '?')} exited {d.get('rc', '?')} on "
-                                   f"{streak} consecutive phase-1 launches")
+    where = f"{d.get('verb', '?')} exited {d.get('rc', '?')}"
+    if d.get("stage"):
+        where += f" at {d['stage']}"
+    why = f"{where} on {streak} consecutive phase-1 launches"
+    if d.get("detail"):
+        why += f": {d['detail']}"
+    return True, d.get("fp", ""), why
+
+
+def failure_stage(proj):
+    """(stage, detail) of the last phase-1 failure, when the driver could name them."""
+    try:
+        d = json.loads((Path(proj) / "work" / "render_failure.json").read_text())
+    except (OSError, ValueError):
+        return "", ""
+    return str(d.get("stage") or ""), str(d.get("detail") or "")
+
+
+def alert_operator(cfg, proj, marker, fp, text):
+    """Tell the OPERATOR, by text message, about something only he can fix.
+
+    For one situation only (operator, 2026-10-01): the pipeline is held up because he
+    has to act in person, which in practice means re-recording a card. A desktop
+    notification on a locked screen was the whole alert before this, and a daily episode
+    sat blocked for two days without him knowing. It is NOT for permission prompts,
+    renders that should be working in the background, or anything a routine or a Claude
+    session can fix: those stay as notifications and log lines.
+
+    The command is private config ("operator_alert_cmd"), because this repo is public
+    and the recipient is not. Once per (marker, fingerprint), like notify_once.
+    Returns True when it fired."""
+    cmd = cfg.get("operator_alert_cmd")
+    f = Path(proj) / "work" / marker
+    tries = 0
+    try:
+        prev = json.loads(f.read_text())
+        if prev.get("fp") == fp:
+            if prev.get("sent") or prev.get("tries", 0) >= 3:
+                return False                 # delivered, or given up on after 3 cycles
+            tries = prev.get("tries", 0)
+    except (OSError, ValueError, AttributeError):
+        pass
+
+    def _mark(sent):
+        try:
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(json.dumps({"fp": fp, "sent": sent, "tries": tries + 1,
+                                     "at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}))
+        except OSError:
+            pass
+
+    if not cmd:
+        log(cfg, f"OPERATOR-ALERT (no operator_alert_cmd configured): {text}")
+        tries = 2                            # nothing to retry
+        _mark(False)
+        return False
+    try:
+        r = subprocess.run(list(cmd) + [text], capture_output=True, text=True, timeout=60)
+        ok, err = r.returncode == 0, (r.stderr or r.stdout or "").strip()[:200]
+    except Exception as e:                   # noqa: BLE001
+        ok, err = False, str(e)
+    _mark(ok)
+    if ok:
+        log(cfg, f"OPERATOR-ALERT sent: {text}")
+        return True
+    log(cfg, f"OPERATOR-ALERT FAILED (try {tries + 1} of 3: {err}): {text}")
+    # Never let a broken text channel hide the block: fall back to the desktop.
+    safe = lambda v: str(v).replace("\\", " ").replace('"', "'")
+    subprocess.run(["/usr/bin/osascript", "-e",
+                    f'display notification "{safe(text)[:200]}" with title "NEEDS YOU"'],
+                   check=False, capture_output=True)
+    return False
+
+
+def alert_if_recording_fault(cfg, show, proj, fp):
+    """A render blocked in a stage that reads the recording (narrate, align) is a fault
+    in a take: text the operator. A block anywhere else is the pipeline's problem and
+    stays a notification."""
+    stage, detail = failure_stage(proj)
+    if stage not in AUDIO_STAGES:
+        return
+    alert_operator(cfg, proj, "operator_alert_render.json", fp,
+                   f"{show['id']} {Path(proj).name}: the render keeps failing at {stage}"
+                   f"{' (' + detail[:140] + ')' if detail else ''}. That stage reads your "
+                   f"recording, so a card most likely needs re-recording. Open the booth "
+                   f"for this episode and check the takes; nothing publishes until then.")
+
+
+def alert_stale_script(cfg, show, proj, why):
+    """script.json no longer matches what was recorded. Only the operator can settle
+    it: re-record the changed cards, or accept the takes (unstick_stale_script.py)."""
+    fp = hashlib.sha256((why or "").encode()).hexdigest()[:16]
+    alert_operator(cfg, proj, "operator_alert_script.json", fp,
+                   f"{show['id']} {Path(proj).name}: the script changed after you "
+                   f"recorded it, so it will not render. Re-record the changed card(s) "
+                   f"in the booth. {(why or '')[:160]}")
+
+
+def alert_if_publish_needs_operator(cfg, show, proj, fp):
+    """A publish run that blocked for something only the operator can do says so in
+    work/publish_block.json ("needs_operator": true, "operator_action": "...")."""
+    try:
+        d = json.loads((Path(proj) / "work" / "publish_block.json").read_text())
+    except (OSError, ValueError):
+        return
+    if not d.get("needs_operator"):
+        return
+    action = str(d.get("operator_action") or d.get("reason") or "see BLOCKED.md")[:260]
+    alert_operator(cfg, proj, "operator_alert_publish.json", fp,
+                   f"{show['id']} {Path(proj).name}: publishing is held until you act. {action}")
 
 
 def write_render_blocked_md(cfg, show, proj, fp, why):
@@ -623,7 +797,12 @@ def exit_reason(proj):
 def booth(cfg, verb, proj):
     """Run launch_booth.py <verb-ish>; returns (first_token, full_output)."""
     cmd = [cfg["python"], cfg["launch_booth"]] + verb + [str(proj)]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    except (subprocess.TimeoutExpired, OSError) as e:
+        # Uncaught until 2026-10-01: one hung --status on 2026-09-30 raised out of the
+        # whole cycle and every show after it in the config was skipped.
+        return "ERROR", f"launch_booth {' '.join(verb) or '(launch)'} did not answer: {e}"
     out = (r.stdout or "").strip()
     return out.split()[0] if out else "", out
 
@@ -633,26 +812,48 @@ def completion_prompt(show, proj):
         f"You are the {show['id']} recording-PUBLISH run, spawned by the zero-token "
         f"recording watcher (com.brg.recording-watcher). The watcher has ALREADY "
         f"verified the booth reports DONE, has "
-        f"ALREADY rendered the video deterministically (media + stills 4:5 + handoff + "
-        f"validate all completed — see work/render_complete.json and the rendered "
-        f"files under video/, stills/, handoff.json, manifest.json), and this run "
-        f"HOLDS the atomic publish claim (work/publish_lock.json) — do NOT run --claim "
-        f"again; proceed directly.\n\n"
+        f"ALREADY rendered the video deterministically (media + stills + handoff + "
+        f"validate + frame_qc all completed — see work/render_complete.json and the "
+        f"rendered files under video/, stills/, handoff.json, manifest.json), and this "
+        f"run HOLDS the atomic publish claim (work/publish_lock.json) — do NOT run "
+        f"--claim again; proceed directly.\n\n"
         f"Project directory: {proj}\n\n"
         f"Read {show['skill']} in full, then execute ONLY the PUBLISH portion of its "
-        f"completion path — {show['completion_steps']} — starting AFTER render/gate. "
-        f"The render is DONE: do NOT run `explainer media`, `explainer stills`, "
-        f"`explainer handoff`, or `explainer validate` again (re-rendering would waste "
-        f"20+ minutes and can hit the Bash time cap — that is exactly the failure this "
-        f"two-phase flow fixes). Read the ALREADY-generated manifest.json/handoff.json "
-        f"for durations, captions, and the length gate, then do the rest: any deck "
-        f"build/push the SKILL specifies, ENQUEUE to the local post queue "
-        f"(build_publish_payloads.py --emit-queue-spec, then postq.py enqueue --spec; "
-        f"never blotato_create_post, no slots, no scheduledTime — see "
-        f"make_money/post_queue/ENQUEUE.md), and "
+        f"completion path — {show['completion_steps']} — starting AFTER render/gate.\n\n"
+        f"RENDERING IS NOT YOUR JOB. The render is done and the watcher owns it. Never "
+        f"run a render, encode, still or Shorts command in this run: not `explainer2 "
+        f"media`, `render`, `stills`, `shorts`, `handoff` or `validate`, not "
+        f"`mark_stills.py`, not `npx remotion`, not `ffmpeg`. Every render on this "
+        f"machine goes through the render queue, and a publish run has nothing to "
+        f"submit to it. If an output is missing or the gate failed, that is a BLOCK "
+        f"(below), not something to re-render around.\n\n"
+        f"Read the ALREADY-generated manifest.json/handoff.json for durations, "
+        f"captions, and the length gate, then do the rest: any deck build/push the "
+        f"SKILL specifies, ENQUEUE to the local post queue (build_publish_payloads.py "
+        f"--emit-queue-spec, then postq.py enqueue --spec; never blotato_create_post, "
+        f"no slots, no scheduledTime — see make_money/post_queue/ENQUEUE.md), and "
         f"write README + uploads.json + ledger append. Never re-source, re-scaffold, or "
-        f"re-author script.json/deck.json/meta.json. If a step fails, stop and leave "
-        f"the error visible; do not switch toolchains to route around it."
+        f"re-author script.json/meta.json. If a step fails, stop and leave the error "
+        f"visible; do not switch toolchains to route around it.\n\n"
+        f"IF YOU MUST BLOCK: write BLOCKED.md saying exactly what is wrong, and write "
+        f"work/publish_block.json as "
+        f'{{"watch": "work/render_complete.json", "was": "<the exact current text of '
+        f'that file>", "reason": "<one line>"}} so the watcher stops respawning this '
+        f"run until a new render replaces that file. Then decide who can clear it:\n"
+        f"- ONLY DAVE, IN PERSON (a card must be re-recorded: a clipped, missing or "
+        f"wrong take, or a script that runs over a hard length limit and needs a cut "
+        f"he has to re-voice): also add "
+        f'"needs_operator": true and "operator_action": "<what he must do, with booth '
+        f'card numbers>" to publish_block.json. The watcher texts him. Use this for '
+        f"nothing else.\n"
+        f"- A DECK-ONLY DEFECT (a slide authored with the wrong field names, a slide "
+        f"that would render empty, a layout slip) where script.json and the recording "
+        f"are fine: fix deck.json, then run "
+        f"`{Path(__file__).resolve().parent / 'rerender.py'} {proj} --reason \"<what "
+        f"you fixed>\"` ONCE and stop. That hands the project back to the watcher, "
+        f"which re-renders through the queue, re-runs the gates and starts a fresh "
+        f"publish run. Do not write BLOCKED.md in that case, and never edit "
+        f"script.json: the audio is already recorded against it."
     )
 
 
@@ -705,13 +906,33 @@ def launch_render(cfg, show, proj):
     render_log = logdir / f"{show['id']}_{stamp}_render.log"
     driver = cfg.get("phase1_driver") or str(
         Path(cfg["launch_booth"]).parent / "phase1_render.py")
-    cmd = ["/usr/bin/caffeinate", "-ims", cfg["python"], driver,
-           str(proj), "--explainer", cfg["explainer_bin"]]
-    if show.get("mode") == "studio":
-        cmd += ["--profile", "studio"]
+    argv = [cfg["python"], driver, str(proj), "--explainer", cfg["explainer_bin"]]
+    studio = show.get("mode") == "studio"
+    if studio:
+        argv += ["--profile", "studio"]
+    # The render queue: one ordered queue for the watcher, the routines and every
+    # session, run by its own launchd agent. A recorded booth-show episode outranks a
+    # long studio render, so a six-minute daily no longer waits two hours behind one
+    # (2026-10-01). Any failure to submit falls back to launching it here.
+    if use_queue(cfg):
+        try:
+            job, created = jobqueue.submit(
+                "phase1", argv, project=str(proj), label=f"{show['id']}:{Path(proj).name}",
+                priority=show.get("render_priority",
+                                  jobqueue.PRI_STUDIO if studio else jobqueue.PRI_SHOW),
+                cwd=cfg["claude_cwd"], log_path=str(render_log))
+            write_lock(proj, None, job=job["id"])
+            if created:
+                bump_attempts(proj, "render")
+            log(cfg, f"RENDER (phase 1) {'queued' if created else 'already queued'} for "
+                     f"{show['id']}: {proj} (job {job['id']}, log {render_log})")
+            return job["id"]
+        except Exception as e:                       # noqa: BLE001
+            log(cfg, f"QUEUE-SUBMIT failed for {show['id']} ({type(e).__name__}: {e}); "
+                     f"launching phase 1 directly")
     child = subprocess.Popen(
-        cmd, cwd=cfg["claude_cwd"], env=render_env(cfg), start_new_session=True,
-        stdout=render_log.open("w"), stderr=subprocess.STDOUT)
+        ["/usr/bin/caffeinate", "-ims"] + argv, cwd=cfg["claude_cwd"], env=render_env(cfg),
+        start_new_session=True, stdout=render_log.open("w"), stderr=subprocess.STDOUT)
     write_lock(proj, child.pid)  # hold the claim for the render's lifetime
     bump_attempts(proj, "render")
     log(cfg, f"RENDER (phase 1) launched for {show['id']}: {proj} "
@@ -869,9 +1090,9 @@ def run_studio(cfg, show, dry, spawned):
                      f"than work/record_done.json; not rendering again", every=None)
             continue
         lk = read_lock(proj)
-        if lk and pid_alive(lk.get("pid")):              # our own render, in flight
-            log_skip(cfg, proj, f"worker:{lk.get('pid')}",
-                     f"{show['id']}: {proj.name} DONE, worker pid {lk.get('pid')} "
+        if worker_alive(lk):                             # our own render, in flight
+            log_skip(cfg, proj, f"worker:{lk.get('job') or lk.get('pid')}",
+                     f"{show['id']}: {proj.name} DONE, {worker_name(lk)} "
                      f"still active — backing off")
             continue
         try:
@@ -917,6 +1138,11 @@ def run_studio(cfg, show, dry, spawned):
                            f"render on hold until they are re-recorded or accepted."):
                 log(cfg, f"STUDIO-RERECORD {show['id']}: {proj.name} cards {cards} "
                          f"flagged; not rendering (relaunch the booth, or render by hand)")
+            if not dry:
+                alert_operator(cfg, proj, "operator_alert_rerecord.json", fp,
+                               f"{proj.name}: the booth flagged card(s) {cards} for "
+                               f"re-record. The render is on hold until you re-record "
+                               f"them or accept the takes.")
             continue
         if spawned:
             log(cfg, f"{show['id']}: {proj.name} DONE but work was already started "
@@ -929,19 +1155,25 @@ def run_studio(cfg, show, dry, spawned):
             if not dry:
                 write_render_blocked_md(cfg, show, proj, rfp, rwhy)
                 notify_render_blocked_once(cfg, show, proj, rfp, rwhy)
+                alert_if_recording_fault(cfg, show, proj, rfp)
             continue
         ok, why = script_guard_ok(cfg, proj)
         if not ok:
             log(cfg, f"BLOCKED {show['id']}: {proj.name} — script.json changed after "
                      f"recording; NOT rendering. {why} (see {proj / 'BLOCKED.md'})")
+            if not dry:
+                alert_stale_script(cfg, show, proj, why)
             continue
         looping, n = crashlooping(proj, "render")
         if looping:
             log(cfg, f"RENDER-CRASHLOOP {show['id']}: {proj.name} phase-1 launched {n}x "
                      f"with no render_complete.json — retrying after backoff")
             continue
+        # With the queue, order and concurrency belong to the queue: a submitted job
+        # waits its turn as a small JSON file, not as a resident process, so there is
+        # nothing for a cap to protect.
         cap = cfg.get("max_concurrent_renders", DEFAULT_MAX_CONCURRENT_RENDERS)
-        running = live_renders(cfg)
+        running = 0 if use_queue(cfg) else live_renders(cfg)
         if running >= cap:
             log(cfg, f"RENDER-CAP {show['id']}: {proj.name} ready to render but {running} "
                      f"render(s) already running (cap {cap}) — deferring to a later cycle")
@@ -959,6 +1191,178 @@ def run_studio(cfg, show, dry, spawned):
     return spawned
 
 
+def run_show(cfg, show, dry, spawned):
+    """One cycle for one booth show. Returns the updated `spawned` flag."""
+    for proj in candidates(show):
+        state, full = booth(cfg, ["--status"], proj)
+        if state == "PENDING":
+            # Booth is up and waiting. Stamp the heartbeat every poll so a later
+            # death is bounded to one cycle; log hourly so the trail is readable.
+            if beat_booth(proj):
+                log(cfg, f"{show['id']}: booth alive for {proj.name} "
+                         f"(waiting for the operator)")
+            break  # operator mid-recording; nothing to do for this show
+        if state == "DONE":
+            if spawned:
+                log(cfg, f"{show['id']}: {proj.name} DONE but work was already "
+                         f"started this cycle — next cycle picks it up")
+                break
+            # Mutual exclusion: the publish_lock pid is the live render (phase 1)
+            # or publish (phase 2) worker. Single-instance flock (main) means no
+            # concurrent watcher cycle, so a simple liveness check is sufficient
+            # and avoids launch_booth --claim's slow 45-min stale rule between the
+            # two phases.
+            lk = read_lock(proj)
+            if worker_alive(lk):
+                log(cfg, f"{show['id']}: {proj.name} DONE, {worker_name(lk)} "
+                         f"still active — backing off")
+                break
+            if render_done(proj):
+                clear_attempts(proj, "render")  # render completed; counter is stale
+                # Phase 2: render finished; publish. Guard against re-posting if a
+                # prior publish got partway (uploads.json written, README not yet).
+                if (proj / "uploads.json").exists():
+                    log(cfg, f"{show['id']}: {proj.name} render done + uploads.json "
+                             f"present but no README — prior publish partial; NOT "
+                             f"auto-retrying (double-post risk), needs review")
+                    break
+                # Deterministic validate-gate block: a completed publish run left
+                # BLOCKED.md and validate.json still fails identically. No LLM
+                # spawn will change the verdict — skip (zero cost) until the
+                # fingerprint moves, and tell Dave once per distinct block.
+                blocked, fp, why = publish_blocked(proj)
+                if blocked:
+                    log(cfg, f"PUBLISH-BLOCKED {show['id']}: {proj.name} — validate "
+                             f"gate failing unchanged ({fp}); NOT spawning phase 2. "
+                             f"{why} (see {proj / 'BLOCKED.md'})")
+                    notify_publish_blocked_once(cfg, show, proj, fp, why)
+                    if not dry:
+                        alert_if_publish_needs_operator(cfg, show, proj, fp)
+                    continue
+                # ...and against a publish that dies before writing anything at
+                # all (expired OAuth, missing bin), which the uploads.json check
+                # above cannot see. `continue`, not `break`, so the doomed project
+                # yields this cycle's slot instead of starving every other show.
+                looping, n = crashlooping(proj, "publish")
+                if looping:
+                    log(cfg, f"PUBLISH-CRASHLOOP {show['id']}: {proj.name} phase-2 "
+                             f"spawned {n}x with no README — skipping so other shows "
+                             f"get this cycle's slot; retrying after backoff. Check "
+                             f"the newest {show['id']}_*_completion.log for the cause")
+                    continue
+                if dry:
+                    log(cfg, f"[DRY-RUN] {show['id']}: {proj.name} render done — "
+                             f"would spawn PUBLISH (phase 2)")
+                else:
+                    spawn_completion(cfg, show, proj, dry)
+                spawned = True
+            else:
+                # Phase 1: no render yet (or a prior render died before completing);
+                # launch the detached render. launch_render writes the lock.
+                #
+                # First: does the audio still match script.json? An edit landing
+                # between the last take and Phase 1 aligns the new text onto the old
+                # audio SILENTLY and publishes it (2026-08-10). Blocked projects need
+                # a human at the booth, so don't spend the cycle's slot on them.
+                # Deterministic render block: phase 1 has died at the same verb
+                # with the same exit code RENDER_BLOCK_AFTER launches running.
+                # Retrying re-renders the whole video to reach an identical
+                # failure, so stop and put a human on it.
+                #
+                # Checked BEFORE the script guard on purpose. script_guard_ok runs
+                # `media --recheck`, whose scriptguard.clear_blocked() unlinks
+                # BLOCKED.md unconditionally when the audio and script.json agree —
+                # it cannot tell its own block from anyone else's. Running it first
+                # would delete this block every cycle and we would rewrite it every
+                # cycle. Skipping it here also saves a subprocess on a project that
+                # is going nowhere until a human intervenes.
+                rblocked, rfp, rwhy = render_blocked(proj)
+                if rblocked:
+                    log(cfg, f"RENDER-BLOCKED {show['id']}: {proj.name} — {rwhy}; "
+                             f"NOT relaunching phase 1 (see {proj / 'BLOCKED.md'})")
+                    if not dry:
+                        write_render_blocked_md(cfg, show, proj, rfp, rwhy)
+                        notify_render_blocked_once(cfg, show, proj, rfp, rwhy)
+                        alert_if_recording_fault(cfg, show, proj, rfp)
+                    continue
+                ok, why = script_guard_ok(cfg, proj)
+                if not ok:
+                    log(cfg, f"BLOCKED {show['id']}: {proj.name} — script.json changed "
+                             f"after recording; NOT rendering. {why} "
+                             f"(see {proj / 'BLOCKED.md'}; recover with "
+                             f"tools/unstick_stale_script.py)")
+                    if not dry:
+                        alert_stale_script(cfg, show, proj, why)
+                    break
+                looping, n = crashlooping(proj, "render")
+                if looping:
+                    log(cfg, f"RENDER-CRASHLOOP {show['id']}: {proj.name} phase-1 "
+                             f"launched {n}x with no render_complete.json "
+                             f"— skipping so other shows get this cycle's slot; "
+                             f"retrying after backoff")
+                    continue
+                # Global concurrency cap. Unlike the per-project publish_lock
+                # this counts renders across ALL shows, so a slow render does
+                # not accumulate company while it works. `continue` rather than
+                # `break`: a cheap phase-2 publish on another project may still
+                # use this cycle, and `spawned` stays False so nothing is lost.
+                cap = cfg.get("max_concurrent_renders",
+                              DEFAULT_MAX_CONCURRENT_RENDERS)
+                running = 0 if use_queue(cfg) else live_renders(cfg)   # see run_studio
+                if running >= cap:
+                    log(cfg, f"RENDER-CAP {show['id']}: {proj.name} ready to render "
+                             f"but {running} render(s) already running (cap {cap}) "
+                             f"— deferring to a later cycle")
+                    continue
+                if dry:
+                    log(cfg, f"[DRY-RUN] {show['id']}: {proj.name} DONE, no render "
+                             f"yet — would launch RENDER (phase 1)")
+                else:
+                    launch_render(cfg, show, proj)
+                spawned = True
+            break
+        if state == "NOT_OPEN":
+            today = date.today().isoformat()
+            if proj.name.startswith(today):
+                held, age = originating_hold(proj)
+                missing = unauthored(proj)
+                if held:
+                    log(cfg, f"{show['id']}: {proj.name} NOT_OPEN but a run is still "
+                             f"authoring it (originating.json, {age // 60}m old) "
+                             f"— leaving the booth to the routine")
+                elif missing:
+                    log(cfg, f"NOT-READY {show['id']}: {proj.name} NOT_OPEN, no "
+                             f"originating hold, but missing {', '.join(missing)} "
+                             f"— a booth here would ask Dave to read a half-authored "
+                             f"script, so none was opened. A run died mid-author; "
+                             f"finish or delete the project.")
+                elif dry:
+                    log(cfg, f"[DRY-RUN] would relaunch booth for {show['id']}: {proj}")
+                else:
+                    booth(cfg, [], proj)  # full launcher: detached booth + Chrome tab pop
+                    # Say what is known about the death in the same line as the
+                    # relaunch. Before 2026-09-02 this line was the ONLY record
+                    # that a booth had died, and it carried neither when nor why.
+                    seen, why = last_alive(proj), exit_reason(proj)
+                    detail = "".join([
+                        f"; last seen alive {seen}" if seen else
+                        "; no heartbeat on file (booth predates this build,"
+                        " or died before its first poll)",
+                        f"; booth reported {why}" if why else
+                        "; booth stamped no exit (SIGKILL or a hard stop)",
+                    ])
+                    log(cfg, f"{show['id']}: booth was NOT_OPEN for today's "
+                             f"{proj.name} — relaunched (takes persist){detail}")
+                    # The beat just reported belongs to the booth that died. Drop
+                    # it so a second death cannot be dated from the first booth's
+                    # heartbeat; the new booth writes its own on the next poll.
+                    (proj / "work" / "booth_heartbeat.json").unlink(missing_ok=True)
+            break
+        log(cfg, f"{show['id']}: unexpected booth status '{full}' for {proj.name}")
+        break
+    return spawned
+
+
 def run(cfg, dry, in_hours=True):
     spawned = False
     for show in cfg["shows"]:
@@ -966,171 +1370,18 @@ def run(cfg, dry, in_hours=True):
             continue
         if not in_hours and not show.get("ignore_hours"):
             continue
-        if show.get("mode") == "studio":
-            spawned = run_studio(cfg, show, dry, spawned)
-            continue
-        for proj in candidates(show):
-            state, full = booth(cfg, ["--status"], proj)
-            if state == "PENDING":
-                # Booth is up and waiting. Stamp the heartbeat every poll so a later
-                # death is bounded to one cycle; log hourly so the trail is readable.
-                if beat_booth(proj):
-                    log(cfg, f"{show['id']}: booth alive for {proj.name} "
-                             f"(waiting for the operator)")
-                break  # operator mid-recording; nothing to do for this show
-            if state == "DONE":
-                if spawned:
-                    log(cfg, f"{show['id']}: {proj.name} DONE but work was already "
-                             f"started this cycle — next cycle picks it up")
-                    break
-                # Mutual exclusion: the publish_lock pid is the live render (phase 1)
-                # or publish (phase 2) worker. Single-instance flock (main) means no
-                # concurrent watcher cycle, so a simple liveness check is sufficient
-                # and avoids launch_booth --claim's slow 45-min stale rule between the
-                # two phases.
-                lk = read_lock(proj)
-                if lk and pid_alive(lk.get("pid")):
-                    log(cfg, f"{show['id']}: {proj.name} DONE, worker pid "
-                             f"{lk.get('pid')} still active — backing off")
-                    break
-                if render_done(proj):
-                    clear_attempts(proj, "render")  # render completed; counter is stale
-                    # Phase 2: render finished; publish. Guard against re-posting if a
-                    # prior publish got partway (uploads.json written, README not yet).
-                    if (proj / "uploads.json").exists():
-                        log(cfg, f"{show['id']}: {proj.name} render done + uploads.json "
-                                 f"present but no README — prior publish partial; NOT "
-                                 f"auto-retrying (double-post risk), needs review")
-                        break
-                    # Deterministic validate-gate block: a completed publish run left
-                    # BLOCKED.md and validate.json still fails identically. No LLM
-                    # spawn will change the verdict — skip (zero cost) until the
-                    # fingerprint moves, and tell Dave once per distinct block.
-                    blocked, fp, why = publish_blocked(proj)
-                    if blocked:
-                        log(cfg, f"PUBLISH-BLOCKED {show['id']}: {proj.name} — validate "
-                                 f"gate failing unchanged ({fp}); NOT spawning phase 2. "
-                                 f"{why} (see {proj / 'BLOCKED.md'})")
-                        notify_publish_blocked_once(cfg, show, proj, fp, why)
-                        continue
-                    # ...and against a publish that dies before writing anything at
-                    # all (expired OAuth, missing bin), which the uploads.json check
-                    # above cannot see. `continue`, not `break`, so the doomed project
-                    # yields this cycle's slot instead of starving every other show.
-                    looping, n = crashlooping(proj, "publish")
-                    if looping:
-                        log(cfg, f"PUBLISH-CRASHLOOP {show['id']}: {proj.name} phase-2 "
-                                 f"spawned {n}x with no README — skipping so other shows "
-                                 f"get this cycle's slot; retrying after backoff. Check "
-                                 f"the newest {show['id']}_*_completion.log for the cause")
-                        continue
-                    if dry:
-                        log(cfg, f"[DRY-RUN] {show['id']}: {proj.name} render done — "
-                                 f"would spawn PUBLISH (phase 2)")
-                    else:
-                        spawn_completion(cfg, show, proj, dry)
-                    spawned = True
-                else:
-                    # Phase 1: no render yet (or a prior render died before completing);
-                    # launch the detached render. launch_render writes the lock.
-                    #
-                    # First: does the audio still match script.json? An edit landing
-                    # between the last take and Phase 1 aligns the new text onto the old
-                    # audio SILENTLY and publishes it (2026-08-10). Blocked projects need
-                    # a human at the booth, so don't spend the cycle's slot on them.
-                    # Deterministic render block: phase 1 has died at the same verb
-                    # with the same exit code RENDER_BLOCK_AFTER launches running.
-                    # Retrying re-renders the whole video to reach an identical
-                    # failure, so stop and put a human on it.
-                    #
-                    # Checked BEFORE the script guard on purpose. script_guard_ok runs
-                    # `media --recheck`, whose scriptguard.clear_blocked() unlinks
-                    # BLOCKED.md unconditionally when the audio and script.json agree —
-                    # it cannot tell its own block from anyone else's. Running it first
-                    # would delete this block every cycle and we would rewrite it every
-                    # cycle. Skipping it here also saves a subprocess on a project that
-                    # is going nowhere until a human intervenes.
-                    rblocked, rfp, rwhy = render_blocked(proj)
-                    if rblocked:
-                        log(cfg, f"RENDER-BLOCKED {show['id']}: {proj.name} — {rwhy}; "
-                                 f"NOT relaunching phase 1 (see {proj / 'BLOCKED.md'})")
-                        if not dry:
-                            write_render_blocked_md(cfg, show, proj, rfp, rwhy)
-                            notify_render_blocked_once(cfg, show, proj, rfp, rwhy)
-                        continue
-                    ok, why = script_guard_ok(cfg, proj)
-                    if not ok:
-                        log(cfg, f"BLOCKED {show['id']}: {proj.name} — script.json changed "
-                                 f"after recording; NOT rendering. {why} "
-                                 f"(see {proj / 'BLOCKED.md'}; recover with "
-                                 f"tools/unstick_stale_script.py)")
-                        break
-                    looping, n = crashlooping(proj, "render")
-                    if looping:
-                        log(cfg, f"RENDER-CRASHLOOP {show['id']}: {proj.name} phase-1 "
-                                 f"launched {n}x with no render_complete.json "
-                                 f"— skipping so other shows get this cycle's slot; "
-                                 f"retrying after backoff")
-                        continue
-                    # Global concurrency cap. Unlike the per-project publish_lock
-                    # this counts renders across ALL shows, so a slow render does
-                    # not accumulate company while it works. `continue` rather than
-                    # `break`: a cheap phase-2 publish on another project may still
-                    # use this cycle, and `spawned` stays False so nothing is lost.
-                    cap = cfg.get("max_concurrent_renders",
-                                  DEFAULT_MAX_CONCURRENT_RENDERS)
-                    running = live_renders(cfg)
-                    if running >= cap:
-                        log(cfg, f"RENDER-CAP {show['id']}: {proj.name} ready to render "
-                                 f"but {running} render(s) already running (cap {cap}) "
-                                 f"— deferring to a later cycle")
-                        continue
-                    if dry:
-                        log(cfg, f"[DRY-RUN] {show['id']}: {proj.name} DONE, no render "
-                                 f"yet — would launch RENDER (phase 1)")
-                    else:
-                        launch_render(cfg, show, proj)
-                    spawned = True
-                break
-            if state == "NOT_OPEN":
-                today = date.today().isoformat()
-                if proj.name.startswith(today):
-                    held, age = originating_hold(proj)
-                    missing = unauthored(proj)
-                    if held:
-                        log(cfg, f"{show['id']}: {proj.name} NOT_OPEN but a run is still "
-                                 f"authoring it (originating.json, {age // 60}m old) "
-                                 f"— leaving the booth to the routine")
-                    elif missing:
-                        log(cfg, f"NOT-READY {show['id']}: {proj.name} NOT_OPEN, no "
-                                 f"originating hold, but missing {', '.join(missing)} "
-                                 f"— a booth here would ask Dave to read a half-authored "
-                                 f"script, so none was opened. A run died mid-author; "
-                                 f"finish or delete the project.")
-                    elif dry:
-                        log(cfg, f"[DRY-RUN] would relaunch booth for {show['id']}: {proj}")
-                    else:
-                        booth(cfg, [], proj)  # full launcher: detached booth + Chrome tab pop
-                        # Say what is known about the death in the same line as the
-                        # relaunch. Before 2026-09-02 this line was the ONLY record
-                        # that a booth had died, and it carried neither when nor why.
-                        seen, why = last_alive(proj), exit_reason(proj)
-                        detail = "".join([
-                            f"; last seen alive {seen}" if seen else
-                            "; no heartbeat on file (booth predates this build,"
-                            " or died before its first poll)",
-                            f"; booth reported {why}" if why else
-                            "; booth stamped no exit (SIGKILL or a hard stop)",
-                        ])
-                        log(cfg, f"{show['id']}: booth was NOT_OPEN for today's "
-                                 f"{proj.name} — relaunched (takes persist){detail}")
-                        # The beat just reported belongs to the booth that died. Drop
-                        # it so a second death cannot be dated from the first booth's
-                        # heartbeat; the new booth writes its own on the next poll.
-                        (proj / "work" / "booth_heartbeat.json").unlink(missing_ok=True)
-                break
-            log(cfg, f"{show['id']}: unexpected booth status '{full}' for {proj.name}")
-            break
+        # One show's trouble must not cost the others their cycle. Until 2026-10-01 a
+        # single exception anywhere in this loop (a hung booth --status, an unreadable
+        # project dir) ended the whole cycle, and every show listed after it was
+        # starved for as long as the fault lasted.
+        try:
+            if show.get("mode") == "studio":
+                spawned = run_studio(cfg, show, dry, spawned)
+            else:
+                spawned = run_show(cfg, show, dry, spawned)
+        except Exception as e:                       # noqa: BLE001
+            log(cfg, f"WATCHER-ERROR {show.get('id')}: {type(e).__name__}: {e} — skipped "
+                     f"this show for this cycle; the others still run")
     return spawned
 
 

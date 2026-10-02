@@ -714,6 +714,18 @@ def _scene_for(slide, theme="", warn=None):
     if slide.get("component"):
         return slide["component"], (slide.get("fields") or {})
     t = slide.get("type")
+    # `"sides": [A, B]` is how authors keep writing a compare, and no component ever read
+    # it: every compare below takes `left` and `right`. Found 2026-10-01: 22 published FWF
+    # dailies (2026-09-03 to 09-28) each carry a compare authored this way, and each
+    # shipped as a kicker over three bare rules for ~20 seconds, because the slide's
+    # unrendered `headline` made slidecheck count the card as having content. The 23rd
+    # was caught only because it had no headline. Accept the shape instead of teaching
+    # every model the other one; an explicit left/right still wins.
+    sides = slide.get("sides")
+    if (t == "compare" and isinstance(sides, (list, tuple)) and len(sides) == 2
+            and not slide.get("left") and not slide.get("right")):
+        slide = {k: v for k, v in slide.items() if k != "sides"}
+        slide["left"], slide["right"] = sides[0], sides[1]
     kicker = slide.get("kicker", "")
 
     # The on-camera cold open (references/paper-world/ON-CAMERA-COLD-OPEN.md). Mapped

@@ -86,20 +86,26 @@ def run(proj, apply=False, model=MODEL):
     by_id = {s["id"]: s for s in script["segments"]}
 
     rows, worst = [], 0.0
-    for seg in segments:
-        wav = seg_path(proj, seg["id"])
-        if not wav.exists():
-            rows.append({"id": seg["id"], "status": "not_recorded"})
-            continue
-        asr = mlx_whisper.transcribe(str(wav), path_or_hf_repo=model)["text"].strip()
-        d = _drift(seg["text"], asr)
-        worst = max(worst, d)
-        status = "verbatim" if d < MINOR else ("adlib" if d < MAJOR else "rerecord")
-        rows.append({"id": seg["id"], "status": status, "drift": d,
-                     "script_text": seg["text"], "asr_text": asr})
-        if apply and status == "adlib" and seg["id"] in by_id:
-            by_id[seg["id"]]["text"] = _spell_numbers(asr)
-            by_id[seg["id"]]["adlib_applied"] = True
+    # 2026-10-01: the mlx-whisper transcription loop takes the render lock (was unlocked).
+    from .. import renderlock
+    lock = renderlock.acquire(proj)
+    try:
+        for seg in segments:
+            wav = seg_path(proj, seg["id"])
+            if not wav.exists():
+                rows.append({"id": seg["id"], "status": "not_recorded"})
+                continue
+            asr = mlx_whisper.transcribe(str(wav), path_or_hf_repo=model)["text"].strip()
+            d = _drift(seg["text"], asr)
+            worst = max(worst, d)
+            status = "verbatim" if d < MINOR else ("adlib" if d < MAJOR else "rerecord")
+            rows.append({"id": seg["id"], "status": status, "drift": d,
+                         "script_text": seg["text"], "asr_text": asr})
+            if apply and status == "adlib" and seg["id"] in by_id:
+                by_id[seg["id"]]["text"] = _spell_numbers(asr)
+                by_id[seg["id"]]["adlib_applied"] = True
+    finally:
+        renderlock.release(lock)
 
     flagged = [r["id"] for r in rows if r.get("status") == "rerecord"]
     applied = [r["id"] for r in rows if r.get("status") == "adlib"] if apply else []

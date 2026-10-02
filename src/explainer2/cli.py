@@ -2,12 +2,12 @@
 """explainer CLI — scaffolds a project and runs the pure-Python media pipeline.
 The LLM generation stages (research/script/deck authoring) are done by the
 /explainer skill, NOT here. This CLI never calls an LLM (PRD §5)."""
-import argparse, json, re, sys, time
+import argparse, json, os, re, sys, time
 from datetime import date, datetime
 from pathlib import Path
 
 from .project import Project, ASPECTS
-from . import deckbuild, manifest, wiki, ingest, themes, qa, presets, validate, handoff, brand, talktime, stills, renderlock, contenttypes, childproc
+from . import deckbuild, manifest, wiki, ingest, themes, qa, presets, validate, handoff, brand, talktime, stills, renderlock, contenttypes, childproc, jobqueue
 from .media import synth, align, render, mux, scriptguard, timelineguard
 
 STAGES = [("narrate", synth.run), ("align", align.run), ("deck", deckbuild.run),
@@ -60,6 +60,46 @@ def _log(proj, msg):
     with (proj.work / "run.log").open("a") as f:
         f.write(line + "\n")
     print(line)
+
+
+# --- the render queue (jobqueue.py) ------------------------------------------------
+# A heavy verb run from inside a Claude session does not run there. It submits itself
+# to the launchd-run queue and waits cheaply for the result, so the command a session
+# already types is the correct one and nothing renders in a session's process tree.
+# Outside a session (launchd, the queue runner, a terminal) the verb runs inline.
+
+def _routed_argv(args):
+    """The argv to re-run this same verb as a queued job: the project path made
+    canonical, and the wait flags (which belong to the submitting side) dropped."""
+    raw, out, skip = list(getattr(args, "_argv", [])), [], False
+    pd = getattr(args, "project_dir", None)
+    for tok in raw:
+        if skip:
+            skip = False
+            continue
+        if tok == "--no-wait":
+            continue
+        if tok == "--wait-secs":
+            skip = True
+            continue
+        if tok.startswith("--wait-secs="):
+            continue
+        out.append(jobqueue.resolve(tok) if pd is not None and tok == pd else tok)
+    return out
+
+
+def _route(args, kind):
+    """Submit this invocation to the queue and wait. Returns the exit code."""
+    proj = jobqueue.resolve(args.project_dir)
+    return jobqueue.submit_and_wait(
+        kind, jobqueue.cli_argv(*_routed_argv(args)), project=proj, env=jobqueue.cli_env(),
+        wait_secs=getattr(args, "wait_secs", None) or jobqueue.WAIT_DEFAULT_S,
+        no_wait=getattr(args, "no_wait", False))
+
+
+def _is_heavy(only):
+    """Does a `media` run with this --only set load a model or encode?"""
+    return only is None or bool(only & jobqueue.HEAVY_STAGES)
 
 
 # --- canonical project numbering (folder is the source of truth, never a hand-typed counter) ---
@@ -337,6 +377,11 @@ def cmd_media(args):
                          indent=2))
         return 1
 
+    # Both guards have passed in THIS process, so a blocked project is reported here
+    # and now. Anything that loads a model or encodes then goes to the queue.
+    if jobqueue.should_route() and _is_heavy(only):
+        return _route(args, "media")
+
     engine = getattr(args, "engine", "deck")
     results, t0 = {}, time.time()
     lock = None  # machine-global render lock, held across render→mux (renderlock.py)
@@ -400,22 +445,116 @@ def cmd_stage(args):
         print(json.dumps({"blocked": "stale_script", "reason": e.report["reason"],
                           "stale_segments": e.report["stale"]}, indent=2))
         return 1
+    heavy = args.stage in jobqueue.HEAVY_STAGES
+    if heavy and jobqueue.should_route():
+        return _route(args, args.stage)
     fn = STAGE_MAP[args.stage]
-    print(json.dumps(fn(proj), indent=2))
+    # A single heavy stage takes the engine lock like `media` does. Until 2026-10-01
+    # `explainer2 narrate|align|mux` ran unlocked: the same 2.5-3.3 GB torch peak the
+    # lock was extended to cover on 2026-08-26, reached by a different verb.
+    lock = renderlock.acquire(proj, log=lambda m: _log(proj, m)) if heavy else None
+    try:
+        print(json.dumps(fn(proj), indent=2))
+    finally:
+        renderlock.release(lock)
 
 
 def cmd_render(args):
-    """Launch render→mux→manifest→qa DETACHED (survives Claude-session
-    suspension) and serialized via the machine-global render lock."""
-    Project.load(args.project_dir)  # validate the project exists before detaching
+    """Queue render→mux→manifest→qa. The job runs under launchd, outside this session,
+    serialized with every other render on this Mac. Returns at once unless --wait."""
+    proj = Project.load(args.project_dir)  # validate the project exists before queuing
+    only = args.only or renderlock.DEFAULT_STAGES
+    if jobqueue.enabled() and not os.environ.get("EXPLAINER_QUEUE_RUNNER"):
+        # Fail HERE on a stale script or timeline, not twenty minutes later in a log.
+        try:
+            scriptguard.enforce(proj, log=lambda m: _log(proj, m))
+            timelineguard.enforce(proj, only=set(only.split(",")), log=lambda m: _log(proj, m))
+        except scriptguard.StaleScriptError as e:
+            print(json.dumps({"blocked": "stale_script", "reason": e.report["reason"],
+                              "blocked_file": str(scriptguard.blocked_path(proj))}, indent=2))
+            return 1
+        except timelineguard.StaleTimelineError as e:
+            print(json.dumps({"blocked": "stale_timeline", "reason": e.report["reason"],
+                              "fix": "explainer2 render <dir> --only narrate,align,render,manifest,qa"},
+                             indent=2))
+            return 1
+        pdir = jobqueue.resolve(args.project_dir)
+        return jobqueue.submit_and_wait(
+            "media", jobqueue.cli_argv("media", pdir, "--only", only, "--engine", args.engine),
+            project=pdir, env=jobqueue.cli_env(), no_wait=not args.wait,
+            wait_secs=args.wait_secs or jobqueue.WAIT_DEFAULT_S)
+    # No queue on this machine: the original detached launcher.
     res = renderlock.launch_detached(args.project_dir, only=args.only, engine=args.engine, log=print)
     print(json.dumps(res, indent=2))
     return 0
 
 
 def cmd_render_status(args):
-    print(renderlock.status())
+    print(jobqueue.status_text())
+    if not jobqueue.enabled():
+        print(renderlock.status())
     return 0
+
+
+def cmd_queue(args):
+    if args.action == "cancel":
+        if not args.job:
+            print("queue cancel needs a job id (see `explainer2 queue`)")
+            return 1
+        j = jobqueue.cancel(args.job)
+        print(f"no such job: {args.job}" if j is None else
+              f"{jobqueue.describe(j)}: {j.get('state')}")
+        return 0 if j else 1
+    if args.action == "log":
+        j = jobqueue.get(args.job) if args.job else None
+        if j is None:
+            print("queue log needs a job id (see `explainer2 queue`)")
+            return 1
+        print(jobqueue._tail(j.get("log"), n=args.lines))
+        return 0
+    print(jobqueue.status_text())
+    return 0
+
+
+def cmd_wait(args):
+    """Block cheaply until a queued job finishes. 0 = done, 75 = still running."""
+    job = jobqueue.get(args.job)
+    if job is None:                       # allow a project dir in place of a job id
+        try:
+            want = jobqueue.resolve(args.job)
+        except OSError:
+            want = None
+        cands = [j for j in jobqueue.jobs() if j.get("project") == want]
+        active = [j for j in cands if j.get("state") in jobqueue.ACTIVE]
+        cands = active or cands
+        if not cands:
+            print(f"no job matches {args.job!r} (see `explainer2 queue`)")
+            return 1
+        job = sorted(cands, key=lambda j: j["id"])[-1]
+    return jobqueue.wait(job["id"], timeout=args.timeout)
+
+
+def cmd_submit(args):
+    """Queue an arbitrary render or encode command (a Remotion still, an ffmpeg splice).
+    It runs under launchd, holding the engine lock, exactly like a render."""
+    cmd = list(args.command)
+    if cmd and cmd[0] == "--":
+        cmd = cmd[1:]
+    if not cmd:
+        print("submit needs a command after `--`, e.g.\n"
+              "  explainer2 submit --label thumb --cwd remotion -- npx remotion still …")
+        return 1
+    if not jobqueue.enabled():
+        print("the render queue is not installed on this machine (see tools/render_queue.py)")
+        return 1
+    label = args.label or Path(cmd[0]).name
+    pre = ["--label", label] + (["--no-lock"] if args.no_lock else []) + ["--"]
+    argv = [sys.executable, "-m", "explainer2.jobqueue", "exec-locked"] + pre + cmd
+    cwd = str(Path(args.cwd).resolve()) if args.cwd else os.getcwd()
+    return jobqueue.submit_and_wait(
+        "cmd", argv, project=args.project, label=label, cwd=cwd, env=jobqueue.cli_env(),
+        priority=args.priority, no_wait=args.no_wait,
+        wait_secs=args.wait_secs or jobqueue.WAIT_DEFAULT_S)
 
 
 def cmd_intel(args):
@@ -454,14 +593,26 @@ def cmd_handoff(args):
     print(json.dumps(handoff.run(Project.load(args.project_dir)), indent=2))
 
 
+def cmd_deckcheck(args):
+    """Everything about a deck that can be known before anyone records it (deckcheck.py).
+    Renders nothing. Exit 0 = pass, 1 = problems: do not open the booth."""
+    from . import deckcheck
+    out = deckcheck.run(Project.load(args.project_dir))
+    print(json.dumps(out, indent=2) if args.json else deckcheck.report(out))
+    return 0 if out["ok"] else 1
+
+
 def cmd_record(args):
     from . import recorder
     print(json.dumps(recorder.run(Project.load(args.project_dir), open_browser=not args.no_open), indent=2))
 
 
 def cmd_adlib(args):
+    proj = Project.load(args.project_dir)
+    if jobqueue.should_route():           # mlx-whisper over every take: a model load
+        return _route(args, "adlib")
     from .media import adlib
-    print(json.dumps(adlib.run(Project.load(args.project_dir), apply=args.apply), indent=2))
+    print(json.dumps(adlib.run(proj, apply=args.apply), indent=2))
 
 
 def cmd_shorts(args):
@@ -486,12 +637,25 @@ def cmd_shorts(args):
                           "stale_segments": e.report["stale"],
                           "blocked_file": str(scriptguard.blocked_path(proj))}, indent=2))
         return 1
-    claim = renderlock.claim_job(args.project_dir, kind="shorts", wait=False)
+    if jobqueue.should_route():
+        return _route(args, "shorts")
+    # Canonical path, so `projects/X` and its resolved spelling take the SAME admission
+    # lock. Keyed on the string as typed, the duplicate-shorts gate could be walked past
+    # by spelling the project a second way (projects/ is a symlink).
+    pdir = jobqueue.resolve(args.project_dir)
+    # Under the queue runner a job WAITS for an admission slot: it was queued on purpose
+    # and dropping it loses the work. A hand-run job outside the queue still refuses.
+    claim = renderlock.claim_job(pdir, kind="shorts",
+                                 wait=bool(os.environ.get("EXPLAINER_QUEUE_RUNNER")))
     if claim is None:
         return 1
+    # Same trap as cmd_media: a killed shorts job must take its remotion/chrome tree
+    # down with it, or the tree keeps rendering under init.
+    childproc.on_terminate(lambda: renderlock.release_job(claim))
+    childproc.install_handlers(log=print)
     try:
         from . import shorts
-        print(json.dumps(shorts.run(args.project_dir, plan_path=args.plan,
+        print(json.dumps(shorts.run(pdir, plan_path=args.plan,
                                     only=args.only_slug, engine=args.engine), indent=2))
     finally:
         renderlock.release_job(claim)
@@ -664,23 +828,67 @@ def main(argv=None):
                         "and captions will drift out of sync with the narration.")
     m.set_defaults(func=cmd_media)
 
-    rn = sub.add_parser("render", help="launch render→mux→manifest→qa DETACHED (survives session "
-                                       "suspension) + serialized via the machine-global render lock")
+    def _wait_flags(sp):
+        """From a Claude session a heavy verb is queued, then waited on. These tune the wait."""
+        sp.add_argument("--no-wait", action="store_true", dest="no_wait",
+                        help="when run from a session: queue the job and return at once")
+        sp.add_argument("--wait-secs", type=int, default=None, dest="wait_secs",
+                        help=f"when run from a session: how long to wait for the queued job "
+                             f"(default {jobqueue.WAIT_DEFAULT_S}; exit 75 = still running, "
+                             f"re-issue `explainer2 wait <id>`)")
+    _wait_flags(m)
+
+    rn = sub.add_parser("render", help="QUEUE render→mux→manifest→qa. The job runs under launchd, "
+                                       "outside the session, one render at a time on this Mac")
     rn.add_argument("project_dir")
     rn.add_argument("--only", default=None,
-                    help=f"stage list to run detached (default: {renderlock.DEFAULT_STAGES})")
+                    help=f"stage list to run (default: {renderlock.DEFAULT_STAGES}). After a "
+                         f"re-record use narrate,align,render,manifest,qa")
     rn.add_argument("--engine", default="remotion", choices=["deck", "remotion"],
                     help="remotion = motion-graphics engine (DEFAULT, motion-playbook.md); deck = JS deck engine (fallback)")
+    rn.add_argument("--wait", action="store_true",
+                    help="wait for the queued render instead of returning at once")
+    rn.add_argument("--wait-secs", type=int, default=None, dest="wait_secs",
+                    help=f"with --wait: seconds to wait (default {jobqueue.WAIT_DEFAULT_S}); "
+                         f"exit 75 = still running")
     rn.set_defaults(func=cmd_render)
 
-    rs = sub.add_parser("render-status", help="show the render-lock holder + every live render on this Mac")
+    rs = sub.add_parser("render-status", help="the render queue, the engine lock, and who is waiting on it")
     rs.set_defaults(func=cmd_render_status)
+
+    qu = sub.add_parser("queue", help="show the render queue; `queue cancel <id>`; `queue log <id>`")
+    qu.add_argument("action", nargs="?", default="status", choices=["status", "cancel", "log"])
+    qu.add_argument("job", nargs="?", default=None)
+    qu.add_argument("--lines", type=int, default=60, help="queue log: lines to show")
+    qu.set_defaults(func=cmd_queue)
+
+    wt = sub.add_parser("wait", help="block cheaply until a queued job finishes "
+                                     "(0 done, 75 still running: re-issue)")
+    wt.add_argument("job", help="job id from `explainer2 queue`, or a project dir (its newest job)")
+    wt.add_argument("--timeout", type=int, default=jobqueue.WAIT_DEFAULT_S)
+    wt.set_defaults(func=cmd_wait)
+
+    sb = sub.add_parser("submit", help="queue an ad-hoc render or encode command: "
+                                       "`explainer2 submit --label x -- npx remotion still …`")
+    sb.add_argument("--label", default=None, help="short name shown in the queue")
+    sb.add_argument("--cwd", default=None, help="directory to run the command in (default: here)")
+    sb.add_argument("--project", default=None, help="project dir this job belongs to (optional)")
+    sb.add_argument("--priority", type=int, default=None)
+    sb.add_argument("--no-lock", action="store_true", dest="no_lock",
+                    help="do not take the engine lock (only for work that neither encodes nor "
+                         "launches a browser)")
+    sb.add_argument("--no-wait", action="store_true", dest="no_wait")
+    sb.add_argument("--wait-secs", type=int, default=None, dest="wait_secs")
+    sb.add_argument("command", nargs=argparse.REMAINDER, help="-- <command and its arguments>")
+    sb.set_defaults(func=cmd_submit)
 
     for st in STAGE_MAP:
         if st == "render":
-            continue  # 'render' is the detached launcher above; inline stage = `media --only render`
+            continue  # 'render' is the queued launcher above; inline stage = `media --only render`
         sp = sub.add_parser(st, help=f"run only the {st} stage")
         sp.add_argument("project_dir")
+        if st in jobqueue.HEAVY_STAGES:
+            _wait_flags(sp)
         sp.set_defaults(func=cmd_stage, stage=st)
 
     it = sub.add_parser("intel", help="YouTube competitive intelligence sweep → intel/intel.json (no API key; yt-dlp)")
@@ -712,6 +920,7 @@ def main(argv=None):
                                       "text to raw ASR (normally avoid)")
     ad.add_argument("project_dir")
     ad.add_argument("--apply", action="store_true")
+    _wait_flags(ad)
     ad.set_defaults(func=cmd_adlib)
 
     sh = sub.add_parser("shorts", help="cut 9:16 Shorts from a finished deep dive per shorts/plan.json (reuses operator narration)")
@@ -720,6 +929,7 @@ def main(argv=None):
     sh.add_argument("--only", default=None, dest="only_slug", help="render just one cut by slug")
     sh.add_argument("--engine", default="remotion", choices=["deck", "remotion"],
                     help="remotion = the motion-graphics engine (DEFAULT, motion-playbook.md); deck = the JS deck engine (fallback)")
+    _wait_flags(sh)
     sh.set_defaults(func=cmd_shorts)
 
     ass = sub.add_parser("assets", help="Adobe Stock assist: open suggested searches / ingest the inbox / status")
@@ -783,6 +993,13 @@ def main(argv=None):
     ho.add_argument("project_dir")
     ho.set_defaults(func=cmd_handoff)
 
+    dc = sub.add_parser("deckcheck", help="PRE-BOOTH: check the deck before anyone records "
+                                          "(empty slides, dropped fields, bad marks, projected "
+                                          "length). Renders nothing. Exit 1 = do not open the booth")
+    dc.add_argument("project_dir")
+    dc.add_argument("--json", action="store_true")
+    dc.set_defaults(func=cmd_deckcheck)
+
     stl = sub.add_parser("stills", help="export one PNG per slide from the rendered deck (for repurposing)")
     stl.add_argument("project_dir")
     stl.add_argument("--aspect", default=None, choices=list(ASPECTS), help="aspect to capture (default: project primary)")
@@ -830,6 +1047,7 @@ def main(argv=None):
     wk.set_defaults(func=cmd_wiki)
 
     args = p.parse_args(argv)
+    args._argv = list(argv if argv is not None else sys.argv[1:])
     return args.func(args) or 0
 
 

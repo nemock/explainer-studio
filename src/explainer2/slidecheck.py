@@ -82,13 +82,32 @@ def _has_content(fields):
     return False
 
 
+# Components whose ONLY content is the left/right pair. A `headline` handed to one of
+# these is not drawn, so it must not count as content. Until 2026-10-01 it did: 22
+# published FWF dailies carried a compare whose two sides were dropped (authored as
+# `sides`), each passed this check on the strength of a headline the card never shows,
+# and each shipped as a kicker over three bare rules.
+_PAIR_ONLY = ("CvgCompare", "SideBySide", "PaperCompare")
+
+
+def _pair_content(fields):
+    return any(isinstance(fields.get(k), dict)
+               and any(str(fields[k].get(pk, "")).strip() for pk in _PAIR_TEXT_KEYS)
+               for k in _PAIR_KEYS)
+
+
 def check_spec(spec):
     """(blank, overlong) — lists of human-readable findings for a built Remotion spec."""
     blank, overlong = [], []
     for i, scene in enumerate(spec.get("scenes") or []):
         comp = scene.get("component", "?")
         fields = scene.get("fields") or {}
-        if comp not in _DRAWS and not _has_content(fields):
+        if comp in _PAIR_ONLY:
+            if not _pair_content(fields):
+                blank.append(f"scene {i} ({comp}) would render with nothing on it: neither "
+                             f"side has a title or a value (a compare draws `left` and "
+                             f"`right`, each with `title` and `value`)")
+        elif comp not in _DRAWS and not _has_content(fields):
             blank.append(f"scene {i} ({comp}) would render with nothing on it")
         h = fields.get("headline")
         if isinstance(h, str) and len(h) > HEADLINE_CEILING:

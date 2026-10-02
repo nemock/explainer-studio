@@ -331,9 +331,21 @@ def _blocking_flock(fd, timeout_secs):
         signal.signal(signal.SIGALRM, old)
 
 
+HELD_ENV = "EXPLAINER_RENDER_LOCK_HELD"   # set for the child of a job that holds the lock
+
+
 def acquire(proj=None, label=None, log=print):
     """Block until the render engine is free, then return the held lock fd.
     Pass the result to release() after mux."""
+    # Pass-through for a process whose PARENT job already holds this lock (2026-10-01).
+    # The render queue runs an ad-hoc command under the lock (`explainer2 submit -- cmd`);
+    # if that command is a script that takes the lock itself, a second flock on a second
+    # file description would wait on its own parent forever. Same idea, and same scope,
+    # as JOB_ENV for admission claims: "this process tree already holds it". release()
+    # accepts the None this returns.
+    if os.environ.get(HELD_ENV):
+        log("render-lock: already held by the job that started this process — passing through")
+        return None
     label = label or (os.path.basename(str(getattr(proj, "dir", ""))) or "render")
     fd = open(LOCKFILE, "a+")
 

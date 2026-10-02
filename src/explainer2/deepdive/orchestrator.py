@@ -10,7 +10,7 @@ hand-off line into the teleprompter, records, then builds. (The media stages are
 nothing here re-implements the engine.)"""
 import json
 
-from .. import deckbuild
+from .. import deckbuild, renderlock
 from ..media import synth, align, render as render_stage, mux  # alias: `render` kwarg shadows the module
 from . import buildlog, gate, manifest as mf, segstatus
 
@@ -48,7 +48,10 @@ def build_segment(program, seg_id, *, run_gate=True, render=True):
     manifest = mf.load(program)
     proj = program.as_project(seg_id)
     mf.claim(program, manifest, seg_id)
+    # 2026-10-01: held from synth through mux, as cmd_media does (was unlocked end to end).
+    lock = None
     try:
+        lock = renderlock.acquire(proj)
         with buildlog.timed(program, "narrate", seg_id):
             synth.run(proj)
         segstatus.report(proj.dir, "narrate", True)
@@ -79,6 +82,7 @@ def build_segment(program, seg_id, *, run_gate=True, render=True):
         mf.transition(program, manifest, seg_id, "rendered", force=True)
         return {"seg": seg_id, "status": "rendered", "gate": g}
     finally:
+        renderlock.release(lock)
         mf.release(program, manifest, seg_id)
 
 

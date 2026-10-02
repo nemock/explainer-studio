@@ -41,6 +41,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from explainer2.project import Project           # noqa: E402
 from explainer2 import remotion_engine as E      # noqa: E402
 from explainer2 import renderlock                # noqa: E402
+from explainer2 import jobqueue                  # noqa: E402
+from explainer2 import childproc                 # noqa: E402
 from frame_preview import DEFAULT_MAX, make_preview  # noqa: E402
 
 REMO = Path(__file__).resolve().parents[1] / "remotion"
@@ -51,6 +53,13 @@ def main():
         sys.exit(__doc__.strip())
     pdir = Path(sys.argv[1]).resolve()
     proj = Project.load(pdir)
+    # Each still launches headless Chrome, so this is a render. From a Claude session it
+    # goes to the render queue and this process only waits for it (jobqueue.py).
+    if jobqueue.should_route():
+        sys.exit(jobqueue.submit_and_wait(
+            "mark_stills", [sys.executable, str(Path(__file__).resolve()), str(pdir)],
+            project=str(pdir), label=f"mark_stills:{pdir.name}"))
+    childproc.install_handlers(log=print)        # a killed run takes its browsers with it
     spec = E.build_spec(proj)
 
     outdir = pdir / "work" / "mark_stills"
@@ -106,10 +115,11 @@ def main():
             pf = outdir / f"props_{i:02d}.json"
             pf.write_text(json.dumps(props))
             out = outdir / f"mark_{i:02d}.png"
-            r = subprocess.run(["npx", "remotion", "still", "Video", str(out),
-                                f"--props={pf}", f"--frame={frame}",
-                                f"--public-dir={pub}", "--log=error"],
-                               cwd=REMO, capture_output=True, text=True)
+            r = childproc.run(["npx", "remotion", "still", "Video", str(out),
+                               f"--props={pf}", f"--frame={frame}",
+                               f"--public-dir={pub}", "--log=error"],
+                              label=f"mark_still_{i:02d}", cwd=REMO,
+                              capture_output=True, text=True)
             label = Path(fields.get("image") or comp).stem
             print(f"  {i:02d} {label:<22} frame {frame}: {'ok' if r.returncode == 0 else 'FAIL'}")
             if r.returncode == 0:

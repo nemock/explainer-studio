@@ -104,7 +104,14 @@ def conform_segment(src, dst, fps=30, loudnorm=True):
         cmd += ["-af", _loudnorm_af(src)]
     cmd += ["-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2",
             "-movflags", "+faststart", str(dst)]
-    r = subprocess.run(cmd, capture_output=True, text=True)
+    if action == "full":
+        # 2026-10-01: the libx264 re-encode takes the render lock (was a bare subprocess.run).
+        # The `-c:v copy` audio-only path stays unlocked: no video encode.
+        from .. import renderlock
+        r = renderlock.run_locked(cmd, label=f"deepdive:conform:{Path(src).name}",
+                                  capture_output=True, text=True)
+    else:
+        r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode != 0:
         raise RuntimeError(f"conform_segment failed for {src}:\n{r.stderr[-1500:]}")
     return {"src": str(src), "dst": str(dst), "action": action,

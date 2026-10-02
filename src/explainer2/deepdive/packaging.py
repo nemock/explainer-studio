@@ -62,13 +62,19 @@ def thumbnail(program, text, out, *, accent=None, logo=None, selfie=None, handle
     html = _html(text, accent, logo, selfie, handle)
     tmp = out.parent / "_thumb.html"
     tmp.write_text(html)
-    with sync_playwright() as p:
-        b = p.chromium.launch(args=["--force-color-profile=srgb", "--hide-scrollbars", "--disable-gpu"])
-        page = b.new_page(viewport={"width": 1280, "height": 720}, device_scale_factor=1)
-        page.goto(tmp.as_uri())
-        page.wait_for_timeout(250)  # let the bundled font load
-        page.screenshot(path=str(out), clip={"x": 0, "y": 0, "width": 1280, "height": 720})
-        b.close()
+    # 2026-10-01: headless Chromium takes the render lock (was unlocked).
+    from .. import renderlock
+    lock = renderlock.acquire(label=f"deepdive:thumbnail:{out.name}")
+    try:
+        with sync_playwright() as p:
+            b = p.chromium.launch(args=["--force-color-profile=srgb", "--hide-scrollbars", "--disable-gpu"])
+            page = b.new_page(viewport={"width": 1280, "height": 720}, device_scale_factor=1)
+            page.goto(tmp.as_uri())
+            page.wait_for_timeout(250)  # let the bundled font load
+            page.screenshot(path=str(out), clip={"x": 0, "y": 0, "width": 1280, "height": 720})
+            b.close()
+    finally:
+        renderlock.release(lock)
     tmp.unlink(missing_ok=True)
     return {"thumbnail": str(out), "text": text, "accent": accent, "logo": str(logo) if logo else None,
             "selfie": str(selfie) if selfie else None}
