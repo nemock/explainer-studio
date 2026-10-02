@@ -133,6 +133,9 @@ Copy the field names below exactly. Per cut:
   `accent` tokens must be substrings of the headline).
 - `ending`: `"loop"` (default) or `"bridge"`. For `"bridge"`, also give
   `cta_kicker` / `cta_headline` / `cta_accent` / `cta_subkicker` (the end-card).
+- `thumbnail_text` / `thumbnail_sub`: the cut's vertical YouTube thumbnail, added at
+  **Package**, not here (thumbnail-playbook §10, 2026-10-02). It adds what the title
+  doesn't say and never reuses the `hook_headline`.
 
 ## 4. Writing the hook & outro (the craft)
 

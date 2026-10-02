@@ -550,6 +550,18 @@ def main():
             _reap(f"{cmd[1]} exited {rc}")
             return rc
 
+    # YouTube thumbnail (2026-10-02). Best effort, AFTER every gate, and never blocking:
+    # a missing thumbnail costs only a custom image (YouTube picks a frame), so it must
+    # never cost the episode. dailies_thumbnail.py exits non-zero when the authoring run
+    # left no `thumbnail_text`; that is reported and skipped. youtube_upload.py in the
+    # publish run sets package/thumbnails/thumb.png when it exists.
+    thumb_tool = Path(__file__).resolve().parent / "dailies_thumbnail.py"
+    if thumb_tool.is_file():
+        rc = run_verb([sys.executable, str(thumb_tool), proj, "--render"])
+        if rc != 0:
+            print(f"[phase1] thumbnail: not rendered (exit {rc}) — the upload will use "
+                  "YouTube's own frame; see the line above for why", flush=True)
+
     clear_failure(proj)          # got all the way through; any prior streak is stale
     sentinel = Path(proj) / "work" / "render_complete.json"
     sentinel.parent.mkdir(parents=True, exist_ok=True)

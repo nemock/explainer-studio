@@ -33,6 +33,37 @@ def _package_issues(proj):
     return out
 
 
+SHORTS_THUMBS_FROM = "2026-10-02"   # projects dated earlier get an advisory, not an issue
+
+
+def _shorts_thumbnail_issues(proj):  # -> (issues, advisories)
+    """Every cut Short gets its own vertical thumbnail (thumbnail-playbook §10,
+    tools/shorts_thumbnail.py), which promote attaches to the Short's YouTube upload.
+    Only the cuts that exist on disk are checked, so a project whose Shorts are not cut
+    yet is not held up by this."""
+    _, thumbnails = contenttypes.package_requirements(proj.content_type)
+    plan_path = proj.dir / "shorts" / "plan.json"
+    if not thumbnails or not plan_path.exists():
+        return [], []
+    try:
+        plan = json.loads(plan_path.read_text())
+    except json.JSONDecodeError:
+        return [], []
+    cuts = plan.get("cuts", []) if isinstance(plan, dict) else plan
+    tdir = proj.dir / "package" / "thumbnails" / "shorts"
+    missing = [c["slug"] for c in cuts if isinstance(c, dict) and c.get("slug")
+               and (proj.dir / "shorts" / c["slug"] / "video" / "explainer_9x16.mp4").exists()
+               and not (tdir / f"{c['slug']}.jpg").exists()]
+    if not missing:
+        return [], []
+    msg = (f"Shorts thumbnails missing for {missing}: add thumbnail_text/thumbnail_sub to "
+           f"shorts/plan.json and run tools/shorts_thumbnail.py <dir> --render "
+           f"(thumbnail-playbook §10)")
+    if proj.dir.name[:10] >= SHORTS_THUMBS_FROM:
+        return [msg], []
+    return [], [msg]
+
+
 def _mmss(s):
     """'12:34' or '1:02:03' -> seconds, or None."""
     m = re.fullmatch(r"(?:(\d+):)?(\d?\d):(\d\d)", str(s).strip())
@@ -171,6 +202,9 @@ def run(proj):
     issues += _package_issues(proj)
     content_issues, advisories = _package_content_issues(proj, m)
     issues += content_issues
+    st_issues, st_advise = _shorts_thumbnail_issues(proj)
+    issues += st_issues
+    advisories += st_advise
 
     # Does every slide actually show something? Checked against the BUILT SPEC, because
     # the 2026-08-12 blank-slide bug lived in the deck -> spec translation and was

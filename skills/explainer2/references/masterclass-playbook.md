@@ -162,7 +162,8 @@ at ~150 wpm is ~3,750 words, and every one of them still has to earn its seat.
   comment CTAs in the script; the forward hook (§4.4) points at the next
   lesson, and course navigation replaces the CTA stack.
 - Package deliverables are the deep-dive set (meta.json, article.md,
-  linkedin.md, both thumbnails) — `validate` enforces them per content type.
+  linkedin.md, both thumbnails, and a vertical thumbnail per cut Short, per
+  thumbnail-playbook §10) — `validate` enforces them per content type.
 
 ## 6b. Series ground truth and the continuity ledger (2026-07-29)
 

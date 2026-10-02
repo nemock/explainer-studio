@@ -266,9 +266,10 @@ def _service(key, interactive):
 
 def _thumb_for_upload(path):
     """Return a path to a <2MB thumbnail. If `path` is already under the limit,
-    return it unchanged; otherwise write a resized (<=1280x720) JPEG to the
-    scratch dir, stepping quality down until it fits. Falls back to the original
-    if Pillow isn't available (YouTube will then reject it — surfaced as a warning)."""
+    return it unchanged; otherwise write a resized (<=1280x720, or <=1080x1920 for a
+    vertical Shorts thumbnail) JPEG to the scratch dir, stepping quality down until it
+    fits. Falls back to the original if Pillow isn't available (YouTube will then
+    reject it — surfaced as a warning)."""
     p = Path(path)
     if p.stat().st_size <= THUMBNAIL_MAX_BYTES:
         return str(p), None
@@ -277,7 +278,7 @@ def _thumb_for_upload(path):
     except ImportError:
         return str(p), "Pillow not installed; could not auto-compress thumbnail (>2MB)"
     img = Image.open(p).convert("RGB")
-    img.thumbnail((1280, 720))
+    img.thumbnail((1080, 1920) if img.height > img.width else (1280, 720))
     out = _cfg_dir() / f"_thumb_{p.stem}.jpg"
     for q in (90, 85, 80, 72, 65, 55):
         img.save(out, "JPEG", quality=q, optimize=True)

@@ -575,7 +575,13 @@ invoke the skill, then write every reader-facing artifact in that pass.**
 Write titles/description/chapters per blueprint §8 into `meta.json` (the
 manifest merges it). **Thumbnails: read `references/thumbnail-playbook.md`, then
 build the two 1280×720 cards (a = live, b = promo reuse) (cutout → brand template → `tools/html2png.py`) into
-`package/thumbnails/`.**
+`package/thumbnails/`.** **Then one vertical 1080×1920 thumbnail per cut Short (thumbnail-playbook
+§10, adopted 2026-10-02):** regenerate thumb A's scene tall in Magnific as
+`package/thumbnails/shorts/base_9x16.png`, write each cut's `thumbnail_text` +
+`thumbnail_sub` in `shorts/plan.json` inside the same humaner pass, and render with
+`tools/shorts_thumbnail.py <dir> --render` through `explainer2 submit` (myenv python). It fails
+on text over the face or outside the safe zone; then read its `sheet.jpg`. `promote` attaches
+each card to its Short's YouTube upload, so nothing is set by hand.
 
 > **Two keys `publish` actually reads, and neither is the obvious one (2026-08-05).**
 > `meta.json` MUST carry:
@@ -598,7 +604,7 @@ build the two 1280×720 cards (a = live, b = promo reuse) (cutout → brand temp
 attaches `package/thumbnails/thumb_a.png` to the upload itself (see `_thumb_for_upload`) —
 nobody does it by hand. It can only attach a file that exists at upload time, so:
 
-> render → shorts → **package (meta + thumbnails + article + linkedin)** → `validate` →
+> render → shorts → **package (meta + thumbnails, Shorts thumbnails included + article + linkedin)** → `validate` →
 > `publish --fire --privacy unlisted`
 
 Publishing first strands the video with no thumbnail and the dry-run reports
@@ -685,7 +691,9 @@ A complete package is generation-plane deliverables, none produced by a
 media stage (so nothing else guarantees they exist — that's how #16 shipped
 without `linkedin.md`, 2026-07-04). For a deep dive or masterclass episode
 that's FOUR: `package/meta.json` · `package/article.md` · `package/linkedin.md`
-· `package/thumbnails/thumb_a.png` + `thumb_b.png` (a = live, b = promo reuse). The set is
+· `package/thumbnails/thumb_a.png` + `thumb_b.png` (a = live, b = promo reuse), plus, once
+the Shorts are cut, `package/thumbnails/shorts/<slug>.jpg` for each (projects dated
+2026-10-02 or later; earlier ones get an advisory). The set is
 per-content-type (promo drops the article; standalone short needs meta only —
 `contenttypes.py` is the registry and validate reads it).
 **Run `bin/explainer2 validate <project_dir>` at the end of Package and again

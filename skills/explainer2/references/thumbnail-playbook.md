@@ -8,7 +8,8 @@ file freezes the quality bar so any model reproduces it without guessing.
 The output goes in `<project>/package/thumbnails/`: `thumb_a.{html,png}` and
 `thumb_b.{html,png}` (a = the live thumbnail, b = a promo asset for social and the
 newsletter; A/B testing retired, see §6), each pointing
-at a cutout `headshot-a.png` / `headshot-b.png`.
+at a cutout `headshot-a.png` / `headshot-b.png`. Each cut Short also gets a vertical
+thumbnail in `package/thumbnails/shorts/` (§10, since 2026-10-02).
 
 ---
 
@@ -300,7 +301,10 @@ This is a render (headless Chromium), so it takes the machine-wide engine lock i
 commands, never as parallel tool calls (SKILL hard rule 7). If `bin/explainer2 queue`
 shows a job running, the lock is held and the card would wait for it inside your
 session, so submit it instead:
-`bin/explainer2 submit --label thumb --cwd /Volumes/Casima/claudeCode/explainer2 -- python3 tools/html2png.py <project>/package/thumbnails/thumb_a.html <project>/package/thumbnails/thumb_a.png --width 1280 --height 720`.
+`bin/explainer2 submit --label thumb --cwd /Volumes/Casima/claudeCode/explainer2 -- /Users/davesaunders/myenv/bin/python tools/html2png.py <project>/package/thumbnails/thumb_a.html <project>/package/thumbnails/thumb_a.png --width 1280 --height 720`.
+**Name the `~/myenv` interpreter, never bare `python3`, in a submitted job (2026-10-02, #71):** the
+queue runs the command outside your shell, where `python3` is a Python without Playwright, so both
+#71 cards failed with `ModuleNotFoundError: No module named 'playwright'` after waiting out a render.
 (2× device scale is built in for crisp text.)
 
 **A/B Test & Compare is RETIRED (operator directive, 2026-07-26).** Dave: "we
@@ -357,6 +361,8 @@ prints (SKILL hard rule 9 — full-res Reads bloat the session transcript). An
       thinned by erosion.
 - [ ] Subject separates from the bg — if not, applied §5 (and noted it in PLAYBOOK).
 - [ ] Two thumbnails rendered: a (live) and b (promo reuse).
+- [ ] One vertical thumbnail per cut Short, `shorts_thumbnail.py` exit 0, `sheet.jpg`
+      looked at (§10).
 - [ ] For a multi-video series: same cutout treatment + layout across the set;
       only copy (and, if needed, the §5 hue) varies.
 
@@ -383,3 +389,81 @@ Operator steer: treat these as guidelines for improving our work, not laws.
 - **Fewer words win.** Our two-band + green-sub is the channel signature; keep each line tight and legible.
 - **b must differ from a at a glance** — different hook *angle* (claim vs curiosity vs negation) plus a pose change (mirror works); near-identical pairs aren't a real test.
 - **Squint test at ~120 px** before shipping.
+
+## 10. Shorts thumbnails: one vertical card per cut (adopted 2026-10-02)
+
+Every deep dive and masterclass module cuts three Shorts, and until now each one went up
+with whatever frame YouTube picked. Each cut now gets its own **1080×1920** thumbnail. All
+three share one base, the main thumbnail's scene regenerated tall so Dave looks the same,
+and each carries its own headline. Operator, 2026-10-02: the same picture of him, rebuilt
+vertical rather than cropped, with "the title text on the thumbnail [changed] to emphasize
+whatever the particular point is of that short."
+
+**Why not crop thumb A.** A 9:16 slice of a 16:9 card is 405 px wide at 720 tall and loses
+Dave, the prop or both. **Why not outpaint it.** Magnific's `images_expand` (ideogram; flux
+is gone) was tried on #71 and painted a fake app interface around the photo. Regenerating is
+what worked.
+
+Run it at Package, after thumb A is final, and only once the Shorts are cut:
+
+1. **The vertical base (one per video, about 180 credits).** Crop `base_a.png` around Dave
+   and the second character, upload the crop (`creations_request_upload`, then
+   `tools/imagegen.py put`, then `creations_finalize_upload`), and generate with **gpt-2,
+   9:16, 2k**, the crop as an `image` reference. The prompt asks for the same man, face,
+   expression and sweatshirt, the same props and room. He and the props sit in the lower
+   55% of the frame with his head near the middle, and the upper 40% is plain wall with
+   nothing in it. No text, no logos, no interface. Fetch it with `tools/imagegen.py fetch …
+   --project <dir> --tool images_generate --model gpt-2` to
+   `package/thumbnails/shorts/base_9x16.png`. Look at a preview: if the face drifted from
+   the main thumbnail, regenerate. Never ship a likeness that isn't him.
+2. **The headlines**, written inside the Package `humaner` invocation, into each cut of
+   `shorts/plan.json`:
+   - `"thumbnail_text"`: the band, 1 to 4 words. Over about 11 characters it splits into
+     two bands.
+   - `"thumbnail_sub"`: one clause; wrap the payoff words in `*asterisks*` for the accent
+     color.
+
+   The thumbnail sits beside the Short's title, so it **adds what the title doesn't say**:
+   the concrete number, name or claim the title only gestures at. #71: "AI Picks the Rhyme
+   Before It Writes the Line" became RABBIT FIRST / "They set out to show it didn't plan
+   ahead." A band that repeats the title, or a sub that restates "that's not what it did",
+   wastes the card. The `hook_headline` is on screen in the first second of the Short
+   itself, so don't reuse it.
+3. **Render** through the queue, with the myenv interpreter (§6):
+   `bin/explainer2 submit --label shorts-thumbs --cwd /Volumes/Casima/claudeCode/explainer2 -- /Users/davesaunders/myenv/bin/python tools/shorts_thumbnail.py <project> --render`.
+   It writes `package/thumbnails/shorts/<slug>.{html,jpg}`, `qa.json` and `sheet.jpg`.
+4. **QA, mechanical then visual.** The script exits non-zero and names the cut when any
+   of these fail:
+   - a text box overlaps Dave's face (OpenCV finds it on the base, padded);
+   - a text box leaves the safe zone (54 px sides, 96 px top, nothing below 75% of the
+     height, where the Shorts shelf lays the title and view count over the image);
+   - the band shrinks under 110 px or the sub under 60 px, the smallest that reads in the
+     channel's Shorts grid at about 210 px wide.
+
+   Fix the copy (shorter) and re-render; never hand-move text. Then Read `sheet.jpg`, the
+   three side by side at 360 px each: every headline legible, the three cards
+   distinguishable, nothing awkward in the line breaks.
+
+**Each cut looks different on purpose.** In plan order the text aligns left, center,
+right, and on a deep dive the band is red, then green, then white. The set reads as one
+video's Shorts while each card stays identifiable in a grid. **The colors follow the
+series, not the video:** `STYLES` in the script is keyed by `project.json` `theme`. The
+deep-dive themes get the §2 palette on a dark scrim. `plg-guide` gets the Product
+Leadership card: rust bands every time, a navy lowercase sub, and a cream scrim
+(`Product_Leadership_Operators_Guide/CLAUDE.md`). An unknown theme falls back to the
+deep-dive colors with a WARNING. When a new series gets its own long-form card, add its
+entry before cutting its Shorts. The base prompt changes with the series too: a cream
+office for Product Leadership, with the upper 40% plain cream wall.
+
+**Upload.** Nobody sets these by hand. `explainer2 promote` attaches
+`package/thumbnails/shorts/<slug>.jpg` to the Short's YouTube post as
+`target.thumbnail_local`. The post queue's direct YouTube upload
+(`make_money/post_queue/youtube_direct.py`) sets it right after the video goes up. A
+refusal never loses the upload: the dispatcher raises a `youtube_thumbnail_failed` alert
+with the watch URL. **Custom Shorts thumbnails reached Partner Program channels on
+2026-07-24 and roll out to others "over time"** (YouTube blog), and whether
+`thumbnails.set` honors a Short over the API is unconfirmed until the first one lands. If
+the alert fires, set it in Studio from the same file, and say so in PLAYBOOK §7.
+
+`validate` requires a thumbnail for every cut Short on projects dated 2026-10-02 or later,
+and only advises on earlier ones.

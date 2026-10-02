@@ -421,6 +421,14 @@ def _build_post_body(entry, media_urls, scheduled, duration_s=None):
 POSTQ = "/Volumes/Casima/claudeCode/make_money/post_queue/postq.py"
 
 
+def shorts_thumbnail(short_mp4):
+    """The vertical thumbnail tools/shorts_thumbnail.py built for this cut, or None.
+    short_mp4 is <project>/shorts/<slug>/video/explainer_9x16.mp4."""
+    mp4 = Path(short_mp4)
+    thumb = mp4.parents[3] / "package" / "thumbnails" / "shorts" / f"{mp4.parents[1].name}.jpg"
+    return str(thumb) if thumb.is_file() else None
+
+
 def enqueue_plan(projects_dir, plan, dry_run=True):
     """Hand a promotion plan to the LOCAL post queue instead of posting it.
 
@@ -453,6 +461,10 @@ def enqueue_plan(projects_dir, plan, dry_run=True):
                 post["additional_posts"] = [{"text": entry["url_comment"], "mediaUrls": []}]
         extra = dict(entry.get("extra", {}))
         extra.pop("pageId", None)      # resolved from brand by the queue
+        if platform == "youtube":
+            thumb = shorts_thumbnail(plan["short_mp4"])
+            if thumb:                  # set by the dispatcher's direct upload
+                extra["thumbnail_local"] = thumb
         if extra:
             post["target"] = extra
         # YouTube needs no route override: the queue's default for this account is

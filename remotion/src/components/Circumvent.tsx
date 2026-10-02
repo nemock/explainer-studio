@@ -2,6 +2,7 @@ import React from 'react';
 import {AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
 import {useWorld, usePlace, flick} from './PaperWorld';
+import {PAPER_CIRCUMVENT} from '../brands/papercraft';
 
 // CIRCUMVENT scene family (2026-07-30).
 //
@@ -461,6 +462,7 @@ export const CvgList: React.FC<{fields: any}> = ({fields}) => {
   // portrait labels scale to the narrow width instead of the tall height.
   const M = Math.min(width, height);
   const portrait = height > width;
+  const showWide = !portrait && W !== PAPER_CIRCUMVENT;   // see the scrim note below
   return (
     <AbsoluteFill>
       <Set src={fields.set} anchor={fields.anchor} />
@@ -476,11 +478,22 @@ export const CvgList: React.FC<{fields: any}> = ({fields}) => {
           So portrait gets its own ramp that never fully clears. It bottoms out at .60,
           which over the darkest ground in these worlds composites to roughly 6:1 against
           the ink — clear of WCAG AA with room for a darker set later. Landscape keeps
-          the original ramp byte-for-byte, so Circumvent's 16:9 is untouched. */}
+          the original ramp byte-for-byte, so Circumvent's 16:9 is untouched.
+
+          SHOW-WORLD LANDSCAPE (2026-10-02). The six personal shows went 16:9-only that
+          day, and the landscape ramp failed the same way the portrait one had: FWF
+          2026-10-02 slide 3 ran "Block 1: selling power since September 30" to ~78% of
+          the width, so the date printed ink-on-ink over the violet set. The column is
+          now capped at 56% of the width (items wrap inside the light part instead of
+          crossing it) and the ramp holds .55 to 60% before clearing at 74%, which keeps
+          about 5:1 against the ink over the darkest ground. Scoped by world: Circumvent
+          (the one client show on this family) still gets the original ramp and no cap. */}
       <AbsoluteFill style={{
         background: portrait
           ? 'linear-gradient(90deg, rgba(242,237,224,.93) 0%, rgba(242,237,224,.86) 45%, rgba(242,237,224,.72) 75%, rgba(242,237,224,.60) 100%)'
-          : 'linear-gradient(90deg, rgba(242,237,224,.92) 0%, rgba(242,237,224,.70) 34%, rgba(242,237,224,0) 62%)',
+          : showWide
+            ? 'linear-gradient(90deg, rgba(242,237,224,.92) 0%, rgba(242,237,224,.84) 44%, rgba(242,237,224,.55) 60%, rgba(242,237,224,0) 74%)'
+            : 'linear-gradient(90deg, rgba(242,237,224,.92) 0%, rgba(242,237,224,.70) 34%, rgba(242,237,224,0) 62%)',
       }} />
       <AbsoluteFill style={{justifyContent: 'center',
                             padding: width < height
@@ -500,6 +513,7 @@ export const CvgList: React.FC<{fields: any}> = ({fields}) => {
               display: 'flex', alignItems: 'center', gap: width * 0.016,
               transform: `translateX(${(1 - e) * -30}px)`, opacity: e,
               marginBottom: M * 0.024,
+              maxWidth: showWide ? width * 0.56 : undefined,
             }}>
               {/* `ordered: false` swaps the index badge for a plain paper chip. A statgrid
                   routes here on the Cvg worlds (no counter component exists), and numbering
