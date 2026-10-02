@@ -295,9 +295,12 @@ If a brand has no `thumbnail` block, use the §0/§2 defaults.
 python tools/html2png.py <project>/package/thumbnails/thumb_a.html \
   <project>/package/thumbnails/thumb_a.png --width 1280 --height 720
 ```
-This is a render (headless Chromium), so it takes the machine-wide render lock itself
-(2026-10-01). Run A and B as ONE detached job, one after the other, never as parallel
-tool calls and never in the session's foreground (SKILL hard rule 7).
+This is a render (headless Chromium), so it takes the machine-wide engine lock itself
+(2026-10-01) and runs inline in a few seconds. Run A, then B, as two sequential
+commands, never as parallel tool calls (SKILL hard rule 7). If `bin/explainer2 queue`
+shows a job running, the lock is held and the card would wait for it inside your
+session, so submit it instead:
+`bin/explainer2 submit --label thumb --cwd /Volumes/Casima/claudeCode/explainer2 -- python3 tools/html2png.py <project>/package/thumbnails/thumb_a.html <project>/package/thumbnails/thumb_a.png --width 1280 --height 720`.
 (2× device scale is built in for crisp text.)
 
 **A/B Test & Compare is RETIRED (operator directive, 2026-07-26).** Dave: "we
@@ -366,7 +369,7 @@ red keyword bands, white sub with green accent) but is **prop-driven**, so it re
 same `brand.ts` as the video and the thumbnail is a visual sibling of the render.
 
 - Props: `{bands[], sub, accent[], cutout, mirror, innerHot, bandSize}`.
-- Render each: `cd remotion && npx remotion still src/index.ts Thumbnail <out.png> --props=<variant.json> --public-dir=<thumbnails dir>` (the cutout PNG lives in that public dir, referenced by `staticFile`). To check the result, Read a `tools/frame_preview.py` preview of it, never the full-res PNG (SKILL hard rule 9).
+- Render each through the render queue (SKILL hard rule 7), one command per card, never two in one message: `bin/explainer2 submit --label thumb --cwd /Volumes/Casima/claudeCode/explainer2/remotion -- npx remotion still src/index.ts Thumbnail <out.png> --props=<variant.json> --public-dir=<thumbnails dir>` (absolute paths for `<out.png>`, `<variant.json>` and the public dir; the cutout PNG lives in that public dir, referenced by `staticFile`). Exit 0 = done; exit 75 = still queued or running: run the `bin/explainer2 wait <job-id>` it printed. To check the result, Read a `tools/frame_preview.py` preview of it, never the full-res PNG (SKILL hard rule 9).
 - The matting preprocess is unchanged: `cutout.py` (only if the selfie isn't already keyed — **check the alpha first; an operator-supplied transparent PNG is preferred, don't re-segment it**) then `clean_matte.py`.
 - **Always trim the cutout to its alpha bbox** — `clean_matte.py --trim` is now the default. A wide transparent PNG with the subject mid-canvas otherwise renders dead-centre under the headline (caught on #12); trimming lets the template anchor the subject to the right.
 - The HTML + `html2png.py` path (§2/§6) remains a valid fallback.

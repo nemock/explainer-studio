@@ -177,7 +177,8 @@ the render captures a broken image.** So:
 - Only use `figure`/`footage` when the image actually exists in the project:
   a licensed Adobe-Stock still ingested via the `assets` flow (lands under
   `assets/…`), or an authored artifact PNG under `sources/artifacts/` (author
-  an HTML artifact, then `python3 tools/html2png.py …` — see the shipped
+  an HTML artifact, then `python3 tools/html2png.py …`, which takes the engine
+  lock itself and runs inline in a few seconds, one at a time — see the shipped
   examples like `sources/artifacts/calendar.png`).
 - If you have no asset yet, render the idea as a **text type** (`list`,
   `statement`, `stat`, `quote`) — a "screenshot this" card is perfectly served
@@ -411,7 +412,8 @@ every `accent`/`accent2`/`mark` token is a substring of its headline/title; no
       the image's moving container, so they ride the Ken Burns and stay on-subject
       ([[annotation-marks-land-on-subject]]). Place them by OPENING the actual image and
       reading the subject's position, never by estimating; verify with a still before the
-      full render (Read its `tools/frame_preview.py` preview, SKILL hard rule 9). If the
+      full render (`python3 tools/mark_stills.py <project_dir>`, which queues itself, SKILL
+      hard rule 7; Read its `tools/frame_preview.py` preview, SKILL hard rule 9). If the
       census's annotation-coverage floor is short, add an image-space mark to another
       figure — never satisfy it by putting an underline back on a text card.
 - [ ] Long segments (>20s) carry a mid-scene motion beat — an annotation, a cued

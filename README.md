@@ -113,13 +113,24 @@ Everything the pipeline depends on runs **locally** and is **free**. The one dec
 
 ## Render robustness (RAM-aware, multi-project-safe)
 
-The render+mux stage — headless frame capture plus an ffmpeg encode — is the one memory-heavy part of the pipeline, and on a 16 GB machine two of them at once means an OOM kill mid-write. Three mechanisms keep it honest (see [`src/explainer2/renderlock.py`](src/explainer2/renderlock.py)):
+The render+mux stage — headless frame capture plus an ffmpeg encode — is the one memory-heavy part of the pipeline, and on a 16 GB machine two of them at once means an OOM kill mid-write. Four mechanisms keep it honest:
 
 - **RAM-aware serialization.** Memory-heavy stages are serialized by design — never Kokoro *and* headless capture *and* ffmpeg at the same time — so the encode fits the unified-memory budget instead of fighting it.
-- **A machine-global render lock.** An `fcntl.flock` on a fixed lockfile (`/tmp/explainer-render.lock`) is shared across **every** explainer project *and* across codebases (this repo **and** the production v1). Start as many renders as you like, whenever you like — they queue and auto-start one at a time, so concurrent renders never kill each other. The OS releases the lock if a holder dies (even on `SIGKILL`), so a crashed render can't deadlock the queue. `bin/explainer2 render-status` shows who holds the lock and every live render.
-- **Detached, suspend-proof launches.** Heavy renders launch in their own session under `caffeinate`, so suspending or closing the Claude app (or wandering off) leaves the encode running to completion instead of killing it mid-frame.
+- **A render queue** ([`src/explainer2/jobqueue.py`](src/explainer2/jobqueue.py), runner [`tools/render_queue.py`](tools/render_queue.py)). A launchd agent runs render jobs one at a time, outside any Claude session, lowest priority number first (booth-show episodes, then quick stills, media renders, Shorts, studio long-form), oldest first within a priority. Jobs survive the Claude app being quit. Run from a Claude session (detected by the `CLAUDECODE` environment variable), the heavy verbs — `media` (any run that includes narrate, align, render or mux), `shorts`, `narrate`, `align`, `mux`, `adlib`, and `tools/mark_stills.py` — submit themselves and wait cheaply; exit 0 means finished, exit 75 means still queued or running (`bin/explainer2 wait <job-id>`). `render` queues and returns at once. Any other render or encode goes in with `bin/explainer2 submit --label <name> --cwd <dir> -- <command>`. Submitting the same command while its job is live re-attaches to it instead of rendering twice.
+- **A machine-global engine lock** ([`src/explainer2/renderlock.py`](src/explainer2/renderlock.py)). Each job takes an `fcntl.flock` on a fixed lockfile (`/tmp/explainer-render.lock`) shared across **every** explainer project *and* across codebases that render on the same Mac (this repo, the production v1, and any other tool that vendors the module). The OS releases the lock if a holder dies (even on `SIGKILL`), so a crashed render can't deadlock anything. After taking it, the lock also waits out any foreign ffmpeg command line that names a video encoder.
+- **Visibility and control.** `bin/explainer2 queue` (or `render-status`) shows running, waiting and recent jobs and the lock holder; `bin/explainer2 queue log <id>` and `bin/explainer2 queue cancel <id>` do what they say.
 
-Hard rule for contributors: never invoke a heavy ffmpeg encode raw — route it through `renderlock.run_locked(...)` so it serializes against scheduled renders.
+**The queue is opt-in per machine.** Without it the verbs run inline, exactly as before, holding the engine lock. To install it once (the steps are in the docstring of [`tools/render_queue.py`](tools/render_queue.py)):
+
+```bash
+python3 tools/render_queue.py --plist com.example.render-queue > ~/Library/LaunchAgents/com.example.render-queue.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.example.render-queue.plist
+python3 tools/render_queue.py --enable com.example.render-queue
+```
+
+Keep the plist's log on the boot volume; a launchd job whose stdio points at an external volume dies silently when that volume is not mounted yet.
+
+Hard rule for contributors: never invoke a heavy ffmpeg encode or a Remotion render raw — submit it with `bin/explainer2 submit` so it serializes against scheduled renders and outlives the session that started it.
 
 ## Quick start
 
@@ -136,11 +147,11 @@ cd remotion && npm install && cd ..
 bin/explainer2 scaffold "why vector databases forget"   # new project dir
 bin/explainer2 intel <project-dir>                       # YouTube intelligence sweep
 #   → Claude authors the Blueprint, script, deck.json/motion spec, and shorts plan (see the SKILL)
+bin/explainer2 deckcheck <project-dir>                   # pre-booth deck check (renders nothing)
 bin/explainer2 record <project-dir>                      # open the booth, record in your voice
-bin/explainer2 media --only narrate,align <project-dir>  # light media stages (foreground)
-bin/explainer2 render <project-dir>                      # heavy render — launches DETACHED
+bin/explainer2 render <project-dir> --only narrate,align,render,manifest,qa  # queued render
 bin/explainer2 shorts <project-dir>                      # cut 9:16 Shorts from the finished deep dive
-bin/explainer2 render-status                             # render-queue view
+bin/explainer2 queue                                     # render-queue view
 ```
 
 The end-to-end procedure, gates, and hard rules are written down in the skill (below) — the project is built to be run by **any** Claude model, so the methodology lives in the repo, not in any one session.

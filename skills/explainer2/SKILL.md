@@ -70,27 +70,47 @@ conflict for the operator. Do not skip steps because they seem obvious.
    pull, the research wiki, or the talk-time library. No invented numbers.
 6. **Numbers are spelled out in scripts** ("five hundred", not "500") — TTS
    and captions both need words.
-7. **Every render goes through the render lock and launches DETACHED, whatever its
-   length (operator directive 2026-10-01).** This covers:
-   - the long-form render (`bin/explainer2 render`, §7);
-   - every Shorts cut or re-cut: ONE detached `bin/explainer2 shorts <dir> --plan
-     <subset>` job, never two, never `--only` jobs side by side;
-   - `tools/mark_stills.py`, which takes the lock itself since 2026-10-01;
-   - `tools/html2png.py` (thumbnail cards, figure artifacts), which also takes the lock
-     itself since 2026-10-01; render both cards in ONE detached job, A then B;
-   - any ad-hoc `npx remotion still` or ffmpeg encode, via `renderlock.run_locked`
-     with the detached launcher pattern in §7.
-   Never launch render jobs as parallel tool calls, and never in the session's
-   foreground. A foreground job queued on the lock still holds its imports inside the
-   desktop app. On 2026-10-01 that froze Claude Desktop, and the force-quit killed two
-   renders, one of them another session's. Before launching, check
-   `bin/explainer2 render-status`, `/tmp/explainer-render.tickets`, and the output
-   files' mtimes against the change you are rendering for. Queuing a render never
-   needs the operator's go-ahead: when a render is needed, put it through the lock
+7. **Every render and encode goes through the render queue; a session never renders
+   (operator directive 2026-10-01).** The queue is a launchd agent
+   (`com.brg.render-queue`, code `src/explainer2/jobqueue.py`, runner
+   `tools/render_queue.py`): jobs run one at a time outside any Claude session,
+   booth-show episodes first, and survive the desktop app being quit. Each job still
+   takes the engine lock (`renderlock.py`), so it also serializes against
+   waveform-studio and daily_beats.
+   - **The heavy verbs queue themselves.** From a session, `bin/explainer2 media <dir>`
+     (any run that includes narrate, align, render or mux), `bin/explainer2 shorts <dir>
+     [--only <slug>] [--plan <file>]`, `bin/explainer2 narrate|align|mux <dir>`,
+     `bin/explainer2 adlib <dir>` and `python3 tools/mark_stills.py <dir>` submit a job
+     and wait for it, printing `SUBMITTED … / QUEUED … position N of M / RUNNING … /
+     DONE …` and the tail of the job log. **Exit 0 = finished. Exit 75 = still queued
+     or running after the wait (default 540 s), which is the queue working, not a
+     failure:** run the `bin/explainer2 wait <job-id>` it printed. `--no-wait` returns
+     at once; `--wait-secs N` changes the wait. Re-issuing the same command while its
+     job is live re-attaches to that job; it never starts a duplicate.
+   - **`bin/explainer2 render <dir> [--only <stages>]`** queues the long-form render
+     and returns at once (`--wait` to wait). The script and timeline guards run before
+     it queues, so a stale script or timeline is reported immediately.
+   - **Any other render or encode** (a Remotion still, an ffmpeg splice or re-encode):
+     `bin/explainer2 submit --label <name> --cwd <dir> -- <command and args>`. It runs
+     under launchd holding the engine lock; a script that takes the lock itself is fine
+     inside `submit`. `--no-lock` only for work that neither encodes nor launches a
+     browser.
+   - **Light verbs run inline:** `deck`, `deckcheck`, `manifest`, `qa`, `stills`,
+     `handoff`, `validate`. `tools/html2png.py` also runs inline (a few seconds; it
+     takes the engine lock itself).
+   - **Never, from a session:** a raw `npx remotion render|still`; a raw `ffmpeg` that
+     encodes video; two render commands in one message; `&`, `nohup`, harness
+     `run_in_background`, or a hand-written `Popen(start_new_session=True)` launcher
+     for a render; a polling loop. Why: a job that lives in a session's process tree
+     dies with the app (the 2026-10-01 force-quit killed two renders, one of them
+     another session's), and parallel jobs are how duplicates and admission refusals
+     happen.
+   `bin/explainer2 queue` shows running, waiting and recent jobs, the engine lock
+   holder, and live claims (`render-status` prints the same). Queuing a render never
+   needs the operator's go-ahead, and "queued behind X" is not a question for him
    (operator, 2026-10-01: "That is the unconditional workflow: all renders go through
-   the queuing system"). The light media stages
-   (narrate/align/deck) and the non-rendering CLI verbs run synchronously in the
-   foreground. Never write a polling loop (global CLAUDE.md shell rules).
+   the queuing system"). Decision doc:
+   `make_money/routine_changes/2026-10-01-render-queue.md`.
 8. **NEVER edit `script.json` after the operator has recorded it** (added
    2026-08-10, after a near-miss). Forced alignment does not fail on a text/audio
    mismatch — it silently maps the new words onto the old audio and the video
@@ -258,6 +278,11 @@ or `footage` images) before the full render. **Then run
 (motion-playbook §4b, added 2026-07-06 after #18 shipped as a "narrated
 PowerPoint"). A FAIL census blocks the render exactly like a failed word
 budget blocks the script gate; paste the tally into PLAYBOOK's deck notes.**
+**Then run `bin/explainer2 deckcheck <project_dir>` (2026-10-01; in addition to the
+census, not instead of it).** It renders nothing. Exit 0 = pass; non-zero prints
+the slides that would render empty, fields a component would drop, malformed marks,
+and a projected length outside the project's min/max. Fix every item before the
+booth opens.
 No separate operator gate — the deck is seen in the rendered video at the
 Package gate.
 
@@ -290,8 +315,10 @@ body line).
 - Operator: launch the booth with **`python3 tools/launch_booth.py <project_dir>`**,
   NOT a bare `bin/explainer2 record` run in a harness background task.
   **HARD RULE (operator directive 2026-06-23, said more than once): the booth is a
-  long-lived server and MUST launch DETACHED + caffeinated** — its own session
-  (`start_new_session`) under `caffeinate -ims`, exactly like renders (§7). A
+  long-lived server and MUST launch DETACHED + caffeinated** — `launch_booth.py`
+  starts it in its own session under `caffeinate -ims` (the booth is not a render;
+  renders go through the queue, hard rule 7). Run `bin/explainer2 deckcheck
+  <project_dir>` before every booth launch; a non-zero exit means fix the deck first. A
   harness-tracked background task DIES when the machine/app suspends while the
   operator is AFK, which silently freezes the booth UI mid-record (the Stop button
   stops responding because its backend is gone). `launch_booth.py` does the detached
@@ -323,14 +350,20 @@ body line).
     five minutes for a Finish sentinel under `explainer-content/projects` and the
     masterclass series dirs. On DONE it checks `voice_source` is operator, holds if
     the booth flagged any card `rerecord` (notifies once), runs the scriptguard, then
-    launches `phase1_render.py --profile studio` detached: `media` (narrate, align,
-    render, manifest, qa) and `shorts`. When it finishes it writes
-    **`work/RESUME.md`**, notifies, and deep-links this session again. **On resume,
-    read `work/RESUME.md` FIRST.** If it exists, or `work/render_complete.json` is
-    newer than `work/record_done.json`, the render is done: do NOT run `media` or
-    `render` again; go to §7's QA review and §7b. If it does not exist yet, check
-    `bin/explainer2 render-status` before starting a render by hand — the watcher may
-    be mid-render or queued behind the render cap.
+    submits `phase1_render.py --profile studio` to the render queue (hard rule 7):
+    `media` (narrate, align, render, manifest, qa) and `shorts`. When it finishes it
+    writes **`work/RESUME.md`**, notifies, and deep-links this session again. **On
+    resume, read `work/RESUME.md` FIRST.** If it exists, or `work/render_complete.json`
+    is newer than `work/record_done.json`, the render is done: do NOT run `media` or
+    `render` again; go to §7's QA review and §7b. If it does not exist yet, run
+    `bin/explainer2 queue` — the job is running or waiting there. **A session never
+    renders an operator-voiced project itself.** After a fix that does not touch
+    `script.json` (a deck fix, a renderer fix), hand it back to the watcher:
+    `python3 tools/rerender.py <project_dir> --reason "<what was fixed>"`. That
+    supersedes the done-markers and the watcher re-renders through the queue. It
+    refuses a third use per recording, a published or partly published project, and a
+    stale script. Never move `render_complete.json`, `manifest.json` or
+    `results.json` aside by hand.
   - Script edits during a session need NO restart (Booth 2.0): the booth
     hot-reloads `script.json` on refresh, and the operator can edit lines
     inline in the booth (writes back to the script with a backup). **An edited
@@ -400,101 +433,93 @@ segment was stale as well. `--accept` re-stamps the current take only. An unstam
 Short take is reported and does not block.
 
 ### 7. Media pipeline
-**Operator-voiced projects: the watcher has usually done this already.** If
-`work/RESUME.md` exists (written by `phase1_render.py --profile studio`, see §6), read it
-and skip to the QA-warnings review below; re-render only after a fix. The commands
-here are for Kokoro-tier projects, for re-renders after a fix, and for the case where
-the watcher held the render (re-record flags, scriptguard block, or `render-status`
-shows it queued).
+**Operator-voiced projects: the watcher has usually done this already, and a session
+never renders them itself.** If `work/RESUME.md` exists (written by
+`phase1_render.py --profile studio`, see §6), read it and skip to the QA-warnings
+review below. After a fix that does not touch `script.json`, re-render with
+`python3 tools/rerender.py <project_dir> --reason "<what was fixed>"` (§6), not with
+the commands below. If the watcher held the render (re-record flags, scriptguard
+block), `bin/explainer2 queue` and `work/RESUME.md` say why. The commands here are
+for Kokoro-tier projects.
 
-Run the light stages inline, then launch the heavy render **detached**:
+Every command below goes through the render queue (hard rule 7). One command:
 ```
-bin/explainer2 media --only narrate,align <project_dir>   # quick, foreground
-bin/explainer2 render <project_dir>                       # detached: remotion render→manifest→qa
+bin/explainer2 render <project_dir> --only narrate,align,render,manifest,qa
 ```
+It queues the job and returns at once; the script and timeline guards run before it
+queues, so a stale script or timeline is reported immediately. Add `--wait` to wait
+for it (exit 0 = done, exit 75 = still queued or running: run the
+`bin/explainer2 wait <job-id>` it printed). Without `--only`, `render` runs
+`render,mux,manifest,qa` on the cached narration and timeline. The equivalent
+two-step form is `bin/explainer2 media <project_dir> --only narrate,align` (queued,
+waits) then `bin/explainer2 render <project_dir>`.
 **Remotion is the default engine** (motion-playbook.md) — `media`/`render`/`shorts`
 default to `--engine remotion`, which outputs the final muxed mp4 directly (no
 deck/mux stages) and needs the Node toolchain (`npm install` in `remotion/`). Pass
 **`--engine deck`** to use the legacy JS deck engine instead (and add `deck` to the
 `--only` list, since the deck engine needs `deck.json`/step 5b). Either way the
-**deep-dive render runs ~15–25 min**, exceeds the Bash 10-min cap, and dies if the app
-suspends — so always split it: light stages inline, then the detached `render`.
+**deep-dive render runs ~15–25 min**, longer than the Bash 10-min cap; that is why it
+runs in the queue, outside the session.
 Then read the QA warnings in the results
 JSON and fix what is fixable (deck pacing, dead air) — at most ONE re-render
 cycle. When you extract frames from the finished render to eyeball the
 slide-type mix, run each extracted frame through `tools/frame_preview.py` and
 Read the preview JPEGs, never the full-res frames (hard rule 9).
 
-**Render robustness (learned the hard way on #34, then #10).** A deep-dive
-render exceeds the Bash 10-min cap, and a render interrupted mid-encode leaves a
-**corrupt `work/video_16x9.mp4` ("moov atom not found")**. The hard lesson (#10,
-2026-06-22): a render launched as a child of the Claude session **dies the moment
-the desktop app is switched away** — the harness kills the background task
-mid-encode. `caffeinate` blocks OS idle-sleep but NOT task termination. So:
-- **Launch renders DETACHED — this is the standard path:**
-  `bin/explainer2 render <project_dir>`. It runs render→mux→manifest→qa in its
-  OWN session (`start_new_session`, the portable macOS `setsid`) under
-  `caffeinate`, so suspending/closing Claude Code leaves it running. It returns
-  immediately (the render is detached — no completion notification), and is
-  idempotent (won't double-encode a project already rendering).
-- **Check progress with `bin/explainer2 render-status`** (lock holder + every
-  live render + each one's last `run.log` line) or tail `work/run.log`. Do NOT
-  write a polling loop — check on re-invocation; global CLAUDE.md rules apply.
-- A `render-status` showing `render-lock: engine busy … queued, waiting` is the
-  lock **working** (another render is in flight; this one auto-starts after) —
-  not a hang. The lockfile *content* is just a note; if its named holder pid is
-  dead, the flock is already free.
-- **Killing a render: `python3 tools/kill_render.py <project_dir> --fix`, never a
-  bare `kill <pid>` (2026-08-10).** A render is a tree — `npm exec remotion
-  render` → `node` → the whole `chrome-headless-shell` fleet — and killing the
-  parent reaps only the parent. On 2026-08-10 the Phase-1 shell was killed and
-  the remotion tree kept rendering, reparented to init, under a lockfile whose
-  recorded pid was already dead. `kill_render.py` signals the process GROUP,
-  verifies nothing is left, and clears a stale lock note. `explainer2 media` also
-  traps SIGTERM/SIGINT/SIGHUP itself now (`childproc.py`) and takes its render
-  children down with it.
-- If a render died: delete the corrupt `work/video_16x9.mp4`, then re-run
-  `bin/explainer2 render <project_dir>` (narrate/align/deck are cheap, cached,
-  and idempotent; the render redoes). Verify the final file with `ffprobe`
-  (duration present, no moov error) before Package; after any deck fix re-cut
-  affected Shorts.
+**Render robustness (learned the hard way on #34, then #10, then 2026-10-01).** A
+render interrupted mid-encode leaves a **corrupt `work/video_16x9.mp4` ("moov atom
+not found")**. A render that is a child of a Claude session dies when the desktop
+app is suspended or quit (#10, 2026-06-22; two renders on 2026-10-01). The queue
+runs every job under launchd, outside any session, so that no longer happens. So:
+- **Check progress with `bin/explainer2 queue`** (running, waiting and recent jobs,
+  the engine lock holder, tickets waiting on the lock, live claims) and
+  `bin/explainer2 queue log <job-id>` for a job's log. `bin/explainer2 wait <job-id
+  | project_dir>` blocks cheaply until it finishes (exit 75 = still running: issue it
+  again). Never write a polling loop; global CLAUDE.md rules apply.
+- A job shown as waiting, or `render-lock: engine busy … queued, waiting` in its
+  log, is the queue **working** — not a hang, and not a question for the operator.
+- **Killing a render: `bin/explainer2 queue cancel <job-id>`** for a queued or
+  running job. For a render started outside the queue,
+  `python3 tools/kill_render.py <project_dir> --fix` (it also finds `shorts`
+  renders). Never a bare `kill <pid>` (2026-08-10): a render is a tree — `npm exec
+  remotion render` → `node` → the whole `chrome-headless-shell` fleet — and
+  killing the parent reaps only the parent; on 2026-08-10 the remotion tree kept
+  rendering, reparented to init, under a lockfile whose recorded pid was dead.
+- If a render died: delete the corrupt `work/video_16x9.mp4`, then re-queue
+  `bin/explainer2 render <project_dir>` (narrate/align/deck are cached; the render
+  redoes). Verify the final file with `ffprobe` (duration present, no moov error)
+  before Package; after any deck fix re-cut affected Shorts.
 
-**Concurrent renders are serialized — the render-lock (2026-06-21).** Both this
-studio AND v1 `explainer-system` (which the CVG routine uses) acquire a
-machine-global `fcntl.flock` on `/tmp/explainer-render.lock` before `render` and
-hold it through `mux`, so two projects/routines never run the memory-heavy
-capture+encode at once (that collision SIGTERM'd #10 mid-render). You can launch
-a render any time — if another is in flight you'll see `render-lock: engine busy
-… queued, waiting` in `work/run.log`, and it **auto-starts when the other
-finishes** (no manual coordination). flock auto-releases when the holder dies
-(even SIGKILL), so a crashed render never deadlocks the queue. Code:
-`renderlock.py` in each codebase — the LOCKFILE path MUST stay identical across
-both, or they won't see each other. (It's flock-only by design: an earlier
-process-sniffing guard false-positived on persistent MCP headless browsers and
-deadlocked the queue — never reintroduce that.)
+**Inside every job: the engine lock (2026-06-21).** The queue runs one job at a
+time, and each job also takes a machine-global `fcntl.flock` on
+`/tmp/explainer-render.lock` (`renderlock.py`) around the memory-heavy
+capture+encode. v1 `explainer-system` (CVG), waveform-studio and daily_beats take
+the same lock, so a queued job also serializes against them (that collision
+SIGTERM'd #10 mid-render). flock auto-releases when the holder dies (even SIGKILL),
+so a crashed render never deadlocks anything. The LOCKFILE path MUST stay identical
+across every copy of `renderlock.py`, or they won't see each other. The lock is
+cooperative, so after taking it `renderlock.py` also waits for any **foreign video
+encode**: an `ffmpeg` command line naming a video ENCODER (`h264_videotoolbox`,
+`libx264`, …) outside its own session (added 2026-08-05 after #55 rendered
+alongside two unlocked encodes and shipped a corrupt bitstream). It deliberately
+does NOT match `chrome-headless-shell`: the 2026-06-21 guard that did
+false-positived on idle MCP browsers and deadlocked renders — never reintroduce
+that one.
 
-**HARD RULE — never run a raw heavy ffmpeg (2026-06-23).** The lock protects the
-render *engine*, but a hand-rolled `ffmpeg` you run yourself (a B-roll motion
-splice, the SV-clip splice, any post-mux re-encode) bypasses it unless you make
-it take the lock. A bare-ffmpeg B-roll splice on 2026-06-23 overlapped Founder
-Tip Tuesday's scheduled render, blew the 16 GB budget, and got OOM-killed
-mid-write — the exact collision the lock exists to prevent. So: **route every
-heavy encode through `renderlock.run_locked(cmd, label=…)`** (in
-`src/explainer2/renderlock.py`) — it acquires the flock, runs the subprocess,
-releases on success or failure. Write the splice as a `.py` that calls it
-(`sys.path.insert(0, '…/explainer2/src'); from explainer2 import renderlock`).
-Two independent requirements, both mandatory (2026-06-23, learned the hard way —
-the splice died twice in one afternoon, once per cause):
-1. **SERIALIZE** — go through `run_locked` so it never encodes alongside a
-   scheduled render (the OOM kill).
-2. **SURVIVE** — launch it **DETACHED** (its own session + `caffeinate`, the way
-   `launch_detached` starts renders), NOT merely backgrounded via the harness.
-   A harness-backgrounded child is killed when the desktop app is suspended; that
-   killed the splice, released the lock, and let the scheduled render jump in.
-   Launcher pattern: `subprocess.Popen(["/usr/bin/caffeinate","-ims", py, splice],
-   start_new_session=True, stdout=open(log,'a'), stderr=STDOUT)`, then check the
-   log / output file on re-invocation (don't poll).
-No raw `ffmpeg` for an encode, ever, now that the helper exists.
+**HARD RULE — never run a raw heavy ffmpeg (2026-06-23).** A hand-rolled `ffmpeg`
+you run yourself (a B-roll motion splice, the SV-clip splice, any post-mux
+re-encode) bypasses the lock and lives in your session. A bare-ffmpeg B-roll splice
+on 2026-06-23 overlapped Founder Tip Tuesday's scheduled render, blew the 16 GB
+budget, and got OOM-killed mid-write; a harness-backgrounded splice was killed when
+the app was suspended. Submit it to the queue instead:
+```
+bin/explainer2 submit --label splice --cwd <project_dir> -- ffmpeg -y -i <in.mp4> … <out.mp4>
+```
+It runs under launchd holding the engine lock, so it neither encodes alongside a
+render nor dies with the app. A multi-step splice can be a `.py` that you submit
+the same way (`-- python3 <splice.py>`); if it calls `renderlock.run_locked`
+itself, that passes through. A stream copy (`-c copy`) that encodes nothing is
+the only ffmpeg that may run inline.
 
 ### 7b. Ad-lib drift check (REQUIRED before Package — operator-recorded videos)
 The operator records with flexibility: they cut, add, and rephrase live, and that
@@ -510,7 +535,7 @@ in-booth check didn't complete (drift disabled, deferred behind a render, or a
 worker error). So before packaging: **read `work/adlib_report.json`**; only if
 it's missing or has `unchecked` entries, run the fallback:
 ```
-bin/explainer2 adlib <project_dir>    # FALLBACK only — re-transcribes everything
+bin/explainer2 adlib <project_dir>    # FALLBACK only — re-transcribes everything (queued, hard rule 7)
 ```
 Either way, review per segment (`drift`, `script_text`, `asr_text`) and
 separate **recognizer noise** from **real drift**:
@@ -590,7 +615,8 @@ NOT clips of the long-form: each cut reuses the long-form body audio but gets a
 booth records the hooks in the SAME session: the booth (launched via
 `launch_booth.py`, §6) surfaces them as extra cards (saved to
 `voiceover/short_<slug>_{hook,outro}.wav`), then
-`bin/explainer2 shorts` assembles hook → body → spoken outro per cut — rendered through
+`bin/explainer2 shorts <project_dir>` (queued, hard rule 7; one cut with
+`--only <slug>`) assembles hook → body → spoken outro per cut — rendered through
 the **Remotion motion engine by default** (kinetic hook, synced captions, animated beats;
 motion-playbook.md), with `--engine deck` for the legacy deck look. A cut with no
 hook/outro falls back to the legacy lift + silent end-card.

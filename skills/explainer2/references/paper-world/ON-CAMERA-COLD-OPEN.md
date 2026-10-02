@@ -171,7 +171,8 @@ above in-flow ones no matter the source order** — so without explicit `zIndex`
 renders *on top of* the paper and the bezel never overlaps it. It looks like a geometry bug
 and it is not. The tell: widening the bleed makes the leak *worse*, not better.
 
-**Verify with a rendered still, not by reading the code.** Put a coloured border on a
+**Verify with a rendered still, not by reading the code** (render it through the queue:
+`bin/explainer2 submit --label still --cwd /Volumes/Casima/claudeCode/explainer2/remotion -- npx remotion still …`, SKILL hard rule 7). Put a coloured border on a
 placeholder take and count how many of those pixels survive the composite; zero means the
 bezel covers the footage edge, which is the seam the whole idea rests on.
 

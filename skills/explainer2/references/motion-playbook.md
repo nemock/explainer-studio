@@ -463,7 +463,8 @@ rules now:
    the mark from the measured centroid/bbox. On #56 the ONE measured mark landed dead-on
    in every frame; eyeballed ones missed by up to 0.14.
 2. **Verify with `python3 tools/mark_stills.py <project_dir>`** (after narrate+align).
-   It renders every mark-carrying scene through the real engine at the frame where its
+   From a session it queues itself and waits (SKILL hard rule 7; exit 75 = still queued
+   or running: run the `bin/explainer2 wait <job-id>` it prints). It renders every mark-carrying scene through the real engine at the frame where its
    last mark has finished drawing and tiles the REAL frames into `work/mark_stills.png`.
    Read the preview it prints (`work/previews/mark_stills_preview.jpg`), never the
    ~1900 px sheet (SKILL hard rule 9), and name the thing each mark sits on in every
@@ -684,6 +685,14 @@ cue count, and PASS/FAIL per rule above. It also FAILs, and lists, every figure 
 and annotation the renderer cannot draw where it was authored, the same ones the render
 would refuse (§2H). Fix fails before rendering.
 
+Then, before the booth (2026-10-01, in addition to the census):
+```
+bin/explainer2 deckcheck <project_dir>
+```
+It renders nothing. Exit 0 = pass; non-zero prints the slides that would render empty,
+fields a component would drop, malformed marks, and a projected length outside the
+project's min/max. Fix every item before the booth opens.
+
 ## 5. The spec contract (data in, motion out)
 
 - **The authored artifact is `deck.json`** (one slide per script segment — the
@@ -720,9 +729,9 @@ would refuse (§2H). Fix fails before rendering.
   reference for slide-type semantics). Both consume the same 1:1 data spec, so a project
   renders either way. Remotion needs the Node toolchain (`npm install` in `remotion/`); the
   engine raises a clear error if it's missing.
-- **Render discipline unchanged.** The heavy encode still goes through the render-lock and
-  launches **detached + caffeinated** (SKILL §7) — Remotion's headless-Chrome+ffmpeg render
-  is exactly the kind of heavy job those rules exist for. Modest concurrency on the M3/16GB;
+- **Render discipline unchanged.** Every Remotion render or still goes through the render
+  queue (SKILL hard rule 7, §7) — Remotion's headless-Chrome+ffmpeg render is exactly the
+  kind of heavy job the queue exists for. Modest concurrency on the M3/16GB;
   `OffthreadVideo` for clips; jpeg frames.
 - **Per-scene fallback:** a scene with no Remotion component falls back to its deck slide,
   so a render never breaks on a missing template.
@@ -754,10 +763,14 @@ would refuse (§2H). Fix fails before rendering.
 - [ ] Figures trace to wiki/intel; no invented numbers; fair-use docs cited.
 - [ ] Performance within M3/16GB (`OffthreadVideo` for clips; modest concurrency). *Footage
       is the exception — it uses `<Video loop>` so short B-roll loops; see §E.*
-- [ ] One-frame `npx remotion still` check on the key frames before the full render,
-      run through the render lock as a detached job (`renderlock.run_locked`; SKILL
-      hard rule 7: every render, whatever its length) —
-      then Read the downscaled preview (`python3 tools/frame_preview.py <still.png>`),
+- [ ] **`bin/explainer2 deckcheck <dir>` exits 0** (no slide renders empty, no field a
+      component would drop, no malformed mark, projected length inside min/max).
+- [ ] Still-check the key frames before the full render, through the render queue
+      (SKILL hard rule 7): mark-carrying scenes with `python3 tools/mark_stills.py <dir>`
+      (queues itself). Any other frame, once a render has staged
+      `<dir>/work/remotion/props.json`:
+      `bin/explainer2 submit --label still --cwd /Volumes/Casima/claudeCode/explainer2/remotion -- npx remotion still src/index.ts Video <dir>/work/still_<N>.png --props=<dir>/work/remotion/props.json --public-dir=<dir>/work/remotion/public --frame=<N>`
+      — then Read the downscaled preview (`python3 tools/frame_preview.py <still.png>`),
       never the full-res still (SKILL hard rule 9: full-res Reads bloat the
       session transcript and OOM the desktop app).
 - [ ] **Sample the LAST frame of every scene that reveals items over time**, not a
@@ -775,11 +788,12 @@ would refuse (§2H). Fix fails before rendering.
    visual budget.
 2. For each script segment, choose a component from §2 via the §3 content→vocabulary map.
 3. Write `motion.json` (DATA — components + fields + sync), 1:1 with the script.
-4. Still-check the key frames (`npx remotion still <comp> --frame=N`, through the
-   render lock as a detached job, SKILL hard rule 7), then
+4. Run `bin/explainer2 deckcheck <dir>` (exit 0 to proceed), then still-check the key
+   frames through the render queue as in the §7 checklist (`python3 tools/mark_stills.py
+   <dir>`, or `bin/explainer2 submit --label still … -- npx remotion still …`), then
    inspect via `tools/frame_preview.py` — Read the preview JPEG, not the
    full-res still (SKILL hard rule 9).
-5. Render via the Remotion engine (render-lock + detached, SKILL §7).
+5. Render via the Remotion engine (queued: `bin/explainer2 render <dir>`, SKILL §7).
 6. QA against §7; fix; at most one re-render cycle.
 
 ## Appendix — technical guardrails (from the Remotion best-practices skill)
@@ -791,7 +805,8 @@ would refuse (§2H). Fix fails before rendering.
 - Use `<Sequence from/durationInFrames>` for timing (`layout="none"` for inline content).
 - `calculateMetadata` for data-driven duration/dimensions/props; **Zod** for typed params.
 - Fonts via `@remotion/google-fonts`. Preview in `npx remotion studio`; single-frame
-  sanity via `npx remotion still`, through the render lock (SKILL hard rule 7)
+  sanity via `npx remotion still`, only ever inside `bin/explainer2 submit` (SKILL hard
+  rule 7; the full command is in §7)
   (inspect the still through `tools/frame_preview.py`
   per SKILL hard rule 9 — never Read the full-res PNG).
 - Sub-rules available in the `remotion` skill (load on demand): transitions, audio-

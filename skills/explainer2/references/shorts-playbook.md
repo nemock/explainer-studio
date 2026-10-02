@@ -151,7 +151,10 @@ surfaces each cut's hook/outro as extra cards (saved to
 `voiceover/short_<slug>_{hook,outro}.wav`). Then
 `bin/explainer2 shorts <deep-dive>` assembles each cut as **[hook + hook slide] →
 [lifted body segments] → [spoken outro]** (the old *silent* end-card becomes the
-recorded outro), 9:16, parent music bed, then align → deck → render → mux.
+recorded outro), 9:16, parent music bed, then align → deck → render → mux. The command
+queues itself (SKILL hard rule 7): exit 0 = done, exit 75 = still queued or running, so
+run the `bin/explainer2 wait <job-id>` it prints. One cut: `--only <slug>`. For an
+operator-voiced deep dive the recording watcher already ran it after Finish.
 
 ## 6. Honest limitation (our format)
 

@@ -75,22 +75,26 @@ the playbook — the repo, not the session, is where insight accumulates.
 
 - CLI: **`bin/explainer2`** (wraps `PYTHONPATH=src ~/myenv/bin/python3.12 -m explainer2.cli`). The shared `~/myenv` venv holds the verified torch/Kokoro/Playwright stack — do not create a new venv without asking.
 - Projects land in `projects/<date>_<slug>/` — a symlink into the private `explainer-content` repo, not a plain gitignored local dir (see "What this project is" above). Per-project layout: PRD §10.
-- **Every render goes through the render lock and launches detached, whatever its length (operator, 2026-10-01).** Run the light stages synchronously (`bin/explainer2 media --only narrate,align <dir>`), then launch the deep-dive render **detached** with `bin/explainer2 render <dir>` — it exceeds the Bash 10-min cap and a harness-backgrounded encode dies on app-suspend, and detaching keeps the machine usable instead of locking it up mid-encode. Shorts cuts, `tools/mark_stills.py` and `npx remotion still` checks are renders too: one detached job through the lock, never parallel tool calls, never the session's foreground (SKILL hard rule 7). No polling loops (global CLAUDE.md shell rules apply: no loops, no brace expansion, absolute paths). See SKILL §7 for the full render-robustness + render-lock detail. **Rendering defaults to the Remotion motion engine** (motion-playbook.md; needs `npm install` in `remotion/`); pass `--engine deck` for the legacy JS deck engine (then also run the `deck` stage).
+- **Every render and encode goes through the render queue; a session never renders (operator, 2026-10-01).** The queue is a launchd agent (`com.brg.render-queue`, `src/explainer2/jobqueue.py`, runner `tools/render_queue.py`) that runs jobs one at a time outside any session, so they survive the app being quit. From a session, `bin/explainer2 media|shorts|narrate|align|mux|adlib <dir>` and `python3 tools/mark_stills.py <dir>` queue themselves and wait: exit 0 = done, **exit 75 = still queued or running, not a failure** — run the `bin/explainer2 wait <job-id>` it printed. `bin/explainer2 render <dir>` queues and returns at once. Any other render or encode (a `npx remotion still`, an ffmpeg splice): `bin/explainer2 submit --label <name> --cwd <dir> -- <command>`. Never a raw `npx remotion render|still` or video-encoding `ffmpeg`, two render commands in one message, `&`/`nohup`/`run_in_background`/a hand-written launcher, or a polling loop. `bin/explainer2 queue` shows everything; `bin/explainer2 queue cancel <id>` stops a job. Operator-voiced projects are rendered by the recording watcher; after a fix that does not touch `script.json`, `python3 tools/rerender.py <dir> --reason "<what was fixed>"`. Run `bin/explainer2 deckcheck <dir>` before any booth. Global CLAUDE.md shell rules apply (no loops, no brace expansion, absolute paths). See SKILL hard rule 7 and §7; decision doc `make_money/routine_changes/2026-10-01-render-queue.md`. **Rendering defaults to the Remotion motion engine** (motion-playbook.md; needs `npm install` in `remotion/`); pass `--engine deck` for the legacy JS deck engine (then also run the `deck` stage).
 - **Visual QA Reads previews, never full-res renders.** Before Reading any rendered slide/still/frame/thumbnail image for verification, downscale it with `python3 tools/frame_preview.py <src.png>` and Read the preview JPEG it prints; full-res PNGs are pipeline inputs only (SKILL hard rule 9, 2026-08-25 — full-res Reads made transcripts 100+ MB and OOM'd the desktop app).
 - **Sessions are compacted, never archived (operator, 2026-09-25).** A new video or module may continue in the same session; continuity is worth more than a small transcript, and archiving has lost it before. What keeps a long session's transcript manageable is reading previews only (the rule above), since every image Read is embedded in it. The old "one session per module, archive at ship" line was an artifact of the 2026-08-25 memory fix, never an operator requirement (SKILL "Session hygiene").
 
 ### After ANY re-record: align before you render
 
-`bin/explainer2 render <dir>` dispatches **only** `render,mux,manifest,qa`. It does
-**not** re-run `align`. So a take re-recorded in the booth after the last align gets
+`bin/explainer2 render <dir>` with no `--only` runs **only** `render,mux,manifest,qa`. It
+does **not** re-run `align`. So a take re-recorded in the booth after the last align gets
 rendered against the previous run's `work/timeline.json`, and the result is a video
 whose slides and captions drift from the card onward with the tail cut off. It does not
 error: the render succeeds, QA passes, `ready_for_post` comes back true.
 
+One command, queued (it returns at once; `bin/explainer2 queue` shows it):
 ```bash
-bin/explainer2 media '<dir>' --only narrate,align   # rebuild the timeline FIRST
-bin/explainer2 render '<dir>'
+bin/explainer2 render '<dir>' --only narrate,align,render,manifest,qa
 ```
+The two-step form is also queued: `bin/explainer2 media '<dir>' --only narrate,align`
+(waits; exit 75 = still running, run the `bin/explainer2 wait <job-id>` it printed), then
+`bin/explainer2 render '<dir>'`. For an operator-voiced project after Finish, the
+recording watcher does this; do not render it from the session.
 
 **`media/timelineguard.py` now enforces this** (2026-08-12, after the Plan to Market
 promo nearly shipped desynced). `align` stamps `work/timeline_audio.json` with a
