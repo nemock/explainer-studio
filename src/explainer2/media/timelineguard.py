@@ -111,6 +111,27 @@ def _newest_take_mtime(proj):
     return newest
 
 
+def require_fresh_narration(proj):
+    """Refuse to align a narration.wav that is older than a recorded take.
+
+    The hole this closes (found in review, 2026-10-01): `align` stamps the fingerprint
+    of the TAKES, but it aligns work/narration.wav, which `narrate` builds from them. Run
+    `align` on its own after a re-record (`media --only align`, or `explainer2 align`)
+    and the new takes' fingerprint was stamped onto a timeline built from the OLD
+    narration. Every later render then read the stamp as "match" and shipped the old
+    audio, with this guard vouching for it. narrate must run first; say so and stop.
+    Kokoro projects have no takes, so this never fires for them."""
+    newest = _newest_take_mtime(proj)
+    nar = proj.work / "narration.wav"
+    if not newest or not nar.exists():
+        return
+    if newest > nar.stat().st_mtime + MTIME_GRACE_S:
+        raise RuntimeError(
+            "a take was re-recorded after work/narration.wav was built, so aligning now "
+            "would time the slides to the OLD audio. Run narrate first: "
+            "explainer2 render <dir> --only narrate,align,render,manifest,qa")
+
+
 def check(proj):
     """Return a report on whether work/timeline.json still describes the audio."""
     tl = proj.work / "timeline.json"

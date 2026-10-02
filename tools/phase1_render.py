@@ -86,6 +86,7 @@ from explainer2 import childproc                              # noqa: E402
 import kill_render                                            # noqa: E402
 
 _child = {"proc": None, "proj": None}
+VALIDATE_NOT_OK = 3           # cli.VALIDATE_NOT_OK: `explainer2 validate` ran, verdict not ok
 
 REAP_DEADLINE_S = 25.0        # total budget for the sweep loop
 REAP_PASS_PAUSE_S = 0.5
@@ -530,6 +531,14 @@ def main():
     t0 = time.time()
     for cmd in verbs:
         rc = run_verb(cmd)
+        if rc == VALIDATE_NOT_OK and verb_name(cmd) == "validate":
+            # The gate ran and said no. That is a VERDICT, recorded in work/validate.json
+            # for the publish run to act on (fix a deck-only defect and hand the project
+            # back with rerender.py, or block). It is not a render failure: launching
+            # phase 1 again would re-render the same video to reach the same verdict.
+            print("[phase1] validate: NOT ok — verdict recorded in work/validate.json; "
+                  "the render is complete and the publish run decides", flush=True)
+            continue
         if rc != 0:
             streak = record_failure(proj, verb_name(cmd), rc, since=t0)
             print(f"[phase1] FAILED: {cmd[1]} exited {rc} — no render_complete.json "

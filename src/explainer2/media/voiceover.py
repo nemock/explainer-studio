@@ -37,6 +37,11 @@ def _cleanup(raw, out, sr):
             return "audio-cleanup:streaming"
     # fallback if the VocalEnhancer skill isn't present: the vendored native chain
     # (denoise/de-ess/EQ/compress + measured two-pass loudnorm to the same target)
+    # Say so. This used to be silent, and the only trace was metrics_synth.json's
+    # `cleanup` field: after a machine move every episode would quietly change voice.
+    print(f"narrate: WARNING — VocalEnhancer cleanup "
+          f"{'failed' if CLEAN.exists() else 'not found at ' + str(CLEAN)}; "
+          f"using the native cleanup chain instead", flush=True)
     from . import cleanup
     return cleanup.clean(raw, out, sr=48000)
 

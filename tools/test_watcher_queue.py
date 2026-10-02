@@ -204,6 +204,54 @@ def main():
         lines = sent.read_text().splitlines()
         assert len(lines) == 5 and "cut and re-record card 6" in lines[4], lines
 
+        # 9. A publish run that has outlived its budget is killed; a render job, a fresh
+        #    publish run, and a lock with no phase are all left alone.
+        sleeper = subprocess.Popen(["/bin/sleep", "300"], start_new_session=True)
+        try:
+            fresh = {"pid": sleeper.pid, "ts": time.time(), "phase": "publish"}
+            assert not rw.reap_hung_publish(cfg, show, proj, fresh, dry=False)
+            assert not rw.reap_hung_publish(cfg, show, proj,
+                                            {"pid": sleeper.pid, "ts": 0}, dry=False)
+            assert not rw.reap_hung_publish(cfg, show, proj,
+                                            {"job": "x", "ts": 0, "phase": "publish"}, dry=False)
+            assert sleeper.poll() is None
+            real_run = rw.subprocess.run
+            rw.subprocess.run = lambda cmd, *a, **k: (
+                subprocess.CompletedProcess(cmd, 0, "", "") if cmd[0] == "/usr/bin/osascript"
+                else real_run(cmd, *a, **k))
+            try:
+                hung = {"pid": sleeper.pid, "ts": time.time() - 2 * 3600, "phase": "publish"}
+                assert rw.reap_hung_publish(cfg, show, proj, hung, dry=False)
+            finally:
+                rw.subprocess.run = real_run
+            sleeper.wait(timeout=20)
+            assert sleeper.poll() is not None, "the hung publish worker must be dead"
+        finally:
+            if sleeper.poll() is None:
+                sleeper.kill()
+
+        # 10. The publish run is spawned on the configured model, and its lock says so.
+        spawned = []
+
+        class FakeChild:
+            pid = 424242
+
+        real_popen = rw.subprocess.Popen
+        rw.subprocess.Popen = lambda cmd, **k: (spawned.append(cmd), FakeChild())[1]
+        try:
+            pshow = {"id": "test-show", "skill": "/x/SKILL.md", "completion_steps": "Steps 8 and 9"}
+            rw.spawn_completion(dict(cfg, claude_bin="/usr/bin/true", publish_model="sonnet"),
+                                pshow, proj, dry=False)
+            rw.spawn_completion(dict(cfg, claude_bin="/usr/bin/true"), pshow, proj, dry=False)
+        finally:
+            rw.subprocess.Popen = real_popen
+        assert spawned[0][-2:] == ["--model", "sonnet"], spawned[0][-3:]
+        assert "--model" not in spawned[1]
+        assert rw.read_lock(proj)["phase"] == "publish"
+        prompt = spawned[0][4]
+        assert "RENDERING IS NOT YOUR JOB" in prompt and "needs_operator" in prompt
+        assert "rerender.py" in prompt and "explainer media" not in prompt
+
     print("OK — test_watcher_queue")
 
 

@@ -585,8 +585,19 @@ def cmd_ingest(args):
         return 1
 
 
+VALIDATE_NOT_OK = 3     # the check RAN and the verdict is not ok (1 stays "could not run")
+
+
 def cmd_validate(args):
-    print(json.dumps(validate.run(Project.load(args.project_dir)), indent=2))
+    """Exit 0 when the manifest is a complete handoff contract, 3 when it is not.
+
+    Until 2026-10-01 this printed {"ok": false} and exited 0, so no caller could gate
+    on it. The verdict is still written to work/validate.json for the publish run to
+    read; phase1_render.py treats 3 as "verdict recorded" rather than as a render
+    failure, because re-rendering cannot change it."""
+    out = validate.run(Project.load(args.project_dir))
+    print(json.dumps(out, indent=2))
+    return 0 if out.get("ok") else VALIDATE_NOT_OK
 
 
 def cmd_handoff(args):
@@ -655,8 +666,18 @@ def cmd_shorts(args):
     childproc.install_handlers(log=print)
     try:
         from . import shorts
-        print(json.dumps(shorts.run(pdir, plan_path=args.plan,
-                                    only=args.only_slug, engine=args.engine), indent=2))
+        try:
+            res = shorts.run(pdir, plan_path=args.plan, only=args.only_slug, engine=args.engine)
+        except timelineguard.StaleTimelineError as e:
+            print(json.dumps({"blocked": "stale_timeline", "reason": e.report["reason"],
+                              "fix": "explainer2 render <dir> --only narrate,align,render,manifest,qa, "
+                                     "then cut the Shorts"}, indent=2))
+            return 1
+        print(json.dumps(res, indent=2))
+        failed = [slug for slug, r in res.items() if r.get("failed")]
+        if failed:
+            print(f"shorts: {len(failed)} of {len(res)} cut(s) FAILED: {', '.join(failed)}")
+            return 1
     finally:
         renderlock.release_job(claim)
     return 0
@@ -682,21 +703,28 @@ def cmd_promote(args):
 
 def cmd_publish(args):
     from . import publish
+    # An aborted publish exits 1. It used to print {"aborted": true} and exit 0, which
+    # reads as success to anything that checks the exit code.
     if args.set_privacy:
-        print(json.dumps(publish.set_privacy(video_id=args.video_id, project_dir=args.project_dir,
-                                             channel=args.channel, privacy=args.set_privacy,
-                                             when=args.when), indent=2))
-        return
+        out = publish.set_privacy(video_id=args.video_id, project_dir=args.project_dir,
+                                  channel=args.channel, privacy=args.set_privacy,
+                                  when=args.when)
+        print(json.dumps(out, indent=2))
+        return 1 if out.get("aborted") else 0
     if args.set_thumbnail:
-        print(json.dumps(publish.set_thumbnail(video_id=args.video_id, project_dir=args.project_dir,
-                                               channel=args.channel, thumb=args.thumb), indent=2))
-        return
+        out = publish.set_thumbnail(video_id=args.video_id, project_dir=args.project_dir,
+                                    channel=args.channel, thumb=args.thumb)
+        print(json.dumps(out, indent=2))
+        return 1 if out.get("aborted") else 0
     if not args.authorize and not args.project_dir:
         print("publish needs a project_dir (or --authorize --channel <key>, or --set-privacy)")
         return 1
-    print(json.dumps(publish.run(args.project_dir, fire=args.fire, privacy=args.privacy,
-                                 when=args.when, channel=args.channel,
-                                 do_authorize=args.authorize, force_rebind=args.force_rebind), indent=2))
+    out = publish.run(args.project_dir, fire=args.fire, privacy=args.privacy,
+                      when=args.when, channel=args.channel,
+                      do_authorize=args.authorize, force_rebind=args.force_rebind,
+                      reupload=args.reupload)
+    print(json.dumps(out, indent=2))
+    return 1 if out.get("aborted") else 0
 
 
 def cmd_talktime(args):
@@ -968,6 +996,9 @@ def main(argv=None):
                      help="with --authorize: allow re-binding a channel key to a DIFFERENT channel "
                           "than it is currently bound to (default: abort + restore on mismatch, so an "
                           "accidental wrong-channel pick can't clobber a working binding)")
+    pub.add_argument("--reupload", action="store_true",
+                     help="with --fire: upload again even though meta.json already records a "
+                          "youtube_url (default: refuse, so a re-run cannot post a duplicate)")
     pub.add_argument("--authorize", action="store_true",
                      help="one-time: run OAuth consent for --channel <key>, bind its token + "
                           "record the channel in the registry (pick the right channel on Google's screen)")

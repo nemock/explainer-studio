@@ -1934,6 +1934,16 @@ def _render_one(sp, log=print, frames=None, out=None):
     outdir = sp.dir / "video"
     outdir.mkdir(exist_ok=True)
     out = Path(out) if out else outdir / f"explainer_{aspect}.mp4"
+    # ATOMIC MASTER (2026-10-01). Remotion used to write straight to the canonical path,
+    # so a render that was killed, failed, or flunked the decode check below left a
+    # partial or corrupt file exactly where publish, validate and the watcher look for
+    # the finished one, and a re-render destroyed the previous good master the moment it
+    # started. Render beside it, prove it, then move it into place in one step. A slice
+    # preview (`frames`) goes straight to the path the caller named.
+    final = out
+    if not frames:
+        out = final.with_name(final.stem + ".partial" + final.suffix)
+        out.unlink(missing_ok=True)
 
     # Resolve npx robustly: under launchd (the recording watcher's Phase-1 renders) the
     # minimal PATH carries neither Homebrew nor /usr/local, and a bare "npx" crashed every
@@ -1964,30 +1974,37 @@ def _render_one(sp, log=print, frames=None, out=None):
     # chrome-headless-shell tree, and on 2026-08-10 that tree survived its parent being
     # killed and kept rendering as an orphan. One killable group instead.
     from . import childproc
-    r = childproc.run(cmd, label=f"remotion:{sp.dir.name}", cwd=str(REMOTION_DIR),
-                      capture_output=True, text=True)
-    if r.returncode != 0:
-        raise RuntimeError(f"remotion render failed:\n{r.stdout[-1800:]}\n{r.stderr[-1800:]}")
-    # Remotion bakes narration-only audio; mix the channel music bed under it (no
-    # separate mux stage on this path). Skipped for slice previews (frames set).
-    music = None if frames else _apply_music(sp, out, log)
+    try:
+        r = childproc.run(cmd, label=f"remotion:{sp.dir.name}", cwd=str(REMOTION_DIR),
+                          capture_output=True, text=True)
+        if r.returncode != 0:
+            raise RuntimeError(f"remotion render failed:\n{r.stdout[-1800:]}\n{r.stderr[-1800:]}")
+        # Remotion bakes narration-only audio; mix the channel music bed under it (no
+        # separate mux stage on this path). Skipped for slice previews (frames set).
+        music = None if frames else _apply_music(sp, out, log)
 
-    # PROVE the master decodes before calling this a success. A returncode of 0 is
-    # not evidence of a good file: #55 (2026-08-05) rendered "successfully" under
-    # encoder contention and produced a structurally perfect, corrupt bitstream that
-    # only surfaced when the music mux choked on it. Fail loudly here rather than
-    # hand a broken master to packaging. Slice previews are skipped (no full file).
-    if not frames:
-        from . import qa as _qa
-        errs = _qa.decode_check(out)
-        if errs:
-            raise RuntimeError(
-                f"render produced a file that does not decode cleanly "
-                f"({len(errs)} error(s) in the first 90s) — treating as a FAILED render, "
-                f"not a warning. First: {errs[0][:160]}\n"
-                f"This is the #55 failure mode (encoder contention -> corrupt h264). "
-                f"Check for other encodes running and re-render.")
-        log("render: decode check clean (no bitstream errors in the first 90s)")
+        # PROVE the master decodes before calling this a success. A returncode of 0 is
+        # not evidence of a good file: #55 (2026-08-05) rendered "successfully" under
+        # encoder contention and produced a structurally perfect, corrupt bitstream that
+        # only surfaced when the music mux choked on it. Fail loudly here rather than
+        # hand a broken master to packaging. Slice previews are skipped (no full file).
+        if not frames:
+            from . import qa as _qa
+            errs = _qa.decode_check(out)
+            if errs:
+                raise RuntimeError(
+                    f"render produced a file that does not decode cleanly "
+                    f"({len(errs)} error(s) in the first 90s) — treating as a FAILED render, "
+                    f"not a warning. First: {errs[0][:160]}\n"
+                    f"This is the #55 failure mode (encoder contention -> corrupt h264). "
+                    f"Check for other encodes running and re-render.")
+            log("render: decode check clean (no bitstream errors in the first 90s)")
+            os.replace(out, final)           # only a proven file takes the master's name
+    except BaseException:
+        if out != final:
+            out.unlink(missing_ok=True)      # leave the previous master, drop the wreck
+        raise
+    out = final
 
     return {"engine": "remotion", "video": str(out), "scenes": len(spec["scenes"]),
             "duration_s": round(spec["durationInFrames"] / spec["fps"], 2),

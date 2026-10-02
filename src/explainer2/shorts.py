@@ -220,64 +220,81 @@ def build_derived(parent: Project, cut):
     return sp, duration, warnings
 
 
+def _render_cut(parent, cut, engine):
+    """Build, align and render ONE cut. Returns its result row; raises on failure."""
+    t0 = time.time()
+    sp, duration, warnings = build_derived(parent, cut)
+    for w in warnings:
+        _log(f"{cut['slug']}: WARNING — {w}")
+    _log(f"{cut['slug']}: {duration:.1f}s, {len(cut['segments'])} segments — rendering ({engine})")
+    lock = None
+    try:
+        if engine == "remotion":
+            # align -> Remotion render -> manifest, ALL under the render lock.
+            # align is NOT cheap, despite the label this comment carried until
+            # 2026-08-26: it loads the torchaudio MMS_FA model plus the whole
+            # narration.wav into tensors (media/align.py) and peaks at 2.5-3.3 GB
+            # per process. Running it in FRONT of the lock let four concurrent
+            # `shorts` jobs sit in align together and peak at ~12 GB on a 16 GB
+            # Mac — macOS threw its out-of-memory dialog while the lock was
+            # correctly holding Remotion to a single render. A lock that guards
+            # the encode but not the peak allocation guards nothing.
+            # Remotion outputs the final muxed mp4 directly (no deck/render/mux).
+            lock = renderlock.acquire(sp, log=_log)
+            _log(f"{cut['slug']}: align ok " + json.dumps(align.run(sp))[:100])
+            rr = remotion_engine.render(sp, log=_log)
+            _log(f"{cut['slug']}: remotion ok {json.dumps(rr)[:140]}")
+            renderlock.release(lock); lock = None
+            try:
+                manifest.run(sp)
+            except Exception as e:  # manifest is a convenience here; the mp4 is the deliverable
+                _log(f"{cut['slug']}: WARNING — manifest skipped ({e})")
+        else:
+            for name, fn in (("align", align.run), ("deck", deckbuild.run),
+                             ("render", render.run), ("mux", mux.run),
+                             ("manifest", manifest.run)):
+                # Serialize the memory-heavy stages (16 GB rule) against every
+                # other render on this Mac — same flock as cmd_media. Held
+                # per-cut (acquire before ALIGN, release after mux) so a long
+                # deep-dive render can interleave between cuts.
+                # Acquired at align, not render (2026-08-26): align is the peak
+                # allocation of the entire pipeline (torch + MMS_FA model + full
+                # waveform, 2.5-3.3 GB), well above the encode it used to guard.
+                # Same fix as the remotion branch above — see its comment.
+                if name == "align" and lock is None:
+                    lock = renderlock.acquire(sp, log=_log)
+                r = fn(sp)
+                _log(f"{cut['slug']}: {name} ok {json.dumps(r)[:100]}")
+                if name == "mux" and lock is not None:
+                    renderlock.release(lock); lock = None
+    finally:
+        renderlock.release(lock)
+    return {
+        "dir": str(sp.dir), "duration_s": round(duration, 1),
+        "video": str(sp.dir / "video" / "explainer_9x16.mp4"),
+        "warnings": warnings,
+        "wall_clock_s": round(time.time() - t0, 1)}
+
+
 def run(parent_dir, plan_path=None, only=None, engine="deck"):
     parent = Project.load(parent_dir)
+    # The body of every cut is sliced from the PARENT's narration and timeline, so a
+    # take re-recorded since the parent's last align would ship here with its old audio.
+    # scriptguard checks the words; this checks the sound (2026-10-01).
+    from .media import timelineguard
+    timelineguard.enforce(parent, only={"render"}, log=_log)
     plan_path = plan_path or (parent.dir / "shorts" / "plan.json")
     plan = json.loads(open(plan_path).read())
     results = {}
     for cut in plan:
         if only and cut["slug"] != only:
             continue
-        t0 = time.time()
-        sp, duration, warnings = build_derived(parent, cut)
-        for w in warnings:
-            _log(f"{cut['slug']}: WARNING — {w}")
-        _log(f"{cut['slug']}: {duration:.1f}s, {len(cut['segments'])} segments — rendering ({engine})")
-        lock = None
+        # One cut failing must not cost the others (2026-10-01). An exception used to
+        # leave the loop, so a bad mark in cut two meant cuts three and four were never
+        # attempted and the results for cut one were never printed.
         try:
-            if engine == "remotion":
-                # align -> Remotion render -> manifest, ALL under the render lock.
-                # align is NOT cheap, despite the label this comment carried until
-                # 2026-08-26: it loads the torchaudio MMS_FA model plus the whole
-                # narration.wav into tensors (media/align.py) and peaks at 2.5-3.3 GB
-                # per process. Running it in FRONT of the lock let four concurrent
-                # `shorts` jobs sit in align together and peak at ~12 GB on a 16 GB
-                # Mac — macOS threw its out-of-memory dialog while the lock was
-                # correctly holding Remotion to a single render. A lock that guards
-                # the encode but not the peak allocation guards nothing.
-                # Remotion outputs the final muxed mp4 directly (no deck/render/mux).
-                lock = renderlock.acquire(sp, log=_log)
-                _log(f"{cut['slug']}: align ok " + json.dumps(align.run(sp))[:100])
-                rr = remotion_engine.render(sp, log=_log)
-                _log(f"{cut['slug']}: remotion ok {json.dumps(rr)[:140]}")
-                renderlock.release(lock); lock = None
-                try:
-                    manifest.run(sp)
-                except Exception as e:  # manifest is a convenience here; the mp4 is the deliverable
-                    _log(f"{cut['slug']}: WARNING — manifest skipped ({e})")
-            else:
-                for name, fn in (("align", align.run), ("deck", deckbuild.run),
-                                 ("render", render.run), ("mux", mux.run),
-                                 ("manifest", manifest.run)):
-                    # Serialize the memory-heavy stages (16 GB rule) against every
-                    # other render on this Mac — same flock as cmd_media. Held
-                    # per-cut (acquire before ALIGN, release after mux) so a long
-                    # deep-dive render can interleave between cuts.
-                    # Acquired at align, not render (2026-08-26): align is the peak
-                    # allocation of the entire pipeline (torch + MMS_FA model + full
-                    # waveform, 2.5-3.3 GB), well above the encode it used to guard.
-                    # Same fix as the remotion branch above — see its comment.
-                    if name == "align" and lock is None:
-                        lock = renderlock.acquire(sp, log=_log)
-                    r = fn(sp)
-                    _log(f"{cut['slug']}: {name} ok {json.dumps(r)[:100]}")
-                    if name == "mux" and lock is not None:
-                        renderlock.release(lock); lock = None
-        finally:
-            renderlock.release(lock)
-        results[cut["slug"]] = {
-            "dir": str(sp.dir), "duration_s": round(duration, 1),
-            "video": str(sp.dir / "video" / "explainer_9x16.mp4"),
-            "warnings": warnings,
-            "wall_clock_s": round(time.time() - t0, 1)}
+            results[cut["slug"]] = _render_cut(parent, cut, engine)
+        except Exception as e:                       # noqa: BLE001
+            _log(f"{cut['slug']}: FAILED — {type(e).__name__}: {e}")
+            results[cut["slug"]] = {"failed": True, "error": f"{type(e).__name__}: {e}"}
     return results

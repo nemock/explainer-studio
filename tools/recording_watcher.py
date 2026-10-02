@@ -207,13 +207,46 @@ def read_lock(proj):
         return None
 
 
-def write_lock(proj, pid, job=None):
+def write_lock(proj, pid, job=None, phase=None):
     f = Path(proj) / "work" / "publish_lock.json"
     f.parent.mkdir(parents=True, exist_ok=True)
     rec = {"pid": pid, "ts": time.time()}
     if job:
         rec["job"] = job             # a queued phase-1 has no pid until the runner starts it
+    if phase:
+        rec["phase"] = phase         # "publish": lets the watcher time a hung run out
     f.write_text(json.dumps(rec))
+
+
+# A publish run that is still alive after this long is hung, not working: the longest
+# healthy one in September took 11 minutes. Nothing used to time it out, so a stuck
+# `claude -p` held its project at "worker still active — backing off" indefinitely.
+PUBLISH_TIMEOUT_SECS = 45 * 60
+
+
+def reap_hung_publish(cfg, show, proj, lk, dry):
+    """Kill a publish worker that has outlived PUBLISH_TIMEOUT_SECS. Returns True if it did."""
+    if not lk or lk.get("phase") != "publish" or not lk.get("pid"):
+        return False
+    age = time.time() - float(lk.get("ts") or 0)
+    limit = cfg.get("publish_timeout_secs", PUBLISH_TIMEOUT_SECS)
+    if age < limit:
+        return False
+    log(cfg, f"PUBLISH-TIMEOUT {show['id']}: {Path(proj).name} — publish worker pid "
+             f"{lk['pid']} has run {int(age // 60)} min (limit {limit // 60}); killing it. "
+             f"The crash-loop guard decides whether it is retried.")
+    if dry:
+        return False
+    try:
+        from explainer2 import childproc
+        childproc.kill_tree(int(lk["pid"]))
+    except Exception as e:                           # noqa: BLE001
+        log(cfg, f"PUBLISH-TIMEOUT could not kill pid {lk['pid']}: {e}")
+        return False
+    notify_once(proj, "publish_timeout_notified", str(lk["pid"]), "Recording watcher",
+                f"{show['id']}: the publish run hung for {int(age // 60)} min and was stopped. "
+                f"Check the newest completion log.")
+    return True
 
 
 def use_queue(cfg):
@@ -948,6 +981,12 @@ def spawn_completion(cfg, show, proj, dry):
     prompt_file.write_text(completion_prompt(show, proj))
     cmd = ["/usr/bin/caffeinate", "-ims", cfg["claude_bin"], "-p", prompt_file.read_text(),
            "--output-format", "text"]
+    # The publish run is mechanical: a dry run, an upload, a payload build, an enqueue, a
+    # README. With no --model it ran on the CLI's default, the top tier, about 240k
+    # output tokens a week (2026-10-01). "publish_model" in the config picks the tier; an
+    # alias such as "sonnet" follows new releases with no edit here.
+    if cfg.get("publish_model"):
+        cmd += ["--model", str(cfg["publish_model"])]
     if dry:
         log(cfg, f"[DRY-RUN] would spawn PUBLISH for {show['id']}: {proj} "
                  f"(log -> {out_file})")
@@ -958,7 +997,7 @@ def spawn_completion(cfg, show, proj, dry):
     # Re-stamp the publish lock with the publish worker's pid so a later cycle
     # sees the live publisher (pid_alive) and backs off until the README lands.
     try:
-        write_lock(proj, child.pid)
+        write_lock(proj, child.pid, phase="publish")
     except OSError as e:
         log(cfg, f"WARNING: could not re-stamp publish lock for {proj}: {e}")
     bump_attempts(proj, "publish")
@@ -1214,6 +1253,8 @@ def run_show(cfg, show, dry, spawned):
             # two phases.
             lk = read_lock(proj)
             if worker_alive(lk):
+                if reap_hung_publish(cfg, show, proj, lk, dry):
+                    break            # killed; the next cycle runs the crash-loop guard
                 log(cfg, f"{show['id']}: {proj.name} DONE, {worker_name(lk)} "
                          f"still active — backing off")
                 break
@@ -1249,6 +1290,13 @@ def run_show(cfg, show, dry, spawned):
                              f"spawned {n}x with no README — skipping so other shows "
                              f"get this cycle's slot; retrying after backoff. Check "
                              f"the newest {show['id']}_*_completion.log for the cause")
+                    # Say so once. This loop used to be visible only in the log, and a
+                    # publish dying on an expired login retried every 30 minutes in
+                    # silence for as long as it took someone to look.
+                    notify_once(proj, "publish_crashloop_notified", "1", "Recording watcher",
+                                f"{show['id']}: the publish run has failed {n} times with "
+                                f"nothing published. Check the newest completion log "
+                                f"(an expired Claude login is the usual cause).")
                     continue
                 if dry:
                     log(cfg, f"[DRY-RUN] {show['id']}: {proj.name} render done — "

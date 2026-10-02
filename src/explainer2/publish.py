@@ -32,6 +32,7 @@ The google-api-python-client import is LAZY so dry-run needs no deps/creds.
 """
 import json
 import shutil
+import time
 from pathlib import Path
 
 DEFAULT_CATEGORY_ID = "22"        # People & Blogs (override via meta "category_id")
@@ -483,7 +484,7 @@ def authorize(key, force_rebind=False):
 
 # ------------------------------------------------------------------ entry point
 def run(project_dir=None, fire=False, privacy="unlisted", when=None,
-        channel=None, do_authorize=False, force_rebind=False):
+        channel=None, do_authorize=False, force_rebind=False, reupload=False):
     # --authorize is project-independent
     if do_authorize:
         key = (channel or DEFAULT_CHANNEL).lstrip("@")
@@ -505,6 +506,16 @@ def run(project_dir=None, fire=False, privacy="unlisted", when=None,
         return {"aborted": True, "reason": "warnings present (fix or override)",
                 "warnings": plan["warnings"]}
 
+    # ALREADY-UPLOADED GUARD (2026-10-01). Nothing here used to look: a session that
+    # re-ran --fire, or resumed after a crash between the upload and the write-back
+    # below, uploaded the same video a second time. meta.json's youtube_url is written
+    # the moment the upload returns (see below), so its presence means "this is live".
+    already = (_meta(proj).get("youtube_url") or "").strip()
+    if already and not reupload:
+        return {"aborted": True, "reason": f"already uploaded: {already}",
+                "fix": "to change it in place use --set-privacy / --set-thumbnail; to upload "
+                       "a second copy on purpose pass --reupload"}
+
     reg = load_registry()
     if key not in reg:
         return {"aborted": True, "reason": f"channel '{key}' not authorized",
@@ -521,13 +532,27 @@ def run(project_dir=None, fire=False, privacy="unlisted", when=None,
     from googleapiclient.http import MediaFileUpload
     media = MediaFileUpload(plan["video_file"], chunksize=-1, resumable=True)
     ins = yt.videos().insert(part="snippet,status", body=plan["_body"], media_body=media)
-    resp = None
+    resp, tries = None, 0
     while resp is None:
-        _s, resp = ins.next_chunk()
+        try:
+            _s, resp = ins.next_chunk()
+        except Exception as e:                       # noqa: BLE001
+            # A resumable upload survives a dropped connection or a 5xx: next_chunk()
+            # picks up where it stopped. One network blip used to kill a long upload.
+            status = getattr(getattr(e, "resp", None), "status", None)
+            transient = status in (500, 502, 503, 504) or isinstance(e, (OSError, TimeoutError))
+            tries += 1
+            if not transient or tries > 5:
+                raise
+            time.sleep(min(60, 2 ** tries))
     vid = resp["id"]
     result = {"video_id": vid, "youtube_url": f"https://youtu.be/{vid}",
               "uploaded_to": live, "set_via_api": ["title/description/tags/category/privacy/madeForKids"],
               "browser_todo": plan["browser_todo"], "warnings": []}
+    # Record the id NOW, before the thumbnail and playlist calls. It used to be written
+    # last, so a failure in either lost the only record that the video was live, and the
+    # next --fire uploaded it again.
+    result["meta_backfilled"] = _backfill_meta(proj, result["youtube_url"])
 
     ta = plan["api_will_set"]["thumbnail_A"]
     if ta and Path(ta).exists():
@@ -557,5 +582,4 @@ def run(project_dir=None, fire=False, privacy="unlisted", when=None,
         except Exception as e:
             result["warnings"].append(f"playlist add failed: {e}")
 
-    result["meta_backfilled"] = _backfill_meta(proj, result["youtube_url"])
     return result

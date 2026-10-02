@@ -15,6 +15,8 @@ def _ts(t, sep=","):
 
 
 def run(proj):
+    from . import timelineguard
+    timelineguard.require_fresh_narration(proj)   # before the model loads: a refusal is free
     import torch, torchaudio
     from .. import lexicon
     data = json.loads((proj.work / "segments.json").read_text())
