@@ -460,10 +460,16 @@ office for Product Leadership, with the upper 40% plain cream wall.
 `target.thumbnail_local`. The post queue's direct YouTube upload
 (`make_money/post_queue/youtube_direct.py`) sets it right after the video goes up. A
 refusal never loses the upload: the dispatcher raises a `youtube_thumbnail_failed` alert
-with the watch URL. **Custom Shorts thumbnails reached Partner Program channels on
-2026-07-24 and roll out to others "over time"** (YouTube blog), and whether
-`thumbnails.set` honors a Short over the API is unconfirmed until the first one lands. If
-the alert fires, set it in Studio from the same file, and say so in PLAYBOOK §7.
+with the watch URL. **The API works for Shorts on @nemock** (confirmed 2026-10-02:
+`thumbnails.set` on four live Shorts, each then served as the video's thumbnail). If the
+alert fires anyway, set it in Studio from the same file, and say so in PLAYBOOK §7.
+
+**A Short that is already up** (a backfill, or a card revised after upload):
+`bin/explainer2 publish --set-thumbnail --channel nemock --video-id <id> --thumb <project>/package/thumbnails/shorts/<slug>.jpg`.
+The Short's video id is the `post_url` of its `youtube` row in the post queue
+(`make_money/post_queue/postq.db`, `media_local` naming the cut's mp4). Every promote run
+uploads a fresh copy, so a Short promoted twice has two ids, and each one needs the
+thumbnail.
 
 `validate` requires a thumbnail for every cut Short on projects dated 2026-10-02 or later,
 and only advises on earlier ones.

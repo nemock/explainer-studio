@@ -39,7 +39,7 @@ MIN_SUB_PX = 60            # where a thumbnail shows about 210 px wide
 # bands and navy sub on cream, Product_Leadership_Operators_Guide/CLAUDE.md). Variants are
 # (band background, band text, sub accent, alignment), one per cut, in plan order.
 DEEP_DIVE = {
-    "scrim": "linear-gradient(180deg, rgba(4,8,20,.6) 0%, rgba(4,8,20,.3) 30%, rgba(4,8,20,0) 46%)",
+    "scrim": ("4,8,20", 0.8, 0.62),        # rgb, alpha at the top, alpha down to the text's floor
     "sub": "#f5f7ff", "sub_shadow": "0 3px 20px rgba(0,0,0,.95)",
     "variants": [("#ff4d4d", "#ffffff", "#3ddc84", "left"),
                  ("#3ddc84", "#08121f", "#ff6b6b", "center"),
@@ -48,7 +48,7 @@ DEEP_DIVE = {
 STYLES = {
     "midnight": DEEP_DIVE, "nemock-deep-dive": DEEP_DIVE, "brg-deep-dive": DEEP_DIVE,
     "plg-guide": {
-        "scrim": "linear-gradient(180deg, rgba(245,240,235,.95) 0%, rgba(245,240,235,.7) 30%, rgba(245,240,235,0) 48%)",
+        "scrim": ("245,240,235", 0.95, 0.8),
         "sub": "#1b2b4b", "sub_shadow": "0 2px 10px rgba(245,240,235,.9)",
         "variants": [("#a8481f", "#ffffff", "#a8481f", "left"),
                      ("#a8481f", "#ffffff", "#a8481f", "center"),
@@ -94,6 +94,18 @@ def sub_html(sub, accent):
                    for i, p in enumerate(parts))
 
 
+def scrim_css(scrim, face):
+    """Hold the backing down to the text's floor (FACE_PAD above the head), then fade it out
+    across the top of the hair. A fixed gradient left #69's subs over bright surgical
+    lights, because its base puts the head higher than #71's; the fade has to follow the
+    face, not a fixed fraction of the frame."""
+    rgb, top, floor = scrim
+    hold = max(0, face["top"] - FACE_PAD) / H * 100
+    clear = (face["top"] + 60) / H * 100
+    return (f"linear-gradient(180deg, rgba({rgb},{top}) 0%, rgba({rgb},{floor}) {hold:.1f}%, "
+            f"rgba({rgb},0) {clear:.1f}%)")
+
+
 def build_html(base_rel, cut, style, variant, face):
     bg, fg, accent, align = variant
     bands = "".join(f'<div class="band">{line}</div>' for line in band_lines(cut["thumbnail_text"]))
@@ -104,7 +116,7 @@ def build_html(base_rel, cut, style, variant, face):
   body {{ width:{W}px; height:{H}px; overflow:hidden; position:relative; background:#090d1c;
     font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }}
   .base {{ position:absolute; inset:0; width:{W}px; height:{H}px; object-fit:cover; }}
-  .scrim {{ position:absolute; inset:0; background:{style['scrim']}; }}
+  .scrim {{ position:absolute; inset:0; background:{scrim_css(style['scrim'], face)}; }}
   .text {{ position:absolute; left:{SAFE['left'] + 16}px; right:{W - SAFE['right'] + 16}px;
     top:{SAFE['top'] + 70}px; text-align:{align}; z-index:2; }}
   .band {{ display:inline-block; background:{bg}; color:{fg}; font-weight:900;
