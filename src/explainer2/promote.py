@@ -421,6 +421,13 @@ def _build_post_body(entry, media_urls, scheduled, duration_s=None):
 POSTQ = "/Volumes/Casima/claudeCode/make_money/post_queue/postq.py"
 
 
+# OFF (2026-10-02). thumbnails.set on a Short writes only the 16:9 renditions (hqdefault and
+# the rest); the Shorts thumbnail (sardefault.jpg) is written only by a Studio upload, which
+# Dave confirmed on @nemock. An API set leaves the Short blank in Studio with a video frame on
+# the Shorts tab. Cards are built at Package and uploaded in Studio (thumbnail-playbook §10).
+SET_SHORTS_THUMBNAILS = False
+
+
 def shorts_thumbnail(short_mp4):
     """The vertical thumbnail tools/shorts_thumbnail.py built for this cut, or None.
     short_mp4 is <project>/shorts/<slug>/video/explainer_9x16.mp4."""
@@ -461,7 +468,7 @@ def enqueue_plan(projects_dir, plan, dry_run=True):
                 post["additional_posts"] = [{"text": entry["url_comment"], "mediaUrls": []}]
         extra = dict(entry.get("extra", {}))
         extra.pop("pageId", None)      # resolved from brand by the queue
-        if platform == "youtube":
+        if platform == "youtube" and SET_SHORTS_THUMBNAILS:
             thumb = shorts_thumbnail(plan["short_mp4"])
             if thumb:                  # set by the dispatcher's direct upload
                 extra["thumbnail_local"] = thumb

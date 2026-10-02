@@ -580,8 +580,9 @@ build the two 1280×720 cards (a = live, b = promo reuse) (cutout → brand temp
 `package/thumbnails/shorts/base_9x16.png`, write each cut's `thumbnail_text` +
 `thumbnail_sub` in `shorts/plan.json` inside the same humaner pass, and render with
 `tools/shorts_thumbnail.py <dir> --render` through `explainer2 submit` (myenv python). It fails
-on text over the face or outside the safe zone; then read its `sheet.jpg`. `promote` attaches
-each card to its Short's YouTube upload, so nothing is set by hand.
+on text over the face or outside the safe zone; then read its `sheet.jpg`. Each card is
+uploaded in Studio after its Short goes up: the API cannot set a Short's thumbnail
+(thumbnail-playbook §10, 2026-10-02).
 
 > **Two keys `publish` actually reads, and neither is the obvious one (2026-08-05).**
 > `meta.json` MUST carry:

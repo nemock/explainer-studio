@@ -455,21 +455,24 @@ deep-dive colors with a WARNING. When a new series gets its own long-form card, 
 entry before cutting its Shorts. The base prompt changes with the series too: a cream
 office for Product Leadership, with the upper 40% plain cream wall.
 
-**Upload.** Nobody sets these by hand. `explainer2 promote` attaches
-`package/thumbnails/shorts/<slug>.jpg` to the Short's YouTube post as
-`target.thumbnail_local`. The post queue's direct YouTube upload
-(`make_money/post_queue/youtube_direct.py`) sets it right after the video goes up. A
-refusal never loses the upload: the dispatcher raises a `youtube_thumbnail_failed` alert
-with the watch URL. **The API works for Shorts on @nemock** (confirmed 2026-10-02:
-`thumbnails.set` on four live Shorts, each then served as the video's thumbnail). If the
-alert fires anyway, set it in Studio from the same file, and say so in PLAYBOOK §7.
+**Upload: a Studio step, by hand (2026-10-02).** The YouTube Data API cannot set a Short's
+thumbnail. `thumbnails.set` on four live @nemock Shorts returned ok but wrote only the 16:9
+renditions (`hqdefault.jpg` and the rest, used in search and on the watch page). The Shorts
+tab kept serving a video frame (`oar2.jpg`), and Studio showed the thumbnail blank. Dave
+then uploaded one card in Studio (Short → Details → Thumbnail → Upload file). That writes
+the Shorts slot, `sardefault.jpg`, and the Shorts tab served the card at once. The channel
+has the feature; the API path does not reach it.
 
-**A Short that is already up** (a backfill, or a card revised after upload):
-`bin/explainer2 publish --set-thumbnail --channel nemock --video-id <id> --thumb <project>/package/thumbnails/shorts/<slug>.jpg`.
-The Short's video id is the `post_url` of its `youtube` row in the post queue
+So: after a Short goes up, upload `package/thumbnails/shorts/<slug>.jpg` in Studio, the same
+kind of manual step as the altered-content answer. `promote` does not attach the card
+(`SET_SHORTS_THUMBNAILS = False`). The mechanism stays in place for the day the API takes
+it, but switch it on only if `i.ytimg.com/vi/<id>/sardefault.jpg` returns 200 with the card
+after an API set. **Never verify a Short's thumbnail by `hqdefault.jpg`.** It updates even
+when the Short's own thumbnail does not.
+
+A Short's video id is the `post_url` of its `youtube` row in the post queue
 (`make_money/post_queue/postq.db`, `media_local` naming the cut's mp4). Every promote run
-uploads a fresh copy, so a Short promoted twice has two ids, and each one needs the
-thumbnail.
+uploads a fresh copy, so a Short promoted twice has two ids, and each one needs the card.
 
 `validate` requires a thumbnail for every cut Short on projects dated 2026-10-02 or later,
 and only advises on earlier ones.
