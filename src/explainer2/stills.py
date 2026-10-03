@@ -1,9 +1,11 @@
 # VENDORED_FROM: nemock/video-explainer-system @ d593aa41dc32d04e3b714b4731b1763f6e31843e (src/explainer/stills.py) — copied 2026-06-10; diverges freely (v1 is frozen).
-"""STILLS — export one PNG per slide from the rendered deck, for repurposing/reference
-(carousel re-use, thumbnails, decks, blog). Renders deck/index.html via Playwright and
-drives renderAt(t) to each slide's *settled* moment (past the intro motion), then
-screenshots. Read-only w.r.t. the pipeline; requires the deck + timeline, so run it
-after `explainer media` (or at least the deck + align stages)."""
+"""STILLS — export one PNG per slide, for repurposing/reference (carousel re-use,
+thumbnails, decks, blog), each at the slide's *settled* moment (past the intro motion).
+The path follows the engine that rendered the video, chosen the way `media` chooses it:
+remotion (the default) extracts the frames from video/explainer_<aspect>.mp4; deck
+renders deck/index.html via Playwright, drives renderAt(t) to each moment and
+screenshots. Read-only w.r.t. the pipeline; needs work/timeline.json plus that video or
+that deck, so run it after `explainer media`."""
 import json
 import subprocess
 from playwright.sync_api import sync_playwright
@@ -18,9 +20,10 @@ def _settled_t(s, duration):
 
 
 def _run_remotion(proj, aspect, timeline):
-    """Remotion-engine path (2026-08-06): there is no deck/index.html to drive — the
-    engine writes the final mp4 directly — so extract each slide's settled frame from
-    the rendered video with ffmpeg instead. Caught by the cutover compatibility check:
+    """Remotion-engine path (2026-08-06): the engine writes the final mp4 directly and
+    builds no deck/index.html (one found there was left by `explainer2 deck` and shows
+    the legacy engine, not this video), so extract each slide's settled frame from the
+    rendered video with ffmpeg instead. Caught by the cutover compatibility check:
     the v1 Playwright path hard-fails on Remotion projects, and stills sits mid-chain
     in the recording watcher's Phase 1, so that failure would have wedged every booth
     show. Single-frame decodes are trivial — no render lock needed."""
@@ -52,15 +55,27 @@ def _run_remotion(proj, aspect, timeline):
             "files": written, "engine": "remotion"}
 
 
-def run(proj, aspect=None):
+def run(proj, aspect=None, engine="remotion"):
     timeline = json.loads((proj.work / "timeline.json").read_text())
     slides = timeline["slides"]
     duration = timeline["duration"]
     aspect = aspect or proj.aspect
-    if not (proj.deck_dir / "index.html").exists():
+    # The ENGINE picks the path, not what is on disk (2026-10-03). This used to take the
+    # Playwright path whenever deck/index.html existed, but deck-playbook §5 has every
+    # author run `explainer2 deck`, which writes that file on Remotion projects too. Phase 1
+    # then saved a show's stills from the legacy HTML deck instead of the video it had just
+    # rendered, and nothing failed: the 2026-09-21 daily founder tip's stills/ show its
+    # compare card as two empty "vs" boxes on flat purple, while its video shows the
+    # cut-paper city. `engine` comes from the CLI with `media`'s default, so phase 1, which
+    # runs both verbs without --engine, gets the same engine for both.
+    if engine == "remotion":
         return _run_remotion(proj, aspect, timeline)
+    deck_html = proj.deck_dir / "index.html"
+    if not deck_html.exists():
+        raise FileNotFoundError(
+            f"stills (deck path): {deck_html} not found — run the deck stage first")
     w, h = proj.size_for(aspect)
-    deck_url = (proj.deck_dir / "index.html").as_uri()
+    deck_url = deck_html.as_uri()
     out = proj.dir / "stills"
     out.mkdir(exist_ok=True)
     for f in out.glob("*.png"):
@@ -90,4 +105,5 @@ def run(proj, aspect=None):
     finally:
         renderlock.release(lock)
 
-    return {"aspect": aspect, "count": len(written), "dir": "stills", "files": written}
+    return {"aspect": aspect, "count": len(written), "dir": "stills", "files": written,
+            "engine": "deck"}

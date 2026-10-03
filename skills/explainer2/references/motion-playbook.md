@@ -363,6 +363,19 @@ rendered above the mount and the page itself stayed empty. Dave's verdict on the
 Image-space like `marks`, inside the same moving container, so it rides the Ken Burns. Let
 it wrap — a quoted line reads better balanced over two lines than crammed onto one.
 
+**`size` is a fraction of the FRAME height, not the image's (2026-10-03, Product Leadership
+module 8).** `at` (the block's center) and `w` (its wrap width) are fractions of the image,
+like `marks`, but `FigurePageType` (`remotion/src/components/Media.tsx`) sets
+`fontSize: height * size` from the composition's height. The image is drawn smaller than the
+frame, so the type comes out larger on the page than an image-space reading of `size`
+predicts, by a factor that depends on how large that slide draws its image. Module 8's page
+text rendered about 1.8× its image-space estimate, and rings authored around the estimate cut
+through the words. Size any mark around page text from the RENDERED text, measured on a
+still, never estimated from `size`: `python3 tools/mark_stills.py <dir>` (it renders at
+1920×1080, so 16:9 only) or a still through `bin/explainer2 submit` (§7). Module 8's
+`work/fix_stills.py` and the `S_BAR_BOX` comment in its `build_deck.py` show the measured
+approach.
+
 - **Never bake decoration in place of the words.** #57 asked the generator for a green
   highlighter stroke *so there would be something to underline*, then authored an
   `underline` on top of it: two green lines, neither underlining anything, over a blank

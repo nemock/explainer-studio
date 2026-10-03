@@ -506,6 +506,10 @@ def main():
     # otherwise take what was actually rendered.
     stills_aspect = "4:5" if "4:5" in rendered else rendered[0]
 
+    # No --engine on `media` or `stills` (2026-10-03). Both default to remotion, and the
+    # stills must come from the engine that rendered the video; test_stills_engine.py checks
+    # the two defaults agree. v1's CLI, the pre-cutover explainer_bin in shows.v1.bak.json,
+    # accepts no --engine on either verb, so passing one would also break a rollback.
     verbs = [
         [exp, "media", proj],
         [exp, "stills", proj, "--aspect", stills_aspect],

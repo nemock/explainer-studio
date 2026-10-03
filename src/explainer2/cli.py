@@ -691,7 +691,7 @@ def cmd_assets(args):
 
 def cmd_stills(args):
     proj = Project.load(args.project_dir)
-    print(json.dumps(stills.run(proj, aspect=args.aspect), indent=2))
+    print(json.dumps(stills.run(proj, aspect=args.aspect, engine=args.engine), indent=2))
 
 
 def cmd_promote(args):
@@ -1031,9 +1031,15 @@ def main(argv=None):
     dc.add_argument("--json", action="store_true")
     dc.set_defaults(func=cmd_deckcheck)
 
-    stl = sub.add_parser("stills", help="export one PNG per slide from the rendered deck (for repurposing)")
+    stl = sub.add_parser("stills", help="export one PNG per slide from the rendered video (for repurposing)")
     stl.add_argument("project_dir")
     stl.add_argument("--aspect", default=None, choices=list(ASPECTS), help="aspect to capture (default: project primary)")
+    # Same flag and default as `media`: phase1_render.py runs both without --engine, and the
+    # stills must come from the engine that rendered the video, whatever else is on disk.
+    stl.add_argument("--engine", default="remotion", choices=["deck", "remotion"],
+                     help="the engine that rendered the video: remotion = frames from "
+                          "video/explainer_<aspect>.mp4 (DEFAULT); deck = screenshots of "
+                          "deck/index.html (fallback)")
     stl.set_defaults(func=cmd_stills)
 
     tt = sub.add_parser("talktime", help="surface the operator's talk-time takes (read-only) to write the script in their voice")
