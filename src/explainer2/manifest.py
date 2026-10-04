@@ -22,7 +22,7 @@ def _probe_duration(path):
         return None
 
 
-def run(proj):
+def run(proj, engine="remotion"):
     meta = {}
     if (proj.dir / "meta.json").exists():
         meta = json.loads((proj.dir / "meta.json").read_text())
@@ -93,7 +93,7 @@ def run(proj):
         synthetic_audio = not operator_voice
     manifest = {
         "schema_version": "2.0",
-        "generator": {"tool": "explainer2", "version": __version__},
+        "generator": {"tool": "explainer2", "version": __version__, "engine": engine},
         "title": proj.data.get("title", meta.get("title", "Explainer")),
         "summary": meta.get("summary", ""),
         "slug": proj.data.get("slug", proj.dir.name),
@@ -101,8 +101,12 @@ def run(proj):
         "voice": proj.voice,
         "aspects": proj.aspects,
         "duration_s": duration,
-        # Remotion projects have no HTML deck; a stale path here misleads consumers.
-        "deck": "deck/index.html" if (proj.dir / "deck" / "index.html").exists() else None,
+        # Only the deck engine renders from deck/index.html. `explainer2 deck` writes that
+        # file on Remotion projects too, so its existence says nothing about this video, and
+        # Product Leadership module 8's manifest named an HTML deck its render never read.
+        # Since 2026-10-04 `engine` comes from the run, as stills' does (stills.py).
+        "deck": ("deck/index.html"
+                 if engine == "deck" and (proj.dir / "deck" / "index.html").exists() else None),
         "video": video,
         "captions": {"srt": "captions/captions.srt", "vtt": "captions/captions.vtt"},
         "status": {"ready_for_post": ready, "per_aspect": per_aspect,

@@ -417,6 +417,9 @@ def cmd_media(args):
                 if engine == "remotion" and name == "render":
                     from . import remotion_engine
                     results[name] = remotion_engine.render(proj, log=lambda m: _log(proj, m))
+                elif name == "manifest":
+                    # the manifest records the engine; the files on disk cannot say which
+                    results[name] = manifest.run(proj, engine=engine)
                 else:
                     results[name] = fn(proj)
             except Exception as e:
@@ -453,8 +456,9 @@ def cmd_stage(args):
     # `explainer2 narrate|align|mux` ran unlocked: the same 2.5-3.3 GB torch peak the
     # lock was extended to cover on 2026-08-26, reached by a different verb.
     lock = renderlock.acquire(proj, log=lambda m: _log(proj, m)) if heavy else None
+    kw = {"engine": args.engine} if hasattr(args, "engine") else {}   # `manifest` only
     try:
-        print(json.dumps(fn(proj), indent=2))
+        print(json.dumps(fn(proj, **kw), indent=2))
     finally:
         renderlock.release(lock)
 
@@ -913,10 +917,17 @@ def main(argv=None):
     for st in STAGE_MAP:
         if st == "render":
             continue  # 'render' is the queued launcher above; inline stage = `media --only render`
-        sp = sub.add_parser(st, help=f"run only the {st} stage")
+        hlp = f"run only the {st} stage"
+        if st == "deck":    # its file passed for a Remotion video's source (deck-playbook §5)
+            hlp = ("--engine deck projects only: build the legacy deck/index.html, which "
+                   "the Remotion render never reads")
+        sp = sub.add_parser(st, help=hlp)
         sp.add_argument("project_dir")
         if st in jobqueue.HEAVY_STAGES:
             _wait_flags(sp)
+        if st == "manifest":    # it records the engine, so it takes media's flag and default
+            sp.add_argument("--engine", default="remotion", choices=["deck", "remotion"],
+                            help="the engine that rendered the video (DEFAULT remotion)")
         sp.set_defaults(func=cmd_stage, stage=st)
 
     it = sub.add_parser("intel", help="YouTube competitive intelligence sweep → intel/intel.json (no API key; yt-dlp)")

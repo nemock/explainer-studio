@@ -246,13 +246,13 @@ def _render_cut(parent, cut, engine):
             _log(f"{cut['slug']}: remotion ok {json.dumps(rr)[:140]}")
             renderlock.release(lock); lock = None
             try:
-                manifest.run(sp)
+                manifest.run(sp, engine=engine)
             except Exception as e:  # manifest is a convenience here; the mp4 is the deliverable
                 _log(f"{cut['slug']}: WARNING — manifest skipped ({e})")
         else:
             for name, fn in (("align", align.run), ("deck", deckbuild.run),
                              ("render", render.run), ("mux", mux.run),
-                             ("manifest", manifest.run)):
+                             ("manifest", lambda p: manifest.run(p, engine=engine))):
                 # Serialize the memory-heavy stages (16 GB rule) against every
                 # other render on this Mac — same flock as cmd_media. Held
                 # per-cut (acquire before ALIGN, release after mux) so a long

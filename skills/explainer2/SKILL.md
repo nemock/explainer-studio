@@ -270,10 +270,12 @@ playbook §2) with the retention map filled in. Set
 
 ### 5b. Deck (generation plane — REQUIRED before media)
 Read `references/deck-playbook.md` IN FULL, then author `deck.json` — one slide
-per script segment, ids matching the script. The `media` pipeline's `deck` stage
-**fails without `deck.json`**; it is never auto-generated. Validate with
-`bin/explainer2 deck <project_dir>` (fast; catches bad fields / missing `figure`
-or `footage` images) before the full render. **Then run
+per script segment, ids matching the script. `media` **fails without `deck.json`**
+(both engines read it); it is never auto-generated. Check by hand that every
+`figure`/`footage` image exists (deck-playbook §5): no tool does, and the Remotion
+render drops a missing one without a word. **Do not run `bin/explainer2 deck` on a
+Remotion project** (2026-10-04): it builds the legacy engine's `deck/index.html`,
+which the render never reads, and checks neither fields nor images. **Then run
 `python3 tools/deck_census.py <project_dir>` — the visual-variety floor
 (motion-playbook §4b, added 2026-07-06 after #18 shipped as a "narrated
 PowerPoint"). A FAIL census blocks the render exactly like a failed word

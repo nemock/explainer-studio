@@ -8,9 +8,9 @@ engine is data-driven: you pick a slide `type` and supply its fields, and the
 JS animation driver renders + animates it deterministically. Authoring HTML, or
 raw CSS animation, breaks the determinism contract (see CLAUDE.md hard rules).
 
-`media` **requires** `deck.json` — without it the `deck` stage fails with
-`FileNotFoundError`. So the deck is authored as a normal build step, right after
-the Script gate. It is NOT auto-generated.
+`media` **requires** `deck.json` — both engines read it, and fail with
+`FileNotFoundError` without it. So the deck is authored as a normal build step, right
+after the Script gate. It is NOT auto-generated.
 
 > **Remotion is now the DEFAULT engine (2026-06-24).** `references/motion-playbook.md`
 > is the animated successor; `shorts`/`media`/`render` default to `--engine remotion`.
@@ -357,15 +357,23 @@ Full flow + guardrails: [docs/magnific-imagegen-plan.md](../../../docs/magnific-
 
 ## 5. Validate before the full render
 
-Run the deck stage alone — it's fast and catches bad fields / missing images
-without the long render:
-```
-bin/explainer2 deck <project_dir>     # → {"slides": N, "deck_html": "deck/index.html"}
-```
+On the Remotion engine (the default), run `python3 tools/deck_census.py <project_dir>`
+and `bin/explainer2 deckcheck <project_dir>` (motion-playbook §4b and §7). Both apply the
+Remotion render's own checks, and neither needs a recording.
+
+**Do not run `bin/explainer2 deck` on a Remotion project (2026-10-04).** It parses
+`deck.json` and writes the legacy engine's `deck/index.html`, nothing more: no field
+check, no image check, and the Remotion render never reads the file. Left on disk, it
+passes for the video's source. Stills were exported from it (fixed 2026-10-03),
+manifest.json named it (fixed 2026-10-04), and on 2026-07-05 a session fixed a payoff
+kicker in ISO 14971 module 6's copy that no render ever read. `bin/explainer2 deck` is for
+`--engine deck` projects, where `media` runs it anyway.
+
 Then a structural check (Python): `deck.json` is valid JSON; `len(slides)` ==
 segment count; every `slides[i].id` equals the i-th script segment's `slide`;
 every `accent`/`accent2`/`mark` token is a substring of its headline/title; no
-`figure`/`footage` points at a missing file.
+`figure`/`footage` points at a missing file. That last item is yours alone: no tool
+checks it, and the Remotion render drops a missing image without a word.
 
 ## 6. Self-QA checklist (run before handing the deck to `media`)
 
@@ -419,7 +427,8 @@ every `accent`/`accent2`/`mark` token is a substring of its headline/title; no
 - [ ] Long segments (>20s) carry a mid-scene motion beat — an annotation, a cued
       stage, or a figure move — so no shot sits static through speech (QA's
       longest-shot warning is the tell).
-- [ ] `bin/explainer2 deck <dir>` renders with no error.
+- [ ] `bin/explainer2 deckcheck <dir>` exits 0 (an `--engine deck` project:
+      `bin/explainer2 deck <dir>` builds with no error).
 
 The deck has no separate operator gate — the operator sees it in the rendered
 video at the Package gate. But a deck that fails §6 fails review.
