@@ -81,6 +81,30 @@ def _transcribe_isolated(wav_path, model, timeout):
     return json.loads(r.stdout.strip()).strip()
 
 
+def _split_say(note):
+    """Pull the `SAY: Name = pho-NET-ic · Name2 = ...` first line out of a card note.
+
+    Returns ([[name, phonetic], ...], remaining note). The booth draws each phonetic inline
+    right after its name on the card (operator directive 2026-10-05: glancing at a note under
+    the card broke his read). Display only: script.json `text`, the captions and the
+    scriptguard hash are untouched. Parenthetical caveats ("(best rendering)") stay in the
+    note line, not inline."""
+    if not note or not note.startswith("SAY:"):
+        return [], note
+    first, _, rest = note.partition("\n")
+    pairs = []
+    for entry in first[len("SAY:"):].split(" · "):
+        name, sep, ph = entry.partition("=")
+        if not sep:
+            continue
+        ph = re.sub(r"\s*\(.*?\)", "", ph).strip()
+        if name.strip() and ph:
+            pairs.append([name.strip(), ph])
+    caveats = [e.strip() for e in first[len("SAY:"):].split(" · ") if "(" in e]
+    tail = ("Pronunciation: " + " · ".join(caveats)) if caveats else ""
+    return pairs, "\n".join(x for x in (tail, rest) if x) or None
+
+
 def _load_segments(proj):
     """Build the card list fresh from disk (script.json + shorts/plan.json).
 
@@ -89,10 +113,14 @@ def _load_segments(proj):
     (seg_list, stem) where stem maps card id -> clip filename stem."""
     from .media.common import effective_segments
     script = json.loads(proj.script_json.read_text())
-    seg_list = [{"id": s["id"], "slide": s["slide"], "text": s["text"],
-                 # optional v2 script fields — teleprompter context cues
-                 "beat": s.get("beat"), "device": s.get("device"), "note": s.get("note")}
-                for s in effective_segments(proj, script)]
+    seg_list = []
+    for s in effective_segments(proj, script):
+        say, note = _split_say(s.get("note"))
+        seg_list.append({"id": s["id"], "slide": s["slide"], "text": s["text"],
+                         # optional v2 script fields — teleprompter context cues
+                         "beat": s.get("beat"), "device": s.get("device"), "note": note,
+                         # inline pronunciations, drawn beside the name on the card (display only)
+                         "say": say})
     # Append the per-Short hook/outro lines from shorts/plan.json so the operator records
     # them in the SAME booth session (short-form best practices: a native 3–8s hook + a
     # short outro, recorded separately — NEVER lifted from the long-form). These save to

@@ -92,6 +92,7 @@
   #focus.recording #bigWave { opacity:.33; }
   #fDevice { color:var(--warn); font-weight:800; font-size:16px; margin-bottom:18px; }
   #fText { font-size:clamp(30px, 3.4vw, 46px); line-height:1.5; font-weight:650; }
+  .say { color:#f2b84b; font-weight:700; font-size:.82em; white-space:nowrap; letter-spacing:.01em; }
   #fNote { margin-top:22px; font-size:15px; opacity:.6; max-width:70ch; }
   #fAudio { margin-top:22px; }
   #fBottom { display:flex; align-items:center; gap:16px; padding:13px 26px;
@@ -371,6 +372,21 @@ function driftChip(s) {
   return `<span class="chip bad click" data-diff="${s.id}">! drift ${pct}% · diff</span>`;
 }
 
+/* Card text with each SAY pronunciation drawn inline right after its name (display only:
+   the script text, the captions and the take guard never see it). Operator, 2026-10-05:
+   a pronunciation in the note under the card made him look away mid-line. */
+function escHtml(t) {
+  return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function sayHtml(s) {
+  let h = escHtml(s.text);
+  (s.say || []).forEach(([name, ph]) => {
+    const n = escHtml(name);
+    h = h.split(n).join(`${n} <span class="say">[${escHtml(ph)}]</span>`);
+  });
+  return h;
+}
+
 /* ---------------- list view ---------------- */
 function render() {
   const list = $('list');
@@ -391,7 +407,7 @@ function render() {
         ${qcChip(s)} ${driftChip(s)}
         <span class="right"><span class="status ${s.recorded ? 'ok' : 'none'}">${s.recorded ? '✓ recorded' + takes : '~' + readTime(s.text) + 's'}</span></span></div>
        ${s.device ? `<div class="device">⚡ ${s.device}</div>` : ''}
-       <div class="script">${s.text}</div>
+       <div class="script">${sayHtml(s)}</div>
        ${s.note ? `<div class="sub">${s.note}</div>` : ''}
        <div class="row">
          <button data-rec="${s.id}" ${locked ? 'disabled' : ''}>${label}</button>
@@ -464,7 +480,7 @@ function focusRender() {
   else { st.textContent = `not recorded · ~${readTime(s.text)}s`; st.className = 'none'; }
   $('fDevice').textContent = s.device ? `⚡ ${s.device}` : '';
   const ft = $('fText');
-  ft.textContent = s.text;
+  ft.innerHTML = sayHtml(s);
   // teleprompter sizing: shrink long cards so they (mostly) fit without scrolling
   const wc = (s.text.match(/\S+/g) || []).length;
   ft.style.fontSize = wc > 110 ? 'clamp(21px, 2.1vw, 29px)'

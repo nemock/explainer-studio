@@ -489,6 +489,17 @@ to date missed length on the first draft; the rule exists because it bites).
       pronoun/connective, over-long sentences. Reading the cards does not substitute:
       on #56 the eye-pass missed ten of these and the operator caught the first on card one.
 - [ ] Read every segment aloud mentally — no tongue-twisters, no 70-word runs
+- [ ] **Every hard-to-say name has a `SAY:` line at the top of its card's `note`** (operator
+      directive 2026-10-05, #72). Format `SAY: Zachariassen = zak-ar-ee-AH-sen`, one entry per
+      name, joined with ` · `; mark uncertain renderings "(best rendering)" and use the person's
+      own pronunciation where you can find it. The booth draws each phonetic INLINE, in amber,
+      right after its name in the card text (`recorder._split_say` + `sayHtml`, 2026-10-05: a
+      pronunciation in the note under the card made Dave look away mid-line and the read
+      stuttered). Never put phonetics in `text` itself, which becomes the captions. Because the scriptguard hashes only
+      `text`, notes can be added mid-session without invalidating recorded takes. On #72 Dave
+      skipped two people's names entirely and lost a take on a third. Also ask at this stage
+      whether the name needs saying at all: a role ("two OKR coaches") with the name in the
+      slide's `source` is often the better line.
 - [ ] **FRESH-EYES GATE — run it BEFORE the booth, not after (added 2026-08-28).**
       The `humaner` skill mandates a fresh-context reviewer subagent for *every spoken
       script*, and this playbook is where that obligation gets missed, because the script
