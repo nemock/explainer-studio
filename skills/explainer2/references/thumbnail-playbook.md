@@ -440,6 +440,13 @@ Run it at Package, after thumb A is final, and only once the Shorts are cut:
    - the band shrinks under 110 px or the sub under 60 px, the smallest that reads in the
      channel's Shorts grid at about 210 px wide.
 
+   gpt-2 often puts the head at 20-35% of the height despite the prompt. The renderer then
+   slides the photo down until the head starts at 42% (at most 30% of the height). It fills
+   the uncovered strip with the photo's own top color under the scrim, so two bands and a
+   sub fit without regenerating. A band still too wide is usually a single long word
+   ("ORGANIZATIONS"): reword it. `--slugs a,b` renders only the named cuts, for a backfill
+   of the Shorts already on YouTube.
+
    Fix the copy (shorter) and re-render; never hand-move text. Then Read `sheet.jpg`, the
    three side by side at 360 px each: every headline legible, the three cards
    distinguishable, nothing awkward in the line breaks.
@@ -463,8 +470,25 @@ then uploaded one card in Studio (Short → Details → Thumbnail → Upload fil
 the Shorts slot, `sardefault.jpg`, and the Shorts tab served the card at once. The channel
 has the feature; the API path does not reach it.
 
-So: after a Short goes up, upload `package/thumbnails/shorts/<slug>.jpg` in Studio, the same
-kind of manual step as the altered-content answer. `promote` does not attach the card
+So: after a Short goes up, upload `package/thumbnails/shorts/<slug>.jpg` in Studio, and in
+the same visit set **AI use → No** (Show more → AI use), then Save. Both are per-Short
+Studio steps; Dave asked for both on every Short (2026-10-02).
+
+**Doing it through Chrome** (the claude-in-chrome tools, one Short at a time, on the open
+Studio tab):
+1. Navigate to `studio.youtube.com/video/<id>/edit`.
+2. Wait about 3 s, click `ytcp-button#toggle-button` (Show more), and confirm
+   `#title-textarea #textbox` is the right Short.
+3. `find` the Thumbnail section's `input type=file`, and `file_upload` the card to it.
+4. Set AI use. The AI-use radios sit inside shadow roots, so `querySelector` and the
+   accessibility-ref click both miss them. Walk the shadow roots for the
+   `TP-YT-PAPER-RADIO-BUTTON` whose `aria-label` is "No, AI wasn't used", then call
+   `.click()` on it and check that `aria-checked` is "true".
+5. Click the inner `button` of `ytcp-button#save`, then wait for the "Changes saved" toast,
+   also found by walking the shadow roots. The save button's `disabled` attribute is not a
+   reliable signal.
+
+Afterwards confirm the result from outside: `i.ytimg.com/vi/<id>/sardefault.jpg` returns 200. `promote` does not attach the card
 (`SET_SHORTS_THUMBNAILS = False`). The mechanism stays in place for the day the API takes
 it, but switch it on only if `i.ytimg.com/vi/<id>/sardefault.jpg` returns 200 with the card
 after an API set. **Never verify a Short's thumbnail by `hqdefault.jpg`.** It updates even

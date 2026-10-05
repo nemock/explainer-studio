@@ -583,7 +583,7 @@ build the two 1280×720 cards (a = live, b = promo reuse) (cutout → brand temp
 `thumbnail_sub` in `shorts/plan.json` inside the same humaner pass, and render with
 `tools/shorts_thumbnail.py <dir> --render` through `explainer2 submit` (myenv python). It fails
 on text over the face or outside the safe zone; then read its `sheet.jpg`. Each card is
-uploaded in Studio after its Short goes up: the API cannot set a Short's thumbnail
+uploaded in Studio after its Short goes up, with AI use set to No in the same visit: the API cannot set a Short's thumbnail
 (thumbnail-playbook §10, 2026-10-02).
 
 > **Two keys `publish` actually reads, and neither is the obvious one (2026-08-05).**

@@ -31,6 +31,8 @@ from pathlib import Path
 W, H = 1080, 1920
 SAFE = {"left": 54, "right": W - 54, "top": 96, "bottom": int(H * 0.75)}
 FACE_PAD = 28
+HEAD_TOP_MIN = int(H * 0.42)  # slide the base down until the head starts at least this low
+SHIFT_MAX = int(H * 0.30)
 MIN_BAND_PX = 110          # below these the text is unreadable in the channel's Shorts grid,
 MIN_SUB_PX = 60            # where a thumbnail shows about 210 px wide
 
@@ -78,6 +80,22 @@ def face_box(base):
             "right": int(x - ox + w), "bottom": int(y - oy + h)}
 
 
+def place_base(base, face):
+    """Slide the base down when the head sits high, so the headline has room above it.
+
+    gpt-2 is asked for the head at mid-frame and often puts it at 20-35% (the 2026-10-02
+    backlog), which leaves no room for two bands and a sub. Sliding the photo down crops some
+    chest off the bottom and uncovers a strip at the top, filled with the photo's own top
+    color under the scrim. Returns (shift_px, top_rgb, face moved by the shift)."""
+    from PIL import Image
+    shift = max(0, min(SHIFT_MAX, HEAD_TOP_MIN - face["top"]))
+    im = Image.open(base).convert("RGB")
+    strip = im.crop((0, 0, im.width, max(1, im.height // 25))).resize((1, 1))
+    rgb = strip.getpixel((0, 0))
+    moved = {k: v + (shift if k in ("top", "bottom") else 0) for k, v in face.items()}
+    return shift, rgb, moved
+
+
 def band_lines(text):
     """Split a band longer than ~11 characters into two balanced lines."""
     words = text.split()
@@ -106,16 +124,18 @@ def scrim_css(scrim, face):
             f"rgba({rgb},0) {clear:.1f}%)")
 
 
-def build_html(base_rel, cut, style, variant, face):
+def build_html(base_rel, cut, style, variant, face, shift=0, top_rgb=(9, 13, 28)):
     bg, fg, accent, align = variant
     bands = "".join(f'<div class="band">{line}</div>' for line in band_lines(cut["thumbnail_text"]))
     sub = sub_html(cut.get("thumbnail_sub", ""), accent)
     limit = face["top"] - FACE_PAD
     return f"""<!doctype html><html><head><meta charset="utf-8"><style>
   * {{ margin:0; box-sizing:border-box; }}
-  body {{ width:{W}px; height:{H}px; overflow:hidden; position:relative; background:#090d1c;
+  body {{ width:{W}px; height:{H}px; overflow:hidden; position:relative; background:rgb{tuple(top_rgb)};
     font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; }}
-  .base {{ position:absolute; inset:0; width:{W}px; height:{H}px; object-fit:cover; }}
+  .base {{ position:absolute; left:0; top:{shift}px; width:{W}px; height:{H}px; object-fit:cover; }}
+  .seam {{ position:absolute; left:0; right:0; top:{shift}px; height:{160 if shift else 0}px;
+    background:linear-gradient(180deg, rgb{tuple(top_rgb)} 0%, rgba{tuple(top_rgb) + (0,)} 100%); }}
   .scrim {{ position:absolute; inset:0; background:{scrim_css(style['scrim'], face)}; }}
   .text {{ position:absolute; left:{SAFE['left'] + 16}px; right:{W - SAFE['right'] + 16}px;
     top:{SAFE['top'] + 70}px; text-align:{align}; z-index:2; }}
@@ -129,6 +149,7 @@ def build_html(base_rel, cut, style, variant, face):
     text-shadow:{style['sub_shadow']}; }}
 </style></head><body>
   <img class="base" src="{base_rel}">
+  <div class="seam"></div>
   <div class="scrim"></div>
   <div class="text"><div class="bands">{bands}</div><div class="sub">{sub}</div></div>
 <script>
@@ -140,7 +161,7 @@ document.fonts.ready.then(() => {{
                          sub.style.fontSize = subPx + 'px'; }};
   apply();
   while (bandPx > 80 && bands.some(b => b.getBoundingClientRect().width > maxW)) {{ bandPx -= 4; apply(); }}
-  while (text.getBoundingClientRect().bottom > limit && (bandPx > 80 || subPx > 40)) {{
+  while (text.getBoundingClientRect().bottom > limit && (subPx > 64 || bandPx > 60)) {{
     if (subPx > 64) subPx -= 2; else bandPx -= 4;
     apply();
   }}
@@ -203,6 +224,8 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("project")
     ap.add_argument("--render", action="store_true")
+    ap.add_argument("--slugs", help="comma-separated cuts to build (a backfill of the Shorts already "
+                                    "on YouTube); default every cut in the plan")
     args = ap.parse_args()
 
     proj = Path(args.project).resolve()
@@ -210,7 +233,15 @@ def main():
     base = out_dir / "base_9x16.png"
     if not base.exists():
         raise SystemExit(f"no vertical base at {base} (thumbnail-playbook §10 makes it)")
-    cuts = json.loads((proj / "shorts" / "plan.json").read_text())
+    plan = json.loads((proj / "shorts" / "plan.json").read_text())
+    # plan.json is a bare list of cuts, or {schema, cuts: [...]} in older projects
+    cuts = plan.get("cuts", []) if isinstance(plan, dict) else plan
+    if args.slugs:
+        want = args.slugs.split(",")
+        unknown = [s for s in want if s not in {c["slug"] for c in cuts}]
+        if unknown:
+            raise SystemExit(f"--slugs not in plan.json: {unknown}")
+        cuts = [c for c in cuts if c["slug"] in want]
     missing = [c["slug"] for c in cuts if not c.get("thumbnail_text")]
     if missing:
         raise SystemExit(f"plan.json cuts without thumbnail_text: {missing}")
@@ -222,11 +253,14 @@ def main():
               f"series has its own thumbnail card, add it to STYLES (thumbnail-playbook §10).")
         style = DEEP_DIVE
     face = face_box(base)
+    shift, top_rgb, face = place_base(base, face)
+    if shift:
+        print(f"base slid down {shift}px to make room above the head")
     pages = []
     for i, cut in enumerate(cuts):
         page = out_dir / f"{cut['slug']}.html"
         variant = style["variants"][i % len(style["variants"])]
-        page.write_text(build_html(base.name, cut, style, variant, face))
+        page.write_text(build_html(base.name, cut, style, variant, face, shift, top_rgb))
         pages.append((cut["slug"], page))
         print("wrote", page)
     if not args.render:
