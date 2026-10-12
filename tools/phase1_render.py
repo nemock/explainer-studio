@@ -413,7 +413,10 @@ def write_resume_md(proj, wall_s, shorts_note):
         "1. §7: read the QA warnings above; fix what is fixable. Re-render only if you "
         "changed something (`bin/explainer2 render <dir>`; align first if any take changed).",
         "2. §7b: review `work/adlib_report.json` — noise vs real drift.",
-        "3. §8 Package: run the `humaner` skill first, then article, share copy, thumbnail, "
+        "3. §8 Package: run the `humaner` skill first, then article, share copy, both "
+        "thumbnails, one vertical thumbnail per cut Short (thumbnail-playbook §10: "
+        "`thumbnail_text`/`thumbnail_sub` in shorts/plan.json, then "
+        "`tools/shorts_thumbnail.py <dir> --render` via `explainer2 submit`), then "
         "validate. Shorts: if the line above says deferred or failed, run "
         "`bin/explainer2 shorts <dir>` yourself.",
         "",
