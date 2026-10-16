@@ -382,7 +382,9 @@ function sayHtml(s) {
   let h = escHtml(s.text);
   (s.say || []).forEach(([name, ph]) => {
     const n = escHtml(name);
-    h = h.split(n).join(`${n} <span class="say">[${escHtml(ph)}]</span>`);
+    // whole words only: "tretinoin" must not match inside "isotretinoin" (#76, 2026-10-16)
+    const re = new RegExp(`(?<![A-Za-z])${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z])`, 'g');
+    h = h.replace(re, `${n} <span class="say">[${escHtml(ph)}]</span>`);
   });
   return h;
 }
