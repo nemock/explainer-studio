@@ -242,6 +242,16 @@ every later gate (script, recording, render, publish). The Learn loop reads
 `bin/explainer2 wiki fact <name> --body "..." --source "<url>"` for each
 sourced claim you intend to use.
 
+**How to fetch (added 2026-10-17).** Search with WebSearch. Read a page or PDF with
+`python3 /Volumes/Casima/claudeCode/make_money/scripts/webfetch.py <url>` (`--pages A-B` for a
+PDF slice). It checks the NAS web archive first, then free routes, and calls Firecrawl only
+as a budgeted last resort. It prints a file path, and you Read the lines you need. Never call
+the Firecrawl MCP tools to read a page: a credit guard hook refuses them. Research subagents
+spawned from this skill used about 2,250 Firecrawl credits in three weeks, mostly on
+`query`-mode scrapes and whole PDFs, so **every research or fact-check subagent brief
+includes this paragraph**, along with the model tier: Sonnet to read and extract claims, Haiku
+for pure fetch lists. Background: `make_money/routine_changes/2026-10-17-webfetch-ladder.md`.
+
 ### 5. Script (generation plane)
 Read `references/script-playbook.md` AND `references/spoken-humanizer.md` IN FULL
 (the latter shapes the hook + cadence as you write, and is the mandatory CUT +

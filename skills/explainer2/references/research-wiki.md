@@ -64,6 +64,12 @@ Write them anyway. Two kinds have already paid for themselves:
   The node exists so nobody reinstates it from a half-memory of the earlier draft.
 - **NOT VERIFIED** — a source we could not read. `#57`'s Bloomberg node records a 403 and
   the rule that follows from it: do not air its circulating quotes as Bloomberg quotes.
+  On Dave's machine, a 403 alone isn't "could not read" yet. Fetch the URL with webfetch
+  (`python3 /Volumes/Casima/claudeCode/make_money/scripts/webfetch.py <url>`), which tries plain
+  HTTP, headless Chromium and, last, Firecrawl. If it exits 3 (login wall) and Dave is signed
+  in to that site in Chrome, read the page with Claude in Chrome and store it with
+  `webfetch.py put <url> --file <file> --method chrome`. Only after those fail is the node
+  NOT VERIFIED.
 
 A wiki that only records wins is a wiki that repeats losses.
 
