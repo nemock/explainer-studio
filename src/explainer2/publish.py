@@ -4,7 +4,8 @@ The generation pipeline stops at the package (PRD boundary). `publish` is a
 SEPARATE, operator-invoked step (like `promote`, but for the main video, not the
 Shorts) that pushes the finished package to YouTube via the operator's OWN OAuth
 against the official YouTube Data API v3 — no third-party SaaS, no per-token
-billing, secrets stay local.
+billing, secrets stay local. A cut Short can go up the same way from its own cut dir
+(content_type "short", no thumbnail over the API; its card goes up in Studio).
 
 HYBRID: the API sets file + core metadata + ONE thumbnail + playlist + schedule.
 It CANNOT do end screens or pinned comments (no public
@@ -91,6 +92,7 @@ def build_plan(proj, channel, privacy="unlisted", when=None):
     title_ab = meta.get("title_ab") or []
     alt_title = title_ab[1] if len(title_ab) > 1 and title_ab[1] != title else None
 
+    is_short = (proj.data or {}).get("content_type") == "short"
     thumbs = meta.get("thumbnails") or {}
     thumb_a, thumb_b = thumbs.get("a"), thumbs.get("b")
     thumb_a_path = (proj.dir / "package" / thumb_a).resolve() if thumb_a else None
@@ -101,6 +103,12 @@ def build_plan(proj, channel, privacy="unlisted", when=None):
                          f"to a <2MB JPEG at upload")
     elif thumb_a:
         warnings.append(f"thumbnail A not found: {thumb_a_path}")
+    elif is_short:
+        # A Short's thumbnail can't be set over the API (it writes the 16:9 slot and Studio
+        # still shows the Short blank), so a cut Short has no `thumbnails` key on purpose:
+        # its vertical card goes up in Studio (thumbnail-playbook §10). Module 12 of the
+        # Product Leadership series, 2026-10-18, was the first cut Short sent through here.
+        notes.append("Short: no thumbnail over the API; upload its vertical card in Studio")
     else:
         # No `thumbnails` key at all. This used to fall through in SILENCE and ship a
         # video with YouTube's auto-generated frame, which is exactly what happened to
@@ -149,7 +157,8 @@ def build_plan(proj, channel, privacy="unlisted", when=None):
             "playlist": _playlist_for(proj, meta, warnings),
             "thumbnail_A": str(thumb_a_path) if thumb_a_path else None,
         },
-        "browser_todo": _browser_checklist(meta, thumb_b, alt_title, chan or {"handle": channel}),
+        "browser_todo": _browser_checklist(meta, thumb_b, alt_title, chan or {"handle": channel},
+                                           is_short=is_short),
         "notes": notes,
         "warnings": warnings,
         "_body": body,
@@ -187,9 +196,13 @@ def _playlist_for(proj, meta, warnings):
     return default
 
 
-def _browser_checklist(meta, thumb_b, alt_title, chan):
+def _browser_checklist(meta, thumb_b, alt_title, chan, is_short=False):
     handle = chan.get("handle") or "the target channel"
     todo = []
+    if is_short:
+        todo.append("SHORT THUMBNAIL: Studio > the Short > Details > Thumbnail > upload the parent "
+                    "project's package/thumbnails/shorts/<slug>.jpg, set AI use in the same visit, "
+                    "Save. Verify at i.ytimg.com/vi/<id>/sardefault.jpg (never hqdefault).")
     # A/B Test & Compare was RETIRED 2026-07-26 (the channel's per-video volume never
     # reaches significance, so it buys friction and not information) and re-confirmed
     # 2026-08-20. thumb_b is still built, but as a PROMO asset the operator uses by hand
@@ -200,7 +213,8 @@ def _browser_checklist(meta, thumb_b, alt_title, chan):
         todo.append(f"THUMBNAIL B is built at package/{thumb_b} — a promo asset for social "
                     f"and the newsletter, to use at will. Do NOT open Test & Compare; A/B "
                     f"is retired.")
-    todo.append("END SCREEN: add subscribe + a video element (Best for viewer) over the last ~20s.")
+    if not is_short:                  # Shorts have no end screens
+        todo.append("END SCREEN: add subscribe + a video element (Best for viewer) over the last ~20s.")
     pc = meta.get("pinned_comment")
     if pc:
         todo.append(f"PINNED COMMENT: VERIFY the active channel is {handle} (photo avatar, "
