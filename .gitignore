@@ -18,6 +18,8 @@ coffee_mugs/
 node_modules/
 # intel caches (Phase 1)
 .cache/
+# repo-root scratch (promote plans, preview output); project work dirs live in explainer-content
+/work/
 # operator/brand assets (personal media, not redistributed)
 book_cover/
 # SECRETS — OAuth client secrets / tokens must never be committed (this repo is public).
