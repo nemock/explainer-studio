@@ -581,6 +581,9 @@ full-bleed shot.
     retention argument applies to the opening only, so `false` (which kills both ends) was
     the wrong lever. With `"outro"`, `audioFrom` becomes 0 and the narration starts on frame
     one — an on-camera cold open lands on Dave's face with no runway at all.
+    **`scaffold` writes it (2026-10-22)** for landscape `deepdive`/`masterclass` projects
+    on `nemock-deep-dive` or `brg-deep-dive`; before that it was added by hand, and #77
+    rendered with the intro because nobody did.
   - **Consequence for anything mapping timeline seconds onto the mp4:** `intro_offset_s()`
     returns 0 for such a project. It already reads the STAGED props rather than assuming a
     constant, so stills/qa/frame_qc stay correct; hand-rolled frame math does not.
