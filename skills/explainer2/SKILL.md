@@ -191,6 +191,10 @@ SERIES root, not `projects/` (masterclass-playbook §3); promos add
 `--promotes`. Ask the operator for angle/length/aspect ONLY if not given —
 one cheap confirmation, then proceed.
 
+Landscape `deepdive`/`masterclass` scaffolds on `nemock-deep-dive` or
+`brg-deep-dive` get `"sting": "outro"` in `project.json` (2026-10-22): no opening
+rocket bumper, closing mark kept (motion-playbook §2F). Don't remove it.
+
 **The canonical number is auto-assigned** from the `projects/` folder (highest
 `_NN_` + 1, zero-padded) and written into the dir name + `project.json`; the
 scaffold also refreshes the counter line in `channel/CATALOG.md`. So pass a slug

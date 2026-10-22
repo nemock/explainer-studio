@@ -271,6 +271,14 @@ def cmd_scaffold(args):
                           "brand_label": contenttypes.brand_label(args.distribution)}
     if args.promotes:
         proj["promotes"] = args.promotes
+    # No opening rocket bumper on long-form (operator directive 2026-09-11: "too much dead
+    # air"). `"outro"` keeps the closing mark; see motion-playbook §2F. Only the paper
+    # deep-dive themes get it, and only landscape: a portrait project's sting is off by
+    # default, and "outro" would turn its closing card ON. Caught on #77, which rendered
+    # the 3.5s intro because nobody added the key by hand.
+    if (ctype in ("deepdive", "masterclass") and w >= h
+            and args.theme in ("nemock-deep-dive", "brg-deep-dive")):
+        proj["sting"] = "outro"
     if num is not None:
         proj["number"] = num
     if min_length:
