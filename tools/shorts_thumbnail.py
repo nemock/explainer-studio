@@ -56,6 +56,14 @@ STYLES = {
                      ("#a8481f", "#ffffff", "#a8481f", "center"),
                      ("#a8481f", "#ffffff", "#a8481f", "right")],
     },
+    # The PM Guide (2026-10-19): the plg-guide card in plum.
+    "pmg-guide": {
+        "scrim": ("245,240,235", 0.95, 0.8),
+        "sub": "#1b2b4b", "sub_shadow": "0 2px 10px rgba(245,240,235,.9)",
+        "variants": [("#7a2e5c", "#ffffff", "#7a2e5c", "left"),
+                     ("#7a2e5c", "#ffffff", "#7a2e5c", "center"),
+                     ("#7a2e5c", "#ffffff", "#7a2e5c", "right")],
+    },
 }
 
 

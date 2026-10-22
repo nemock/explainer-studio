@@ -793,7 +793,8 @@ def _scene_for(slide, theme="", warn=None):
     # now clearable: the lightTint/lightSurround tokens landed 2026-08-07, six days AFTER
     # that exclusion, and PAPER_PLG uses them so the table is the same #f5f0eb cream the
     # figures and schematics already sit on. One backdrop, not two.
-    if theme in ("nemock-deep-dive", "wte-guide", "circumvent", "plg-guide"):
+    # pmg-guide (2026-10-19) joins with plg-guide, its sister series on the same paper world.
+    if theme in ("nemock-deep-dive", "wte-guide", "circumvent", "plg-guide", "pmg-guide"):
         pc = _papercraft_scene(slide, t, kicker, accent, headline)
         if pc:
             return pc
@@ -812,7 +813,7 @@ def _scene_for(slide, theme="", warn=None):
         # in STUDIO GREEN — the exact off-brand leak `accent2 == accent` exists to prevent,
         # on the one frame that decides whether a Short gets watched.
         if theme in ("cut-bond", "nemock-deep-dive", "brg-deep-dive", "wte-guide",
-                     "circumvent", "plg-guide"):
+                     "circumvent", "plg-guide", "pmg-guide"):
             return "PaperHook", {"image": slide.get("image"), "kicker": kicker,
                                  "headline": headline, "accent": accent,
                                  # `stage` is the fallback when a hook has no bespoke art
@@ -1386,7 +1387,8 @@ def build_spec(sp):
     # the OPENING only — a closing wordmark costs no retention, because the video is over —
     # so it gets its own value rather than forcing `false` and silently dropping the brand
     # mark he did not ask to lose.
-    _NO_STING = ("wte-guide", "plg-guide") + _CVG_STYLE_THEMES
+    # pmg-guide (2026-10-19): like-and-subscribe only, same reasoning as plg-guide.
+    _NO_STING = ("wte-guide", "plg-guide", "pmg-guide") + _CVG_STYLE_THEMES
     _sting = sp.data.get("sting", width >= height)
     _intro_on = bool(_sting) and _sting != "outro"
     if sp.data.get("theme") not in _NO_STING and _sting:
@@ -1895,7 +1897,8 @@ def _render_one(sp, log=print, frames=None, out=None):
     # while the real render, which builds its own per-project public dir, 404'd on the
     # warning triangle and DIED. Stills are not proof that a render will stage.
     for _lib in ("papercraft-notes", "papercraft-cards", "papercraft-fixings",
-                 "papercraft-grounds", "papercraft-stages", "papercraft-plg"):
+                 "papercraft-grounds", "papercraft-stages", "papercraft-plg",
+                 "papercraft-pmg"):
         _sub = REMOTION_DIR / "public" / _lib
         if _sub.exists():
             shutil.copytree(_sub, public / _lib, dirs_exist_ok=True)
@@ -1916,7 +1919,8 @@ def _render_one(sp, log=print, frames=None, out=None):
     #     it, so the book cover rendered onto the final card of a series that is
     #     explicitly not the book brand. A standing decision that only holds when someone
     #     remembers to retype it into each project file is not a standing decision.
-    _NO_BOOK_CTA = ("wte-guide", "plg-guide")
+    #   pmg-guide  2026-10-19 — like-and-subscribe only (series outline §8.5).
+    _NO_BOOK_CTA = ("wte-guide", "plg-guide", "pmg-guide")
     _cta_book = (sp.data.get("cta_book", True)
                  and sp.data.get("theme") not in _NO_BOOK_CTA)
     if _cta_book and any(s["component"] in ("CTA", "PaperBookCTA") for s in spec["scenes"]):

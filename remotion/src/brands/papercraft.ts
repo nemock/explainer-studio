@@ -272,10 +272,22 @@ export const PAPER_PLG: PaperWorldTokens = {
   kicker: '#a8481f',
 };
 
+// PMG — The Product Manager's Guide to Getting Sh*t Done (2026-10-19). PLG's light table,
+// with the plum accent. Its own elementDir: the warning triangle there is PLG's rust one
+// recoloured plum, so no rust leaks onto a plum page.
+export const PAPER_PMG: PaperWorldTokens = {
+  ...PAPER_PLG,
+  accent: '#7a2e5c',
+  accentSoft: '#c99ab5',
+  elementDir: 'papercraft-pmg/elements',
+  kicker: '#7a2e5c',
+};
+
 // Theme -> world. Every paper channel owns its ground; anything unmapped keeps FWF.
 const WORLD_BY_THEME: Record<string, PaperWorldTokens> = {
   'nemock-deep-dive': PAPER_NEMOCK,
   'plg-guide': PAPER_PLG,
+  'pmg-guide': PAPER_PMG,
   'brg-deep-dive': PAPER_BRG_DEEP,
   'brg-paper': PAPER_BRG,
   'wte-guide': PAPER_WTE,

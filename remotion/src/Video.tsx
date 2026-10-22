@@ -171,7 +171,7 @@ const FULL_BLEED = new Set([
 // plg-guide joined 2026-08-11: its themes.py bg is #f5f0eb and its Magnific art was generated
 // against #f5f0eb, so without this entry every generated figure sits on a visibly different
 // cream and reads as a patch pasted onto the page.
-const BRG_CREAM_THEMES = ['brg-deep-dive', 'wte-guide', 'plg-guide'];
+const BRG_CREAM_THEMES = ['brg-deep-dive', 'wte-guide', 'plg-guide', 'pmg-guide'];
 // Circumvent's sheet is a warmer kraft cream than either neighbour (PALETTE.md).
 const CIRCUMVENT_CREAM = '#f2ede0';
 

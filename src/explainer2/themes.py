@@ -73,6 +73,14 @@ THEMES = {
     # leak (same trick as `fwf`). CTA is like-and-subscribe ONLY: no book, no spoken site.
     "plg-guide": {"bg": "#f5f0eb", "fg": "#1b2b4b", "accent": "#a8481f", "accent2": "#a8481f",
                   "motion": "fade", "fonts": {"display": "Fraunces", "body": "Inter"}},
+    # pmg-guide = The Product Manager's Guide to Getting Sh*t Done (fourteen-part PM teaching
+    # series, /Volumes/Casima/claudeCode/Product_Manager_Guide). Same cream+navy paper as
+    # plg-guide, its sister series on the same channel; accent is PLUM (#7a2e5c, operator
+    # 2026-10-19), clear of rust, WTE teal, BRG indigo, Circumvent gold and studio green in a
+    # thumbnail grid. ~7.8:1 on the cream, so it carries accent text. accent2 == accent so no
+    # off-brand colour can leak. CTA is like-and-subscribe ONLY: no book, no spoken site.
+    "pmg-guide": {"bg": "#f5f0eb", "fg": "#1b2b4b", "accent": "#7a2e5c", "accent2": "#7a2e5c",
+                  "motion": "fade", "fonts": {"display": "Fraunces", "body": "Inter"}},
     # circumvent = Circumvent Global marketing + explainer videos (circumventglobal.com).
     # NOT part of Dave's personal brand and NOT a BRG property: its own key so the Circumvent
     # program can be papercraft without repainting any neighbour. Added 2026-07-30 per the

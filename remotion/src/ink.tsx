@@ -9,7 +9,7 @@ import {BRAND} from './brand';
 // midnight masterclass and every legacy deck.
 
 export const PAPER_THEMES = ['nemock-deep-dive', 'cut-bond', 'brg-paper', 'brg-deep-dive', 'wte-guide', 'circumvent',
-  'plg-guide',
+  'plg-guide', 'pmg-guide',
   // The six personal-show worlds (2026-08-06 brand system) — all render the Cvg family.
   'fwf', 'mmt-tangerine', 'ftt-study', 'wsc-goldenrod', 'ttd-indigo', 'fmf-alarm'];
 export const isPaperTheme = (t?: string): boolean => !!t && PAPER_THEMES.includes(t);
@@ -141,6 +141,17 @@ const PAPER_PLG: Ink = {
   typeOnPaper: false,   // its own series world — not a deep-dive world
 };
 
+// PMG — The Product Manager's Guide to Getting Sh*t Done (2026-10-19), the sister series
+// to PLG on the same channel. Same cream/navy world; the accent is PLUM (#7a2e5c, operator's
+// choice) so the two series read as siblings, not as one. ~7.8:1 on the #f5f0eb cream.
+// Like PLG it is strictly cream/navy/accent, so `danger` is the plum too.
+const PAPER_PMG: Ink = {
+  ...PAPER_PLG,
+  accent: '#7a2e5c',
+  accentWash: 'rgba(122,46,92,.28)',
+  danger: '#7a2e5c',
+};
+
 // CIRCUMVENT GLOBAL paper world (2026-07-30) — the Circumvent marketing/explainer program.
 // The only paper world with GREEN ink rather than navy or purple, which is what makes it
 // legible as a different brand at a glance. Deep forest body ink (#1c3a29) extends the
@@ -186,6 +197,7 @@ const INK_BY_THEME: Record<string, Ink> = {
   'brg-deep-dive': PAPER_BRG_DEEP,
   'wte-guide': PAPER_WTE,
   'plg-guide': PAPER_PLG,
+  'pmg-guide': PAPER_PMG,
   'circumvent': PAPER_CIRCUMVENT,
   'fwf': mkShowInk('#2A1142', '#757BBD', 'rgba(117,123,189,.34)'),
   'mmt-tangerine': mkShowInk('#5F2508', '#0F7E75', 'rgba(15,126,117,.30)'),

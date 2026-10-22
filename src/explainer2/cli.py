@@ -52,6 +52,12 @@ THEME_MUSIC = {
         "path": _REPO_ROOT / "library/music/11-magnific_generate-a-sophisticated-_LU1wnIYswO.mp3",
         "gain": 0.22,
     },
+    # The PM Guide (2026-10-19) is plg-guide's sister series on the same channel; same bed,
+    # decided at theme creation so module 1 never renders on the inaudible fallback.
+    "pmg-guide": {
+        "path": _REPO_ROOT / "library/music/11-magnific_generate-a-sophisticated-_LU1wnIYswO.mp3",
+        "gain": 0.22,
+    },
 }
 
 
