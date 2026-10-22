@@ -241,8 +241,12 @@ def main():
         # leftover from an edit rather than emphasis. Real emphasis repeats ACROSS a
         # sentence break ("...the ladder. The ladder was measuring..."), so only flag a
         # repeat with no punctuation between the two halves.
+        # "twenty" is exempt: scripts spell numbers out, so the years 2020-2029 read
+        # "twenty twenty" / "twenty twenty-five". The regex stops at the hyphen, so the
+        # hit is a bare "twenty twenty" either way, and a doubled "twenty" that is not a
+        # year can't be told apart from the year 2020 here, so only "twenty" is exempted.
         for m_ in re.finditer(r"\b(\w+(?:\s+\w+)?)\s+\1\b", text, re.I):
-            if m_.group(1).lower() not in ("that", "had", "so"):
+            if m_.group(1).lower() not in ("that", "had", "so", "twenty"):
                 doubled.append(f"{card}: {m_.group(0)!r}")
 
         for w_ in re.findall(r"[A-Za-z]+", text):
