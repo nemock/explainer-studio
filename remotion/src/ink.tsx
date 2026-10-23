@@ -9,7 +9,7 @@ import {BRAND} from './brand';
 // midnight masterclass and every legacy deck.
 
 export const PAPER_THEMES = ['nemock-deep-dive', 'cut-bond', 'brg-paper', 'brg-deep-dive', 'wte-guide', 'circumvent',
-  'plg-guide', 'pmg-guide',
+  'plg-guide', 'pmg-guide', 'papercraft-matrix',
   // The six personal-show worlds (2026-08-06 brand system) — all render the Cvg family.
   'fwf', 'mmt-tangerine', 'ftt-study', 'wsc-goldenrod', 'ttd-indigo', 'fmf-alarm'];
 export const isPaperTheme = (t?: string): boolean => !!t && PAPER_THEMES.includes(t);
@@ -141,6 +141,23 @@ const PAPER_PLG: Ink = {
   typeOnPaper: false,   // its own series world — not a deep-dive world
 };
 
+// 3D PAPERCRAFT MATRIX (2026-10-23) — the medtech cybersecurity series. A paper world with a
+// DARK page (#06120c), so the ink here is for type that sits directly on that page: light,
+// phosphor-tinted. Type printed on the sage cards uses the WORLD's ink (#0b2418) instead.
+// The accent is the studio green, and 'bad' keeps the studio red: vulnerabilities need a
+// danger colour on this subject, and red reads on the dark page.
+const PAPER_MATRIX: Ink = {
+  body: '#e6f5e9',
+  soft: 'rgba(214,240,222,.72)',
+  cardBg: 'rgba(230,245,233,.06)',
+  track: 'rgba(230,245,233,.14)',
+  neutral: 'rgba(230,245,233,.5)',
+  accent: '#3ddc84',
+  accentWash: 'rgba(61,220,132,.30)',
+  paper: true,
+  typeOnPaper: false,
+};
+
 // PMG — The Product Manager's Guide to Getting Sh*t Done (2026-10-19), the sister series
 // to PLG on the same channel. Same cream/navy world; the accent is PLUM (#7a2e5c, operator's
 // choice) so the two series read as siblings, not as one. ~7.8:1 on the #f5f0eb cream.
@@ -198,6 +215,7 @@ const INK_BY_THEME: Record<string, Ink> = {
   'wte-guide': PAPER_WTE,
   'plg-guide': PAPER_PLG,
   'pmg-guide': PAPER_PMG,
+  'papercraft-matrix': PAPER_MATRIX,
   'circumvent': PAPER_CIRCUMVENT,
   'fwf': mkShowInk('#2A1142', '#757BBD', 'rgba(117,123,189,.34)'),
   'mmt-tangerine': mkShowInk('#5F2508', '#0F7E75', 'rgba(15,126,117,.30)'),

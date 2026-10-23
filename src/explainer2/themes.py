@@ -81,6 +81,16 @@ THEMES = {
     # off-brand colour can leak. CTA is like-and-subscribe ONLY: no book, no spoken site.
     "pmg-guide": {"bg": "#f5f0eb", "fg": "#1b2b4b", "accent": "#7a2e5c", "accent2": "#7a2e5c",
                   "motion": "fade", "fonts": {"display": "Fraunces", "body": "Inter"}},
+    # papercraft-matrix = "3D Papercraft Matrix", the world for The Product Manager's Guide to
+    # Cybersecurity in Medical Devices (seventeen-part BRG series,
+    # /Volumes/Casima/claudeCode/MedDevice_Cyber_Guide). The house 3D papercraft with a Matrix
+    # feel built in paper (operator 2026-10-23): a DARK page (#06120c), forest-green cardstock,
+    # sage text cards, hanging perforated paper tape as code rain, ONE phosphor-green accent
+    # (the studio green). Its own key so no existing paper world moves. accent2 is the studio
+    # red, for vulnerability marks. CTA is like-and-subscribe ONLY: no book, no site.
+    # Locked spec: skills/explainer2/references/paper-world-matrix/STYLE.md.
+    "papercraft-matrix": {"bg": "#06120c", "fg": "#e6f5e9", "accent": "#3ddc84", "accent2": "#ff4d4d",
+                          "motion": "fade", "fonts": {"display": "Fraunces", "body": "Inter"}},
     # circumvent = Circumvent Global marketing + explainer videos (circumventglobal.com).
     # NOT part of Dave's personal brand and NOT a BRG property: its own key so the Circumvent
     # program can be papercraft without repainting any neighbour. Added 2026-07-30 per the

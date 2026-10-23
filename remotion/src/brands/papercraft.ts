@@ -55,6 +55,12 @@ export type PaperWorldTokens = {
   // chip/band fills — and on a LIGHT ground one value cannot do both: a fill light enough
   // for navy text on it is far too pale to read as text on cream (2026-08-07).
   kicker?: string;
+  // The shared PAGE (PaperBackground) for a world whose page is not cream. Optional, and
+  // only papercraft-matrix sets it (2026-10-23): every world without it keeps the original
+  // cream page byte-identically. `base` is the page colour the fibre texture overlays,
+  // `light`/`surround` are the key-light and vignette as bare "r,g,b" triples, and `rain`
+  // is an optional transparent overlay hung from the top edge (the world's signature).
+  page?: {base: string; light: string; surround: string; rain?: string};
 };
 
 // FWF / davesaunders.net (the nemock-deep-dive channel)
@@ -283,8 +289,41 @@ export const PAPER_PMG: PaperWorldTokens = {
   kicker: '#7a2e5c',
 };
 
+// 3D PAPERCRAFT MATRIX — The Product Manager's Guide to Cybersecurity in Medical Devices
+// (2026-10-23). The house papercraft with a Matrix feel, built in paper: a near-black green
+// page, forest-green cardstock, sage text cards with deep green ink, ONE phosphor-green
+// accent (the studio green, so it matches every green the engine already draws), and hanging
+// perforated paper tape as code rain. A PAGE world like PLG/PMG (the page is the table), but
+// the page is DARK, so it sets the `page` token that PaperBackground reads. Locked spec:
+// skills/explainer2/references/paper-world-matrix/STYLE.md.
+export const PAPER_MATRIX: PaperWorldTokens = {
+  ground: '#06120c',
+  groundDeep: '#020604',
+  sheet: '#0f3a24',
+  sheetAlt: '#145032',
+  paper: '#c9d4c2',      // sage card stock: the pump body's paper in the anchor
+  paperShade: '#a9b8a2',
+  ink: '#0b2418',
+  // The accent PRINTED ON CARDS. Phosphor #3ddc84 on the sage stock is under 2:1, so on
+  // paper the accent is a deep green (~3.8:1, bold display type). The phosphor green stays
+  // the world's accent everywhere type sits on the dark page: `kicker` below and ink.tsx.
+  accent: '#14743f',
+  accentSoft: '#a8eec6',
+  shadow: 'rgba(0,0,0,.55)',
+  hookSheet: '#06120c',
+  hookInk: '#e6f5e9',
+  lightTint: '160,255,200',
+  lightSurround: '2,6,4',
+  surface: 'page',
+  elementDir: 'papercraft-matrix/elements',
+  kicker: '#3ddc84',
+  page: {base: '#06120c', light: '120,255,180', surround: '1,4,2',
+         rain: 'papercraft-matrix/elements/tape_rain.webp'},
+};
+
 // Theme -> world. Every paper channel owns its ground; anything unmapped keeps FWF.
 const WORLD_BY_THEME: Record<string, PaperWorldTokens> = {
+  'papercraft-matrix': PAPER_MATRIX,
   'nemock-deep-dive': PAPER_NEMOCK,
   'plg-guide': PAPER_PLG,
   'pmg-guide': PAPER_PMG,

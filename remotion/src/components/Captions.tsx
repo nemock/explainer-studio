@@ -2,6 +2,7 @@ import React from 'react';
 import {AbsoluteFill, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
 import {isPaperTheme, useInk} from '../ink';
+import {useWorld} from './PaperWorld';
 import type {Word} from '../schema';
 
 // Word-synced, PAGED kinetic captions (motion-playbook §2A). Baseline on every scene.
@@ -57,13 +58,17 @@ export const Captions: React.FC<{
   // worlds got the NAVY caption treatment (dark pill, white text) burned onto cream stock.
   // isPaperTheme is the single source of truth for which worlds are paper.
   const paper = isPaperTheme(theme);
-  const pill = paper ? 'rgba(250,245,232,.92)' : 'rgba(7,11,22,.55)';
-  const restInk = paper ? '#2a2622' : BRAND.white;
+  // A paper world with a DARK page (only papercraft-matrix, 2026-10-23) captions like the
+  // navy world: a cream pill on a near-black green page reads as a sticker, and the green
+  // active word on cream sits at under 2:1. Every other paper world is unchanged.
+  const darkPage = paper && !!useWorld().page;
+  const pill = darkPage ? 'rgba(2,6,4,.72)' : paper ? 'rgba(250,245,232,.92)' : 'rgba(7,11,22,.55)';
+  const restInk = darkPage ? '#e6f5e9' : paper ? '#2a2622' : BRAND.white;
   // The active word is the world's ONE accent. Cut & Bond keeps its coral; every other
   // theme resolves through ink, so navy/nemock/brg-paper stay BRAND.green exactly as before
   // and brg-deep-dive finally gets BRG indigo instead of the studio green.
   const activeInk = accentColor || (cutbond ? '#ff5a4d' : ink.accent);
-  const shadow = paper ? '0 2px 6px rgba(120,92,40,.25)' : '0 3px 16px rgba(0,0,0,.8)';
+  const shadow = paper && !darkPage ? '0 2px 6px rgba(120,92,40,.25)' : '0 3px 16px rgba(0,0,0,.8)';
 
   const pages = React.useMemo(() => buildPages(words || []), [words]);
   if (!words || words.length === 0) return null;
@@ -106,7 +111,7 @@ export const Captions: React.FC<{
                 fontWeight: 900,
                 fontSize,
                 color: isActive ? activeInk : restInk,
-                opacity: isActive ? 1 : paper ? 0.55 : 0.72,
+                opacity: isActive ? 1 : paper && !darkPage ? 0.55 : 0.72,
                 textShadow: shadow,
               }}
             >

@@ -1,6 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Img, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {CUTANDBOND} from '../brands/cutandbond';
+import {useWorld} from './PaperWorld';
 
 // The Cut & Bond paper world backdrop (2026-07-15). The persistent surface every
 // paper cutout sits on — selected by the paper themes ('nemock-deep-dive' / 'cut-bond') in Video.tsx, in place of the
@@ -27,6 +28,44 @@ export const PaperBackground: React.FC = () => {
   // fiber grain drifts only a few px, very slowly — no perceptible crawl.
   const gx = Math.sin(t * 0.05) * 6;
   const gy = Math.cos(t * 0.045) * 5;
+
+  // A world with its own PAGE (only papercraft-matrix, 2026-10-23) gets the same paper fibre
+  // over its own colour and its own light. Every other world skips this branch, so the cream
+  // page below is unchanged for them.
+  const world = useWorld();
+  if (world.page) {
+    const pg = world.page;
+    // hanging tape: a slow, small sway, like paper strips stirred by a fan (12s period)
+    const sway = Math.sin((t / 12) * Math.PI * 2);
+    return (
+      <AbsoluteFill style={{backgroundColor: pg.base}}>
+        <Img
+          src={staticFile('papercraft-grounds/ground_cream_1.webp')}
+          style={{position: 'absolute', inset: 0, width: '100%', height: '100%',
+                  objectFit: 'cover', display: 'block', mixBlendMode: 'overlay'}}
+        />
+        <AbsoluteFill
+          style={{
+            background: `radial-gradient(120% 95% at ${hx}% ${hy + 6}%, rgba(${pg.light},.10) 0%, rgba(${pg.light},0) 55%, rgba(${pg.surround},.55) 100%)`,
+          }}
+        />
+        <AbsoluteFill
+          style={{
+            background: `radial-gradient(48% 42% at ${hx}% ${hy}%, rgba(${pg.light},${(glow * 0.5).toFixed(3)}) 0%, rgba(${pg.light},0) 70%)`,
+            mixBlendMode: 'screen',
+          }}
+        />
+        {pg.rain ? (
+          <Img
+            src={staticFile(pg.rain)}
+            style={{position: 'absolute', left: 0, top: 0, width: '100%', height: 'auto',
+                    display: 'block', transform: `translateY(${(sway * 0.6 - 0.6).toFixed(2)}%)`}}
+          />
+        ) : null}
+        <AbsoluteFill style={{boxShadow: `inset 0 0 340px rgba(${pg.surround},.6)`}} />
+      </AbsoluteFill>
+    );
+  }
 
   return (
     <AbsoluteFill style={{backgroundColor: CUTANDBOND.paper}}>

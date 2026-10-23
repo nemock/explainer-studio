@@ -58,6 +58,12 @@ THEME_MUSIC = {
         "path": _REPO_ROOT / "library/music/11-magnific_generate-a-sophisticated-_LU1wnIYswO.mp3",
         "gain": 0.22,
     },
+    # 3D Papercraft Matrix (2026-10-23, the medtech cybersecurity series): the standard bed,
+    # set at theme creation for the same reason.
+    "papercraft-matrix": {
+        "path": _REPO_ROOT / "library/music/11-magnific_generate-a-sophisticated-_LU1wnIYswO.mp3",
+        "gain": 0.22,
+    },
 }
 
 

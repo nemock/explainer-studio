@@ -204,7 +204,9 @@ export const Video: React.FC<VideoProps> = (props) => {
     <WorldProvider theme={theme}>
     {/* base page: BRG's cream is a shade cooler than the FWF sheet; every other theme
         keeps its exact prior value so no existing render moves. */}
-    <AbsoluteFill style={{backgroundColor: paper ? (theme === 'circumvent' ? CIRCUMVENT_CREAM : BRG_CREAM_THEMES.includes(theme || '') ? '#f5f0eb' : '#f4ecd6') : '#090d1c'}}>
+    {/* papercraft-matrix (2026-10-23) has a dark page; PaperBackground paints it from the
+        world's `page` token, and this base matches it so no cream shows at the edges. */}
+    <AbsoluteFill style={{backgroundColor: paper ? (theme === 'circumvent' ? CIRCUMVENT_CREAM : theme === 'papercraft-matrix' ? '#06120c' : BRG_CREAM_THEMES.includes(theme || '') ? '#f5f0eb' : '#f4ecd6') : '#090d1c'}}>
       {paper ? <PaperBackground /> : <Background />}
       {scenes.map((scene, i) => {
         const Comp = REGISTRY[scene.component] || TalkingScene;

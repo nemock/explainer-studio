@@ -64,6 +64,16 @@ STYLES = {
                      ("#7a2e5c", "#ffffff", "#7a2e5c", "center"),
                      ("#7a2e5c", "#ffffff", "#7a2e5c", "right")],
     },
+    # 3D Papercraft Matrix (2026-10-23): a dark-page card. Near-black green scrim, studio-
+    # green bands with deep green type, pale phosphor sub. Every cut green so the Shorts read
+    # as one series.
+    "papercraft-matrix": {
+        "scrim": ("6,18,12", 0.85, 0.66),
+        "sub": "#e6f5e9", "sub_shadow": "0 3px 20px rgba(0,0,0,.95)",
+        "variants": [("#3ddc84", "#0b2418", "#3ddc84", "left"),
+                     ("#3ddc84", "#0b2418", "#3ddc84", "center"),
+                     ("#3ddc84", "#0b2418", "#3ddc84", "right")],
+    },
 }
 
 
