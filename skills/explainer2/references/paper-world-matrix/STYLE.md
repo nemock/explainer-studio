@@ -77,10 +77,14 @@ code-rain overlay; `el_warning.png`, the green warning triangle; `provenance.jso
 shared substrates (cards, notes, fixings, grounds) are palette-neutral and are tinted to this
 world's tokens, so they are not regenerated. Per-episode Magnific spend is scene art only.
 
-**The only dark-PAGE paper world.** It sets the optional `page` token, which three
+**The only dark-PAGE paper world.** It sets the optional `page` token, which these
 components read and every other world skips: `PaperBackground` (dark page + fibre + tape
 rain), `Captions` (dark pill, light text), `PaperHook` (headline on sage card stock in card
-ink). Video.tsx paints the matching base.
+ink), `Media.tsx`'s `FigurePageType` (a figure's `pageText` prints in card ink and the deep
+accent, since it sits on the art's paper), and `Schematic`'s edge-label tags (card ink on the
+cream tag). Video.tsx paints the matching base. The last two were found on episode 1's deck
+stills (2026-10-23): both printed `ink.body`, which is light here, onto light paper.
+**Any component that prints on paper inside the art reads the same token.**
 
 **Two greens, by surface.** Type on the dark page (kickers, captions, `ink.accent`) uses the
 phosphor `#3ddc84`. Type printed ON sage cards uses the world `accent`, deep green

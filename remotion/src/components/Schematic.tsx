@@ -4,6 +4,7 @@ import rough from 'roughjs';
 import {BRAND} from '../brand';
 import {useInk, PAPER_SHADOW} from '../ink';
 import {PaperNote, PaperSheet, fitNote, NOTE_PASTEL, PASTEL_CYCLE, NotePastel} from './PaperNote';
+import {useWorld} from './PaperWorld';
 
 // motion-playbook §2C — Schematic: a node-and-edge diagram that ASSEMBLES under the
 // narration, with a camera that drifts to the active region ("lead the viewer's eye
@@ -58,6 +59,10 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
   // (plg-guide module 6, 2026-09-23). In 16:9, U === H, so landscape is unchanged.
   const U = Math.min(W, H);
   const ink = useInk();
+  // Edge-label tags are cream paper. On a dark-page world ink.body is light (it is the type on
+  // the dark ground), which left the tag blank; there the tag takes the world's card ink.
+  const world = useWorld();
+  const tagInk = world.page ? world.ink : ink.body;
   const nodes: any[] = fields.nodes || [];
   const edges: any[] = fields.edges || [];
   const stages: any[] = fields.stages || [];
@@ -361,7 +366,7 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
             // substrates, so a drawn chip is the most exposed synthetic surface on the slide.
             <div key={`el${i}`} style={{
               position: 'absolute', left: mx * W, top: my * H, transform: 'translate(-50%, -50%)',
-              color: ink.body, borderRadius: 8,
+              color: tagInk, borderRadius: 8,
               padding: `${U * 0.007}px ${U * 0.017}px`, whiteSpace: 'nowrap',
               fontFamily: BRAND.font, fontStyle: 'italic', fontWeight: 800, fontSize: U * 0.02,
               boxShadow: '0 4px 14px rgba(0,0,0,.2)',

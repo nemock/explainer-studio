@@ -4,6 +4,7 @@ import rough from 'roughjs';
 import {BRAND} from '../brand';
 import {useInk, PAPER_SHADOW} from '../ink';
 import {PaperSheet, Tape} from './PaperNote';
+import {useWorld} from './PaperWorld';
 
 // --- figure MARKS: hand-drawn circle/arrow/underline/box in the figure's OWN image space,
 // rendered INSIDE the moving/zooming container so the callout TRAVELS with the Ken Burns
@@ -89,7 +90,13 @@ const FigMark: React.FC<{m: any; i: number; vh?: number}> = ({m, i, vh = 562}) =
 // `size` and the wrap width are fractions, and the whole block sits inside the image's
 // transform, so it scales with the shot instead of drifting off it.
 const FigurePageType: React.FC<{pageText?: any; height: number; ink: any}> = ({pageText, height, ink}) => {
+  // The type is printed ON the art's paper, not on the page around it. Every light-page world
+  // has dark body ink, so ink.body served both. A dark-page world (papercraft-matrix) has LIGHT
+  // body ink for its dark ground, which on a sage page or a green band was unreadable, so there
+  // the type takes the world's card ink and card accent, as PaperHook's headline card does.
+  const world = useWorld();
   if (!pageText || !pageText.text) return null;
+  const onCard = world.page ? {body: world.ink, accent: world.accent} : {body: ink.body, accent: ink.accent};
   const [x, y] = pageText.at || [0.5, 0.42];
   return (
     <div style={{
@@ -97,10 +104,10 @@ const FigurePageType: React.FC<{pageText?: any; height: number; ink: any}> = ({p
       width: `${(pageText.w ?? 0.5) * 100}%`, transform: 'translate(-50%, -50%)',
       fontFamily: BRAND.font, fontWeight: 700,
       fontSize: height * (pageText.size ?? 0.032), lineHeight: 1.28,
-      color: ink.body, textAlign: pageText.align || 'center',
+      color: onCard.body, textAlign: pageText.align || 'center',
       textWrap: 'balance', pointerEvents: 'none',
     }}>
-      {figColorize(pageText.text, pageText.accent, pageText.accent2, ink.accent,
+      {figColorize(pageText.text, pageText.accent, pageText.accent2, onCard.accent,
                    (ink.danger ?? (ink.paper ? '#c2352b' : BRAND.red)))}
     </div>
   );
