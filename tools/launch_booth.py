@@ -413,6 +413,10 @@ def start(project, open_tab=True, allow_no_shorts=False):
     # Written afterwards on modules 2 AND 3 of the Operator's Guide. Both times the entry
     # was correct and both times it was late, which is the signature of a rule that depends
     # on remembering. Operator, 2026-08-28: add the guard.
+    #
+    # The heading may say Module or Episode (2026-10-26). The Operator's Guide series write
+    # "## Module NN"; the MedTech cybersecurity PM Guide writes "## Episode NN", and its first
+    # booth warned that a ledger entry was missing when it was there.
     try:
         _series = json.loads((proj / "project.json").read_text()).get("series") or {}
     except Exception:
@@ -424,8 +428,8 @@ def start(project, open_tab=True, allow_no_shorts=False):
             print(f"WARNING: series episode {_ep} but no continuity ledger at {_ledger}.")
             print("         Later modules check backward references against it; without one they")
             print("         have nothing to cite.")
-        elif not re.search(rf"^##\s+Module\s+0*{_ep}\b", _ledger.read_text(), re.M):
-            print(f"WARNING: no continuity-ledger entry for Module {_ep:02d} in {_ledger.name}.")
+        elif not re.search(rf"^##\s+(?:Module|Episode)\s+0*{_ep}\b", _ledger.read_text(), re.M):
+            print(f"WARNING: no continuity-ledger entry for Module/Episode {_ep:02d} in {_ledger.name}.")
             print("         The rule is to append it when the script goes final, BEFORE the booth.")
             print("         Write it now: concepts introduced (in the wording the video uses),")
             print("         running-example state, claims -> KB node, callbacks, forward hook.")
