@@ -87,8 +87,16 @@ def main():
         if not fields.get("marks"):
             continue
         fields = json.loads(json.dumps(fields))  # deep copy
-        if str(fields.get("image", "")).startswith("assets/imagegen/"):
-            fields["image"] = fields["image"].split("/")[-1]
+        img = str(fields.get("image", ""))
+        if img.startswith("assets/imagegen/"):
+            fields["image"] = img.split("/")[-1]
+        elif img and not img.startswith(("papercraft", "chibi/")) and (pdir / img).is_file():
+            # Any other project image (e.g. assets/docshots/ document crops, 2026-10-27: three
+            # 404'd here and failed while the real render, which stages every project path,
+            # drew them). Copy it in under its basename, as render()'s _stage_images does.
+            (pub / Path(img).name).unlink(missing_ok=True)
+            shutil.copy(pdir / img, pub / Path(img).name)
+            fields["image"] = Path(img).name
         dur = sc["durationInFrames"]
         last_cue = max((m.get("cueFrame") or 0) for m in fields["marks"])
         frame = min(dur - 3, last_cue + 40)  # all marks fully drawn
