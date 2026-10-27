@@ -58,7 +58,12 @@ export const PaperHook: React.FC<{fields: any}> = ({fields}) => {
     );
   }
 
-  const kb = interpolate(frame, [0, 150], [1.05, 1.12], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  // The drift stops at 5 s, and a long cold open then holds a frozen frame: MedTech cyber
+  // episode 1's 18 s hook logged 13 s of QA dead air. On a dark-page world it keeps drifting,
+  // slower, to 30 s (the component is not told its scene length). Other worlds are unchanged.
+  const kb = world.page
+    ? interpolate(frame, [0, 150, 900], [1.05, 1.12, 1.2], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})
+    : interpolate(frame, [0, 150], [1.05, 1.12], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const headIn = spring({frame: frame - 6, fps, config: {damping: 16, stiffness: 120}});
   const kickIn = interpolate(frame, [0, 14], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
 
