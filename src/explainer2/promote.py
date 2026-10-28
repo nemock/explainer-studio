@@ -430,10 +430,14 @@ SET_SHORTS_THUMBNAILS = False
 
 def shorts_thumbnail(short_mp4):
     """The vertical thumbnail tools/shorts_thumbnail.py built for this cut, or None.
-    short_mp4 is <project>/shorts/<slug>/video/explainer_9x16.mp4."""
-    mp4 = Path(short_mp4)
-    thumb = mp4.parents[3] / "package" / "thumbnails" / "shorts" / f"{mp4.parents[1].name}.jpg"
-    return str(thumb) if thumb.is_file() else None
+    short_mp4 is <project>/shorts/<slug>/video/explainer_9x16.mp4. A video with no cards (or a
+    path of another shape) returns None, and the Short is promoted without one."""
+    try:
+        mp4 = Path(short_mp4)
+        thumb = mp4.parents[3] / "package" / "thumbnails" / "shorts" / f"{mp4.parents[1].name}.jpg"
+        return str(thumb) if thumb.is_file() else None
+    except (IndexError, TypeError, OSError):
+        return None
 
 
 def enqueue_plan(projects_dir, plan, dry_run=True):
