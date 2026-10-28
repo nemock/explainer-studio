@@ -596,9 +596,10 @@ build the two 1280×720 cards (a = live, b = promo reuse) (cutout → brand temp
 `package/thumbnails/shorts/base_9x16.png`, write each cut's `thumbnail_text` +
 `thumbnail_sub` in `shorts/plan.json` inside the same humaner pass, and render with
 `tools/shorts_thumbnail.py <dir> --render` through `explainer2 submit` (myenv python). It fails
-on text over the face or outside the safe zone; then read its `sheet.jpg`. Each card is
-uploaded in Studio after its Short goes up, with AI use set to No in the same visit: the API cannot set a Short's thumbnail
-(thumbnail-playbook §10, 2026-10-02). To post a cut Short to YouTube directly, give its cut dir
+on text over the face or outside the safe zone; then read its `sheet.jpg`. The API cannot set a
+Short's thumbnail, so each card goes on in Studio, with AI use set to No in the same visit. For a
+Short posted through the promote routine the post queue does this itself after the upload
+(`make_money/post_queue/shorts_card.py`, 2026-10-28; thumbnail-playbook §10). To post a cut Short to YouTube directly, give its cut dir
 (`shorts/<slug>/`) a `package/meta.json`: title from `shorts/plan.json`, a short humaner-passed
 description ending in the full video's link, `"video": "video/explainer_9x16.mp4"`,
 `"playlist": null`, and no `thumbnails` key. Then run `bin/explainer2 publish <cut dir> --fire

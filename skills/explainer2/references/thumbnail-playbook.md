@@ -474,6 +474,16 @@ So: after a Short goes up, upload `package/thumbnails/shorts/<slug>.jpg` in Stud
 the same visit set **AI use → No** (Show more → AI use), then Save. Both are per-Short
 Studio steps; Dave asked for both on every Short (2026-10-02).
 
+**Automatic for promoted Shorts (2026-10-28).** `explainer2 promote` puts the card's path in
+the YouTube row's `target.shorts_card_local`. After the dispatcher uploads the Short it queues
+the card for `make_money/post_queue/shorts_card.py`, which starts a headless
+`claude -p --chrome` session (Sonnet) to run the steps below in Dave's Chrome, then checks
+`sardefault.jpg` itself and alerts Dave after three failed tries. Its instructions are
+`shorts_card_prompt.md` beside it; change the steps there and here together. A Short already
+live without its card: `python3 shorts_card.py add --video-id <id> --card <jpg>`, then
+`python3 shorts_card.py run`. A cut posted with `explainer2 publish <cut dir>` still gets the
+steps below by hand.
+
 **Doing it through Chrome** (the claude-in-chrome tools, one Short at a time, on the open
 Studio tab):
 1. Navigate to `studio.youtube.com/video/<id>/edit`.
@@ -488,8 +498,9 @@ Studio tab):
    also found by walking the shadow roots. The save button's `disabled` attribute is not a
    reliable signal.
 
-Afterwards confirm the result from outside: `i.ytimg.com/vi/<id>/sardefault.jpg` returns 200. `promote` does not attach the card
-(`SET_SHORTS_THUMBNAILS = False`). The mechanism stays in place for the day the API takes
+Afterwards confirm the result from outside: `i.ytimg.com/vi/<id>/sardefault.jpg` returns 200
+(it is 404 until a card is on). The API set stays off (`SET_SHORTS_THUMBNAILS = False`); it is
+separate from `shorts_card_local` above. That mechanism stays in place for the day the API takes
 it, but switch it on only if `i.ytimg.com/vi/<id>/sardefault.jpg` returns 200 with the card
 after an API set. **Never verify a Short's thumbnail by `hqdefault.jpg`.** It updates even
 when the Short's own thumbnail does not.

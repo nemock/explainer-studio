@@ -468,10 +468,14 @@ def enqueue_plan(projects_dir, plan, dry_run=True):
                 post["additional_posts"] = [{"text": entry["url_comment"], "mediaUrls": []}]
         extra = dict(entry.get("extra", {}))
         extra.pop("pageId", None)      # resolved from brand by the queue
-        if platform == "youtube" and SET_SHORTS_THUMBNAILS:
+        if platform == "youtube":
             thumb = shorts_thumbnail(plan["short_mp4"])
-            if thumb:                  # set by the dispatcher's direct upload
-                extra["thumbnail_local"] = thumb
+            if thumb and SET_SHORTS_THUMBNAILS:
+                extra["thumbnail_local"] = thumb       # API set; writes 16:9 renditions only
+            if thumb:
+                # The Shorts slot itself: after the upload the dispatcher queues this for
+                # post_queue/shorts_card.py, which sets it in Studio (2026-10-28).
+                extra["shorts_card_local"] = thumb
         if extra:
             post["target"] = extra
         # YouTube needs no route override: the queue's default for this account is
