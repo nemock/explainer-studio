@@ -92,6 +92,12 @@ def _split_say(note):
     if not note or not note.startswith("SAY:"):
         return [], note
     first, _, rest = note.partition("\n")
+    # A SAY line run straight into the note ("SAY: Keough = KEE-oh. Keough at ...", PM Guide
+    # M5 card 36, 2026-10-30) drew the whole note inline on the card. The guide ends at its
+    # first sentence; anything after it is note.
+    m = re.match(r"(SAY:.*?\.)\s+(\S.*)", first)
+    if m:
+        first, rest = m.group(1).rstrip("."), "\n".join(x for x in (m.group(2), rest) if x)
     pairs = []
     for entry in first[len("SAY:"):].split(" · "):
         name, sep, ph = entry.partition("=")
