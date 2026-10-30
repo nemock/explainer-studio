@@ -95,6 +95,11 @@ const FigurePageType: React.FC<{pageText?: any; height: number; ink: any}> = ({p
   // body ink for its dark ground, which on a sage page or a green band was unreadable, so there
   // the type takes the world's card ink and card accent, as PaperHook's headline card does.
   const world = useWorld();
+  // A list of blocks fills a form on one sheet: PM Guide M5's win-loss table sets each row's
+  // label and its checks in their own cells (2026-10-30). One object still works as before.
+  if (Array.isArray(pageText)) {
+    return <>{pageText.map((p, i) => <FigurePageType key={i} pageText={p} height={height} ink={ink} />)}</>;
+  }
   if (!pageText || !pageText.text) return null;
   const onCard = world.page ? {body: world.ink, accent: world.accent} : {body: ink.body, accent: ink.accent};
   const [x, y] = pageText.at || [0.5, 0.42];
