@@ -205,7 +205,9 @@ def build_derived(parent: Project, cut):
                  "content_type": "short",
                  "derived_from": parent.dir.name,
                  "parent_segments": cut["segments"]}
-    for k in ("music", "music_gain"):
+    # cta_book: a parent that turns the book cover off (like-and-subscribe-only videos)
+    # must turn it off on its Shorts too, or every Short's outro card shows the book (#80).
+    for k in ("music", "music_gain", "cta_book"):
         if parent.data.get(k) is not None:
             proj_data[k] = parent.data[k]
 
