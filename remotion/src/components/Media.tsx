@@ -3,7 +3,8 @@ import {AbsoluteFill, Easing, Img, Video, interpolate, spring, staticFile, useCu
 import rough from 'roughjs';
 import {BRAND} from '../brand';
 import {useInk, PAPER_SHADOW} from '../ink';
-import {PaperSheet, Tape} from './PaperNote';
+import {PaperSheet, Tape, litBoxShadow} from './PaperNote';
+import {useTypeScale, useHeadingFamily} from '../type';
 import {useWorld} from './PaperWorld';
 
 // --- figure MARKS: hand-drawn circle/arrow/underline/box in the figure's OWN image space,
@@ -170,6 +171,13 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
   const ink = useInk();
+  // phone type (2026-11-01): kicker is an eyebrow above a title, the headline when alone;
+  // the column lifts clear of the larger captions, and the mount is lit paper on lit worlds
+  // a figure's heading sits at the heading FLOOR, not its natural size: the art is the
+  // content here, and every pixel of heading comes out of the document's height
+  const {on: phone, ts, floor} = useTypeScale();
+  const headFamily = useHeadingFamily();
+  const lit = Boolean(useWorld().lit) && ink.paper;
   const revealFrac = fields.imageFromFrac ?? 0;
   const revealAt = revealFrac * durationInFrames;
   const phased = revealFrac > 0 && !!fields.title;
@@ -226,16 +234,20 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
   // (#50, 2026-07-31: a deck referencing `imagegen/x.png` instead of `assets/imagegen/x.png`).
   // Degrade to the caption card instead — a missing image must never cost a 20-minute render.
   const img = fields.image ? (
-    <Img src={staticFile(fields.image)} style={{maxWidth: '100%', maxHeight: Math.round(height * 0.56), objectFit: 'contain', display: 'block', borderRadius: 8}} />
+    <Img src={staticFile(fields.image)} style={{maxWidth: '100%', maxHeight: Math.round(height * (phone ? 0.42 : 0.56)), objectFit: 'contain', display: 'block', borderRadius: lit ? 2 : 8}} />
   ) : null;
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 6%'}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 6%', paddingBottom: phone ? height * 0.21 : 0}}>
       {/* Kicker marginBottom 0.025 -> 0.07 (2026-08-11): at the larger size the kicker reached
           the mount's top-left tape, which draws over it and ate the first characters ("SERIES"
           rendered as "ERIES"). The tape overhangs the corner by roughly height*0.06, so the
           kicker has to clear the TAPE, not just the mount edge. */}
-      {fields.kicker ? (
-        <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: height * 0.030, letterSpacing: 4, textTransform: 'uppercase', opacity: kIntro, marginBottom: height * 0.07}}>
+      {fields.kicker && phone && !fields.title ? (
+        <div style={{fontFamily: headFamily, color: ink.body, fontWeight: 900, fontSize: ts('heading', 0), lineHeight: 1.08, letterSpacing: -0.5, textAlign: 'center', opacity: kIntro, marginBottom: height * 0.075}}>
+          {fields.kicker}
+        </div>
+      ) : fields.kicker ? (
+        <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: ts('eyebrow', height * 0.030), letterSpacing: 4, textTransform: 'uppercase', opacity: kIntro, marginBottom: height * (phone && persistentTitle ? 0.014 : 0.07)}}>
           {fields.kicker}
         </div>
       ) : null}
@@ -254,7 +266,7 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
         // "It traveled" as "t raveled", "The situation" as "he situation", "People left" as
         // "eople left". The kicker got this clearance in 2026-08-11; persistentTitle landed
         // 2026-07-28 and was never re-checked against the tape. Clear the TAPE, not the mount.
-        <div style={{textAlign: 'center', padding: '0 4%', fontFamily: BRAND.font, color: ink.body, fontWeight: 900, fontSize: height * 0.042, lineHeight: 1.16, opacity: kIntro, marginBottom: height * 0.075, textShadow: ink.paper ? PAPER_SHADOW : '0 3px 18px rgba(0,0,0,.6)'}}>
+        <div style={{textAlign: 'center', padding: '0 4%', fontFamily: phone ? headFamily : BRAND.font, color: ink.body, fontWeight: 900, fontSize: phone ? floor('heading') : height * 0.042, lineHeight: phone ? 1.08 : 1.16, letterSpacing: phone ? -0.5 : undefined, opacity: kIntro, marginBottom: height * 0.075, textShadow: ink.paper ? PAPER_SHADOW : '0 3px 18px rgba(0,0,0,.6)'}}>
           {figColorize(fields.title, fields.accent, fields.accent2, ink.accent, (ink.danger ?? (ink.paper ? '#c2352b' : BRAND.red)))}
         </div>
       ) : null}
@@ -270,8 +282,19 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
       // positioned at negative offsets, so tape placed inside would be clipped away on
       // exactly the figures that most need it — nearly all of them.
       <div style={{position: 'relative', maxWidth: '76%', transform: `scale(${scale})`, opacity: imgOpacity}}>
-      <div style={{position: 'relative', background: ink.paper ? undefined : '#fff', borderRadius: 26, padding: height * 0.022, boxShadow: ink.paper ? PAPER_SHADOW : '0 40px 120px rgba(0,0,0,.55)', overflow: (tour || autoKen) ? 'hidden' : undefined}}>
-        {ink.paper ? <PaperSheet id={`mount:${fields.image ?? fields.title ?? ''}`} family="card_index" radius={26} tint="#fffcf5" /> : null}
+      {/* MOUNT BORDER vs TAPE (operator 2026-11-01: "make sure it's not covering text").
+          A corner tape (width height*0.16, Tape at tl/br) crosses the mount's corner on a
+          diagonal and reaches ~height*0.066 in along it (x + y <= 0.066H from the corner),
+          plus a few degrees of seeded tilt. With a border of 0.022H the art started inside
+          that triangle, so #79 s11's tape sat on the "T" of a document headline. The art
+          clears the tape when its corner sits further in than the reach, i.e. when the side
+          border plus the top border exceed 0.066H. Lit worlds use 0.06H at the sides and
+          0.03H top and bottom (0.09H), not a deep border all round: a 0.064H border on every
+          side cost the art so much height that #79's wide document crops shrank to a third
+          of the frame (proof, 2026-11-01). So tape lands only on the mount's own paper, and
+          the art keeps 0.42H with the column still ending above the caption pill (~0.76H). */}
+      <div style={{position: 'relative', background: ink.paper ? undefined : '#fff', borderRadius: lit ? 5 : 26, padding: lit ? `${height * 0.03}px ${height * 0.06}px` : height * 0.022, boxShadow: lit ? litBoxShadow(height, 1.2) : ink.paper ? PAPER_SHADOW : '0 40px 120px rgba(0,0,0,.55)', overflow: (tour || autoKen) ? 'hidden' : undefined}}>
+        {ink.paper ? <PaperSheet id={`mount:${fields.image ?? fields.title ?? ''}`} family="card_index" radius={lit ? 5 : 26} tint="#fffcf5" /> : null}
         {pieces.length ? (
           // assembling: base image hidden; each piece is a clipped copy wiping in on cue
           <div style={{position: 'relative', ...(tour || {})}}>
@@ -327,7 +350,7 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
           band it needs to clear. */}
       {fields.caption ? (
         <div style={{fontFamily: BRAND.font, color: ink.body, opacity: 0.75 * imgOpacity,
-                     fontSize: height * 0.028, lineHeight: 1.35, textAlign: 'center',
+                     fontSize: ts('caption', height * 0.028), lineHeight: phone ? 1.2 : 1.35, textAlign: 'center',
                      maxWidth: '62%', marginTop: height * 0.055,
                      marginBottom: (fields.source || fields.source_url) ? height * 0.11 : 0}}>
           {fields.caption}
@@ -343,6 +366,9 @@ export const Footage: React.FC<{fields: any; durationInFrames: number}> = ({fiel
   const frame = useCurrentFrame();
   const {height, fps} = useVideoConfig();
   const ink = useInk();
+  const {ts} = useTypeScale();
+  const headFamily = useHeadingFamily();
+  const lit = Boolean(useWorld().lit) && ink.paper;
   const src: string | undefined = fields.image;
   const isVideo = typeof src === 'string' && /\.(mp4|mov|webm|m4v)$/i.test(src);
   const media = src ? (
@@ -380,6 +406,29 @@ export const Footage: React.FC<{fields: any; durationInFrames: number}> = ({fiel
   const intro = spring({frame, fps, config: {damping: 18, stiffness: 90}});
   const winScale = interpolate(intro, [0, 1], [0.94, 1]);
   const kb = interpolate(frame, [0, durationInFrames], [1, 1.06]);
+  // Lit paper worlds (2026-11-01): the inset was a navy studio window (dark inner vignette,
+  // a heavy black halo) on the cream page. There it is a print mounted on card stock in the
+  // world's light, under a real heading, clear of the 44 px captions.
+  if (lit) {
+    return (
+      <AbsoluteFill>
+        {fields.headline ? (
+          <div style={{position: 'absolute', top: '6%', left: '6%', right: '6%', textAlign: 'center', fontFamily: headFamily, color: ink.body,
+                       fontWeight: 900, fontSize: ts('heading', 0), lineHeight: 1.08, letterSpacing: -0.5, opacity: intro}}>
+            {figColorize(fields.headline, fields.accent, fields.accent2, ink.accent, (ink.danger ?? '#c2352b'))}
+          </div>
+        ) : null}
+        <div style={{position: 'absolute', top: fields.headline ? '19%' : '10%', left: '50%', width: '60%',
+                     height: fields.headline ? '52%' : '60%', padding: height * 0.022, borderRadius: 4,
+                     boxShadow: litBoxShadow(height, 1.2), transform: `translateX(-50%) scale(${winScale})`, opacity: intro}}>
+          <PaperSheet id={`footmount:${src ?? ''}`} family="card_index" radius={4} tint="#fffcf5" />
+          <div style={{position: 'relative', width: '100%', height: '100%', overflow: 'hidden', borderRadius: 2}}>
+            <div style={{position: 'absolute', inset: 0, transform: `scale(${kb})`}}>{media}<FigureMarks marks={fields.marks} /></div>
+          </div>
+        </div>
+      </AbsoluteFill>
+    );
+  }
   return (
     <AbsoluteFill>
       {fields.headline ? (

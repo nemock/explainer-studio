@@ -481,6 +481,11 @@ JSON and fix what is fixable (deck pacing, dead air) — at most ONE re-render
 cycle. When you extract frames from the finished render to eyeball the
 slide-type mix, run each extracted frame through `tools/frame_preview.py` and
 Read the preview JPEGs, never the full-res frames (hard rule 9).
+**Then the phone test (2026-11-01): `python3 tools/phone_sheet.py <project_dir>`** (queues
+itself). It tiles one frame per slide at the width an upright phone shows a 16:9 video
+(390 px) and runs an advisory fill check (SPARSE / CROWDED). Read its preview at 100%; any
+slide you cannot read there fails, whatever every other gate said. Rules and thresholds:
+`references/visual-system.md` §5.
 
 **Render robustness (learned the hard way on #34, then #10, then 2026-10-01).** A
 render interrupted mid-encode leaves a **corrupt `work/video_16x9.mp4` ("moov atom

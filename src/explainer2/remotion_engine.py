@@ -957,6 +957,15 @@ MARK_FIELDS = {"circle": ("at",), "box": ("at",), "underline": ("at",),
 # step with useRoughPaths and DoodleAnn, and ANNOTATION_COLORS with colorsFor.
 ANNOTATION_FIELDS = {**MARK_FIELDS, "doodle": ("at",)}
 ANNOTATION_COLORS = ("green", "red", "white", "amber")
+# NODE-ANCHORED ANNOTATIONS (2026-11-01, visual upgrade). On a schematic, a circle/box/
+# underline may name its subject with `target: "<node id>"` instead of `at`; Schematic.tsx
+# draws it around that node's rendered box, inside the camera, so it lands wherever layout
+# puts the node. Frame coordinates cannot survive the phone type scale, which resizes and
+# refits every node: s04's circle on #79 was authored at [0.5, 0.62] around a note that
+# moves. On PHONE_TYPE_THEMES an old `at` circle that sits on a node is snapped to it.
+# Keep this tuple in step with `phoneType` in remotion/src/brands/papercraft.ts.
+TARGET_KINDS = ("circle", "box", "underline", "strike")
+PHONE_TYPE_THEMES = ("nemock-deep-dive",)
 MARKS_BLOCKED_NAME = "BLOCKED-MARKS.md"
 
 # What each layer's renderer does with what it is given, keyed by the deck field. `default`
@@ -990,6 +999,29 @@ def _is_point(v):
             and all(isinstance(c, (int, float)) and not isinstance(c, bool) for c in v))
 
 
+def _snap_to_node(ann, nodes):
+    """The id of the schematic node an `at` annotation was authored around, or None.
+    Nearest node centre within 0.12 of the frame (x and y as fractions), so a circle drawn
+    in empty canvas between nodes is left alone."""
+    at = ann.get("at")
+    if ann.get("kind") == "strike":
+        # a strike authored across a note's label: its midpoint, and it must be level
+        f, t = ann.get("from"), ann.get("to")
+        if not (_is_point(f) and _is_point(t)) or abs(f[1] - t[1]) > 0.03:
+            return None
+        at = [(f[0] + t[0]) / 2, (f[1] + t[1]) / 2]
+    if not _is_point(at):
+        return None
+    best, best_d = None, 0.12
+    for n in nodes:
+        if not isinstance(n, dict) or not _is_point([n.get("x"), n.get("y")]):
+            continue
+        d = ((n["x"] - at[0]) ** 2 + (n["y"] - at[1]) ** 2) ** 0.5
+        if d < best_d:
+            best, best_d = n.get("id"), d
+    return best
+
+
 def _mark_problems(sid, marks, key="marks"):
     """One line per entry of a slide's `marks` (the default) or `annotations` (key=
     "annotations") that its renderer cannot draw where it was authored, naming the slide,
@@ -1013,6 +1045,8 @@ def _mark_problems(sid, marks, key="marks"):
                        f"use one of {', '.join(fields)}")
             continue
         missing = [f for f in need if f not in mk]
+        if key == "annotations" and mk.get("target") and kind in TARGET_KINDS:
+            missing = []      # drawn around a schematic node; build_spec checks the id
         if missing:
             if need == ("at",):
                 why = (f"it draws at `at` [x, y] (+ `w`/`h`), so without it the mark lands on "
@@ -1170,6 +1204,16 @@ def build_spec(sp):
         mark_problems += _mark_problems(s["slide"], fields.get("marks") or [])
         mark_problems += _mark_problems(s["slide"], slide.get("annotations") or [],
                                         "annotations")
+        node_ids = {n.get("id") for n in slide.get("nodes") or [] if isinstance(n, dict)}
+        for ai, a in enumerate(slide.get("annotations") or []):
+            if isinstance(a, dict) and a.get("target"):
+                if slide.get("type") != "schematic":
+                    mark_problems.append(f"{s['slide']}: annotations[{ai}] `target` works only on "
+                                         f"a schematic; use `at` [x, y] on a {slide.get('type')}")
+                elif a["target"] not in node_ids:
+                    mark_problems.append(f"{s['slide']}: annotations[{ai}] `target` "
+                                         f"{a['target']!r} names no node on this schematic "
+                                         f"(nodes: {', '.join(sorted(map(str, node_ids)))})")
         # And every authored field the type map never hands to a Paper* component
         # (DROPPED-FIELD CONTRACT above). Raised after the marks, so a deck with both is
         # blocked on its marks first; deck_census lists both at once, before narrate.
@@ -1339,8 +1383,23 @@ def build_spec(sp):
                 if a.get("cue") and f is None:
                     warnings.append(f"{sid}: annotation cue unmatched (\"{a['cue']}\") — proportional fallback")
                 a2["cueFrame"] = f if f is not None else int(round(dur * (ai + 1) / (n + 1)))
+                if (slide.get("type") == "schematic" and not a2.get("target")
+                        and a2.get("kind") in TARGET_KINDS
+                        and sp.data.get("theme") in PHONE_TYPE_THEMES):
+                    snapped = _snap_to_node(a2, slide.get("nodes") or [])
+                    if snapped:
+                        a2["target"] = snapped
+                        warnings.append(f"{sid}: annotation at {a2.get('at') or a2.get('from')} snapped to node "
+                                        f"{snapped!r}; author it as `target` (phone type moves nodes)")
                 resolved.append(a2)
-            sc["annotations"] = resolved
+            # Node-anchored marks ride the schematic itself (inside its camera); the rest stay
+            # on the frame-space overlay.
+            on_node = [a for a in resolved if a.get("target") and slide.get("type") == "schematic"]
+            if on_node:
+                sc["fields"]["nodeAnnotations"] = on_node
+            resolved = [a for a in resolved if a not in on_node]
+            if resolved:
+                sc["annotations"] = resolved
             # NARRATIVE-ORDER GUARD (operator-caught, #56): a circle drawn before the
             # thing it circles exists reads as nonsense. On a schematic, nothing exists
             # before the first stage reveals, so any annotation resolving earlier is a
@@ -1350,7 +1409,7 @@ def build_spec(sp):
                 first_cue = slide["stages"][0].get("cue", "")
                 f0 = _resolve_phrase(first_cue, segw, s0, fps) if first_cue else None
                 if f0 is not None:
-                    for a2 in resolved:
+                    for a2 in on_node + resolved:
                         if a2["cueFrame"] < f0:
                             warnings.append(
                                 f"{sid}: annotation fires at frame {a2['cueFrame']} but the "
@@ -1473,7 +1532,12 @@ def build_spec(sp):
         "durationInFrames": int(round(total * fps)),
         "audio": "narration.wav", "words": words, "scenes": scenes,
         "captionBottomPx": int(round(height * cap_frac)),
-        "captionFontSize": int(round(height * (0.032 if height >= 1600 else 0.026))),
+        # 0.026 of a 1080 frame is 28 px: about 6 pt on a phone held upright. The phone
+        # type scale themes take 44 px (operator 2026-11-01, visual upgrade).
+        "captionFontSize": int(round(height * (0.032 if height >= 1600 else
+                                               0.041 if sp.data.get("theme") in PHONE_TYPE_THEMES
+                                               else 0.026))),
+        **({"headingFont": sp.data["heading_font"]} if sp.data.get("heading_font") else {}),
         "audioFrom": audio_from,
         # Visual world: '' (navy studio) or 'paper' (Cut & Bond off-white). Set in project.json.
         "theme": sp.data.get("theme", ""),

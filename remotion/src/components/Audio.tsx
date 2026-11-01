@@ -2,6 +2,8 @@ import React from 'react';
 import {AbsoluteFill, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {useAudioData, visualizeAudio} from '@remotion/media-utils';
 import {BRAND} from '../brand';
+import {useInk} from '../ink';
+import {useTypeScale} from '../type';
 
 // motion-playbook §2G — true audio-reactive accents. Both handle the sting audio offset:
 // the narration starts at `audioFrom` (frames), so we sample at (absoluteFrame - audioFrom).
@@ -39,18 +41,22 @@ export const Waveform: React.FC<{fields: any; durationInFrames: number; sceneFro
   const f = sceneFrom + local - audioFrom;
   const bins = data && f >= 0 ? visualizeAudio({fps, frame: f, audioData: data, numberOfSamples: 64}) : new Array(64).fill(0);
   const H = height * 0.34;
+  // paper worlds: the white headline and white bars were invisible on cream (2026-11-01 review)
+  const ink = useInk();
+  const {ts} = useTypeScale();
+  const light = ink.paper ? ink.body : BRAND.white;
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', flexDirection: 'column'}}>
       {fields.kicker ? (
-        <div style={{fontFamily: BRAND.font, color: BRAND.green, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 5, textTransform: 'uppercase', opacity: intro, marginBottom: height * 0.03}}>{fields.kicker}</div>
+        <div style={{fontFamily: BRAND.font, color: BRAND.green, fontWeight: 800, fontSize: ts('eyebrow', height * 0.024), letterSpacing: 5, textTransform: 'uppercase', opacity: intro, marginBottom: height * 0.03}}>{fields.kicker}</div>
       ) : null}
       {fields.headline ? (
-        <div style={{fontFamily: BRAND.font, color: BRAND.white, fontWeight: 900, fontSize: height * 0.06, textAlign: 'center', opacity: intro, marginBottom: height * 0.03, textShadow: '0 10px 50px rgba(0,0,0,.6)'}}>{fields.headline}</div>
+        <div style={{fontFamily: BRAND.font, color: light, fontWeight: 900, fontSize: ts('heading', height * 0.06), textAlign: 'center', opacity: intro, marginBottom: height * 0.03, textShadow: ink.paper ? 'none' : '0 10px 50px rgba(0,0,0,.6)'}}>{fields.headline}</div>
       ) : null}
       <div style={{display: 'flex', alignItems: 'center', gap: height * 0.006, height: H, width: '78%', opacity: intro}}>
         {bins.map((v, i) => {
           const h = Math.max(height * 0.01, Math.min(H, v * height * 5));
-          return <div key={i} style={{flex: 1, height: h, background: i % 2 ? BRAND.green : BRAND.white, borderRadius: 4, alignSelf: 'center'}} />;
+          return <div key={i} style={{flex: 1, height: h, background: i % 2 ? BRAND.green : light, borderRadius: 4, alignSelf: 'center'}} />;
         })}
       </div>
     </AbsoluteFill>

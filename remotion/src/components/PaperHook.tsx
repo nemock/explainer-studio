@@ -3,7 +3,8 @@ import {AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, use
 import {BRAND} from '../brand';
 import {useInk} from '../ink';
 import {useWorld} from './PaperWorld';
-import {PaperSheet} from './PaperNote';
+import {PaperSheet, litShadowFilter} from './PaperNote';
+import {useTypeScale, useHeadingFamily} from '../type';
 import {PaperStage, isStageName, stageZonePx, fitStageText} from './PaperStage';
 
 // Paper cold-open hook (2026-07-14) — REPLACES the rotating 3D "buckyball" (Hero3D) as the
@@ -65,6 +66,9 @@ export const PaperHook: React.FC<{fields: any}> = ({fields}) => {
     ? interpolate(frame, [0, 150, 900], [1.05, 1.12, 1.2], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})
     : interpolate(frame, [0, 150], [1.05, 1.12], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const headIn = spring({frame: frame - 6, fps, config: {damping: 16, stiffness: 120}});
+  const {on: phone, ts} = useTypeScale();
+  const headFamily = useHeadingFamily();
+  const lit = Boolean(world.lit) && !world.page;
   const kickIn = interpolate(frame, [0, 14], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
 
   // With a full-bleed illustration the label sits near the top (over the art). With NO image
@@ -85,7 +89,7 @@ export const PaperHook: React.FC<{fields: any}> = ({fields}) => {
 
       <div style={{...labelPos, opacity: headIn, width: '84%'}}>
         {fields.kicker ? (
-          <div style={{textAlign: 'center', color: ink.accent, fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.026, letterSpacing: 5, textTransform: 'uppercase', opacity: kickIn, marginBottom: height * 0.018}}>
+          <div style={{textAlign: 'center', color: ink.accent, fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('eyebrow', height * 0.026), letterSpacing: phone ? 4 : 5, textTransform: 'uppercase', opacity: kickIn, marginBottom: height * 0.018}}>
             {fields.kicker}
           </div>
         ) : null}
@@ -97,12 +101,14 @@ export const PaperHook: React.FC<{fields: any}> = ({fields}) => {
         {/* A dark-page world (only papercraft-matrix, 2026-10-23) prints the headline on real
             card stock in its own sage paper with its own card ink: the cream card and the
             world's light hookInk were invisible together. Every other world is unchanged. */}
-        <div style={{position: 'relative', borderRadius: 24, padding: `${height * 0.032}px ${width * 0.045}px`, margin: '0 auto', maxWidth: '100%',
-                     filter: `drop-shadow(0 ${height * 0.014}px ${height * 0.032}px ${world.page ? world.shadow : 'rgba(120,92,40,.28)'})`}}>
+        <div style={{position: 'relative', borderRadius: lit ? 6 : 24, padding: `${height * 0.032}px ${width * 0.045}px`, margin: '0 auto', maxWidth: '100%',
+                     filter: lit ? litShadowFilter(Math.min(width, height), 1.2)
+                       : `drop-shadow(0 ${height * 0.014}px ${height * 0.032}px ${world.page ? world.shadow : 'rgba(120,92,40,.28)'})`}}>
           {ink.typeOnPaper || world.page
-            ? <PaperSheet id={`hook:${fields.headline ?? ''}`} family="card" radius={24} tint={world.page ? world.paper : '#fffdf6'} />
+            ? <PaperSheet id={`hook:${fields.headline ?? ''}`} family="card" radius={lit ? 6 : 24} tint={world.page ? world.paper : '#fffdf6'} />
             : <div style={{position: 'absolute', inset: 0, borderRadius: 24, background: '#fbf6e8', border: '3px solid rgba(44,30,78,.10)'}} />}
-          <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.072, lineHeight: 1.06, color: world.page ? world.ink : INK, textAlign: 'center'}}>
+          <div style={{position: 'relative', fontFamily: headFamily, fontWeight: 900, fontSize: ts('heading', height * 0.072), lineHeight: 1.06, color: world.page ? world.ink : INK, textAlign: 'center',
+                       mixBlendMode: lit ? 'multiply' : undefined}}>
             {colorize(fields.headline || '', fields.accent, world.page ? world.accent : ink.accent)}
           </div>
         </div>

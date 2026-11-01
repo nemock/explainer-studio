@@ -2,6 +2,7 @@ import React from 'react';
 import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
 import {useInk} from '../ink';
+import {useTypeScale} from '../type';
 
 // This file's own Kicker, separate from the one in TextScenes. It hardcoded BRAND.green
 // and never read the ink, so on every theme whose accent is not green the kicker above a
@@ -11,8 +12,9 @@ import {useInk} from '../ink';
 // BRAND.green, so nothing about them moves.
 const Kicker: React.FC<{text?: string; o: number; height: number}> = ({text, o, height}) => {
   const ink = useInk();
+  const {on, ts} = useTypeScale();
   return text ? (
-    <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 5, textTransform: 'uppercase', textAlign: 'center', opacity: o, marginBottom: height * 0.035}}>
+    <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: ts('eyebrow', height * 0.024), letterSpacing: 5, textTransform: 'uppercase', textAlign: 'center', opacity: o, marginBottom: height * 0.035}}>
       {text}
     </div>
   ) : null;
@@ -24,6 +26,7 @@ export const DrawLine: React.FC<{fields: any; durationInFrames: number}> = ({fie
   const frame = useCurrentFrame();
   const {fps, height, width} = useVideoConfig();
   const ink = useInk();
+  const {on, ts} = useTypeScale();
   const pts: number[] = (fields.points && fields.points.length ? fields.points : [10, 30, 25, 60, 45, 80]);
   const W = width * 0.62, H = height * 0.42;
   const max = Math.max(...pts), min = Math.min(...pts);
@@ -60,6 +63,7 @@ export const Waterfall: React.FC<{fields: any; durationInFrames: number}> = ({fi
   const per = durationInFrames / Math.max(1, bars.length + 1);
   const maxV = Math.max(1, ...bars.map((b: any) => Math.abs(b.value || 0)));
   const ink = useInk();
+  const {on, ts} = useTypeScale();
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
       <Kicker text={fields.kicker} o={spring({frame, fps, config: {damping: 18}})} height={height} />
@@ -71,9 +75,9 @@ export const Waterfall: React.FC<{fields: any; durationInFrames: number}> = ({fi
           const col = (b.kind === 'bad') ? (ink.danger ?? BRAND.red) : isEnd ? BRAND.green : ink.neutral;
           return (
             <div key={i} style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: height * 0.012}}>
-              <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.026, color: ink.body}}>{b.value}</div>
+              <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: ts('sub', height * 0.026), color: ink.body}}>{b.value}</div>
               <div style={{width: height * 0.12, height: (Math.abs(b.value) / maxV) * height * 0.32 * g, background: col, borderRadius: 8}} />
-              <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: height * 0.02, color: ink.body, opacity: 0.75, maxWidth: height * 0.16, textAlign: 'center'}}>{b.label}</div>
+              <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: ts('sub', height * 0.02), color: ink.body, opacity: 0.75, maxWidth: height * (on ? 0.26 : 0.16), textAlign: 'center'}}>{b.label}</div>
             </div>
           );
         })}
@@ -90,6 +94,7 @@ export const Pictograph: React.FC<{fields: any; durationInFrames: number}> = ({f
   const shown = Math.round(interpolate(frame, [0, durationInFrames * 0.7], [0, filled], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}));
   const cols = Math.ceil(Math.sqrt(total * 1.6));
   const ink = useInk();
+  const {on, ts} = useTypeScale();
   const col = fields.kind === 'good' ? BRAND.green : (ink.danger ?? BRAND.red);
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
@@ -100,7 +105,7 @@ export const Pictograph: React.FC<{fields: any; durationInFrames: number}> = ({f
         ))}
       </div>
       {fields.label ? (
-        <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.03, color: ink.body, marginTop: height * 0.035, textAlign: 'center', maxWidth: '70%'}}>
+        <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('body', height * 0.03), color: ink.body, marginTop: height * 0.035, textAlign: 'center', maxWidth: '70%'}}>
           <span style={{color: col, fontWeight: 900}}>{shown}</span> {fields.label}
         </div>
       ) : null}
@@ -116,6 +121,7 @@ export const Ring: React.FC<{fields: any; durationInFrames: number}> = ({fields,
   const v = interpolate(frame, [0, durationInFrames * 0.7], [0, target], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const R = height * 0.16, C = 2 * Math.PI * R;
   const ink = useInk();
+  const {on, ts} = useTypeScale();
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
       <Kicker text={fields.kicker} o={spring({frame, fps, config: {damping: 18}})} height={height} />
@@ -127,7 +133,7 @@ export const Ring: React.FC<{fields: any; durationInFrames: number}> = ({fields,
         </svg>
         <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.075, color: ink.body, fontVariantNumeric: 'tabular-nums'}}>{Math.round(v)}%</div>
       </div>
-      {fields.label ? <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.028, color: ink.body, opacity: 0.8, marginTop: height * 0.03}}>{fields.label}</div> : null}
+      {fields.label ? <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('body', height * 0.028), color: ink.body, opacity: 0.8, marginTop: height * 0.03}}>{fields.label}</div> : null}
     </AbsoluteFill>
   );
 };
@@ -141,6 +147,7 @@ export const Funnel: React.FC<{fields: any; durationInFrames: number}> = ({field
   const itemTimes: (number | null)[] | undefined = fields.itemTimes;
   const per = durationInFrames / Math.max(1, stages.length + 1);
   const ink = useInk();
+  const {on, ts} = useTypeScale();
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
       <Kicker text={fields.kicker} o={spring({frame, fps, config: {damping: 18}})} height={height} />
@@ -151,8 +158,8 @@ export const Funnel: React.FC<{fields: any; durationInFrames: number}> = ({field
           const w = interpolate(i, [0, Math.max(1, stages.length - 1)], [62, 26]); // % width narrowing
           return (
             <div key={i} style={{width: `${w}vw`, padding: height * 0.022, borderRadius: 12, background: `rgba(61,220,132,${0.5 - i * 0.07})`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: e, transform: `scaleY(${e})`}}>
-              <span style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.032, color: ink.body}}>{s.label}</span>
-              <span style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.034, color: ink.body}}>{s.value}</span>
+              <span style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('body', height * 0.032), color: ink.body}}>{s.label}</span>
+              <span style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: ts('body', height * 0.034), color: ink.body}}>{s.value}</span>
             </div>
           );
         })}

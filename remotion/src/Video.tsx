@@ -35,6 +35,7 @@ import {ReactiveStrip, Waveform} from './components/Audio';
 import {PaperAtom, ElementStat, DiscoveryCard, PeriodicSlot, PaperWord, PaperFire, PaperProp, PaperFootage, PaperCTA, PaperMolecule, SketchbookPage} from './components/Chem';
 import {InkProvider, isPaperTheme} from './ink';
 import {WorldProvider} from './components/PaperWorld';
+import {HeadingFontProvider} from './type';
 import {ChibiPresenter} from './components/ChibiPresenter';
 
 // the component catalog (motion-playbook §2). Unknown -> TalkingScene (captions-led).
@@ -176,7 +177,7 @@ const BRG_CREAM_THEMES = ['brg-deep-dive', 'wte-guide', 'plg-guide', 'pmg-guide'
 const CIRCUMVENT_CREAM = '#f2ede0';
 
 export const Video: React.FC<VideoProps> = (props) => {
-  const {audio, words, scenes, captionBottomPx, captionFontSize, audioFrom, width, height, theme, captionAccent, showCaptions, presenter} = props;
+  const {audio, words, scenes, captionBottomPx, captionFontSize, audioFrom, width, height, theme, captionAccent, showCaptions, presenter, headingFont} = props;
   // Paper worlds: 'nemock-deep-dive' (Dave's deep dives) and 'cut-bond' (Cut & Bond).
   // Everything else ('midnight', the ISO 14971 series) keeps the navy brand.
   const paper = isPaperTheme(theme);
@@ -202,6 +203,7 @@ export const Video: React.FC<VideoProps> = (props) => {
   return (
     <InkProvider theme={theme}>
     <WorldProvider theme={theme}>
+    <HeadingFontProvider font={headingFont}>
     {/* base page: BRG's cream is a shade cooler than the FWF sheet; every other theme
         keeps its exact prior value so no existing render moves. */}
     {/* papercraft-matrix (2026-10-23) has a dark page; PaperBackground paints it from the
@@ -267,6 +269,7 @@ export const Video: React.FC<VideoProps> = (props) => {
         </Sequence>
       ) : null}
     </AbsoluteFill>
+    </HeadingFontProvider>
     </WorldProvider>
     </InkProvider>
   );

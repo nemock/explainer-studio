@@ -50,6 +50,12 @@ Read this file before authoring any video's motion spec.
 
 ## 1. The brand motion system (the constants)
 
+> **Paper worlds (every current deep dive): type sizes, the slide heading, lit paper, layout
+> and the phone test live in [visual-system.md](visual-system.md), which wins over this
+> section.** The constants below are the original NAVY studio system (`midnight`, the ISO
+> series); on paper worlds the kicker is no longer "uppercase green" alone (visual-system §2a)
+> and nothing breathes (papercraft-motion-spec §2). Updated 2026-11-01.
+
 - **Palette:** navy radial background `#15314a → #0d1428 → #090d1c` (hotspot to edge);
   **red `#ff4d4d`** (negative / alarm / the contrarian accent), **green `#3ddc84`**
   (positive / active word / brand), **white `#f5f7ff`** (body). Numbers use
@@ -781,6 +787,8 @@ project's min/max. Fix every item before the booth opens.
       is the exception — it uses `<Video loop>` so short B-roll loops; see §E.*
 - [ ] **`bin/explainer2 deckcheck <dir>` exits 0** (no slide renders empty, no field a
       component would drop, no malformed mark, projected length inside min/max).
+- [ ] Changed a component? `python3 tools/test_type_floor.py` passes (no new type under the
+      phone floor; visual-system.md §2). After the render, `python3 tools/phone_sheet.py <dir>`.
 - [ ] Still-check the key frames before the full render, through the render queue
       (SKILL hard rule 7): mark-carrying scenes with `python3 tools/mark_stills.py <dir>`
       (queues itself). Any other frame, once a render has staged

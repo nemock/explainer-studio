@@ -2,7 +2,9 @@ import React from 'react';
 import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
 import {useInk, PAPER_SHADOW} from '../ink';
-import {PaperSheet} from './PaperNote';
+import {PaperSheet, litShadowFilter} from './PaperNote';
+import {useWorld} from './PaperWorld';
+import {useTypeScale, useHeadingFamily} from '../type';
 import {PaperStage, isStageName, stageZonePx, fitStageText} from './PaperStage';
 import {colorizeText} from './colorize';
 
@@ -12,8 +14,9 @@ const colorize = (text: string, accent: string[] = [], red: string[] = [],
 
 const SubKicker: React.FC<{text?: string; height: number}> = ({text, height}) => {
   const ink = useInk();
+  const {ts} = useTypeScale();
   return text ? (
-    <div style={{fontFamily: BRAND.font, color: ink.body, opacity: 0.75, fontWeight: 700, fontSize: height * 0.03, marginTop: height * 0.02, textAlign: 'center'}}>
+    <div style={{fontFamily: BRAND.font, color: ink.body, opacity: 0.75, fontWeight: 700, fontSize: ts('body', height * 0.03), marginTop: height * 0.02, textAlign: 'center'}}>
       {text}
     </div>
   ) : null;
@@ -21,11 +24,12 @@ const SubKicker: React.FC<{text?: string; height: number}> = ({text, height}) =>
 
 const Kicker: React.FC<{text?: string; o: number; height: number}> = ({text, o, height}) => {
   const ink = useInk();
+  const {ts} = useTypeScale();   // on a phone-type world: the eyebrow role (it sits above a headline)
   return text ? (
     // 0.024 -> 0.030 (2026-08-11, operator): at 1080 the kicker was 26px, which is ~5pt on a
     // phone — legible on a desktop preview, a squint in the feed where most of this is watched.
     // Letter-spacing eased 5 -> 4 because tracking that wide at the larger size eats the line.
-    <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: height * 0.030, letterSpacing: 4, textTransform: 'uppercase', textAlign: 'center', opacity: o, marginBottom: height * 0.020}}>
+    <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: ts('eyebrow', height * 0.030), letterSpacing: 4, textTransform: 'uppercase', textAlign: 'center', opacity: o, marginBottom: height * 0.020}}>
       {text}
     </div>
   ) : null;
@@ -77,6 +81,8 @@ export const KineticHeadline: React.FC<{fields: any; durationInFrames?: number}>
   const {fps, height, width} = useVideoConfig();
   const s = spring({frame, fps, config: {damping: 18, stiffness: 90}});
   const ink = useInk();
+  const lit = Boolean(useWorld().lit) && ink.typeOnPaper;
+  const headFamily = useHeadingFamily();
 
   // OPT-IN stage scene (deck field `stage`). Deliberately not automatic: statement is the
   // most-used slide type, and putting every one of them in the same room would be its own
@@ -118,9 +124,10 @@ export const KineticHeadline: React.FC<{fields: any; durationInFrames?: number}>
             navy worlds keep bare type, which is correct there: there is no paper to sit on. */}
         <div style={{position: 'relative', maxWidth: '100%',
                      padding: ink.typeOnPaper ? `${height * 0.036}px ${height * 0.055}px` : undefined,
-                     filter: ink.typeOnPaper ? `drop-shadow(0 ${height * 0.013}px ${height * 0.03}px rgba(120,92,40,.24))` : undefined}}>
-          {ink.typeOnPaper ? <PaperSheet id={`stmt:${fields.headline ?? ''}`} family="card" radius={22} tint="#fffdf6" /> : null}
-          <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 900, fontSize: headlineSize, maxWidth: HEADLINE_BOX.w, lineHeight: 1.07, textAlign: 'center', textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
+                     filter: lit ? litShadowFilter(height, 1.2)
+                       : ink.typeOnPaper ? `drop-shadow(0 ${height * 0.013}px ${height * 0.03}px rgba(120,92,40,.24))` : undefined}}>
+          {ink.typeOnPaper ? <PaperSheet id={`stmt:${fields.headline ?? ''}`} family="card" radius={lit ? 6 : 22} tint="#fffdf6" /> : null}
+          <div style={{position: 'relative', fontFamily: headFamily, fontWeight: 900, fontSize: headlineSize, maxWidth: HEADLINE_BOX.w, lineHeight: 1.07, textAlign: 'center', textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
             <RevealWords text={fields.headline} accent={fields.accent} accentRed={fields.accentRed} startDelay={4} />
           </div>
         </div>

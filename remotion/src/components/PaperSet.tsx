@@ -1,6 +1,8 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
+import {useTypeScale, useHeadingFamily} from '../type';
+import {PaperSheet, litBoxShadow} from './PaperNote';
 import {useWorld, Camera, CameraMove, PLANE, Plane, PaperTable, PaperCard, PaperProps, usePaperLayout, resolveCamera, usePlace, usePopup, flick, placeStyle} from './PaperWorld';
 
 // Papercraft Motion — prototype scene components (papercraft-motion-spec.md §7).
@@ -66,6 +68,8 @@ export const PaperSetHook: React.FC<{fields: any; durationInFrames: number}> = (
   const moves: CameraMove[] = [{at: pushAt, to: {zoom: 1.09, y: 0.46}}];
   const cam: Camera = resolveCamera(frame, useVideoConfig().fps, moves);
   const head = usePlace(pushAt + 4);
+  const {on: phone, ts} = useTypeScale();
+  const headFamily = useHeadingFamily();
 
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
@@ -91,7 +95,7 @@ export const PaperSetHook: React.FC<{fields: any; durationInFrames: number}> = (
           {beats.map((b, i) => (
             <Placed key={i} at={beatAt(i)}>
               <PaperCard id={`beat:${i}:${b}`} family="card_tag" style={{transform: `rotate(${(i % 2 ? 1.6 : -1.4)}deg) scale(${flick(frame, beatAt(i))})`}}>
-                <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.034, color: W.ink, whiteSpace: 'nowrap'}}>{b}</div>
+                <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: ts('sub', height * 0.034), color: W.ink, whiteSpace: 'nowrap'}}>{b}</div>
               </PaperCard>
             </Placed>
           ))}
@@ -106,13 +110,13 @@ export const PaperSetHook: React.FC<{fields: any; durationInFrames: number}> = (
                      transform: 'translateX(-50%)', maxWidth: width * (portrait ? 0.86 : 0.62)}}>
           <div style={{opacity: frame >= pushAt + 4 ? 1 : 0}}>
             <div style={{position: 'absolute', left: '50%', bottom: -height * 0.016, width: '88%', height: height * 0.034,
-                         transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(8px)', opacity: head.shadowOpacity}} />
+                         transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(8px)', opacity: W.lit ? 0 : head.shadowOpacity}} />
             <PaperCard id={`head:${fields.headline ?? ''}`} style={{...head.object, padding: `${height * 0.03}px ${width * 0.03}px`, borderRadius: 20}}>
               {fields.kicker ? (
-                <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.022, letterSpacing: 4,
+                <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('eyebrow', height * 0.022), letterSpacing: 4,
                              textTransform: 'uppercase', color: W.accent, textAlign: 'center', marginBottom: height * 0.012}}>{fields.kicker}</div>
               ) : null}
-              <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.062, lineHeight: 1.08,
+              <div style={{fontFamily: headFamily, fontWeight: 900, fontSize: ts('heading', height * 0.062), lineHeight: 1.08,
                            color: W.ink, textAlign: 'center'}}>{colorize(fields.headline || '', fields.accent, W.accent)}</div>
             </PaperCard>
           </div>
@@ -139,6 +143,7 @@ export const PaperPopCard: React.FC<{fields: any; durationInFrames: number}> = (
   // fully above it (the same lower-third lesson as the Shorts thirds layout). Portrait
   // captions take a deeper band, so the card shrinks and rides higher to clear it.
   const cardH = portrait ? frameH * 0.44 : frameH * 0.64;
+  const {on: phone, ts} = useTypeScale();
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <Plane cam={cam} factor={PLANE.table}><PaperTable seed={fields.label || 'card'} tightenAt={inAt} /></Plane>
@@ -159,11 +164,11 @@ export const PaperPopCard: React.FC<{fields: any; durationInFrames: number}> = (
                    style={{height: '100%', maxWidth: width * 0.92, objectFit: 'contain', display: 'block'}} />
             ) : null}
             <div style={{position: 'absolute', left: 0, right: 0, top: '64%', textAlign: 'center'}}>
-              <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: cardH * 0.082, letterSpacing: 1, color: W.ink,
+              <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: phone ? Math.max(cardH * 0.082, ts('label', 0)) : cardH * 0.082, letterSpacing: 1, color: W.ink,
                            opacity: interpolate(frame, [popAt + 8, popAt + 18], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}),
                            transform: `scale(${flick(frame, inAt)})`}}>{fields.label}</div>
               {fields.sub ? (
-                <div style={{fontFamily: BRAND.font, fontWeight: 600, fontSize: cardH * 0.034, color: W.accent, marginTop: cardH * 0.02, padding: '0 12.5%',
+                <div style={{fontFamily: BRAND.font, fontWeight: phone ? 700 : 600, fontSize: ts('sub', cardH * 0.034), color: W.accent, marginTop: cardH * 0.02, padding: '0 12.5%',
                              opacity: interpolate(frame, [popAt + 14, popAt + 24], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})}}>{fields.sub}</div>
               ) : null}
             </div>
@@ -207,6 +212,8 @@ export const PaperCounter: React.FC<{fields: any; durationInFrames: number}> = (
   const raw = value * (landed / nChips);
   const shown = decimals ? Number(raw.toFixed(decimals)) : Math.round(raw);
   const chipW = width * (portrait ? 0.34 : 0.2), chipH = height * 0.062;
+  const {on, ts} = useTypeScale();
+  const lit = Boolean(W.lit);
 
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
@@ -214,7 +221,7 @@ export const PaperCounter: React.FC<{fields: any; durationInFrames: number}> = (
       <PaperProps items={fields.props} />
       {fields.kicker ? (
         <div style={{position: 'absolute', top: frameH * (portrait ? 0.09 : 0.14), left: 0, right: 0, textAlign: 'center', fontFamily: BRAND.font,
-                     fontWeight: 800, fontSize: height * 0.026, letterSpacing: 5, textTransform: 'uppercase', color: W.kicker ?? W.accentSoft}}>
+                     fontWeight: 800, fontSize: ts('eyebrow', height * 0.026), letterSpacing: 5, textTransform: 'uppercase', color: W.kicker ?? W.accentSoft}}>
           {fields.kicker}
         </div>
       ) : null}
@@ -226,11 +233,21 @@ export const PaperCounter: React.FC<{fields: any; durationInFrames: number}> = (
           // seeded per-chip jitter (x + tilt) so the stack reads chip-by-chip, hand-placed
           const j = ((i * 2654435761) % 97) / 97 - 0.5;
           return (
+            // lit: the chips are real card stock in the world's light (the last flat CSS
+            // surface with a fake borderBottom edge, papercraft-substrate-plan §5e left it)
+            lit ? (
+              <div key={i} style={{position: 'absolute', bottom: i * chipH * 0.86, left: j * chipW * 0.12,
+                                   width: chipW, height: chipH, boxShadow: litBoxShadow(height, 0.45), ...p,
+                                   transform: `${p.transform} rotate(${(i % 2 ? 2.4 : -2.2) + j * 1.5}deg)`}}>
+                <PaperSheet id={`chip:${i}`} family="card_tag" radius={3} edge={7} tint={W.paper} />
+              </div>
+            ) : (
             <div key={i} style={{position: 'absolute', bottom: i * chipH * 0.86, left: j * chipW * 0.12,
                                  width: chipW, height: chipH,
                                  background: W.paper, borderRadius: 10, borderBottom: `6px solid ${W.paperShade}`,
                                  boxShadow: `0 ${height * 0.008}px ${height * 0.02}px ${W.shadow}`, ...p,
                                  transform: `${p.transform} rotate(${(i % 2 ? 2.4 : -2.2) + j * 1.5}deg)`}} />
+            )
           );
         })}
         <div style={{position: 'absolute', bottom: -height * 0.018, left: '50%', width: chipW * 1.2, height: height * 0.03,
@@ -241,9 +258,12 @@ export const PaperCounter: React.FC<{fields: any; durationInFrames: number}> = (
       <div style={portrait
         ? {position: 'absolute', left: '50%', top: frameH * 0.2, textAlign: 'center',
            transform: `translateX(-50%) scale(${flick(frame, land)})`}
-        : {position: 'absolute', left: width * 0.52, top: '50%', transform: `translateY(-50%) scale(${flick(frame, land)})`}}>
+        : {position: 'absolute', left: width * 0.52, top: '50%', transform: `translateY(-50%) scale(${flick(frame, land)})`,
+           // phone type: the label is readable now, so it is also long; keep the column on the
+           // frame (#79 s30's label ran off the right edge at 51 px)
+           maxWidth: on ? width * 0.42 : undefined}}>
         <PaperCard id={`num:${fields.label ?? fields.value ?? ''}`} style={{padding: `${height * 0.025}px ${width * 0.03}px`, borderRadius: 22,
-                           boxShadow: `0 ${height * 0.02}px ${height * 0.045}px ${W.shadow}`}}>
+                           boxShadow: lit ? litBoxShadow(height, 1.4) : `0 ${height * 0.02}px ${height * 0.045}px ${W.shadow}`}}>
           <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.15, lineHeight: 1, color: W.ink, fontVariantNumeric: 'tabular-nums'}}>
             {counterFmt(shown, fields.prefix || '', fields.suffix || '', decimals)}
           </div>
@@ -251,7 +271,7 @@ export const PaperCounter: React.FC<{fields: any; durationInFrames: number}> = (
         {fields.label ? (
           <div style={{marginTop: height * 0.024, opacity: interpolate(frame, [land + 4, land + 12], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})}}>
             <PaperCard id={`numlbl:${fields.label ?? ''}`} family="card_tag" style={{display: 'inline-block', padding: `${height * 0.01}px ${width * 0.016}px`, borderRadius: 10, transform: 'rotate(-1.2deg)'}}>
-              <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.03, color: W.accent}}>{fields.label}</div>
+              <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('body', height * 0.03), color: W.accent}}>{fields.label}</div>
             </PaperCard>
           </div>
         ) : null}

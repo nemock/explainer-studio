@@ -280,6 +280,13 @@ motion-playbook §5/§2H). What you author in `deck.json`:
   the render refuses it (`BLOCKED-MARKS.md`, 2026-09-24). #48, one of its Shorts and #67
   shipped seven with the wrong geometry, and 26 `amber`/`navy` annotations never appeared
   (amber has been a real ink since that day).
+- **On a `schematic`, an annotation names its node: `"target": "<node id>"` instead of
+  `at`/`from`/`to`** (circle, box, underline, strike; 2026-11-01). The schematic draws it
+  around that node's laid-out box, so it lands on the note wherever the phone type scale
+  puts it; a strike crosses each line of the label. Frame coordinates do not survive that
+  layout (#79's s13/s29 strikes landed on the wrong words). An old coordinate mark sitting
+  on a node is snapped to it on phone-type themes, with a warning; a bad id is refused.
+  Details: `visual-system.md` §5.
 - **`marks: [...]`** — the IMAGE-space twin of annotations, for pointing at something
   INSIDE a `figure`/`footage`'s art (a face, a robot, a chart). Same kinds + cue contract,
   but `at`/`from`/`to` are **0-1 of the IMAGE**, and the mark rides the Ken Burns so it
@@ -429,6 +436,10 @@ checks it, and the Remotion render drops a missing image without a word.
       longest-shot warning is the tell).
 - [ ] `bin/explainer2 deckcheck <dir>` exits 0 (an `--engine deck` project:
       `bin/explainer2 deck <dir>` builds with no error).
+- [ ] **Phone-type themes (`nemock-deep-dive`, `visual-system.md` §0):** a `kicker` with no
+      title on its slide renders AS the headline, so write it as one ("Two bets", not
+      "SECTION TWO"); schematic annotations use `target`; after the render,
+      `python3 tools/phone_sheet.py <dir>` and Read its preview at 100%.
 
 The deck has no separate operator gate — the operator sees it in the rendered
 video at the Package gate. But a deck that fails §6 fails review.

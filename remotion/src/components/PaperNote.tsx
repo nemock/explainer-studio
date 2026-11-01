@@ -1,5 +1,38 @@
 import React from 'react';
-import {Img, staticFile} from 'remotion';
+import {Img, staticFile, useVideoConfig} from 'remotion';
+import {useWorld} from './PaperWorld';
+
+// LIT PAPER (visual upgrade, 2026-11-01; world token `lit`). The substrates carry real fibre
+// and real shading, and three steps were flattening them on screen:
+//   1. the desaturate step lifted brightness (1.12-1.18) to land the tint on the palette
+//      value, which also washed the paper's own light and grain toward flat white;
+//   2. background removal stripped the cast shadow, and each component put back one uniform
+//      CSS blur of its own (a dozen different values);
+//   3. nothing lit the object itself, so every sheet was evenly lit, which paper never is.
+// Lit mode: tint after a CONTRAST lift instead (fibre survives, mean lands near the same
+// value), lay a light falloff across each sheet from the world's one light (upper left,
+// papercraft-motion-spec §6), and cast two shadows from that light: a tight contact shadow
+// and a soft wide one. Worlds without `lit` render exactly as before.
+const LIT_DESAT = 'grayscale(1) contrast(1.32) brightness(1.07)';
+// bright toward the light, slightly darker away from it; soft-light keeps the tint's hue
+const LIT_SHADE = 'rgba(255,255,255,.80) 0%, rgba(255,255,255,0) 40%, rgba(0,0,0,0) 60%, rgba(0,0,0,.42) 100%';
+const LIGHT_ANGLE = 128;   // degrees, CSS linear-gradient: light from the upper left
+
+/** Two shadows from the world's one light, as a CSS `filter` value. `lift` scales the cast
+ *  shadow for objects that sit higher off the table (1 = a note lying flat). */
+export const litShadowFilter = (U: number, lift = 1) =>
+  `drop-shadow(${(U * 0.0018).toFixed(1)}px ${(U * 0.0028).toFixed(1)}px ${(U * 0.0018).toFixed(1)}px rgba(40,22,10,.36)) ` +
+  `drop-shadow(${(U * 0.012 * lift).toFixed(1)}px ${(U * 0.02 * lift).toFixed(1)}px ${(U * 0.022 * lift).toFixed(1)}px rgba(40,22,10,.22))`;
+
+/** The same light as a CSS `box-shadow`, for rectangular cards drawn with PaperSheet. */
+export const litBoxShadow = (U: number, lift = 1) =>
+  `${(U * 0.0018).toFixed(1)}px ${(U * 0.0028).toFixed(1)}px ${(U * 0.002).toFixed(1)}px rgba(40,22,10,.30), ` +
+  `${(U * 0.012 * lift).toFixed(1)}px ${(U * 0.02 * lift).toFixed(1)}px ${(U * 0.026 * lift).toFixed(1)}px rgba(40,22,10,.20)`;
+
+// A flipped mask flips the gradient with it; pre-mirror the angle so the light lands upper
+// left on screen whatever the take's flip.
+const shadeAngle = (fx: boolean, fy: boolean) =>
+  fx && fy ? 180 + LIGHT_ANGLE : fx ? 360 - LIGHT_ANGLE : fy ? 180 - LIGHT_ANGLE : LIGHT_ANGLE;
 
 // Real paper substrates instead of CSS-drawn cards (papercraft-substrate-plan.md).
 //
@@ -131,9 +164,19 @@ export const PaperNote: React.FC<{
 }> = ({id, aspect, pastel = 'yellow', family, shadow, children, style}) => {
   const note = fitNote(id, aspect, family);
   const tint = (NOTE_PASTEL as Record<string, string>)[pastel as string] ?? pastel;
+  const lit = Boolean(useWorld().lit);
+  const {width, height} = useVideoConfig();
+  const flip = `scaleX(${note.flipX ? -1 : 1}) scaleY(${note.flipY ? -1 : 1})`;
+  const mask: React.CSSProperties = {
+    WebkitMaskImage: `url(${staticFile(note.src)})`,
+    maskImage: `url(${staticFile(note.src)})`,
+    WebkitMaskSize: '100% 100%', maskSize: '100% 100%',
+    WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat',
+  };
+  // lit: the world's light decides the shadow; the caller's legacy value is for unlit worlds
+  const filter = lit ? litShadowFilter(Math.min(width, height)) : shadow ? `drop-shadow(${shadow})` : undefined;
   return (
-    <div style={{position: 'relative', width: '100%', height: '100%',
-                 filter: shadow ? `drop-shadow(${shadow})` : undefined, ...style}}>
+    <div style={{position: 'relative', width: '100%', height: '100%', filter, ...style}}>
       <div style={{position: 'absolute', inset: 0}}>
         <Img
           src={staticFile(note.src)}
@@ -141,24 +184,28 @@ export const PaperNote: React.FC<{
             width: '100%', height: '100%', display: 'block',
             // the desaturate half of the tint: strip the generated yellow and lift the
             // mid-tone to near-white so the multiply below lands on the true palette value
-            filter: 'grayscale(1) brightness(1.18)',
-            transform: `scaleX(${note.flipX ? -1 : 1}) scaleY(${note.flipY ? -1 : 1})`,
+            filter: lit ? LIT_DESAT : 'grayscale(1) brightness(1.18)',
+            transform: flip,
           }}
         />
         {/* the multiply half. Masked to the paper's own alpha so the tint stops at the
             cut edge instead of painting a rectangle over the scene. */}
         <div style={{
           position: 'absolute', inset: 0, background: tint, mixBlendMode: 'multiply',
-          WebkitMaskImage: `url(${staticFile(note.src)})`,
-          maskImage: `url(${staticFile(note.src)})`,
-          WebkitMaskSize: '100% 100%', maskSize: '100% 100%',
-          WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat',
-          transform: `scaleX(${note.flipX ? -1 : 1}) scaleY(${note.flipY ? -1 : 1})`,
+          ...mask, transform: flip,
         }} />
+        {lit ? (
+          <div style={{
+            position: 'absolute', inset: 0, mixBlendMode: 'soft-light', ...mask, transform: flip,
+            background: `linear-gradient(${shadeAngle(note.flipX, note.flipY)}deg, ${LIT_SHADE})`,
+          }} />
+        ) : null}
       </div>
       {children ? (
         <div style={{position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-                     alignItems: 'center', justifyContent: 'center'}}>
+                     alignItems: 'center', justifyContent: 'center',
+                     // lit: ink printed INTO the paper, not floating over it
+                     mixBlendMode: lit ? 'multiply' : undefined}}>
           {children}
         </div>
       ) : null}
@@ -200,7 +247,8 @@ export const PaperSheet: React.FC<{
   const src = staticFile(`papercraft-cards/${family}_${take}.webp`);
   // same two-step as the notes: strip the paper's own warmth before multiplying, or the
   // tint lands somewhere other than the palette value asked for
-  const desat = tint ? 'grayscale(1) brightness(1.12)' : undefined;
+  const lit = Boolean(useWorld().lit);
+  const desat = tint ? (lit ? LIT_DESAT : 'grayscale(1) brightness(1.12)') : undefined;
   return (
     <div style={{position: 'absolute', inset: 0, borderRadius: radius, overflow: 'hidden', ...style}}>
       {/*
@@ -228,6 +276,8 @@ export const PaperSheet: React.FC<{
         filter: desat,
       }} />
       {tint ? <div style={{position: 'absolute', inset: 0, background: tint, mixBlendMode: 'multiply'}} /> : null}
+      {lit ? <div style={{position: 'absolute', inset: 0, mixBlendMode: 'soft-light',
+                          background: `linear-gradient(${LIGHT_ANGLE}deg, ${LIT_SHADE})`, opacity: 0.75}} /> : null}
     </div>
   );
 };

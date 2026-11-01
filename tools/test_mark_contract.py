@@ -344,6 +344,47 @@ with tempfile.TemporaryDirectory() as tmp:
     if [{k: v for k, v in m.items() if k != "cueFrame"} for m in (g02 or [])] != [NAVY_MARK]:
         failures.append(f"good annotations: the navy figure mark did not pass through: {g02!r}")
 
+    # 11) node-anchored annotations (visual upgrade, 2026-11-01). On a schematic a
+    #     circle/box/underline/strike may name its node with `target` instead of frame
+    #     coordinates; it rides the schematic's own fields (Schematic.tsx draws it around the
+    #     node's laid-out box), never the frame overlay. A bad id or a target off a schematic
+    #     is refused. On the phone-type theme an old coordinate mark sitting on a node is
+    #     snapped to it (the type scale moves nodes: #79 s04/s13/s29); elsewhere it is not.
+    def schem(sid, *anns):
+        return {"id": sid, "type": "schematic", "kicker": "k",
+                "nodes": [{"id": "a", "label": "A", "x": 0.3, "y": 0.4},
+                          {"id": "b", "label": "B", "x": 0.7, "y": 0.4}],
+                "annotations": list(anns)}
+    try:
+        E.build_spec(make_project(Path(tmp) / "tgt_bad", [
+            schem("t01", {"kind": "circle", "target": "zz"}),
+            annotated("t02", "statement", {"kind": "circle", "target": "a"})]))
+        failures.append("target: a bad node id and a target off a schematic were not refused")
+    except E.MalformedMarkError as e:
+        txt = "\n".join(e.problems)
+        for want in ("t01: annotations[0] `target` 'zz' names no node",
+                     "t02: annotations[0] `target` works only on a schematic"):
+            if want not in txt:
+                failures.append(f"target: expected {want!r} in:\n{txt}")
+    snap_anns = [{"kind": "circle", "target": "b", "cue": "x"},
+                 {"kind": "circle", "at": [0.31, 0.41], "w": 0.2},          # on node a
+                 {"kind": "strike", "from": [0.2, 0.4], "to": [0.4, 0.4]},   # across node a
+                 {"kind": "circle", "at": [0.5, 0.8], "w": 0.1}]             # empty canvas
+    for theme, want_on, want_off in (("nemock-deep-dive", ["b", "a", "a"], 1),
+                                     ("plg-guide", ["b"], 3)):
+        try:
+            scenes = E.build_spec(make_project(Path(tmp) / f"tgt_{theme}", [schem("t03", *snap_anns)],
+                                               theme=theme))["scenes"]
+            sc = next(x for x in scenes if x["component"] == "Schematic")   # past any sting
+        except E.MalformedMarkError as e:
+            failures.append(f"target {theme}: refused: {e.problems!r}")
+            continue
+        on = [a.get("target") for a in sc["fields"].get("nodeAnnotations") or []]
+        off = sc.get("annotations") or []
+        if on != want_on or len(off) != want_off:
+            failures.append(f"target {theme}: node-anchored {on!r} (want {want_on!r}), "
+                            f"frame-space {len(off)} (want {want_off})")
+
 # --- real projects: must build clean ------------------------------------------------------
 checked = 0
 for p in sys.argv[1:] or DEFAULT_PROJECTS:

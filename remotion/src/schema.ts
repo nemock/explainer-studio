@@ -56,6 +56,11 @@ export const videoSchema = z.object({
       charHeightFrac: z.number().default(0.18),
     })
     .optional(),
+  // Display face for headings (project.json `heading_font`; type.ts HeadingFontProvider).
+  // `file` is a path in the public dir. Absent -> headings use BRAND.font.
+  headingFont: z
+    .object({family: z.string(), file: z.string(), weight: z.string().optional()})
+    .optional(),
 });
 
 export type VideoProps = z.infer<typeof videoSchema>;

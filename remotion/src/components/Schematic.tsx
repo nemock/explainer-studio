@@ -5,6 +5,8 @@ import {BRAND} from '../brand';
 import {useInk, PAPER_SHADOW} from '../ink';
 import {PaperNote, PaperSheet, fitNote, NOTE_PASTEL, PASTEL_CYCLE, NotePastel} from './PaperNote';
 import {useWorld} from './PaperWorld';
+import {AnnotateOverlay} from './Annotate';
+import {useTypeScale, useHeadingFamily} from '../type';
 
 // motion-playbook §2C — Schematic: a node-and-edge diagram that ASSEMBLES under the
 // narration, with a camera that drifts to the active region ("lead the viewer's eye
@@ -89,6 +91,172 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
     return m;
   }, [nodes, edges, stages, stageTimes, durationInFrames]);
 
+  // Notes size themselves to their CONTENT (operator directive 2026-07-28, #52: long
+  // labels/subs were overflowing the fixed-height notes — "It matches them against a
+  // playbook" and the redlining definition both spilled past their edges). The old
+  // formula ignored text length entirely, so anything that wrapped past two lines ran
+  // out of the note. Estimate the wrapped line count from the node's own width and the
+  // rendered font sizes, then grow the box to fit.
+  //   n.w      — width, frame-width fraction (unchanged)
+  //   n.h      — explicit height override, frame-height fraction (wins over everything)
+  //   n.shape  — 'square' for a chunky real-post-it note; there is usually plenty of
+  //              empty canvas, so bigger notes are cheap and read better.
+  const {on: phone, ts, floor} = useTypeScale();
+  const headFamily = useHeadingFamily();
+  const fLabel0 = ts('label', U * 0.03), fSub0 = ts('sub', U * 0.02);
+  const sizeBox = (n: any, wPx: number, fLabel: number, fSub: number, noSquare = false) => {
+    const w = wPx;
+    const padX = U * 0.014;                    // matches the rendered horizontal padding
+    const inner = Math.max(1, w - padX * 2);
+    // rough wrapped-line count: chars * (em width) / usable width, min 1 line
+    const linesOf = (txt: any, f: number, em: number) =>
+      Math.max(1, Math.ceil((String(txt ?? '').length * f * em) / inner));
+    const lLab = linesOf(n.label, fLabel, 0.55);        // 900-weight runs wide
+    const lSub = n.sub ? linesOf(n.sub, fSub, 0.50) : 0;
+    // slightly generous line-heights vs the render (1.08/1.1) so we never under-size
+    const content = lLab * fLabel * 1.10 + (lSub ? U * 0.006 + lSub * fSub * 1.15 : 0);
+    let h = Math.max(U * 0.085, content + U * 0.028);   // + breathing room top/bottom
+    if (n.shape === 'square' && !noSquare) h = Math.max(h, w);  // true square, real-post-it look
+    if (n.h) h = n.h * H;                               // explicit override wins
+    // Paper mode: the substrate's real aspect sets the height, so the generated paper is
+    // never squashed to fit a box (papercraft-substrate-plan.md §3 — stretching smears the
+    // grain and mushes the torn edge). fitNote only ever picks paper no wider than the text
+    // needs, so this grows the box; the surplus is blank note. An explicit n.h still wins.
+    let fit;
+    if (ink.paper && !fields.sketch) {
+      fit = fitNote(`schem:${n.id}`, w / h);
+      if (!n.h) h = w / fit.aspect;
+    }
+    return {w, h, fit, lLab, lSub};
+  };
+
+  // LAYOUT. Unscaled worlds: exactly the authored geometry (centre n.x*W, n.y*H, width n.w).
+  // Phone type (visual upgrade 2026-11-01): the bigger type needs bigger notes, and the
+  // diagram should use the space rather than sit as postage stamps in a blank frame
+  // (operator, #79). So each note widens up to 1.3x its authored width, capped short of its
+  // row neighbour; then the whole group is fitted (uniform scale, at most 1.2x, centred)
+  // into the band between the heading and the captions. Relative placement is kept, so the
+  // author's composition survives; only its scale and centring change. Two passes, because
+  // a scaled width changes the wrapped height.
+  type Box = {x: number; y: number; w: number; h: number; cx: number; cy: number; fit: any; lLab: number; lSub: number};
+  const {boxes, fLabel, fSub, mapPt} = React.useMemo(() => {
+    const out = new Map<string, Box>();
+    if (!phone || H > W) {
+      nodes.forEach((n) => {
+        const s = sizeBox(n, (n.w ?? 0.2) * W, fLabel0, fSub0);
+        out.set(n.id, {x: n.x * W - s.w / 2, y: n.y * H - s.h / 2, w: s.w, h: s.h,
+                       cx: n.x * W, cy: n.y * H, fit: s.fit, lLab: s.lLab, lSub: s.lSub});
+      });
+      return {boxes: out, fLabel: fLabel0, fSub: fSub0, mapPt: (x: number, y: number) => [x, y]};
+    }
+    const width0 = (n: any) => {
+      const a = (n.w ?? 0.2) * W;
+      const mates = nodes.filter((m) => m !== n && Math.abs(m.y - n.y) < 0.12);
+      const dx = mates.length ? Math.min(...mates.map((m) => Math.abs(m.x - n.x))) * W : Infinity;
+      const cap = Math.min(0.36 * W, dx * 0.9);
+      // a square note grows in BOTH directions, so widening it eats the vertical room the
+      // rows need (#79 s04); squares take the uniform group growth only
+      return n.shape === 'square' ? a : Math.max(a, Math.min(cap, a * 1.3));
+    };
+    const top = H * 0.06 + (fields.kicker ? ts('heading', 0) * 1.2 + H * 0.035 : 0);
+    const R = {x0: W * 0.05, x1: W * 0.95, y0: top, y1: H * 0.73};
+    // A layout at growth k: sizes from k-scaled widths, centres spread by k about C (the
+    // authored group's centre). Coordinates relative to C until the final placement.
+    const build = (k: number, fl: number, fs: number, C: {x: number; y: number}) =>
+      nodes.map((n) => ({n, ...sizeBox(n, width0(n) * k, fl, fs),
+                         rx: (n.x * W - C.x) * k, ry: (n.y * H - C.y) * k}));
+    const bbox = (L: ReturnType<typeof build>) => {
+      const B = {x0: Math.min(...L.map((l) => l.rx - l.w / 2)), x1: Math.max(...L.map((l) => l.rx + l.w / 2)),
+                 y0: Math.min(...L.map((l) => l.ry - l.h / 2)), y1: Math.max(...L.map((l) => l.ry + l.h / 2))};
+      return {...B, cx: (B.x0 + B.x1) / 2, cy: (B.y0 + B.y1) / 2,
+              fit: Math.min((R.x1 - R.x0) / Math.max(1, B.x1 - B.x0), (R.y1 - R.y0) / Math.max(1, B.y1 - B.y0))};
+    };
+    // pass 1: the authored layout at natural size -> how much it may grow (<= 1.2x)
+    const B1 = bbox(build(1, fLabel0, fSub0, {x: 0, y: 0}));
+    const C = {x: B1.cx, y: B1.cy};
+    const k = Math.min(B1.fit, 1.2);
+    // pass 2: re-size at that growth with the fonts scaled along (never under the floor)
+    const fl = Math.min(fLabel0 * 1.15, Math.max(floor('label'), fLabel0 * k));
+    const fs = Math.min(fSub0 * 1.15, Math.max(floor('sub'), fSub0 * k));
+    const L = build(k, fl, fs, C);
+    const B = bbox(L);
+    const s2 = Math.min(1, B.fit);          // wrapping may have grown it past the band
+    const rcx = (R.x0 + R.x1) / 2, rcy = (R.y0 + R.y1) / 2;
+    const place = (rx: number, ry: number) => [rcx + (rx - B.cx) * s2, rcy + (ry - B.cy) * s2];
+    // Growth is not uniform (notes widen 1.3x and the bigger type wraps taller), so notes the
+    // author set apart can now touch: s04 on #79 put its "rule" note across the row above it.
+    // Only the notes in a collision give way, so one tight pair does not shrink the whole
+    // diagram (s17): a forced square stops being square first (it grows in both directions),
+    // then each colliding note shrinks about its own centre until the pair clears by a gap.
+    // Pairs that already overlapped as authored (f < 0.5) are deliberate stacks; left alone.
+    const gap = U * 0.025;
+    const placed = L.map((l) => {
+      const [cx, cy] = place(l.rx, l.ry);
+      return {l, cx, cy, w: l.w * s2, h: l.h * s2, noSquare: false};
+    });
+    const fOf = (a: typeof placed[0], b: typeof placed[0]) => Math.max(
+      (Math.abs(a.cx - b.cx) - gap) / ((a.w + b.w) / 2),
+      (Math.abs(a.cy - b.cy) - gap) / ((a.h + b.h) / 2));
+    const pairs = () => placed.flatMap((a, i) => placed.slice(i + 1).map((b) => [a, b] as const));
+    // squares give way TOGETHER: they are usually peers, and one short note in a row of
+    // squares reads as a different kind of thing (s04's middle switch did)
+    const squareHit = pairs().some(([a, b]) => {
+      const f = fOf(a, b);
+      return f < 1 && f >= 0.5 && (a.l.n.shape === 'square' || b.l.n.shape === 'square');
+    });
+    if (squareHit) {
+      placed.filter((p) => p.l.n.shape === 'square').forEach((p) => {
+        p.noSquare = true;
+        p.h = sizeBox(p.l.n, p.w, fl * s2, fs * s2, true).h;
+      });
+    }
+    const fNode = new Map(placed.map((p) => [p, 1]));
+    pairs().forEach(([a, b]) => {
+      const f = fOf(a, b);
+      if (f >= 1 || f < 0.5) return;
+      fNode.set(a, Math.min(fNode.get(a)!, f));
+      fNode.set(b, Math.min(fNode.get(b)!, f));
+    });
+    // one type size for the whole diagram, set by its most-shrunk note (never under the floor)
+    const fMin = Math.min(...Array.from(fNode.values()));
+    const flF = Math.max(floor('label'), fl * s2 * fMin), fsF = Math.max(floor('sub'), fs * s2 * fMin);
+    placed.forEach((p) => {
+      // re-fit the height to the text at its FINAL size: type stops at its floor while the
+      // box keeps shrinking, so a scaled height can be shorter than its own words
+      const w = p.w * fNode.get(p)!;
+      const r = sizeBox(p.l.n, w, flF, fsF, p.noSquare);
+      out.set(p.l.n.id, {x: p.cx - w / 2, y: p.cy - r.h / 2, w, h: r.h, cx: p.cx, cy: p.cy,
+                         fit: r.fit, lLab: r.lLab, lSub: r.lSub});
+    });
+    // any authored frame point (camera centres) through the same transform
+    const mapPt = (x: number, y: number) => place((x - C.x) * k, (y - C.y) * k);
+    return {boxes: out, fLabel: flF, fSub: fsF, mapPt};
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, W, H, phone, fLabel0, fSub0, fields.kicker, ink.paper, fields.sketch]);
+  const nodeBox = (n: any) => boxes.get(n.id)!;
+  const nodeById = React.useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
+  // `target` annotations -> frame geometry from the node's box. A circle clears the note
+  // with room for the tilt; an underline sits just under it.
+  const anchored = React.useMemo(() => (fields.nodeAnnotations || []).flatMap((a: any) => {
+    const b = boxes.get(a.target);
+    if (!b) return [];
+    if (a.kind === 'strike') {
+      // across the LABEL, one stroke per wrapped line (the label sits above any sub-line in
+      // the note's centred text block; same metrics as sizeBox)
+      const subH = b.lSub ? U * 0.006 + b.lSub * fSub * 1.1 : 0;
+      const top = b.cy - (b.lLab * fLabel * 1.08 + subH) / 2;
+      return Array.from({length: b.lLab}, (_, i) => {
+        const y = (top + (i + 0.55) * fLabel * 1.08) / H;
+        return {...a, from: [(b.x + b.w * 0.12) / W, y], to: [(b.x + b.w * 0.88) / W, y]};
+      });
+    }
+    if (a.kind === 'underline') {
+      return [{...a, at: [b.cx / W, (b.y + b.h) / H + 0.018], w: (b.w * 0.8) / W}];
+    }
+    const pad = a.kind === 'circle' ? [1.28, 1.42] : [1.1, 1.16];
+    return [{...a, at: [b.cx / W, b.cy / H], w: (b.w * pad[0]) / W, h: (b.h * pad[1]) / H}];
+  }), [fields.nodeAnnotations, boxes, W, H, U, fLabel, fSub]);
+
   // camera: piecewise moves between {center, zoom} keys at their stage times
   const cam = React.useMemo(() => {
     const keys = (fields.camera || [])
@@ -97,9 +265,14 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
             : c.at != null ? c.at : 0,
         cx: (c.center?.[0] ?? 0.5), cy: (c.center?.[1] ?? 0.5), zoom: c.zoom ?? 1,
       }))
+      .map((c: any) => {
+        if (!phone || H > W) return c;
+        const [x, y] = mapPt(c.cx * W, c.cy * H);
+        return {...c, cx: x / W, cy: y / H};
+      })
       .sort((a: any, b: any) => a.at - b.at);
     return [{at: 0, cx: 0.5, cy: 0.5, zoom: 1}, ...keys];
-  }, [fields.camera, stageTimes]);
+  }, [fields.camera, stageTimes, phone, mapPt, W, H]);
   const MOVE = Math.round(0.9 * fps);
   let cx = 0.5, cy = 0.5, zoom = 1;
   for (let i = 0; i < cam.length; i++) {
@@ -112,43 +285,6 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
     zoom = zoom + (k.zoom - zoom) * t;
   }
 
-  // Notes size themselves to their CONTENT (operator directive 2026-07-28, #52: long
-  // labels/subs were overflowing the fixed-height notes — "It matches them against a
-  // playbook" and the redlining definition both spilled past their edges). The old
-  // formula ignored text length entirely, so anything that wrapped past two lines ran
-  // out of the note. Estimate the wrapped line count from the node's own width and the
-  // rendered font sizes, then grow the box to fit.
-  //   n.w      — width, frame-width fraction (unchanged)
-  //   n.h      — explicit height override, frame-height fraction (wins over everything)
-  //   n.shape  — 'square' for a chunky real-post-it note; there is usually plenty of
-  //              empty canvas, so bigger notes are cheap and read better.
-  const nodeBox = (n: any) => {
-    const w = (n.w ?? 0.2) * W;
-    const padX = U * 0.014;                    // matches the rendered horizontal padding
-    const inner = Math.max(1, w - padX * 2);
-    const fLabel = U * 0.03, fSub = U * 0.02;  // must track the font sizes used below
-    // rough wrapped-line count: chars * (em width) / usable width, min 1 line
-    const linesOf = (txt: any, f: number, em: number) =>
-      Math.max(1, Math.ceil((String(txt ?? '').length * f * em) / inner));
-    const lLab = linesOf(n.label, fLabel, 0.55);        // 900-weight runs wide
-    const lSub = n.sub ? linesOf(n.sub, fSub, 0.50) : 0;
-    // slightly generous line-heights vs the render (1.08/1.1) so we never under-size
-    const content = lLab * fLabel * 1.10 + (lSub ? U * 0.006 + lSub * fSub * 1.15 : 0);
-    let h = Math.max(U * 0.085, content + U * 0.028);   // + breathing room top/bottom
-    if (n.shape === 'square') h = Math.max(h, w);       // true square, real-post-it look
-    if (n.h) h = n.h * H;                               // explicit override wins
-    // Paper mode: the substrate's real aspect sets the height, so the generated paper is
-    // never squashed to fit a box (papercraft-substrate-plan.md §3 — stretching smears the
-    // grain and mushes the torn edge). fitNote only ever picks paper no wider than the text
-    // needs, so this grows the box; the surplus is blank note. An explicit n.h still wins.
-    let fit;
-    if (ink.paper && !fields.sketch) {
-      fit = fitNote(`schem:${n.id}`, w / h);
-      if (!n.h) h = w / fit.aspect;
-    }
-    return {x: n.x * W - w / 2, y: n.y * H - h / 2, w, h, fit};
-  };
-  const nodeById = React.useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
 
   // seeded sketch outlines (computed once — pure of frame)
   const sketchPaths = React.useMemo(() => {
@@ -164,7 +300,7 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
     });
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fields.sketch, nodes, W, H]);
+  }, [fields.sketch, nodes, W, H, boxes]);
 
   // paper edges: hand-drawn navy Sharpie lines (seeded, pure of frame; drawn on via dashoffset)
   const roughEdges = React.useMemo(() => {
@@ -172,9 +308,9 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
     if (!ink.paper) return m;
     const gen = rough.generator();
     edges.forEach((e) => {
-      const a = nodeById.get(e.from), b = nodeById.get(e.to);
+      const a = boxes.get(e.from), b = boxes.get(e.to);
       if (!a || !b) return;
-      const [x1, y1, x2, y2] = [a.x * W, a.y * H, b.x * W, b.y * H];
+      const [x1, y1, x2, y2] = [a.cx, a.cy, b.cx, b.cy];
       const dr = gen.line(x1, y1, x2, y2, {
         seed: seedFrom(`edge:${e.from}->${e.to}`), roughness: 2, bowing: 2.4,
         stroke: ink.body, strokeWidth: Math.max(3, U * 0.0055),
@@ -184,11 +320,21 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
     });
     return m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ink.paper, ink.body, edges, nodeById, W, H]);
+  }, [ink.paper, ink.body, edges, boxes, W, H]);
 
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center'}}>
-      {fields.kicker ? (
+      {fields.kicker && phone ? (
+        // phone type: the kicker is the slide's only headline, so it is set as one (operator
+        // 2026-11-01) instead of small green caps alone at the top of an empty frame
+        <div style={{position: 'absolute', top: '6%', left: '6%', right: '6%', textAlign: 'center',
+                     fontFamily: headFamily, color: ink.body, fontWeight: 900,
+                     fontSize: ts('heading', 0), lineHeight: 1.08, letterSpacing: -0.5,
+                     textWrap: 'balance' as any,
+                     opacity: spring({frame, fps, config: {damping: 18}})}}>
+          {fields.kicker}
+        </div>
+      ) : fields.kicker ? (
         <div style={{position: 'absolute', top: '6%', left: 0, right: 0, textAlign: 'center',
                      fontFamily: BRAND.font, color: ink.accent, fontWeight: 800,
                      fontSize: U * 0.030, letterSpacing: 4, textTransform: 'uppercase',
@@ -206,14 +352,14 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
         {/* edges under nodes */}
         <svg width={W} height={H} style={{position: 'absolute', inset: 0, overflow: 'visible'}}>
           {edges.map((e, i) => {
-            const a = nodeById.get(e.from);
-            const b = nodeById.get(e.to);
+            const a = boxes.get(e.from);
+            const b = boxes.get(e.to);
             if (!a || !b) return null;
             const at = revealAt.get(`${e.from}->${e.to}`) ?? 0;
             const t = interpolate(frame, [at, at + Math.round(0.6 * fps)], [0, 1],
                                   {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
             if (t <= 0) return null;
-            const [x1, y1, x2, y2] = [a.x * W, a.y * H, b.x * W, b.y * H];
+            const [x1, y1, x2, y2] = [a.cx, a.cy, b.cx, b.cy];
             const len = Math.hypot(x2 - x1, y2 - y1);
             const angle = Math.atan2(y2 - y1, x2 - x1);
             const color = kindColor(e.kind, (ink.danger ?? BRAND.red));
@@ -310,12 +456,12 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
                   shadow={`0 ${Math.round(U * 0.012)}px ${Math.round(U * 0.022)}px rgba(12,4,24,.34)`}
                 >
                   <div style={{padding: `0 ${U * 0.022}px`, textAlign: 'center'}}>
-                    <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: U * 0.03,
+                    <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: fLabel,
                                  color: '#2c1e4e', lineHeight: 1.08}}>
                       {n.label}
                     </div>
                     {n.sub ? (
-                      <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: U * 0.02,
+                      <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: fSub,
                                    color: darken(NOTE_PASTEL[pastel], 0.42),
                                    marginTop: U * 0.006, lineHeight: 1.1}}>
                         {n.sub}
@@ -338,12 +484,12 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
               opacity: e,
               transform: `translateY(${interpolate(e, [0, 1], [22, 0])}px) scale(${interpolate(e, [0, 1], [0.88, 1])})`,
             }}>
-              <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: U * 0.03,
+              <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: fLabel,
                            color: fields.sketch ? BRAND.white : ink.body, lineHeight: 1.08}}>
                 {n.label}
               </div>
               {n.sub ? (
-                <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: U * 0.02,
+                <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: fSub,
                              color: color, marginTop: U * 0.006, lineHeight: 1.1}}>
                   {n.sub}
                 </div>
@@ -354,13 +500,13 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
         {/* edge labels as cream chips ON TOP of the notes (paper) — never buried under a node */}
         {ink.paper ? edges.map((e, i) => {
           if (!e.label) return null;
-          const a = nodeById.get(e.from), b = nodeById.get(e.to);
+          const a = boxes.get(e.from), b = boxes.get(e.to);
           if (!a || !b) return null;
           const at = revealAt.get(`${e.from}->${e.to}`) ?? 0;
           const t = interpolate(frame, [at, at + Math.round(0.6 * fps)], [0, 1],
                                 {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
           if (t < 0.9) return null;
-          const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+          const mx = (a.cx + b.cx) / 2 / W, my = (a.cy + b.cy) / 2 / H;
           return (
             // a small paper tag, not a flat cream pill. These sit directly ON the note
             // substrates, so a drawn chip is the most exposed synthetic surface on the slide.
@@ -368,7 +514,7 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
               position: 'absolute', left: mx * W, top: my * H, transform: 'translate(-50%, -50%)',
               color: tagInk, borderRadius: 8,
               padding: `${U * 0.007}px ${U * 0.017}px`, whiteSpace: 'nowrap',
-              fontFamily: BRAND.font, fontStyle: 'italic', fontWeight: 800, fontSize: U * 0.02,
+              fontFamily: BRAND.font, fontStyle: 'italic', fontWeight: 800, fontSize: fSub,
               boxShadow: '0 4px 14px rgba(0,0,0,.2)',
               opacity: interpolate(t, [0.9, 1], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}),
             }}>
@@ -377,6 +523,9 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
             </div>
           );
         }) : null}
+        {/* node-anchored annotations (`target`): drawn around the node's laid-out box, inside
+            the camera, so a circle lands on its note wherever layout put it */}
+        {anchored.length ? <AnnotateOverlay annotations={anchored} /> : null}
       </AbsoluteFill>
     </AbsoluteFill>
   );

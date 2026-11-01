@@ -1,7 +1,7 @@
 import React, {createContext, useContext} from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {PaperWorldTokens, PAPER_FWF, paperWorldFor, SNAP, HINGE, CAM} from '../brands/papercraft';
-import {PaperSheet, CardFamily} from './PaperNote';
+import {PaperSheet, CardFamily, litBoxShadow} from './PaperNote';
 
 // World context (2026-07-26) — which channel's paper ground/palette this render uses.
 // Mirrors InkProvider: theme-keyed, defaulting to FWF so every existing paper deck is
@@ -316,6 +316,20 @@ export const PaperTable: React.FC<{
            style={{position: 'absolute', inset: 0, width: '100%', height: '100%',
                    objectFit: 'cover', display: 'block', mixBlendMode: 'overlay'}} />
       {/* big paper sheets laid on the table (the hero-a ground language) */}
+      {world.lit ? (
+        // lit: the laid sheets are real card stock in the world's light, not flat CSS
+        // rectangles (they read as beige UI blocks behind #79's compare and list slides)
+        [{l: width * (0.06 + r1 * 0.08), t: height * (0.52 + r2 * 0.1), w: 0.46, h: 0.5, c: world.sheet, o: 1, r: -4 + r1 * 8, id: 'a'},
+         {l: width - width * (0.04 + r2 * 0.07) - width * 0.38, t: height * (0.6 + r3 * 0.08), w: 0.38, h: 0.44, c: world.sheetAlt, o: 1, r: 3 - r2 * 7, id: 'b'},
+         {l: width * (0.3 + r3 * 0.2), t: height * (0.78 + r1 * 0.06), w: 0.5, h: 0.35, c: world.sheet, o: 0.75, r: -2 + r3 * 5, id: 'c'}]
+          .map((sh) => (
+            <div key={sh.id} style={{position: 'absolute', left: sh.l, top: sh.t, width: width * sh.w, height: height * sh.h,
+                                     opacity: sh.o, transform: `rotate(${sh.r.toFixed(2)}deg)`,
+                                     boxShadow: litBoxShadow(Math.min(width, height), 0.7)}}>
+              <PaperSheet id={`table:${seed}:${sh.id}`} family="card" radius={2} tint={sh.c} />
+            </div>
+          ))
+      ) : (<>
       <div style={{position: 'absolute', left: width * (0.06 + r1 * 0.08), top: height * (0.52 + r2 * 0.1),
                    width: width * 0.46, height: height * 0.5, background: world.sheet,
                    transform: `rotate(${(-4 + r1 * 8).toFixed(2)}deg)`, boxShadow: sheetShadow}} />
@@ -325,6 +339,7 @@ export const PaperTable: React.FC<{
       <div style={{position: 'absolute', left: width * (0.3 + r3 * 0.2), top: height * (0.78 + r1 * 0.06),
                    width: width * 0.5, height: height * 0.35, background: world.sheet, opacity: 0.75,
                    transform: `rotate(${(-2 + r3 * 5).toFixed(2)}deg)`, boxShadow: sheetShadow}} />
+      </>)}
       {/* vignette toward groundDeep */}
       <AbsoluteFill style={{background: `radial-gradient(120% 105% at 50% 42%, transparent 45%, ${world.groundDeep} 100%)`}} />
       {/* key light: wide + soft by default; tightens on cue. The two colours are world
@@ -355,8 +370,14 @@ export const PaperCard: React.FC<{
   substrate?: boolean;
   children: React.ReactNode;
 }> = ({world: worldProp, style, id, family, substrate = true, children}) => {
+  const {width, height} = useVideoConfig();
   const world = worldProp ?? useWorld();
-  const radius = (style?.borderRadius as number) ?? 14;
+  // lit worlds: cut card stock has a small corner, not a 24px UI radius, and it casts the
+  // world's two-shadow light unless the caller set its own (PaperNote.tsx LIT PAPER)
+  const lit = Boolean(world.lit) && substrate;
+  const radius = lit ? Math.min(6, (style?.borderRadius as number) ?? 6) : (style?.borderRadius as number) ?? 14;
+  const litStyle: React.CSSProperties = lit
+    ? {borderRadius: radius, ...(style?.boxShadow ? {} : {boxShadow: litBoxShadow(Math.min(width, height))})} : {};
   if (!substrate) {
     return (
       <div style={{background: world.paper, borderRadius: 14,
@@ -369,14 +390,14 @@ export const PaperCard: React.FC<{
   return (
     // position:relative so the substrate backdrop can fill this box without touching the
     // caller's padding or size; content rides above it in the normal flow.
-    <div style={{position: 'relative', borderRadius: radius, padding: '0.6em 0.9em', ...style}}>
+    <div style={{position: 'relative', borderRadius: radius, padding: '0.6em 0.9em', ...style, ...litStyle}}>
       {/* tinted to world.paper, not left as generated. The card stock comes out warmer than
           the world's cream, and unnormalised it reads as kraft next to every other cream
           surface in the scene. Routing it through the tint keeps the real grain and cut edge
           while landing the colour exactly on the channel's token — which also means theme
           isolation holds for free: BRG, Circumvent and Cut & Bond each get their own paper. */}
       <PaperSheet id={id ?? 'card'} family={family} radius={radius} tint={world.paper} />
-      <div style={{position: 'relative'}}>{children}</div>
+      <div style={{position: 'relative', mixBlendMode: lit ? 'multiply' : undefined}}>{children}</div>
     </div>
   );
 };

@@ -3,6 +3,7 @@ import {AbsoluteFill, interpolate, spring, staticFile, useCurrentFrame, useVideo
 import rough from 'roughjs';
 import {BRAND} from '../brand';
 import {Ink, useInk} from '../ink';
+import {useTypeScale} from '../type';
 
 // motion-playbook §2H — the annotation overlay: hand-drawn arrows/circles/underlines
 // that DRAW THEMSELVES starting on a narration cue, leading the eye while the voice
@@ -172,6 +173,7 @@ export const AnnotateOverlay: React.FC<{annotations: Ann[]}> = ({annotations}) =
   const frame = useCurrentFrame();
   const {fps, height: H} = useVideoConfig();
   const ink = useInk();
+  const {ts} = useTypeScale();
   const COLOR = colorsFor(ink);
   return (
     <AbsoluteFill style={{pointerEvents: 'none'}}>
@@ -188,7 +190,7 @@ export const AnnotateOverlay: React.FC<{annotations: Ann[]}> = ({annotations}) =
             position: 'absolute', left: `${lx * 100}%`, top: `${ly * 100}%`,
             transform: `translate(-50%, ${H * 0.02}px)`,
             fontFamily: BRAND.font, fontStyle: 'italic', fontWeight: 800,
-            fontSize: H * 0.026, color: COLOR[a.color || 'green'], opacity: o,
+            fontSize: ts('annotation', H * 0.026), color: COLOR[a.color || 'green'], opacity: o,
             textShadow: ink.paper ? 'none' : '0 3px 14px rgba(0,0,0,.7)', whiteSpace: 'nowrap',
           }}>
             {a.label}

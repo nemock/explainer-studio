@@ -2,6 +2,7 @@ import React from 'react';
 import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
 import {useInk} from '../ink';
+import {useTypeScale} from '../type';
 
 // motion-playbook §2F — the reusable FWF brand sting (intro/outro). Wordmark scales +
 // glows in with an accent sweep. fields: {title, subtitle?}
@@ -12,17 +13,20 @@ export const BrandSting: React.FC<{fields: any; durationInFrames: number}> = ({f
   const sweepX = interpolate(frame, [6, 30], [-width, width], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const out = interpolate(frame, [durationInFrames - 10, durationInFrames], [1, 0], {extrapolateLeft: 'clamp'});
   const title = fields.title || 'FOUNDERS WHO FINISH';
+  // paper worlds: BRAND.white on cream was invisible (found in the 2026-11-01 visual review)
+  const ink = useInk();
+  const {ts} = useTypeScale();
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', opacity: out, overflow: 'hidden'}}>
       <div style={{position: 'relative'}}>
-        <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.072, letterSpacing: 2, color: BRAND.white, textAlign: 'center', transform: `scale(${interpolate(inn, [0, 1], [0.7, 1])})`, opacity: inn, textShadow: `0 0 ${40 * inn}px rgba(61,220,132,.5), 0 12px 60px rgba(0,0,0,.7)`}}>
+        <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.072, letterSpacing: 2, color: ink.paper ? ink.body : BRAND.white, textAlign: 'center', transform: `scale(${interpolate(inn, [0, 1], [0.7, 1])})`, opacity: inn, textShadow: ink.paper ? 'none' : `0 0 ${40 * inn}px rgba(61,220,132,.5), 0 12px 60px rgba(0,0,0,.7)`}}>
           {title}
         </div>
         {/* accent light sweep across the wordmark */}
         <AbsoluteFill style={{background: `linear-gradient(105deg, transparent 40%, rgba(61,220,132,.55) 50%, transparent 60%)`, transform: `translateX(${sweepX}px)`, mixBlendMode: 'screen'}} />
       </div>
       {fields.subtitle ? (
-        <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: height * 0.026, color: BRAND.green, marginTop: height * 0.02, opacity: interpolate(frame, [18, 34], [0, 1], {extrapolateRight: 'clamp'}), letterSpacing: 4, textTransform: 'uppercase'}}>
+        <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: ts('eyebrow', height * 0.026), color: BRAND.green, marginTop: height * 0.02, opacity: interpolate(frame, [18, 34], [0, 1], {extrapolateRight: 'clamp'}), letterSpacing: 4, textTransform: 'uppercase'}}>
           {fields.subtitle}
         </div>
       ) : null}

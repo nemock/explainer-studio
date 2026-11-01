@@ -3,7 +3,8 @@ import {AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, use
 import {BRAND} from '../brand';
 import {useInk, PAPER_SHADOW} from '../ink';
 import {useWorld, CameraMove, PLANE, Plane, PaperTable, PaperCard, PaperProps, usePaperLayout, resolveCamera, usePlace, popupStyle, placeStyle, flick, usePaperPush} from './PaperWorld';
-import {PaperSheet} from './PaperNote';
+import {PaperSheet, litBoxShadow} from './PaperNote';
+import {useTypeScale, useHeadingFamily} from '../type';
 import {figColorize} from './Media';
 
 // Papercraft Motion — data & structure family (papercraft-motion-spec.md §7).
@@ -16,10 +17,25 @@ import {figColorize} from './Media';
 // `height` is the type scale (the MIN dimension since the portrait pass — frame height in
 // landscape, so nothing moves there); `top` is a real vertical position and stays in frame
 // units, pulled up a little in portrait where the frame is much taller than it is wide.
-const Kicker: React.FC<{text?: string; height: number}> = ({text, height}) => {
+// Phone type (2026-11-01): a kicker with no title under it IS the slide's headline, so it is
+// set as one; above a title it stays a small green eyebrow, at a size a phone can read.
+const Kicker: React.FC<{text?: string; height: number; hasTitle?: boolean}> = ({text, height, hasTitle}) => {
   const W = useWorld();
   const {portrait} = usePaperLayout();
   const {height: frameH} = useVideoConfig();
+  const {on: phone, ts} = useTypeScale();
+  const headFamily = useHeadingFamily();
+  if (text && phone) {
+    return hasTitle ? (
+      <div style={{position: 'absolute', top: frameH * (portrait ? 0.07 : 0.07), left: 0, right: 0, textAlign: 'center',
+                   fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('eyebrow', 0), letterSpacing: 4,
+                   textTransform: 'uppercase', color: W.kicker ?? W.accentSoft}}>{text}</div>
+    ) : (
+      <div style={{position: 'absolute', top: frameH * 0.06, left: '6%', right: '6%', textAlign: 'center',
+                   fontFamily: headFamily, fontWeight: 900, fontSize: ts('heading', 0), lineHeight: 1.08,
+                   letterSpacing: -0.5, textWrap: 'balance' as any, color: W.ink}}>{text}</div>
+    );
+  }
   return text ? (
     <div style={{position: 'absolute', top: frameH * (portrait ? 0.08 : 0.12), left: 0, right: 0, textAlign: 'center',
                  fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.026, letterSpacing: 5,
@@ -39,6 +55,8 @@ export const PaperStairs: React.FC<{fields: any; durationInFrames: number}> = ({
   // Type/step metrics track the min dimension; the staircase's own floor and height are
   // frame-vertical, so they get portrait numbers that keep it clear of the caption band.
   const {portrait, M: height} = usePaperLayout();
+  const {ts} = useTypeScale();
+  const lit = Boolean(W.lit);
   const raw: number[] = (fields.points || []).map((p: any) => (typeof p === 'number' ? p : p?.value ?? 0));
   const pts = raw.slice(0, 8);
   const n = Math.max(2, pts.length);
@@ -80,9 +98,9 @@ export const PaperStairs: React.FC<{fields: any; durationInFrames: number}> = ({
           // real paper columns (phase 3). Each step gets its own substrate id so a staircase
           // is not the same sheet of paper repeated across every riser.
           <div key={i} style={{position: 'absolute', left: x(i), top: topY(i), width: stepW * 0.94,
-                               height: baseY - topY(i), borderRadius: 8,
-                               boxShadow: `0 ${height * 0.014}px ${height * 0.03}px ${W.shadow}`, ...st}}>
-            <PaperSheet id={`stair:${i}`} radius={8} edge={9} tint={W.paper} />
+                               height: baseY - topY(i), borderRadius: lit ? 3 : 8,
+                               boxShadow: lit ? litBoxShadow(height, 0.9) : `0 ${height * 0.014}px ${height * 0.03}px ${W.shadow}`, ...st}}>
+            <PaperSheet id={`stair:${i}`} radius={lit ? 3 : 8} edge={9} tint={W.paper} />
           </div>
         );
       })}
@@ -95,7 +113,7 @@ export const PaperStairs: React.FC<{fields: any; durationInFrames: number}> = ({
         <div style={{position: 'absolute', left: Math.min(x(n - 1) + stepW * 0.1, width * (portrait ? 0.5 : 0.78)), top: topY(n - 1) - height * 0.26,
                      ...placeStyle(frame, fps, height, lastAt + 8)}}>
           <PaperCard id={`stairlbl:${fields.end_label ?? ''}`} family="card_tag" style={{display: 'inline-block', padding: `${height * 0.012}px ${width * 0.016}px`, borderRadius: 10, transform: 'rotate(1.4deg)'}}>
-            <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.03, color: W.accent, whiteSpace: 'nowrap'}}>{fields.endLabel}</div>
+            <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('body', height * 0.03), color: W.accent, whiteSpace: 'nowrap'}}>{fields.endLabel}</div>
           </PaperCard>
         </div>
       ) : null}
@@ -136,28 +154,47 @@ export const PaperCompare: React.FC<{fields: any; durationInFrames?: number}> = 
     return (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
   };
   const lightSheet = lum(W.sheet) > 0.55;
+  const {on: phone, ts} = useTypeScale();
+  const headFamily = useHeadingFamily();
+  const lit = Boolean(W.lit);
   const tray = (d: any, at: number) => {
     const bad = d?.kind === 'bad';
     const st = popupStyle(frame, fps, at);
+    const band = bad ? (lightSheet ? W.ink : W.sheet) : W.accentSoft;
     return (
       <div style={{flex: portrait ? '0 0 auto' : 1, position: 'relative',
-                   width: portrait ? width * 0.78 : undefined, maxWidth: portrait ? undefined : width * 0.36}}>
+                   width: portrait ? width * 0.78 : undefined, maxWidth: portrait ? undefined : width * (phone ? 0.41 : 0.36)}}>
+        {lit ? null : (
         <div style={{position: 'absolute', left: '50%', bottom: -height * 0.018, width: '86%', height: height * 0.036,
                      transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%',
-                     filter: `blur(${bad ? 12 : 8}px)`, opacity: frame >= at ? (bad ? 1 : 0.75) : 0}} />
+                     filter: `blur(${bad ? 12 : 8}px)`, opacity: frame >= at ? (bad ? 1 : 0.75) : 0}} />)}
         {/* the tray body is real paper (phase 2); the flat W.paper fill and the fake
             borderBottom "thickness" are what made it read as a UI panel next to the
             generated art. The header band still paints over the paper, which is correct —
             it is ink on the card, not a second material. */}
-        <div style={{...st, position: 'relative', borderRadius: 18, overflow: 'hidden',
-                     boxShadow: `0 ${height * (bad ? 0.026 : 0.016)}px ${height * (bad ? 0.05 : 0.034)}px ${W.shadow}`}}>
-          <PaperSheet id={`tray:${d?.title ?? ''}`} radius={18} tint={W.paper} />
-          <div style={{position: 'relative', background: bad ? (lightSheet ? W.ink : W.sheet) : W.accentSoft,
+        <div style={{...st, position: 'relative', borderRadius: lit ? 6 : 18, overflow: lit ? 'visible' : 'hidden',
+                     boxShadow: lit ? litBoxShadow(height, bad ? 1.5 : 1)
+                       : `0 ${height * (bad ? 0.026 : 0.016)}px ${height * (bad ? 0.05 : 0.034)}px ${W.shadow}`}}>
+          <PaperSheet id={`tray:${d?.title ?? ''}`} radius={lit ? 6 : 18} tint={W.paper} />
+          {lit ? (
+            // lit: the header is a tinted paper label stuck across the card, not a CSS band
+            <div style={{position: 'relative', margin: `${height * 0.022}px auto 0`, width: 'fit-content', maxWidth: '88%',
+                         padding: `${height * 0.012}px ${height * 0.03}px`, textAlign: 'center',
+                         transform: `rotate(${bad ? 1.2 : -1.2}deg)`, boxShadow: litBoxShadow(height, 0.35),
+                         fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('sub', height * 0.026), letterSpacing: 2,
+                         textTransform: 'uppercase', color: bad ? W.paper : W.ink}}>
+              <PaperSheet id={`band:${d?.title ?? ''}`} family="card_tag" radius={4} edge={7} tint={band} />
+              <span style={{position: 'relative'}}>{d?.title}</span>
+            </div>
+          ) : (
+          <div style={{position: 'relative', background: band,
                        padding: `${height * 0.014}px 0`, textAlign: 'center',
-                       fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.026, letterSpacing: 3,
+                       fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('sub', height * 0.026), letterSpacing: 3,
                        textTransform: 'uppercase', color: bad ? W.paper : W.ink}}>{d?.title}</div>
+          )}
           <div style={{position: 'relative', padding: `${height * 0.03}px ${width * 0.018}px`, fontFamily: BRAND.font, fontWeight: 900,
-                       fontSize: height * 0.042, lineHeight: 1.15, color: W.ink, textAlign: 'center'}}>{d?.value}</div>
+                       fontSize: ts('label', height * 0.042), lineHeight: 1.15, color: W.ink, textAlign: 'center',
+                       mixBlendMode: lit ? 'multiply' : undefined}}>{d?.value}</div>
         </div>
       </div>
     );
@@ -166,7 +203,7 @@ export const PaperCompare: React.FC<{fields: any; durationInFrames?: number}> = 
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <PaperTable seed={(fields.left?.title || '') + 'vs'} />
       <PaperProps items={fields.props} />
-      <Kicker text={fields.kicker} height={height} />
+      <Kicker text={fields.kicker} height={height} hasTitle={Boolean(fields.title)} />
       <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve, ...push}}>
         {fields.title ? (
           // The header line (2026-09-26; the type map dropped it until then). Styled as
@@ -178,9 +215,10 @@ export const PaperCompare: React.FC<{fields: any; durationInFrames?: number}> = 
           // landscape title matches Figure's to the pixel; portrait tracks M like every other
           // paper size. The measure is Figure's too: its scene pads 6% a side, and the title
           // pads another 4% of what is left.
-          <div style={{textAlign: 'center', maxWidth: width * 0.88 * 0.92, fontFamily: BRAND.font, color: ink.body,
-                       fontWeight: 900, fontSize: height * 0.042, lineHeight: 1.16, opacity: titleIn,
-                       marginBottom: height * 0.075, textShadow: ink.paper ? PAPER_SHADOW : '0 3px 18px rgba(0,0,0,.6)'}}>
+          <div style={{textAlign: 'center', maxWidth: width * 0.88 * 0.92, fontFamily: phone ? headFamily : BRAND.font, color: ink.body,
+                       fontWeight: 900, fontSize: ts('heading', height * 0.042), lineHeight: phone ? 1.08 : 1.16, opacity: titleIn,
+                       letterSpacing: phone ? -0.5 : undefined,
+                       marginBottom: height * (phone ? 0.06 : 0.075), textShadow: ink.paper ? PAPER_SHADOW : '0 3px 18px rgba(0,0,0,.6)'}}>
             {figColorize(fields.title, fields.accent, [], ink.accent)}
           </div>
         ) : null}
@@ -208,6 +246,8 @@ export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({f
   // Portrait runs the flow DOWN the frame instead of across it (CvgSteps' fix): a row of
   // cards in a 1080-wide frame gives each step a column narrower than its own label.
   const {portrait, M: height, reserve} = usePaperLayout();
+  const {ts} = useTypeScale();
+  const lit = Boolean(W.lit);
   const steps: string[] = (fields.steps || []).map((s: any) => (typeof s === 'string' ? s : s?.title || ''));
   const n = Math.max(1, steps.length);
   const itemTimes: (number | null)[] = fields.itemTimes || [];
@@ -288,7 +328,7 @@ export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({f
                   : {position: 'absolute', left: cx(i - 1), top: frameH * 0.545, width: cx(i) - cx(i - 1),
                      height: height * 0.014, borderRadius: 6, zIndex: 0,
                      transform: `scaleX(${stripT})`, transformOrigin: 'left center',
-                     boxShadow: `0 ${height * 0.006}px ${height * 0.014}px ${W.shadow}`}}>
+                     boxShadow: lit ? litBoxShadow(height, 0.3) : `0 ${height * 0.006}px ${height * 0.014}px ${W.shadow}`}}>
                   <PaperSheet id={`strip:${i}`} family="card_tag" radius={6} edge={5} tint={W.sheetAlt} />
                 </div>
               ) : null}
@@ -296,12 +336,13 @@ export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({f
                            top: portrait ? cy(i) - height * 0.06 : frameH * 0.42, width: cardW}}>
                 <div style={{position: 'absolute', left: '50%', bottom: -height * 0.014, width: '82%', height: height * 0.028,
                              transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(7px)',
-                             opacity: frame >= at(i) ? 1 : 0}} />
-                <div style={{...st, position: 'relative', borderRadius: 16,
+                             opacity: frame >= at(i) && !lit ? 1 : 0}} />
+                <div style={{...st, position: 'relative', borderRadius: lit ? 5 : 16,
+                             boxShadow: lit && frame >= at(i) ? litBoxShadow(height) : undefined,
                              padding: `${height * 0.022}px ${width * 0.012}px`, textAlign: 'center'}}>
-                  <PaperSheet id={`flowcard:${i}:${s}`} radius={16} tint={W.paper} />
-                  <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.05, color: W.accent, lineHeight: 1}}>{i + 1}</div>
-                  <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.028, color: W.ink,
+                  <PaperSheet id={`flowcard:${i}:${s}`} radius={lit ? 5 : 16} tint={W.paper} />
+                  <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 900, fontSize: ts('label', height * 0.05), color: W.accent, lineHeight: 1}}>{i + 1}</div>
+                  <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('body', height * 0.028), color: W.ink,
                                lineHeight: 1.18, marginTop: height * 0.01}}>{s}</div>
                 </div>
               </div>
@@ -327,34 +368,43 @@ export const PaperList: React.FC<{fields: any; durationInFrames: number}> = ({fi
   const itemTimes: (number | null)[] = fields.itemTimes || [];
   const per = durationInFrames / Math.max(1, items.length + 1);
   const at = (i: number) => (itemTimes[i] != null ? (itemTimes[i] as number) : Math.round(i * per));
+  const {on: phone, ts, floor} = useTypeScale();
+  const lit = Boolean(W.lit);
+  // phone: long items step down to the floor rather than run off the page
+  const itemPx = phone ? (Math.max(...items.map((t) => String(t).length), 0) > 34 ? floor('label') : ts('label', 0))
+                       : height * 0.038;
+  const chip = phone ? itemPx * 1.3 : height * 0.062;
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <PaperTable seed={fields.title || fields.kicker || 'list'} />
       <PaperProps items={fields.props} />
-      <Kicker text={fields.kicker} height={height} />
+      <Kicker text={fields.kicker} height={height} hasTitle={Boolean(fields.title)} />
       <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve, ...push}}>
         <div>
           {fields.title ? (
             <div style={{...placeStyle(frame, fps, height, 4), marginBottom: height * 0.024}}>
               <PaperCard id={`ctrlbl:${fields.label ?? ''}`} family="card_tag" style={{display: 'inline-block', padding: `${height * 0.012}px ${width * 0.02}px`, borderRadius: 12}}>
-                <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.036, color: W.ink}}>{fields.title}</div>
+                <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: ts('label', height * 0.036), color: W.ink}}>{fields.title}</div>
               </PaperCard>
             </div>
           ) : null}
           {items.map((it, i) => (
             <div key={i} style={{display: 'flex', alignItems: 'center', gap: width * 0.014,
-                                 marginBottom: height * 0.02, ...placeStyle(frame, fps, height, at(i))}}>
-              <div style={{position: 'relative', width: height * 0.062, height: height * 0.062, borderRadius: 12,
+                                 marginBottom: height * (phone ? 0.028 : 0.02), ...placeStyle(frame, fps, height, at(i))}}>
+              <div style={{position: 'relative', width: chip, height: chip, borderRadius: 12,
                            display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto',
-                           boxShadow: `0 ${height * 0.008}px ${height * 0.016}px ${W.shadow}`,
-                           fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.034, color: W.ink}}>
+                           boxShadow: lit ? litBoxShadow(height, 0.5) : `0 ${height * 0.008}px ${height * 0.016}px ${W.shadow}`,
+                           transform: lit ? `rotate(${i % 2 ? 2 : -2.5}deg)` : undefined,
+                           fontFamily: BRAND.font, fontWeight: 900, fontSize: phone ? itemPx : height * 0.034, color: W.ink}}>
                 <PaperSheet id={`num:${i}`} family="card_tag" radius={12} edge={7} tint={W.accentSoft} />
                 <span style={{position: 'relative'}}>{i + 1}</span>
               </div>
-              <PaperCard id={`step:${i}`} style={{padding: `${height * 0.012}px ${width * 0.018}px`, borderRadius: 12,
-                                 boxShadow: `0 ${height * 0.01}px ${height * 0.02}px ${W.shadow}`,
+              <PaperCard id={`step:${i}`} style={{padding: `${height * 0.012}px ${width * 0.018}px`, borderRadius: lit ? 6 : 12,
+                                 boxShadow: lit ? litBoxShadow(height, 0.8) : `0 ${height * 0.01}px ${height * 0.02}px ${W.shadow}`,
+                                 maxWidth: phone ? width * 0.72 : undefined,
                                  transform: `rotate(${i % 2 ? 0.5 : -0.5}deg)`}}>
-                <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.038, color: W.ink}}>{it}</div>
+                <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: itemPx, color: W.ink, lineHeight: 1.12,
+                             mixBlendMode: lit ? 'multiply' : undefined}}>{it}</div>
               </PaperCard>
             </div>
           ))}
@@ -378,6 +428,9 @@ export const PaperBookCTA: React.FC<{fields: any; durationInFrames?: number}> = 
   const {portrait, M: height, reserve} = usePaperLayout();
   const book = usePlace(6);
   const card = usePlace(16);
+  const {ts} = useTypeScale();
+  const headFamily = useHeadingFamily();
+  const lit = Boolean(W.lit);
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <PaperTable seed={fields.headline || 'cta'} />
@@ -389,26 +442,26 @@ export const PaperBookCTA: React.FC<{fields: any; durationInFrames?: number}> = 
         {fields.image ? (
           <div style={{position: 'relative', width: width * (portrait ? 0.42 : 0.24)}}>
             <div style={{position: 'absolute', left: '50%', bottom: -height * 0.022, width: '92%', height: height * 0.04,
-                         transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(11px)', opacity: book.shadowOpacity}} />
+                         transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(11px)', opacity: lit ? 0 : book.shadowOpacity}} />
             <div style={book.object}>
-              <Img src={staticFile(fields.image)} style={{width: '100%', display: 'block', borderRadius: 10,
-                   boxShadow: `0 ${height * 0.02}px ${height * 0.05}px ${W.shadow}`, transform: 'rotate(-2deg)'}} />
+              <Img src={staticFile(fields.image)} style={{width: '100%', display: 'block', borderRadius: lit ? 3 : 10,
+                   boxShadow: lit ? litBoxShadow(height, 1.6) : `0 ${height * 0.02}px ${height * 0.05}px ${W.shadow}`, transform: 'rotate(-2deg)'}} />
             </div>
           </div>
         ) : null}
         <div style={{position: 'relative', maxWidth: width * (portrait ? 0.86 : 0.44)}}>
           <div style={{position: 'absolute', left: '50%', bottom: -height * 0.016, width: '88%', height: height * 0.03,
-                       transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(9px)', opacity: card.shadowOpacity}} />
+                       transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(9px)', opacity: lit ? 0 : card.shadowOpacity}} />
           <PaperCard id={`ctacard:${fields.headline ?? ''}`} style={{...card.object, padding: `${height * 0.03}px ${width * 0.028}px`, borderRadius: 20}}>
             {fields.kicker ? (
-              <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.022, letterSpacing: 4,
+              <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('eyebrow', height * 0.022), letterSpacing: 4,
                            textTransform: 'uppercase', color: W.accent, marginBottom: height * 0.014}}>{fields.kicker}</div>
             ) : null}
-            <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.058, lineHeight: 1.08, color: W.ink}}>
+            <div style={{fontFamily: headFamily, fontWeight: 900, fontSize: ts('heading', height * 0.058), lineHeight: 1.08, color: W.ink}}>
               {fields.headline}
             </div>
             {fields.subkicker ? (
-              <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: height * 0.028, color: W.accent,
+              <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: ts('sub', height * 0.028), color: W.accent,
                            marginTop: height * 0.02, lineHeight: 1.3}}>{fields.subkicker}</div>
             ) : null}
           </PaperCard>

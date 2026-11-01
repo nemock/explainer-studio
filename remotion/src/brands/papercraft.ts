@@ -55,6 +55,13 @@ export type PaperWorldTokens = {
   // chip/band fills — and on a LIGHT ground one value cannot do both: a fill light enough
   // for navy text on it is far too pale to read as text on cream (2026-08-07).
   kicker?: string;
+  // Visual upgrade (2026-11-01), both opt-in so an unproven world renders byte-identically:
+  //   phoneType — the type scale in type.ts (phone-legible floors; a real slide heading in
+  //               place of the lone uppercase kicker; content sized to the space)
+  //   lit       — paper keeps its own fibre and shading, takes a light falloff across each
+  //               sheet and two shadows (contact + cast) from one light (litShadow)
+  phoneType?: boolean;
+  lit?: boolean;
   // The shared PAGE (PaperBackground) for a world whose page is not cream. Optional, and
   // only papercraft-matrix sets it (2026-10-23): every world without it keeps the original
   // cream page byte-identically. `base` is the page colour the fibre texture overlays,
@@ -243,6 +250,10 @@ export const PAPER_NEMOCK: PaperWorldTokens = {
   // BRAND.green). The whole point of this world is that a Paper* kicker and a Schematic
   // kicker are the same colour on the same page.
   kicker: '#3ddc84',
+  // First world on the upgrade (operator 2026-11-01: deep dives first, other paper worlds
+  // opt in by theme once proven).
+  phoneType: true,
+  lit: true,
 };
 
 // PLG — The Operator's Guide to Product Leadership (2026-08-12). A LIGHT-ground world,
