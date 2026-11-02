@@ -295,6 +295,11 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
           the art keeps 0.42H with the column still ending above the caption pill (~0.76H). */}
       <div style={{position: 'relative', background: ink.paper ? undefined : '#fff', borderRadius: lit ? 5 : 26, padding: lit ? `${height * 0.03}px ${height * 0.06}px` : height * 0.022, boxShadow: lit ? litBoxShadow(height, 1.2) : ink.paper ? PAPER_SHADOW : '0 40px 120px rgba(0,0,0,.55)', overflow: (tour || autoKen) ? 'hidden' : undefined}}>
         {ink.paper ? <PaperSheet id={`mount:${fields.image ?? fields.title ?? ''}`} family="card_index" radius={lit ? 5 : 26} tint="#fffcf5" /> : null}
+        {/* The art's own window (2026-11-02, PM Guide cyber #2). The mount's overflow:hidden
+            clips at its OUTER edge, so a Ken Burns that grows the art to 1.22x spilled over the
+            border and, with the pan, ate it unevenly: late in every figure the mount showed on
+            one or two sides only and the print looked torn. The pan now stays inside the art. */}
+        <div style={{position: 'relative', overflow: (tour || autoKen) ? 'hidden' : undefined, borderRadius: lit ? 2 : 8}}>
         {pieces.length ? (
           // assembling: base image hidden; each piece is a clipped copy wiping in on cue
           <div style={{position: 'relative', ...(tour || {})}}>
@@ -320,6 +325,7 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
         ) : (
           <div style={{position: 'relative'}}>{img}<FigurePageType pageText={fields.pageText} height={height} ink={ink} /><FigureMarks marks={marks} aspect={fields.imageAspect} /></div>
         )}
+        </div>
         {hl ? (
           <div style={{position: 'absolute', top: `${hl.top ?? 30}%`, left: `${hl.left ?? 6}%`, height: `${hl.height ?? 12}%`, width: `${hlW}%`, background: ink.accentWash, borderRadius: 8}} />
         ) : null}
