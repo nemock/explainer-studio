@@ -30,18 +30,27 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 # so the per-project Pixabay licence auto-copy (_copy_music_license) will not fire for it —
 # that is expected, not a missing step. The old Pixabay beds stay in library/music/ because
 # the back catalogue still references them from its own project.json files.
-DEFAULT_MUSIC = _REPO_ROOT / "library/music/11-magnific_generate-a-sophisticated-_LU1wnIYswO.mp3"
-DEFAULT_MUSIC_GAIN = 0.22   # 0.12 was measured inaudible under narration
+#
+# 2026-11-01 (operator: viewers found the bed distracting; "get rid of any percussion sounds
+# so there's no beat ... just soften the silence"): track 11 carried a kick and hi-hat on
+# every 110 BPM beat. Track 12 is a beatless 110 BPM ambient drone (Magnific / Lyria 3 Pro),
+# prepared as a seamless 137 s loop at -14 LUFS (see its -provenance.txt). Gain 0.16 puts it
+# at about -30 LUFS under the voice, 3 dB quieter than track 11 at 0.22. Track 11 stays in the
+# library for the back catalogue, whose project.json files still name it.
+BED = _REPO_ROOT / "library/music/12-magnific_beatless-ambient-drone-110bpm_KLcwzickqp_loop.mp3"
+BED_GAIN = 0.16
+DEFAULT_MUSIC = BED
+DEFAULT_MUSIC_GAIN = BED_GAIN   # beds are -14 LUFS from track 12 on; 0.16 = ~ -30 LUFS bed
 
 # Per-channel beds. Keep beds FLAT at render (no sidechain ducking — the gaps between spoken
 # lines are too short, so ducking pumps; operator 2026-07-16). NOTE nemock-deep-dive's bed is
 # operator-generated Magnific (NOT Pixabay): the per-project license auto-copy won't fire for
-# it; monetization rights come from the Magnific subscription. Magnific caps generated audio at
-# 5:00, so this bed loops (~5:00/10:00 seams under an ~11-min deep dive) — accepted.
+# it; monetization rights come from the Magnific subscription. The bed is a prepared seamless
+# loop (137 s), so its repeats under a long video have no audible seam.
 THEME_MUSIC = {
     "nemock-deep-dive": {
-        "path": _REPO_ROOT / "library/music/11-magnific_generate-a-sophisticated-_LU1wnIYswO.mp3",
-        "gain": 0.22,
+        "path": BED,
+        "gain": BED_GAIN,
     },
     # The Operator's Guide to Product Leadership rides alongside the deep dives on the
     # same channel, so it gets the same bed rather than the global fallback. Added
@@ -49,20 +58,20 @@ THEME_MUSIC = {
     # the DESIGNED behaviour for an unlisted theme, not a bug, but 0.12 was already found
     # inaudible under narration (that is why nemock moved to 0.22).
     "plg-guide": {
-        "path": _REPO_ROOT / "library/music/11-magnific_generate-a-sophisticated-_LU1wnIYswO.mp3",
-        "gain": 0.22,
+        "path": BED,
+        "gain": BED_GAIN,
     },
     # The PM Guide (2026-10-19) is plg-guide's sister series on the same channel; same bed,
     # decided at theme creation so module 1 never renders on the inaudible fallback.
     "pmg-guide": {
-        "path": _REPO_ROOT / "library/music/11-magnific_generate-a-sophisticated-_LU1wnIYswO.mp3",
-        "gain": 0.22,
+        "path": BED,
+        "gain": BED_GAIN,
     },
     # 3D Papercraft Matrix (2026-10-23, the medtech cybersecurity series): the standard bed,
     # set at theme creation for the same reason.
     "papercraft-matrix": {
-        "path": _REPO_ROOT / "library/music/11-magnific_generate-a-sophisticated-_LU1wnIYswO.mp3",
-        "gain": 0.22,
+        "path": BED,
+        "gain": BED_GAIN,
     },
 }
 
