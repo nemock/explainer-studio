@@ -965,7 +965,7 @@ ANNOTATION_COLORS = ("green", "red", "white", "amber")
 # moves. On PHONE_TYPE_THEMES an old `at` circle that sits on a node is snapped to it.
 # Keep this tuple in step with `phoneType` in remotion/src/brands/papercraft.ts.
 TARGET_KINDS = ("circle", "box", "underline", "strike")
-PHONE_TYPE_THEMES = ("nemock-deep-dive",)
+PHONE_TYPE_THEMES = ("nemock-deep-dive", "papercraft-matrix")
 MARKS_BLOCKED_NAME = "BLOCKED-MARKS.md"
 
 # What each layer's renderer does with what it is given, keyed by the deck field. `default`

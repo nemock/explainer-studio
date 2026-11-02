@@ -330,6 +330,10 @@ export const PAPER_MATRIX: PaperWorldTokens = {
   kicker: '#3ddc84',
   page: {base: '#06120c', light: '120,255,180', surround: '1,4,2',
          rain: 'papercraft-matrix/elements/tape_rain.webp'},
+  // Opted into the 2026-11-01 visual upgrade on 2026-11-02 (Dave, from episode 2 of the
+  // series on). Keep PHONE_TYPE_THEMES in remotion_engine.py in step.
+  phoneType: true,
+  lit: true,
 };
 
 // Theme -> world. Every paper channel owns its ground; anything unmapped keeps FWF.

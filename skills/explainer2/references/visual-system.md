@@ -20,8 +20,11 @@ Two world tokens in `remotion/src/brands/papercraft.ts`, both opt-in per theme:
 | `phoneType` | the type scale below, the slide heading, content sized to the space, 44 px captions |
 | `lit` | lit paper: real fibre, a light falloff across each sheet, two shadows from one light |
 
-**On today: `nemock-deep-dive` only** (operator 2026-11-01: deep dives first). Every other
-theme renders byte-for-byte as before. A world joins by setting both tokens AND adding its
+**On today: `nemock-deep-dive`** (operator 2026-11-01: deep dives first) **and
+`papercraft-matrix`** (operator 2026-11-02, from episode 2 of the MedTech cybersecurity PM
+Guide; episode 1 shipped before it). Every other theme renders byte-for-byte as before.
+`papercraft-matrix` is a dark-page world: a lone kicker sits on the page, so `PaperData`'s
+heading takes the page's light ink there (`world.page ? hookInk : ink`), found on the proof. A world joins by setting both tokens AND adding its
 theme to `PHONE_TYPE_THEMES` in `src/explainer2/remotion_engine.py` (captions and annotation
 snapping read that tuple). Prove it on stills of that show first (§6). Never flip a global
 default (theme-keyed branding isolation).

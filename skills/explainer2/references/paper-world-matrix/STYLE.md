@@ -86,6 +86,11 @@ cream tag). Video.tsx paints the matching base. The last two were found on episo
 stills (2026-10-23): both printed `ink.body`, which is light here, onto light paper.
 **Any component that prints on paper inside the art reads the same token.**
 
+**Phone type and lit paper since episode 2 (Dave, 2026-11-02).** `PAPER_MATRIX` sets
+`phoneType` and `lit`, and the theme is in `PHONE_TYPE_THEMES` (`visual-system.md`). A lone
+kicker becomes the slide's headline ON THE PAGE, so `PaperData` prints it in `hookInk` here;
+author lone kickers as short sentence-case headlines. Episode 1 rendered before the switch.
+
 **Two greens, by surface.** Type on the dark page (kickers, captions, `ink.accent`) uses the
 phosphor `#3ddc84`. Type printed ON sage cards uses the world `accent`, deep green
 `#14743f`, because phosphor on sage is under 2:1.

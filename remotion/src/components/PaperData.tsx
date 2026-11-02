@@ -31,9 +31,12 @@ const Kicker: React.FC<{text?: string; height: number; hasTitle?: boolean}> = ({
                    fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('eyebrow', 0), letterSpacing: 4,
                    textTransform: 'uppercase', color: W.kicker ?? W.accentSoft}}>{text}</div>
     ) : (
+      // A lone kicker sits on the PAGE, not on a card. W.ink is card ink, which on a dark-page
+      // world (papercraft-matrix) was dark green on the dark page (2026-11-02 proof, s09); the
+      // page's own light ink there is hookInk. Every other world keeps W.ink.
       <div style={{position: 'absolute', top: frameH * 0.06, left: '6%', right: '6%', textAlign: 'center',
                    fontFamily: headFamily, fontWeight: 900, fontSize: ts('heading', 0), lineHeight: 1.08,
-                   letterSpacing: -0.5, textWrap: 'balance' as any, color: W.ink}}>{text}</div>
+                   letterSpacing: -0.5, textWrap: 'balance' as any, color: W.page ? W.hookInk : W.ink}}>{text}</div>
     );
   }
   return text ? (
