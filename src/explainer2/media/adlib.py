@@ -4,9 +4,11 @@ Transcribes each recorded segment locally (mlx-whisper, Metal) and word-diffs it
 against the script text:
 
   drift < 2%   verbatim — keep the script text (cleanest captions)
-  2% – 15%     ad-lib   — captions should follow what was actually said;
+  over 2%      ad-lib   — captions should follow what was actually said;
                           --apply rewrites that segment's text from the ASR
-  > 15%        flagged  — re-record (or accept-with-rewrite manually)
+  rerecord     only when the transcript shows the script's words are not in the take
+               (rerecord_confirmed). Drift alone never asks the operator to go back to
+               the mic: "rerecord" holds the render and texts his phone.
 
 Report → work/adlib_report.json. --apply backs up script.json to
 script.orig.json before touching it. Forced alignment downstream works with
@@ -19,6 +21,14 @@ import re
 MODEL = "mlx-community/whisper-medium.en-mlx"
 MINOR = 0.02
 MAJOR = 0.15
+# A re-record is confirmed by words missing from the take, never by drift alone. Operator,
+# 2026-11-03: "I should not be alerted to re-record a card until it is verified as
+# necessary." Of the 93 cards the catalog's 295 reports held at or over MAJOR, these two
+# rules keep only the takes that really lost their words (tools/test_adlib_flags.py).
+MISSING_RUN_WORDS = 8       # a contiguous run of script words absent from the transcript...
+MISSING_RUN_SHARE = 1 / 3   # ...that is at least this share of the card (a cut-off take)
+MIN_MATCH_SHARE = 0.4       # or too little of the card matched at all (a wrong card)
+MIN_MATCH_WORDS = 4         # too few words to judge below this ("Expired." / "All expired.")
 
 
 _ONES = ("zero one two three four five six seven eight nine ten eleven twelve "
@@ -40,6 +50,9 @@ def _num_words(n):
     if n < 1_000_000:
         th, r = divmod(n, 1000)
         return _num_words(th) + " thousand" + ((" " + _num_words(r)) if r else "")
+    if n < 1_000_000_000:
+        m, r = divmod(n, 1_000_000)
+        return _num_words(m) + " million" + ((" " + _num_words(r)) if r else "")
     return str(n)
 
 
@@ -49,7 +62,10 @@ def _norm_words(text):
     # re-record (2026-09-23), which parks the watcher's render. Deleted, not spaced,
     # so contractions stay one token; the curly form goes too.
     text = text.lower().replace("'", "").replace("’", "").replace("%", " percent ")
-    text = re.sub(r"(\d),(\d)", r"\1\2", text)          # 1,000 → 1000
+    # 1,234,567 → 1234567, but digits read one at a time stay apart: "1,2,3,4,5,6,7" came
+    # out as 12 34 56 7 and scored a clean take at 16% drift (#81 card 11, 2026-11-03).
+    text = re.sub(r"(?<![\d,])\d{1,3}(?:,\d{3})+(?![\d,])",
+                  lambda m: m.group().replace(",", ""), text)
     text = re.sub(r"[^a-z0-9' ]", " ", text)
     out = []
     for tok in text.split():
@@ -76,6 +92,35 @@ def _drift(script_text, asr_text):
     return round(1.0 - difflib.SequenceMatcher(None, a, b).ratio(), 4)
 
 
+def rerecord_confirmed(script_text, asr_text):
+    """(True, why) when the transcript shows the take does not hold the card's words.
+
+    Drift is the wrong evidence for this: spoken initialisms ("F-D-A" / "FDA"), contractions,
+    decimals and misheard names all score high against a clean take. Missing words are what
+    a re-record fixes, and a recognizer that mishears a word still leaves the words around it."""
+    a, b = _norm_words(script_text), _norm_words(asr_text)
+    if not a:
+        return False, ""
+    matcher = difflib.SequenceMatcher(None, a, b, autojunk=False)
+    run = max((i2 - i1 for tag, i1, i2, _, _ in matcher.get_opcodes()
+               if tag in ("delete", "replace")), default=0)
+    matched = sum(m.size for m in matcher.get_matching_blocks())
+    if run >= MISSING_RUN_WORDS and run >= MISSING_RUN_SHARE * len(a):
+        return True, f"{run} of {len(a)} script words in a row are not in the take"
+    if len(a) >= MIN_MATCH_WORDS and matched < MIN_MATCH_SHARE * len(a):
+        return True, f"only {matched} of {len(a)} script words are in the take"
+    return False, ""
+
+
+def classify(drift, script_text, asr_text):
+    """verbatim / adlib / rerecord: the one place a card earns the re-record flag."""
+    if drift < MINOR:
+        return "verbatim"
+    if drift >= MAJOR and rerecord_confirmed(script_text, asr_text)[0]:
+        return "rerecord"
+    return "adlib"
+
+
 def run(proj, apply=False, model=MODEL):
     import mlx_whisper
     from .common import effective_segments
@@ -98,7 +143,7 @@ def run(proj, apply=False, model=MODEL):
             asr = mlx_whisper.transcribe(str(wav), path_or_hf_repo=model)["text"].strip()
             d = _drift(seg["text"], asr)
             worst = max(worst, d)
-            status = "verbatim" if d < MINOR else ("adlib" if d < MAJOR else "rerecord")
+            status = classify(d, seg["text"], asr)
             rows.append({"id": seg["id"], "status": status, "drift": d,
                          "script_text": seg["text"], "asr_text": asr})
             if apply and status == "adlib" and seg["id"] in by_id:

@@ -590,7 +590,7 @@ def run(proj, open_browser=True):
         # pass needed after recording. Cards whose drift check didn't complete are
         # "unchecked"; `explainer2 adlib` remains as the FALLBACK for those only.
         if drift_enabled:
-            from .media.adlib import MODEL, MINOR, MAJOR
+            from .media.adlib import MODEL, classify
             rows, worst = [], 0.0
             for s in segs:
                 sid = s["id"]; st = cur["stem"][sid]
@@ -600,7 +600,7 @@ def run(proj, open_browser=True):
                 if dr.get("status") != "done":
                     rows.append({"id": sid, "status": "unchecked"}); continue
                 d = dr.get("drift", 0.0); worst = max(worst, d)
-                status = "verbatim" if d < MINOR else ("adlib" if d < MAJOR else "rerecord")
+                status = classify(d, s["text"], dr.get("asr_text", ""))
                 rows.append({"id": sid, "status": status, "drift": d,
                              "script_text": s["text"], "asr_text": dr.get("asr_text", "")})
             (work_dir / "adlib_report.json").write_text(json.dumps(

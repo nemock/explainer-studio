@@ -391,8 +391,11 @@ body line).
     the guard and the render refuses to start.
   Then read `work/adlib_report.json` — the booth drift-checks every take live
   and writes the report at Finish (§7b; run `bin/explainer2 adlib` only as the
-  fallback for `unchecked` segments). If a segment is flagged `rerecord`, tell
-  the operator which and relaunch the booth (`launch_booth.py`). Fix any real
+  fallback for `unchecked` segments). `rerecord` means the take is missing the
+  card's words (`adlib.rerecord_confirmed`), not that drift is high (2026-11-03); tell
+  the operator which and relaunch the booth (`launch_booth.py`). A possible slip
+  inside a complete take ("David" for "Donald") goes to him as a question with the
+  card and the transcript, never as an instruction to re-record. Fix any real
   drift BY HAND (edit the segment, re-run narrate+align) — **do NOT use
   `--apply`** (it overwrites your spelled-out numbers and proper nouns with raw
   ASR; see §7b).
