@@ -169,7 +169,7 @@ export const figColorize = (text: string, accents: string[] = [], accents2: stri
 //     each wiping in on its cue; the "picture assembling" treatment.
 export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
   const frame = useCurrentFrame();
-  const {fps, height} = useVideoConfig();
+  const {fps, height, width} = useVideoConfig();
   const ink = useInk();
   // phone type (2026-11-01): kicker is an eyebrow above a title, the headline when alone;
   // the column lifts clear of the larger captions, and the mount is lit paper on lit worlds
@@ -236,8 +236,12 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
   const img = fields.image ? (
     <Img src={staticFile(fields.image)} style={{maxWidth: '100%', maxHeight: Math.round(height * (phone ? 0.42 : 0.56)), objectFit: 'contain', display: 'block', borderRadius: lit ? 2 : 8}} />
   ) : null;
+  // The lift clears the captions in LANDSCAPE only. Portrait already reserves 0.34H for them
+  // (Video.tsx contentBottom), and adding this on top pushed the column about 0.17H too high,
+  // so a Short's heading ran off the top of the frame (#81 strawberry: "token" with the
+  // first line gone).
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 6%', paddingBottom: phone ? height * 0.21 : 0}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 6%', paddingBottom: phone && width >= height ? height * 0.21 : 0}}>
       {/* Kicker marginBottom 0.025 -> 0.07 (2026-08-11): at the larger size the kicker reached
           the mount's top-left tape, which draws over it and ate the first characters ("SERIES"
           rendered as "ERIES"). The tape overhangs the corner by roughly height*0.06, so the
