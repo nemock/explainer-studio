@@ -226,7 +226,8 @@ brief, CRAFT.md, the architecture tells, and the **article/Substack** dial in FO
 Not CONSTRAINTS.md. Tell it to read the whole piece aloud in one pass and to name the craft
 problem in the skill's vocabulary, and hand it the settled carve-outs so it does not
 re-argue them: a declared `length_variant`, deliberate repetition, verbatim quotes, the
-series CTA rule. Fix every finding or answer it in one line. Two rounds maximum.
+series CTA rule. Fix every finding or answer it in one line. Rounds and the read every fix
+gets before it ships: humaner SKILL.md, "The fresh-eyes gate."
 
 **Re-run the mechanical checks after applying its fixes.** On module 3 the repair for one
 finding introduced a section opening on a bare "Which", which is the §0 defect this

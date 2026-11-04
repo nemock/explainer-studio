@@ -519,7 +519,8 @@ to date missed length on the first draft; the rule exists because it bites).
       reader), and list the settled
       carve-outs so it does not re-litigate them (deliberate repetition, verbatim quoted
       lines, numbers spelled out for captions, the composite company, the series CTA).
-      Fix every finding or answer it in one line naming the carve-out. Cap at two rounds.
+      Fix every finding or answer it in one line naming the carve-out. Rounds and the read
+      every fix gets before the booth opens: humaner SKILL.md, "The fresh-eyes gate."
 
       **The timing is the whole point, and module 3 is the worked example of getting it
       wrong.** The gate ran there only after the booth AND after the render, and its
