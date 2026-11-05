@@ -148,6 +148,7 @@ export const PAPER_WTE: PaperWorldTokens = {
 // green: this brand sells to agricultural producers and energy buyers, and green-on-green
 // reads as environmental advocacy to that audience.
 export const PAPER_CIRCUMVENT: PaperWorldTokens = {
+  phoneType: true, lit: true,  // operator 2026-11-05: every show, type that uses the space
   ground: '#14361F',
   groundDeep: '#0D2415',
   sheet: '#1F4A2F',
@@ -171,6 +172,7 @@ export const PAPER_CIRCUMVENT: PaperWorldTokens = {
 
 // Daily founder tip (theme `fwf`) — the book cover's violet.
 export const PAPER_SHOW_FWF: PaperWorldTokens = {
+  phoneType: true, lit: true,  // operator 2026-11-05: every show, type that uses the space
   ground: '#2A1142', groundDeep: '#1D0B30', sheet: '#36185B', sheetAlt: '#757BBD',
   paper: '#F3EFFA', paperShade: '#DFD8EE', ink: '#2A1142',
   accent: '#757BBD', accentSoft: '#C7CCEA', shadow: 'rgba(15,5,30,.45)',
@@ -179,6 +181,7 @@ export const PAPER_SHOW_FWF: PaperWorldTokens = {
 
 // Monday MedTech (`mmt-tangerine`) — tangerine stock, clinical aqua.
 export const PAPER_MMT: PaperWorldTokens = {
+  phoneType: true, lit: true,  // operator 2026-11-05: every show, type that uses the space
   ground: '#7A2F09', groundDeep: '#5A2206', sheet: '#C25012', sheetAlt: '#F2B279',
   paper: '#FFF2E5', paperShade: '#F0DCC6', ink: '#5F2508',
   accent: '#0F7E75', accentSoft: '#7FD9CF', shadow: 'rgba(40,15,4,.45)',
@@ -187,6 +190,7 @@ export const PAPER_MMT: PaperWorldTokens = {
 
 // Founder Tip Tuesday (`ftt-study`) — the midnight-blue study, brass and parchment.
 export const PAPER_FTT: PaperWorldTokens = {
+  phoneType: true, lit: true,  // operator 2026-11-05: every show, type that uses the space
   ground: '#14253E', groundDeep: '#0D1930', sheet: '#1D3557', sheetAlt: '#C9A24A',
   paper: '#F0E8D2', paperShade: '#DFD3B6', ink: '#1D3557',
   accent: '#A8822F', accentSoft: '#E2CC92', shadow: 'rgba(8,16,32,.45)',
@@ -195,6 +199,7 @@ export const PAPER_FTT: PaperWorldTokens = {
 
 // Who Signs The Check (`wsc-goldenrod`) — goldenrod folder, ledger-green ink.
 export const PAPER_WSC: PaperWorldTokens = {
+  phoneType: true, lit: true,  // operator 2026-11-05: every show, type that uses the space
   ground: '#7A5E10', groundDeep: '#5C460B', sheet: '#F2C94C', sheetAlt: '#B3271D',
   paper: '#FBF3DC', paperShade: '#EBDDB4', ink: '#1F3D2E',
   accent: '#A4551E', accentSoft: '#D9A06B', shadow: 'rgba(60,45,8,.45)',
@@ -203,6 +208,7 @@ export const PAPER_WSC: PaperWorldTokens = {
 
 // The Teardown (`ttd-indigo`) — electric-indigo blueprint, safety-orange annotations.
 export const PAPER_TTD: PaperWorldTokens = {
+  phoneType: true, lit: true,  // operator 2026-11-05: every show, type that uses the space
   ground: '#1D2170', groundDeep: '#141650', sheet: '#2E33A0', sheetAlt: '#9BA8F5',
   paper: '#EDF0FF', paperShade: '#D8DDF2', ink: '#1D2170',
   accent: '#E2661F', accentSoft: '#F9B98E', shadow: 'rgba(10,12,45,.5)',
@@ -211,6 +217,7 @@ export const PAPER_TTD: PaperWorldTokens = {
 
 // Failure Modes Friday (`fmf-alarm`) — brick red, caution yellow (deepened on paper).
 export const PAPER_FMF: PaperWorldTokens = {
+  phoneType: true, lit: true,  // operator 2026-11-05: every show, type that uses the space
   ground: '#6E1111', groundDeep: '#4E0C0C', sheet: '#9E1B1B', sheetAlt: '#C9CDD2',
   paper: '#FBEFE8', paperShade: '#EDD9CE', ink: '#5A1010',
   accent: '#A87E00', accentSoft: '#F5C518', shadow: 'rgba(45,8,8,.5)',

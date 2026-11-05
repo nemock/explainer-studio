@@ -20,9 +20,15 @@ Two world tokens in `remotion/src/brands/papercraft.ts`, both opt-in per theme:
 | `phoneType` | the type scale below, the slide heading, content sized to the space, 44 px captions |
 | `lit` | lit paper: real fibre, a light falloff across each sheet, two shadows from one light |
 
-**On today: `nemock-deep-dive`** (operator 2026-11-01: deep dives first) **and
-`papercraft-matrix`** (operator 2026-11-02, from episode 2 of the MedTech cybersecurity PM
-Guide; episode 1 shipped before it). Every other theme renders byte-for-byte as before.
+**On today: `nemock-deep-dive`** (operator 2026-11-01), **`papercraft-matrix`** (operator
+2026-11-02, from episode 2 of the MedTech cybersecurity PM Guide; episode 1 shipped before it),
+and **the whole daily/weekly/Circumvent family** (operator 2026-11-05): `fwf`, `mmt-tangerine`,
+`ftt-study`, `wsc-goldenrod`, `ttd-indigo`, `fmf-alarm`, `circumvent`. See §4a.
+
+**Still off, and named as such** in `UNSCALED` in `tools/test_type_floor.py`: `plg-guide`,
+`pmg-guide`, `brg-deep-dive`, `brg-paper`, `wte-guide`. That test fails on any theme that is
+on neither list, because "opt-in" alone left the daily on 23-28 px type for four days after the
+upgrade shipped, with every gate green; the operator caught it on a phone.
 `papercraft-matrix` is a dark-page world: a lone kicker sits on the page, so `PaperData`'s
 heading takes the page's light ink there (`world.page ? hookInk : ink`), found on the proof. A world joins by setting both tokens AND adding its
 theme to `PHONE_TYPE_THEMES` in `src/explainer2/remotion_engine.py` (captions and annotation
@@ -121,6 +127,26 @@ worlds:
 - **Compare/list/counter/statement**: wider measures (0.41–0.74 of frame width) so bigger type
   wraps instead of overflowing; a long list item steps down to the `label` floor, never under.
 
+## 4a. The daily, weekly and Circumvent family (`Circumvent.tsx`, `Cvg*`)
+
+A separate component set from the Paper* one: type printed on a full-bleed set rather than on
+cards. Same roles, through `useCvgType()`. Earlier fixes here kept landscape "pixel-identical",
+so when these shows went 16:9-only (2026-10-02) they landed on the old sizes. On a phone-type
+world, in landscape:
+
+- **Punch:** the kicker says what the number IS ("seconds to book an Uber"), so it takes the
+  `label` role (67 px) in ink, not an eyebrow under a 281 px number.
+- **Scene:** wider block (78% of frame), larger length-aware tiers, and a scrim that runs as low
+  as the larger block does, so ink never lands on the set.
+- **Lone kicker** (compare, steps, list with no headline): 56 px in ink; above a headline it is
+  the 43 px eyebrow.
+- **Compare:** short values use the room (`4` at 162 px, not 78); long ones step down.
+- **Steps:** each label sits on its own paper tag (dark ink on a dark set was unreadable, and
+  labels crossed the art), and the authored `headline` is drawn. Label size fits the longest word.
+- **List:** the largest item size at which the whole list fits above the captions, floor 52 px.
+
+Portrait keeps its own tiers, tuned against 4:5, with kickers and sub-lines on the scale.
+
 ## 5. Visual QA on a phone-type world
 
 Run in this order; all through the render queue where they render (CLAUDE.md rule 9).
@@ -154,6 +180,6 @@ anything that builds.
 
 - **New object families** (Magnific; quote credits first, operator approves): ruled index
   cards, kraft tags, folders, pins and clips, and a relight pass on the existing notes/cards.
-- Other paper worlds have not opted in.
+- The themes in §0's "still off" list have not been decided.
 - A strike across a short second label line runs the note's width (line widths are estimated).
 - Portrait (Shorts) keeps the authored schematic geometry; only sizes change there.

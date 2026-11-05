@@ -27,6 +27,20 @@ FLOOR = 0.044
 EXPR = re.compile(r"fontSize:\s*([^,}]+)")
 RAW = re.compile(r"\b(height|H|U|M|frameH|cardH)\s*\*\s*(0\.\d+)")
 PHONE_BRANCH = re.compile(r"(phone|on)\s*\?")
+ROOT = Path(__file__).resolve().parents[1]
+
+# THEMES NOT YET ON THE SCALE. Every theme in WORLD_BY_THEME is either on phoneType or named
+# here with the reason. The 2026-11-01 upgrade shipped opt-in, this test checked only inline
+# sizes, and the daily and every weekly show stayed on 23-28 px type for four more days with
+# every gate green (operator caught it on a phone, 2026-11-05). A world can no longer be left
+# out by nobody deciding: adding a theme, or leaving one here, is now a visible choice.
+UNSCALED = {
+    "plg-guide": "published series; operator has not decided",
+    "pmg-guide": "mid-series; operator has not decided",
+    "brg-deep-dive": "operator has not decided",
+    "brg-paper": "operator has not decided",
+    "wte-guide": "operator has not decided",
+}
 
 # Bare sub-floor literals per file on 2026-11-01, after the phone type scale landed.
 BASELINE = {
@@ -38,7 +52,7 @@ BASELINE = {
     "Captions.tsx": 0,
     "Chem.tsx": 0,
     "ChibiPresenter.tsx": 0,
-    "Circumvent.tsx": 7,
+    "Circumvent.tsx": 0,
     "CvgTitle.tsx": 0,
     "DataViz2.tsx": 0,
     "Extras.tsx": 3,
@@ -79,6 +93,38 @@ def bare_subfloor(text):
     return hits
 
 
+def theme_problems():
+    """Themes on neither list, stale exceptions, and the engine's tuple out of step."""
+    ts = (ROOT / "remotion/src/brands/papercraft.ts").read_text()
+    block = ts[ts.index("const WORLD_BY_THEME"):]
+    block = block[:block.index("};")]
+    worlds = dict(re.findall(r"'([\w-]+)':\s*(PAPER_\w+)", block))
+    assert worlds, "WORLD_BY_THEME not found"
+
+    def scaled(name):
+        m = re.search(r"const %s: PaperWorldTokens = \{(.*?)\n\};" % name, ts, re.S)
+        assert m, f"{name} definition not found"
+        if re.search(r"\bphoneType:\s*true", m.group(1)):
+            return True
+        parent = re.search(r"\.\.\.(PAPER_\w+)", m.group(1))
+        return scaled(parent.group(1)) if parent else False
+
+    on = {t for t, w in worlds.items() if scaled(w)}
+    engine = (ROOT / "src/explainer2/remotion_engine.py").read_text()
+    tuple_of = lambda name: set(re.findall(r'"([\w-]+)"', re.search(
+        r"^%s = (.*?\))" % name, engine, re.S | re.M).group(1)))
+    py = tuple_of("PHONE_TYPE_THEMES") | tuple_of("_CVG_STYLE_THEMES")
+    out = []
+    for t in sorted(worlds):
+        if t not in on and t not in UNSCALED:
+            out.append(f"theme {t}: no phoneType and no reason in UNSCALED, so it ships unreadable type")
+        if t in on and t in UNSCALED:
+            out.append(f"theme {t}: on phoneType but still listed in UNSCALED; remove it")
+        if (t in on) != (t in py):
+            out.append(f"theme {t}: phoneType {t in on} but PHONE_TYPE_THEMES {t in py} (captions would disagree)")
+    return out, len(on), len(worlds)
+
+
 def main():
     counts = {f.name: bare_subfloor(f.read_text()) for f in sorted(COMPONENTS.glob("*.tsx"))}
     if "--baseline" in sys.argv:
@@ -96,12 +142,15 @@ def main():
             lower.append(f"{name}: {len(hits)} < baseline {allowed}; lower it in BASELINE")
     for line in lower:
         print("note:", line)
+    theme_bad, n_on, n_all = theme_problems()
+    bad += theme_bad
     if bad:
-        print("FAIL —", len(bad), "file(s) gained tiny type:")
+        print("FAIL —", len(bad), "type problem(s):")
         for b in bad:
             print("  -", b)
         return 1
-    print(f"PASS — no new sub-floor font sizes across {len(counts)} components")
+    print(f"PASS — no new sub-floor font sizes across {len(counts)} components; "
+          f"{n_on} of {n_all} themes on the scale, {len(UNSCALED)} named exceptions")
     return 0
 
 

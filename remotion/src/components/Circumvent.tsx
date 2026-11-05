@@ -3,6 +3,8 @@ import {AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, use
 import {BRAND} from '../brand';
 import {useWorld, usePlace, flick} from './PaperWorld';
 import {PAPER_CIRCUMVENT} from '../brands/papercraft';
+import {PaperSheet, litBoxShadow} from './PaperNote';
+import {useTypeScale} from '../type';
 
 // CIRCUMVENT scene family (2026-07-30).
 //
@@ -210,6 +212,26 @@ const kickerSize = (text: string, M: number, width: number, portrait: boolean): 
   return Math.max(base, Math.min(M * 0.034, fits));
 };
 
+// PHONE TYPE ON THIS FAMILY (operator, 2026-11-05: "why is it so small? There is plenty of
+// room on this screen"). Every earlier fix to this file grew type for the one case reported
+// and kept the rest "pixel-identical", usually landscape. Then the six shows went 16:9-only
+// (2026-10-02) and landed on exactly the sizes those fixes had preserved: 23 px kickers over
+// a 281 px number. So on a phoneType world the sizes here come from the roles in type.ts, in
+// every aspect. Worlds without the token keep the old values.
+//   kicker   above a headline: the eyebrow role
+//   lone     the only headline on the slide (compare, steps, list): larger, and in ink
+const useCvgType = () => {
+  const {on, ts, floor, U} = useTypeScale();
+  const {width, height} = useVideoConfig();
+  const portrait = height > width;
+  const kicker = (text: string) => {
+    const old = kickerSize(text, U, width, portrait);
+    return on ? Math.max(ts('eyebrow', 0), old) : old;
+  };
+  const lone = (text: string) => (on ? U * 0.052 : kickerSize(text, U, width, portrait));
+  return {on, ts, floor, U, kicker, lone, track: on ? 3 : 5};
+};
+
 const SceneType: React.FC<{
   kicker?: string; headline?: string; accent?: string[]; sub?: string;
   align?: 'left' | 'center'; at?: number; hit?: number | null; band?: 'top' | 'middle';
@@ -239,6 +261,12 @@ const SceneType: React.FC<{
     : hLen <= 320 ? 0.044
     : 0.038;
   const P = paperRgb(W.paper);
+  const T = useCvgType();
+  // phone type, landscape: a wider block and larger tiers, since a 16:9 frame has the room.
+  // Portrait keeps its own tiers, which were tuned against 4:5 (the note above).
+  const wide = T.on && width >= height;
+  const hPhone = hLen <= 28 ? 0.1 : hLen <= 60 ? 0.084 : hLen <= 185 ? 0.066 : hLen <= 240 ? 0.056
+    : hLen <= 320 ? 0.05 : 0.044;
   // Portrait pass 2026-08-07: type tracks the min dimension (landscape identical), and
   // the text block widens on narrow frames — 62% of a portrait width wastes the room.
   const portrait = height > width;
@@ -260,7 +288,10 @@ const SceneType: React.FC<{
     <>
       <AbsoluteFill style={{
         background: band === 'top'
-          ? `linear-gradient(180deg, rgba(${P},.90) 0%, rgba(${P},.62) 30%, rgba(${P},0) 56%)`
+          ? wide
+            // the larger block runs lower, so the scrim has to as well or ink lands on the set
+            ? `linear-gradient(180deg, rgba(${P},.93) 0%, rgba(${P},.84) 40%, rgba(${P},.5) 60%, rgba(${P},0) 76%)`
+            : `linear-gradient(180deg, rgba(${P},.90) 0%, rgba(${P},.62) 30%, rgba(${P},0) 56%)`
           : `linear-gradient(180deg, rgba(${P},0) 0%, rgba(${P},.74) 26%, rgba(${P},.74) 74%, rgba(${P},0) 100%)`,
         opacity: 0.98,
       }} />
@@ -276,25 +307,25 @@ const SceneType: React.FC<{
           : `${height * 0.085}px ${width * 0.075}px`,
       }}>
         <div style={{
-          maxWidth: width * (portrait ? 0.85 : 0.62),
+          maxWidth: width * (portrait ? 0.85 : wide ? 0.78 : 0.62),
           transform: `translateY(${(1 - e) * 22}px) scale(${scale})`, opacity: e,
           textAlign: align,
         }}>
           {kicker ? (
             <div style={{
-              fontFamily: BRAND.font, fontWeight: 800, fontSize: kickerSize(kicker, M, width, portrait), letterSpacing: 5,
+              fontFamily: BRAND.font, fontWeight: 800, fontSize: T.kicker(kicker), letterSpacing: T.track,
               textTransform: 'uppercase', color: W.accent, marginBottom: M * 0.016,
             }}>{kicker}</div>
           ) : null}
           {headline ? (
             <div style={{
-              fontFamily: BRAND.font, fontWeight: 900, fontSize: M * hSize * TS,
+              fontFamily: BRAND.font, fontWeight: 900, fontSize: M * (wide ? hPhone : hSize * TS),
               lineHeight: 1.06, color: W.ink, letterSpacing: -0.5,
             }}>{colorize(headline, accent, W.accent)}</div>
           ) : null}
           {sub ? (
             <div style={{
-              fontFamily: BRAND.font, fontWeight: 700, fontSize: M * 0.026 * TS, color: W.accent,
+              fontFamily: BRAND.font, fontWeight: 700, fontSize: T.ts('sub', M * 0.026 * TS), color: W.accent,
               marginTop: M * 0.02,
             }}>{sub}</div>
           ) : null}
@@ -337,7 +368,8 @@ export const CvgCta: React.FC<{fields: any}> = ({fields}) => {
   // One line, always: width-fit (900-weight glyphs run ~0.52em) capped by a height-based
   // ceiling so short headlines don't balloon.
   const fit = (width * 0.88) / Math.max(1, headline.length * 0.52);
-  const hSize = Math.min(height * 0.062, fit);
+  const T = useCvgType();
+  const hSize = Math.min(T.ts('heading', height * 0.062), fit);
   const markH = Math.min(width, height) * 0.34;
   return (
     <AbsoluteFill>
@@ -348,7 +380,7 @@ export const CvgCta: React.FC<{fields: any}> = ({fields}) => {
         }}>
           {fields.kicker ? (
             <div style={{
-              fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.022, letterSpacing: 5,
+              fontFamily: BRAND.font, fontWeight: 800, fontSize: T.ts('eyebrow', height * 0.022), letterSpacing: T.track,
               textTransform: 'uppercase', color: W.accent, marginBottom: height * 0.02,
             }}>{fields.kicker}</div>
           ) : null}
@@ -358,7 +390,7 @@ export const CvgCta: React.FC<{fields: any}> = ({fields}) => {
           }}>{colorize(headline, fields.accent, W.accent)}</div>
           {fields.subkicker ? (
             <div style={{
-              fontFamily: BRAND.font, fontWeight: 700, fontSize: height * 0.024, color: W.accent,
+              fontFamily: BRAND.font, fontWeight: 700, fontSize: T.ts('sub', height * 0.024), color: W.accent,
               marginTop: height * 0.016,
             }}>{fields.subkicker}</div>
           ) : null}
@@ -424,6 +456,7 @@ export const CvgPunch: React.FC<{fields: any}> = ({fields}) => {
   // 0.88 not 0.9: the old budget left no room for the negative letterSpacing rounding
   // that put "UNREAD" a few pixels over an already-too-generous cap.
   const size = Math.min(stepped, (width * 0.88) / emWidth(word));
+  const T = useCvgType();
   return (
     <AbsoluteFill>
       <Set src={fields.set} anchor={fields.anchor} />
@@ -433,8 +466,12 @@ export const CvgPunch: React.FC<{fields: any}> = ({fields}) => {
         <div style={{textAlign: 'center', transform: `scale(${0.9 + s * 0.1})`, opacity: s}}>
           {fields.kicker ? (
             <div style={{
-              fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 6,
-              textTransform: 'uppercase', color: W.accent, marginBottom: height * 0.02,
+              // phone type: this line says what the word or number IS ("seconds to book an
+              // Uber"), so it is a label, not a caption to it (#11-05 daily: 26 px under 281)
+              fontFamily: BRAND.font, fontWeight: 800, fontSize: T.ts('label', height * 0.024),
+              letterSpacing: T.on ? 2 : 6, lineHeight: 1.12, maxWidth: T.on ? width * 0.88 : undefined,
+              margin: T.on ? `0 auto ${height * 0.02}px` : undefined, textWrap: T.on ? 'balance' as any : undefined,
+              textTransform: 'uppercase', color: T.on ? W.ink : W.accent, marginBottom: height * 0.02,
             }}>{fields.kicker}</div>
           ) : null}
           <div style={{
@@ -462,7 +499,19 @@ export const CvgList: React.FC<{fields: any}> = ({fields}) => {
   // portrait labels scale to the narrow width instead of the tall height.
   const M = Math.min(width, height);
   const portrait = height > width;
-  const showWide = !portrait && W !== PAPER_CIRCUMVENT;   // see the scrim note below
+  const T = useCvgType();
+  // see the scrim note below. Phone type: Circumvent too, its larger items crossed into the art
+  const showWide = !portrait && (W !== PAPER_CIRCUMVENT || T.on);
+  // phone type: the largest item size at which the whole list still fits above the captions,
+  // never under the label floor. Estimated from wrapped line counts (900 weight ~0.55em).
+  const labels: string[] = items.map((it: any) => (typeof it === 'string' ? it : (it.title || it.label || '')));
+  const colW = (showWide ? width * 0.56 : width * 0.85) - M * 0.066 - width * 0.016;
+  const blockH = (k: number) => labels.reduce((a, l) =>
+    a + Math.max(1, Math.ceil(((l || '').length * M * k * 0.55) / colW)) * M * k * 1.1 + M * 0.024, 0);
+  const itemK = T.on
+    ? ([0.066, 0.062, 0.056, 0.05].find((k) => blockH(k) <= height * 0.56) ?? 0.048)
+    : 0.058;
+  const badge = T.on ? 0.066 : 0.052;
   return (
     <AbsoluteFill>
       <Set src={fields.set} anchor={fields.anchor} />
@@ -498,11 +547,12 @@ export const CvgList: React.FC<{fields: any}> = ({fields}) => {
       <AbsoluteFill style={{justifyContent: 'center',
                             padding: width < height
                               ? `0 ${width * 0.075}px ${height * 0.18}px`
-                              : `0 ${width * 0.075}px`}}>
+                              : `0 ${width * 0.075}px ${T.on ? height * 0.2 : 0}px`}}>
         {fields.kicker ? (
           <div style={{
-            fontFamily: BRAND.font, fontWeight: 800, fontSize: kickerSize(fields.kicker, M, width, portrait), letterSpacing: 5,
-            textTransform: 'uppercase', color: W.accent, marginBottom: M * 0.028,
+            fontFamily: BRAND.font, fontWeight: 800, fontSize: T.lone(fields.kicker), letterSpacing: T.on ? 2 : 5,
+            lineHeight: T.on ? 1.1 : undefined, maxWidth: T.on && showWide ? width * 0.62 : undefined,
+            textTransform: 'uppercase', color: T.on ? W.ink : W.accent, marginBottom: M * 0.028,
           }}>{fields.kicker}</div>
         ) : null}
         {items.map((it: any, i: number) => {
@@ -519,14 +569,14 @@ export const CvgList: React.FC<{fields: any}> = ({fields}) => {
                   routes here on the Cvg worlds (no counter component exists), and numbering
                   three statistics 1/2/3 reads as a ranking they do not have. */}
               <div style={{
-                width: M * (fields.ordered === false ? 0.022 : 0.052), height: M * 0.052,
+                width: M * (fields.ordered === false ? 0.022 : badge), height: M * badge,
                 background: W.accent, flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: BRAND.font, fontWeight: 900, fontSize: M * 0.026, color: W.paper,
+                fontFamily: BRAND.font, fontWeight: 900, fontSize: T.ts('sub', M * 0.026), color: W.paper,
                 transform: `rotate(${i % 2 ? 1.6 : -1.4}deg)`,
               }}>{fields.ordered === false ? '' : i + 1}</div>
               <div style={{
-                fontFamily: BRAND.font, fontWeight: 900, fontSize: M * 0.058, color: W.ink, lineHeight: 1.1,
+                fontFamily: BRAND.font, fontWeight: 900, fontSize: M * itemK, color: W.ink, lineHeight: 1.1,
               }}>{label}</div>
             </div>
           );
@@ -554,6 +604,10 @@ export const CvgCompare: React.FC<{fields: any}> = ({fields}) => {
   // value so the two halves never render at different sizes.
   const vMax = Math.max(String(L.value || '').length, String(R.value || '').length);
   const pSize = vMax > 70 ? 0.056 : 0.066;
+  const T = useCvgType();
+  // phone type, landscape: short values use the room ("4" and "About 500" were 78 px in a
+  // half-frame column); long ones step down so they stay above the captions
+  const lSize = !T.on ? 0.072 : vMax <= 8 ? 0.15 : vMax <= 14 ? 0.115 : vMax <= 30 ? 0.09 : vMax <= 70 ? 0.072 : 0.06;
   const Side: React.FC<{d: any; e: number; side: 'l' | 'r'}> = ({d, e, side}) => (
     <div style={{
       // `flex: 1` is right in LANDSCAPE, where the container is a row and this makes two
@@ -581,8 +635,8 @@ export const CvgCompare: React.FC<{fields: any}> = ({fields}) => {
         // this is not an edge case. kickerSize keeps it length-aware and floors it at
         // the old size, so no label shrinks.
         fontFamily: BRAND.font, fontWeight: 800,
-        fontSize: kickerSize(d.title || d.label || '', M, width, portrait), letterSpacing: 4,
-        textTransform: 'uppercase', color: d.kind === 'bad' ? (W.neutral ?? `${W.ink}8A`) : W.accent, marginBottom: M * 0.018,
+        fontSize: T.on ? T.ts('sub', 0) : kickerSize(d.title || d.label || '', M, width, portrait), letterSpacing: T.on ? 2 : 4,
+        textAlign: 'center', textTransform: 'uppercase', color: d.kind === 'bad' ? (W.neutral ?? `${W.ink}8A`) : W.accent, marginBottom: M * 0.018,
         // `label` accepted alongside `title` (2026-08-30). A survey of 440 decks found
         // `title` used 702 times and `label` 12, all in recent FWF dailies — those
         // episodes shipped compare slides with NO labels at all, because an unread key
@@ -597,8 +651,8 @@ export const CvgCompare: React.FC<{fields: any}> = ({fields}) => {
         // read as tiny type floating in clear space (operator, FTT 08-11 slide 2). The
         // caption clearance now comes from the container's bottom padding, not from
         // shrinking the type.
-        fontFamily: BRAND.font, fontWeight: 900, fontSize: M * (portrait ? pSize : 0.072), lineHeight: 1.08,
-        color: W.ink, textAlign: 'center', opacity: d.kind === 'bad' ? 0.62 : 1,
+        fontFamily: BRAND.font, fontWeight: 900, fontSize: M * (portrait ? pSize : lSize), lineHeight: 1.08,
+        color: W.ink, textAlign: 'center', opacity: d.kind === 'bad' ? (T.on ? 0.76 : 0.62) : 1,
         // `text` accepted alongside `value` for the same reason. FMF 2026-08-28 s12
         // authored `label` + `text`, so NEITHER key was read and the whole compare slide
         // rendered as a divider and two underlines with no words on it. That shipped.
@@ -612,13 +666,17 @@ export const CvgCompare: React.FC<{fields: any}> = ({fields}) => {
   return (
     <AbsoluteFill>
       <Set src={fields.set} anchor={fields.anchor} />
-      <AbsoluteFill style={{background: 'rgba(242,237,224,.70)'}} />
+      {/* phone type, landscape: the world's own paper, and stronger. A fixed cream at .70 turned
+          muddy grey over a dark set, and the type on it lost contrast (FTT, Teardown proofs). */}
+      <AbsoluteFill style={{background: T.on && !portrait ? `rgba(${paperRgb(W.paper)},.88)` : 'rgba(242,237,224,.70)'}} />
       {fields.kicker ? (
         <AbsoluteFill style={{alignItems: 'center', justifyContent: 'flex-start',
-                              paddingTop: height * (portrait ? 0.07 : 0.1)}}>
+                              paddingTop: height * (portrait ? 0.07 : T.on ? 0.07 : 0.1)}}>
           <div style={{
-            fontFamily: BRAND.font, fontWeight: 800, fontSize: kickerSize(fields.kicker, M, width, portrait), letterSpacing: 5,
-            textTransform: 'uppercase', color: W.accent,
+            fontFamily: BRAND.font, fontWeight: 800, fontSize: T.lone(fields.kicker), letterSpacing: T.on ? 2 : 5,
+            lineHeight: T.on ? 1.1 : undefined, maxWidth: T.on ? width * 0.88 : undefined,
+            textAlign: 'center', textWrap: T.on ? 'balance' as any : undefined,
+            textTransform: 'uppercase', color: T.on ? W.ink : W.accent,
           }}>{fields.kicker}</div>
         </AbsoluteFill>
       ) : null}
@@ -635,7 +693,8 @@ export const CvgCompare: React.FC<{fields: any}> = ({fields}) => {
                             // 2026-08-30: with content-height sides the pair centres as a
                             // group, so the old 0.10 pushed it low and left a wide empty
                             // strip under the kicker.
-                            padding: portrait ? `${height * 0.06}px 0 ${height * 0.19}px` : 0}}>
+                            padding: portrait ? `${height * 0.06}px 0 ${height * 0.19}px`
+                              : T.on ? `${height * 0.13}px 0 ${height * 0.2}px` : 0}}>
         <Side d={L} e={eL} side="l" />
         <div style={portrait
           ? {height: 3, width: '38%', background: W.accent, opacity: 0.5}
@@ -661,24 +720,53 @@ export const CvgSteps: React.FC<{fields: any}> = ({fields}) => {
   // type tracks the min dimension — landscape output is pixel-identical (min == height).
   const portrait = height > width;
   const M = Math.min(width, height);
+  const T = useCvgType();
+  const P = paperRgb(W.paper);
+  // phone type, landscape. Three things the 11-05 daily showed at once: the labels were dark
+  // ink straight on a dark set (and one ran across the tool board), so each sits on its own
+  // paper tag; the `headline` the deck authors write here was received and never drawn; and
+  // the column width and label size now leave room for the type. A word never overflows its
+  // column: the label steps down to fit the longest word, not under 36 px at 1080.
+  const wide = T.on && !portrait;
+  const head: string = wide ? (fields.headline || '') : '';
+  const colPct = (88 - 2.6 * (n - 1)) / n;
+  const longest = Math.max(1, ...steps.map((s: any) =>
+    Math.max(0, ...String(typeof s === 'string' ? s : (s.title || '')).split(/\s+/).map((w) => w.length))));
+  const labelPx = wide
+    ? Math.max(M * 0.034, Math.min(T.ts('body', 0), ((width * colPct) / 100 - M * 0.03) / (longest * 0.58)))
+    : M * 0.036;
   return (
     <AbsoluteFill>
       <Set src={fields.set} anchor={fields.anchor} />
       <AbsoluteFill style={{
-        background: 'linear-gradient(180deg, rgba(242,237,224,.10) 0%, rgba(242,237,224,.45) 46%, rgba(242,237,224,.82) 100%)',
+        background: wide
+          ? `linear-gradient(180deg, rgba(${P},.92) 0%, rgba(${P},.8) 22%, rgba(${P},.3) 38%, rgba(${P},.3) 70%, rgba(${P},.82) 100%)`
+          : 'linear-gradient(180deg, rgba(242,237,224,.10) 0%, rgba(242,237,224,.45) 46%, rgba(242,237,224,.82) 100%)',
       }} />
-      {fields.kicker ? (
-        <AbsoluteFill style={{alignItems: 'center', justifyContent: 'flex-start', paddingTop: height * 0.09}}>
+      {fields.kicker || head ? (
+        <AbsoluteFill style={{alignItems: 'center', justifyContent: 'flex-start', paddingTop: height * (wide ? 0.05 : 0.09)}}>
+          {fields.kicker ? (
           <div style={{
-            fontFamily: BRAND.font, fontWeight: 800, fontSize: kickerSize(fields.kicker, M, width, portrait), letterSpacing: 5,
-            textTransform: 'uppercase', color: W.accent,
+            fontFamily: BRAND.font, fontWeight: 800, fontSize: head ? T.kicker(fields.kicker) : T.lone(fields.kicker),
+            letterSpacing: wide ? (head ? 3 : 2) : T.track, lineHeight: wide ? 1.1 : undefined,
+            maxWidth: wide ? width * 0.88 : undefined, textAlign: 'center',
+            textTransform: 'uppercase', color: wide && !head ? W.ink : W.accent,
           }}>{fields.kicker}</div>
+          ) : null}
+          {head ? (
+            <div style={{
+              fontFamily: BRAND.font, fontWeight: 900, lineHeight: 1.06, letterSpacing: -0.5, color: W.ink,
+              fontSize: head.length > 40 ? T.floor('heading') : T.ts('heading', 0), textAlign: 'center',
+              maxWidth: width * 0.88, marginTop: M * 0.008, textWrap: 'balance' as any,
+            }}>{colorize(head, fields.accent, W.accent)}</div>
+          ) : null}
         </AbsoluteFill>
       ) : null}
       <AbsoluteFill style={portrait
         ? {flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: height * 0.012,
            paddingBottom: height * 0.18}
-        : {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: width * 0.012}}>
+        : {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: width * 0.012,
+           ...(wide ? {paddingTop: height * (head ? 0.26 : 0.16), paddingBottom: height * 0.26} : {})}}>
         {steps.map((s: any, i: number) => {
           const e = ease(frame, cues[i] ?? 6 + i * 18, 12);
           const label = typeof s === 'string' ? s : (s.title || '');
@@ -693,16 +781,21 @@ export const CvgSteps: React.FC<{fields: any}> = ({fields}) => {
                      transform: `scaleX(${ease(frame, (cues[i] ?? 0) - 6, 10)})`, transformOrigin: 'left'}} />
               ) : null}
               <div style={{
-                width: portrait ? '84%' : `${72 / n}%`, textAlign: 'center',
+                width: portrait ? '84%' : wide ? `${colPct}%` : `${72 / n}%`, textAlign: 'center',
                 transform: `translateY(${(1 - e) * 20}px)`, opacity: e,
               }}>
                 {img ? (
-                  <Img src={staticFile(img)} style={{height: M * (portrait ? 0.16 : 0.26), width: 'auto', display: 'block', margin: '0 auto'}} />
+                  <Img src={staticFile(img)} style={{height: M * (portrait ? 0.16 : wide ? 0.17 : 0.26), width: 'auto', display: 'block', margin: '0 auto'}} />
                 ) : null}
                 <div style={{
-                  fontFamily: BRAND.font, fontWeight: 900, fontSize: M * 0.036, color: W.ink,
+                  position: 'relative', fontFamily: BRAND.font, fontWeight: 900, fontSize: labelPx, color: W.ink,
                   lineHeight: 1.12, marginTop: M * 0.016,
-                }}>{label}</div>
+                  ...(wide ? {padding: `${M * 0.016}px ${M * 0.015}px`, boxShadow: litBoxShadow(M, 0.6),
+                              transform: `rotate(${i % 2 ? 0.7 : -0.7}deg)`} : {}),
+                }}>
+                  {wide ? <PaperSheet id={`step:${i}:${label}`} family="card_tag" radius={4} edge={7} tint={W.paper} /> : null}
+                  <span style={{position: 'relative'}}>{label}</span>
+                </div>
               </div>
             </React.Fragment>
           );
@@ -722,18 +815,22 @@ export const CvgDefine: React.FC<{fields: any}> = ({fields}) => {
   // narrow frames. Landscape identical (min == height).
   const portrait = height > width;
   const M = Math.min(width, height);
+  const T = useCvgType();
+  const wide = T.on && !portrait;
   return (
     <AbsoluteFill>
       <Set src={fields.set} anchor={fields.anchor} />
       <Cutouts items={fields.props} />
-      <AbsoluteFill style={{background: 'linear-gradient(90deg, rgba(242,237,224,.92) 0%, rgba(242,237,224,.74) 46%, rgba(242,237,224,.20) 100%)'}} />
+      <AbsoluteFill style={{background: wide
+        ? 'linear-gradient(90deg, rgba(242,237,224,.93) 0%, rgba(242,237,224,.86) 62%, rgba(242,237,224,.35) 100%)'
+        : 'linear-gradient(90deg, rgba(242,237,224,.92) 0%, rgba(242,237,224,.74) 46%, rgba(242,237,224,.20) 100%)'}} />
       <AbsoluteFill style={{alignItems: 'flex-start', justifyContent: 'center',
                             padding: portrait
                               ? `0 ${width * 0.09}px ${height * 0.18}px`
-                              : `0 ${width * 0.09}px`}}>
+                              : `0 ${width * 0.09}px ${wide ? height * 0.14 : 0}px`}}>
         {fields.kicker ? (
           <div style={{
-            fontFamily: BRAND.font, fontWeight: 800, fontSize: kickerSize(fields.kicker, M, width, portrait), letterSpacing: 5,
+            fontFamily: BRAND.font, fontWeight: 800, fontSize: T.kicker(fields.kicker), letterSpacing: T.track,
             textTransform: 'uppercase', color: W.accent, marginBottom: M * 0.02, opacity: e1,
           }}>{fields.kicker}</div>
         ) : null}
@@ -746,8 +843,8 @@ export const CvgDefine: React.FC<{fields: any}> = ({fields}) => {
           transform: `scaleX(${e1})`, transformOrigin: 'left',
         }} />
         <div style={{
-          fontFamily: BRAND.font, fontWeight: 700, fontSize: M * 0.04, lineHeight: 1.3,
-          color: W.ink, maxWidth: width * (portrait ? 0.85 : 0.62), opacity: e2, transform: `translateY(${(1 - e2) * 16}px)`,
+          fontFamily: BRAND.font, fontWeight: 700, fontSize: T.ts('body', M * 0.04), lineHeight: wide ? 1.2 : 1.3,
+          color: W.ink, maxWidth: width * (portrait ? 0.85 : wide ? 0.76 : 0.62), opacity: e2, transform: `translateY(${(1 - e2) * 16}px)`,
         }}>{fields.definition || ''}</div>
       </AbsoluteFill>
     </AbsoluteFill>
@@ -787,6 +884,8 @@ export const CvgReframe: React.FC<{fields: any}> = ({fields}) => {
   const M = Math.min(width, height);
   const TS = portrait ? 1.18 : 1;
   const P = paperRgb(W.paper);
+  const T = useCvgType();
+  const wide = T.on && !portrait;
   const before = fields.before || '';
   const strikeText = fields.strike || '';
   const afterText = fields.after || '';
@@ -795,7 +894,8 @@ export const CvgReframe: React.FC<{fields: any}> = ({fields}) => {
   const fit = (s: string, base: number) => {
     const n = (s || '').length;
     const f = n <= 40 ? 1 : n <= 90 ? 0.8 : n <= 150 ? 0.64 : n <= 230 ? 0.52 : 0.44;
-    return M * base * f * TS;
+    // phone type, landscape: 1.25x, and never under the body floor
+    return wide ? Math.max(T.floor('body'), M * base * 1.25 * f) : M * base * f * TS;
   };
   // With no `strike` authored, the struck phrase IS `before` (PaperReframe's reading).
   const leadLine = strikeText ? before : '';
@@ -812,15 +912,15 @@ export const CvgReframe: React.FC<{fields: any}> = ({fields}) => {
         alignItems: 'flex-start', justifyContent: 'center',
         padding: portrait
           ? `${height * 0.085}px ${width * 0.075}px ${height * 0.18}px`
-          : `${height * 0.085}px ${width * 0.075}px`,
+          : `${height * 0.085}px ${width * 0.075}px ${wide ? height * 0.2 : height * 0.085}px`,
       }}>
         <div style={{
-          maxWidth: width * (portrait ? 0.85 : 0.62),
+          maxWidth: width * (portrait ? 0.85 : wide ? 0.78 : 0.62),
           transform: `translateY(${(1 - e) * 22}px)`, opacity: e,
         }}>
           {fields.kicker ? (
             <div style={{
-              fontFamily: BRAND.font, fontWeight: 800, fontSize: kickerSize(fields.kicker, M, width, portrait), letterSpacing: 5,
+              fontFamily: BRAND.font, fontWeight: 800, fontSize: T.kicker(fields.kicker), letterSpacing: T.track,
               textTransform: 'uppercase', color: W.accent, marginBottom: M * 0.016,
             }}>{fields.kicker}</div>
           ) : null}

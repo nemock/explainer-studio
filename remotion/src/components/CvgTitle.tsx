@@ -2,6 +2,7 @@ import React from 'react';
 import {AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
 import {useWorld} from './PaperWorld';
+import {useTypeScale} from '../type';
 
 // SHOW TITLE PANEL for the six personal-show worlds (2026-09-03, operator request).
 //
@@ -71,8 +72,9 @@ export const CvgTitle: React.FC<{fields?: any; durationInFrames?: number}> = ({f
   // height-based ceiling so short names don't balloon.
   const fit = (width * 0.86) / Math.max(1, longest * 0.52);
   const tSize = Math.min(portrait ? width * 0.11 : height * 0.11, fit);
-  const kSize = M * (portrait ? 0.028 : 0.03);
-  const sSize = M * (portrait ? 0.032 : 0.034);
+  const {ts} = useTypeScale();
+  const kSize = ts('eyebrow', M * (portrait ? 0.028 : 0.03));
+  const sSize = ts('sub', M * (portrait ? 0.032 : 0.034));
   const stripW = Math.min(width * 0.28, tSize * 2.4);
 
   return (
