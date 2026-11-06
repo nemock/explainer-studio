@@ -4,6 +4,7 @@ import {BRAND} from '../brand';
 import {useInk, PAPER_SHADOW} from '../ink';
 import {colorizeText} from './colorize';
 import {fitStageText} from './PaperStage';
+import {useTypeScale} from '../type';
 
 // motion-playbook §2A/F — the closing CTA. Floats the brand book cover in next to the
 // call-to-action text (operator directive 2026-06-24: show the cover, don't just talk
@@ -39,6 +40,7 @@ export const CTA: React.FC<{fields: any}> = ({fields}) => {
   // "fix the CTA card spacing"). In that case fit the headline to the frame, using the
   // same box as the TextScenes headlines so the closing card matches the cards before it.
   // Floored at the old 7%, so this can only ever grow the type, never shrink it.
+  const {ts} = useTypeScale();
   const wide = !book && !portrait;
   const headlineSize = wide
     ? Math.max(height * 0.07, fitStageText(fields.headline || '', width * 0.84, height * 0.42))
@@ -48,7 +50,7 @@ export const CTA: React.FC<{fields: any}> = ({fields}) => {
     <div style={{textAlign: (portrait || !book) ? 'center' : 'left', maxWidth: portrait ? '90%' : (book ? '46%' : '84%'), opacity: tIntro,
                  transform: `translateY(${interpolate(tIntro, [0, 1], [24, 0])}px)`}}>
       {fields.kicker ? (
-        <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: height * 0.030, letterSpacing: 4, textTransform: 'uppercase', marginBottom: height * 0.028}}>
+        <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: ts('eyebrow', height * 0.030), letterSpacing: 4, textTransform: 'uppercase', marginBottom: height * 0.028}}>
           {fields.kicker}
         </div>
       ) : null}
@@ -56,7 +58,7 @@ export const CTA: React.FC<{fields: any}> = ({fields}) => {
         {colorizeText(fields.headline, fields.accent, fields.accentRed, ink.accent, (ink.danger ?? BRAND.red))}
       </div>
       {fields.subkicker ? (
-        <div style={{fontFamily: BRAND.font, color: ink.body, opacity: 0.82, fontWeight: 700, fontSize: height * 0.03, marginTop: height * 0.028, lineHeight: 1.3}}>
+        <div style={{fontFamily: BRAND.font, color: ink.body, opacity: 0.82, fontWeight: 700, fontSize: ts('sub', height * 0.03), marginTop: height * 0.028, lineHeight: 1.3}}>
           {fields.subkicker}
         </div>
       ) : null}

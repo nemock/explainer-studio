@@ -846,7 +846,8 @@ def _scene_for(slide, theme="", warn=None):
     if t == "sting":
         return "BrandSting", {"title": slide.get("title") or headline, "subtitle": slide.get("subtitle", "")}
     if t == "compare":
-        return "SideBySide", {"left": slide.get("left", {}), "right": slide.get("right", {})}
+        return "SideBySide", {"kicker": kicker, "title": slide.get("title", ""), "accent": accent,
+                              "left": slide.get("left", {}), "right": slide.get("right", {})}
     if t == "schematic":
         # node/edge diagram assembling under narration (motion-playbook §2C). Stage cues
         # (stages[].cue) resolve to fields.stageTimes in build_spec's sync pass.
@@ -965,7 +966,8 @@ ANNOTATION_COLORS = ("green", "red", "white", "amber")
 # moves. On PHONE_TYPE_THEMES an old `at` circle that sits on a node is snapped to it.
 # Keep this tuple in step with `phoneType` in remotion/src/brands/papercraft.ts.
 TARGET_KINDS = ("circle", "box", "underline", "strike")
-PHONE_TYPE_THEMES = ("nemock-deep-dive", "papercraft-matrix") + _CVG_STYLE_THEMES
+PHONE_TYPE_THEMES = ("nemock-deep-dive", "papercraft-matrix", "plg-guide", "pmg-guide",
+                     "brg-deep-dive", "brg-paper", "wte-guide") + _CVG_STYLE_THEMES
 MARKS_BLOCKED_NAME = "BLOCKED-MARKS.md"
 
 # What each layer's renderer does with what it is given, keyed by the deck field. `default`

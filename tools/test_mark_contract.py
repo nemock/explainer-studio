@@ -371,7 +371,7 @@ with tempfile.TemporaryDirectory() as tmp:
                  {"kind": "strike", "from": [0.2, 0.4], "to": [0.4, 0.4]},   # across node a
                  {"kind": "circle", "at": [0.5, 0.8], "w": 0.1}]             # empty canvas
     for theme, want_on, want_off in (("nemock-deep-dive", ["b", "a", "a"], 1),
-                                     ("plg-guide", ["b"], 3)):
+                                     ("cut-bond", ["b"], 3)):
         try:
             scenes = E.build_spec(make_project(Path(tmp) / f"tgt_{theme}", [schem("t03", *snap_anns)],
                                                theme=theme))["scenes"]

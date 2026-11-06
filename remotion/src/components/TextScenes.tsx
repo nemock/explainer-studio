@@ -144,14 +144,16 @@ export const DefineTerm: React.FC<{fields: any; durationInFrames?: number}> = ({
   const t = spring({frame, fps, config: {damping: 18, stiffness: 90}});
   const d = spring({frame: frame - 10, fps, config: {damping: 18}});
   const ink = useInk();
-  const termSize = (fields.term || '').length > 16 ? height * 0.06 : height * 0.075;
+  const {on, ts} = useTypeScale();
+  const long = (fields.term || '').length > 16;
+  const termSize = long ? ts('heading', height * 0.06) : ts('display', height * 0.075);
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 9%'}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: `0 9% ${on ? height * 0.14 : 0}px`}}>
       <Kicker text={fields.kicker} o={t} height={height} />
       <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 900, fontSize: termSize, lineHeight: 1.1, textAlign: 'center', opacity: t, transform: `translateY(${interpolate(t, [0, 1], [24, 0])}px)`, textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
         {colorize(fields.term, fields.accent, fields.accentRed, ink.accent, (ink.danger ?? BRAND.red))}
       </div>
-      <div style={{fontFamily: BRAND.font, color: ink.body, fontWeight: 700, fontSize: height * 0.038, lineHeight: 1.3, textAlign: 'center', maxWidth: '85%', marginTop: height * 0.028, opacity: d, transform: `translateY(${interpolate(d, [0, 1], [18, 0])}px)`}}>
+      <div style={{fontFamily: BRAND.font, color: ink.body, fontWeight: 700, fontSize: ts('body', height * 0.038), lineHeight: on ? 1.2 : 1.3, textAlign: 'center', maxWidth: '85%', marginTop: height * 0.028, opacity: d, transform: `translateY(${interpolate(d, [0, 1], [18, 0])}px)`}}>
         {fields.definition}
       </div>
     </AbsoluteFill>
@@ -165,13 +167,14 @@ export const Quote: React.FC<{fields: any; durationInFrames?: number}> = ({field
   const q = spring({frame, fps, config: {damping: 18}});
   const at = spring({frame: frame - 18, fps, config: {damping: 16}});
   const ink = useInk();
+  const {on, ts} = useTypeScale();
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 9%'}}>
-      <div style={{fontFamily: BRAND.font, color: ink.body, fontWeight: 800, fontSize: height * 0.058, lineHeight: 1.25, textAlign: 'center', opacity: q, transform: `translateY(${interpolate(q, [0, 1], [26, 0])}px)`, textShadow: ink.paper ? PAPER_SHADOW : '0 10px 40px rgba(0,0,0,.6)'}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: `0 9% ${on ? height * 0.14 : 0}px`}}>
+      <div style={{fontFamily: BRAND.font, color: ink.body, fontWeight: 800, fontSize: ts('label', height * 0.058), lineHeight: on ? 1.16 : 1.25, textAlign: 'center', opacity: q, transform: `translateY(${interpolate(q, [0, 1], [26, 0])}px)`, textShadow: ink.paper ? PAPER_SHADOW : '0 10px 40px rgba(0,0,0,.6)'}}>
         {fields.quote}
       </div>
       {fields.attribution ? (
-        <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: height * 0.028, marginTop: height * 0.03, opacity: at}}>
+        <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: ts('sub', height * 0.028), marginTop: height * 0.03, opacity: at}}>
           — {fields.attribution}
         </div>
       ) : null}
@@ -207,13 +210,14 @@ export const Reframe: React.FC<{fields: any; durationInFrames?: number}> = ({fie
   const a = spring({frame, fps, config: {damping: 18}});
   const flip = spring({frame: frame - 26, fps, config: {damping: 16}});
   const ink = useInk();
+  const {on, ts} = useTypeScale();
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 8%', flexDirection: 'column'}}>
-      <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.06, color: ink.body, opacity: interpolate(flip, [0, 1], [1, 0.35]), textDecoration: 'line-through', textDecorationColor: (ink.danger ?? BRAND.red), textAlign: 'center'}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: `0 8% ${on ? height * 0.14 : 0}px`, flexDirection: 'column'}}>
+      <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: ts('label', height * 0.06), color: ink.body, opacity: interpolate(flip, [0, 1], [1, 0.35]), textDecoration: 'line-through', textDecorationColor: (ink.danger ?? BRAND.red), textAlign: 'center'}}>
         {fields.before}
       </div>
       <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 900, fontSize: height * 0.04, margin: `${height * 0.02}px 0`, opacity: a}}>↓</div>
-      <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.078, color: ink.body, textAlign: 'center', opacity: flip, transform: `scale(${interpolate(flip, [0, 1], [0.85, 1])})`, textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
+      <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: ts('display', height * 0.078), lineHeight: on ? 1.06 : undefined, color: ink.body, textAlign: 'center', opacity: flip, transform: `scale(${interpolate(flip, [0, 1], [0.85, 1])})`, textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
         {fields.after}
       </div>
     </AbsoluteFill>
@@ -229,12 +233,19 @@ export const BuildList: React.FC<{fields: any; durationInFrames: number}> = ({fi
   const per = durationInFrames / Math.max(1, items.length + 1);
   const titleO = spring({frame: frame - 6, fps, config: {damping: 18}});
   const ink = useInk();
+  const {on, ts} = useTypeScale();
+  // phone type: the largest item size at which the list still fits above the captions, never
+  // under the label floor (same idea as CvgList). 800 weight ~0.53em; column is 80% of frame.
+  const {width} = useVideoConfig();
+  const blockH = (k: number) => items.reduce((a, it) =>
+    a + Math.max(1, Math.ceil((String(it).length * height * k * 0.53) / (width * 0.76))) * height * k * 1.1 + height * 0.022, 0);
+  const itemPx = on ? height * ([0.062, 0.056, 0.05].find((k) => blockH(k) <= height * 0.52) ?? 0.048) : height * 0.044;
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 10%'}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: `0 10% ${on ? height * 0.14 : 0}px`}}>
       <div style={{maxWidth: '100%'}}>
         <Kicker text={fields.kicker} o={spring({frame, fps, config: {damping: 18}})} height={height} />
         {fields.title ? (
-          <div style={{fontFamily: BRAND.font, color: ink.body, fontWeight: 800, fontSize: height * 0.036, lineHeight: 1.2, opacity: titleO, marginBottom: height * 0.024, transform: `translateY(${interpolate(titleO, [0, 1], [16, 0])}px)`}}>
+          <div style={{fontFamily: BRAND.font, color: ink.body, fontWeight: 800, fontSize: ts('label', height * 0.036), lineHeight: on ? 1.1 : 1.2, opacity: titleO, marginBottom: height * 0.024, transform: `translateY(${interpolate(titleO, [0, 1], [16, 0])}px)`}}>
             {colorize(fields.title, fields.accent, fields.accentRed, ink.accent, (ink.danger ?? BRAND.red))}
           </div>
         ) : null}
@@ -244,8 +255,8 @@ export const BuildList: React.FC<{fields: any; durationInFrames: number}> = ({fi
           const e = spring({frame: frame - appear, fps, config: {damping: 18}});
           return (
             <div key={i} style={{display: 'flex', alignItems: 'baseline', gap: height * 0.02, opacity: e, transform: `translateX(${interpolate(e, [0, 1], [-30, 0])}px)`, marginBottom: height * 0.022}}>
-              <span style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.05, color: ink.accent}}>{i + 1}</span>
-              <span style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.044, color: ink.body, lineHeight: 1.1}}>{it}</span>
+              <span style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: on ? itemPx : height * 0.05, color: ink.accent}}>{i + 1}</span>
+              <span style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: itemPx, color: ink.body, lineHeight: 1.1}}>{it}</span>
             </div>
           );
         })}
@@ -261,6 +272,8 @@ export const SideBySide: React.FC<{fields: any; durationInFrames?: number}> = ({
   const l = spring({frame, fps, config: {damping: 18}});
   const r = spring({frame: frame - 10, fps, config: {damping: 18}});
   const ink = useInk();
+  const {on, ts} = useTypeScale();
+  const lit = Boolean(useWorld().lit) && ink.typeOnPaper;
   // The side colours used to be POSITIONAL (left always good, right always bad), which quietly
   // ignored the deck's own `kind`. #50 has a compare with `bad` on the LEFT, one with `bad` on
   // BOTH sides, and one with neither — all three rendered wrong. Honour the authored kind when
@@ -277,22 +290,29 @@ export const SideBySide: React.FC<{fields: any; durationInFrames?: number}> = ({
     const bad = declared ? d?.kind === 'bad' : positionalBad;
     const paper = ink.typeOnPaper;
     return (
-      <div style={{flex: 1, position: 'relative', padding: height * 0.03, borderRadius: 20,
+      <div style={{flex: 1, position: 'relative', padding: height * 0.03, borderRadius: lit ? 6 : 20,
                    background: paper ? undefined : ink.cardBg,
                    border: paper ? undefined : `2px solid ${bad ? 'rgba(255,77,77,.5)' : `${ink.accent}66`}`,
-                   filter: paper ? `drop-shadow(0 ${height * 0.012}px ${height * 0.028}px rgba(120,92,40,.22))` : undefined,
+                   filter: lit ? litShadowFilter(height) : paper ? `drop-shadow(0 ${height * 0.012}px ${height * 0.028}px rgba(120,92,40,.22))` : undefined,
                    opacity: o,
                    // a hair of opposing tilt so the two read as laid-down paper, not as a grid
                    transform: `translateX(${interpolate(o, [0, 1], [dir * 40, 0])}px)${paper ? ` rotate(${dir * 0.5}deg)` : ''}`}}>
         {paper ? <PaperSheet id={`cmp:${d?.title ?? ''}:${d?.value ?? ''}`} family="card"
-                             radius={20} tint={bad ? '#f6e0dc' : '#fffcf5'} /> : null}
-        <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 3, textTransform: 'uppercase', color: bad ? (ink.danger ?? BRAND.red) : ink.accent, marginBottom: height * 0.018}}>{d?.title}</div>
-        <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.044, color: ink.body, lineHeight: 1.12}}>{d?.value}</div>
+                             radius={lit ? 6 : 20} tint={bad ? '#f6e0dc' : '#fffcf5'} /> : null}
+        <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('sub', height * 0.024), letterSpacing: on ? 2 : 3, textTransform: 'uppercase', color: bad ? (ink.danger ?? BRAND.red) : ink.accent, marginBottom: height * 0.018}}>{d?.title}</div>
+        <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 900, fontSize: ts('label', height * 0.044), color: ink.body, lineHeight: 1.12}}>{d?.value}</div>
       </div>
     );
   };
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 7%'}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: `0 7% ${on ? height * 0.14 : 0}px`}}>
+      {on && fields.kicker ? <Kicker text={fields.kicker} o={l} height={height} /> : null}
+      {on && fields.title ? (
+        <div style={{fontFamily: BRAND.font, color: ink.body, fontWeight: 900, fontSize: ts('heading', 0), lineHeight: 1.08,
+                     letterSpacing: -0.5, textAlign: 'center', marginBottom: height * 0.05, opacity: l}}>
+          {colorize(fields.title, fields.accent, fields.accentRed, ink.accent, (ink.danger ?? BRAND.red))}
+        </div>
+      ) : null}
       <div style={{display: 'flex', gap: height * 0.03, width: '100%', alignItems: 'stretch'}}>
         {col(fields.left, l, -1, false)}
         {col(fields.right, r, 1, true)}
@@ -311,8 +331,9 @@ export const Timeline: React.FC<{fields: any; durationInFrames: number}> = ({fie
   const per = durationInFrames / Math.max(1, events.length + 1);
   const lineGrow = interpolate(frame, [0, durationInFrames * 0.85], [0, 100], {extrapolateRight: 'clamp'});
   const ink = useInk();
+  const {on, ts} = useTypeScale();
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 9%'}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: `0 9% ${on ? height * 0.14 : 0}px`}}>
       <div style={{width: '100%', maxWidth: '90%'}}>
         <Kicker text={fields.kicker} o={spring({frame, fps, config: {damping: 18}})} height={height} />
         <div style={{position: 'relative', paddingLeft: height * 0.03}}>
@@ -322,8 +343,8 @@ export const Timeline: React.FC<{fields: any; durationInFrames: number}> = ({fie
             const o = spring({frame: frame - at, fps, config: {damping: 18}});
             return (
               <div key={i} style={{display: 'flex', alignItems: 'baseline', gap: height * 0.02, opacity: o, transform: `translateX(${interpolate(o, [0, 1], [-24, 0])}px)`, marginBottom: height * 0.03}}>
-                <span style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.03, color: BRAND.green, minWidth: height * 0.14}}>{e.date}</span>
-                <span style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.038, color: ink.body, lineHeight: 1.12}}>{e.label}</span>
+                <span style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: ts('sub', height * 0.03), color: on ? ink.accent : BRAND.green, minWidth: height * (on ? 0.22 : 0.14)}}>{e.date}</span>
+                <span style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('body', height * 0.038), color: ink.body, lineHeight: 1.12}}>{e.label}</span>
               </div>
             );
           })}

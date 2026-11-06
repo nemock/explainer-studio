@@ -233,8 +233,21 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
   // unconditionally, so one unresolvable path threw and killed the whole render ~2 min in
   // (#50, 2026-07-31: a deck referencing `imagegen/x.png` instead of `assets/imagegen/x.png`).
   // Degrade to the caption card instead — a missing image must never cost a 20-minute render.
+  // COLUMN BUDGET, phone type in landscape (2026-11-05 proofs: a two-line heading plus an authored
+  // caption pushed the column off the top of the frame, and the caption printed under the burned-in
+  // caption pill; plg-guide carries one on most of its figures). The art takes what the heading
+  // leaves of the band above the captions, and an authored caption moves BESIDE the art, into the
+  // empty side of a 16:9 frame, instead of under it.
+  const wideFig = phone && width >= height;
+  const sideCaption = wideFig && !!fields.caption && !!fields.image;
+  const headText: string = fields.title || fields.kicker || '';
+  const headUpper = headText === headText.toUpperCase();
+  const headLines = headText ? Math.max(1, Math.ceil((headText.length * floor('heading') * (headUpper ? 0.66 : 0.52)) / (width * 0.8))) : 0;
+  const headH = (fields.kicker && fields.title ? ts('eyebrow', 0) * 1.2 + height * 0.014 : 0)
+    + headLines * floor('heading') * 1.08 + (headText ? height * 0.075 : 0);
+  const artMax = wideFig ? Math.max(height * 0.24, Math.min(height * 0.46, height * 0.69 - headH - height * 0.06)) : height * (phone ? 0.42 : 0.56);
   const img = fields.image ? (
-    <Img src={staticFile(fields.image)} style={{maxWidth: '100%', maxHeight: Math.round(height * (phone ? 0.42 : 0.56)), objectFit: 'contain', display: 'block', borderRadius: lit ? 2 : 8}} />
+    <Img src={staticFile(fields.image)} style={{maxWidth: '100%', maxHeight: Math.round(artMax), objectFit: 'contain', display: 'block', borderRadius: lit ? 2 : 8}} />
   ) : null;
   // The lift clears the captions in LANDSCAPE only. Portrait already reserves 0.34H for them
   // (Video.tsx contentBottom), and adding this on top pushed the column about 0.17H too high,
@@ -247,7 +260,7 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
           rendered as "ERIES"). The tape overhangs the corner by roughly height*0.06, so the
           kicker has to clear the TAPE, not just the mount edge. */}
       {fields.kicker && phone && !fields.title ? (
-        <div style={{fontFamily: headFamily, color: ink.body, fontWeight: 900, fontSize: ts('heading', 0), lineHeight: 1.08, letterSpacing: -0.5, textAlign: 'center', opacity: kIntro, marginBottom: height * 0.075}}>
+        <div style={{fontFamily: headFamily, color: ink.body, fontWeight: 900, fontSize: floor('heading'), lineHeight: 1.08, letterSpacing: -0.5, textAlign: 'center', textWrap: 'balance' as any, opacity: kIntro, marginBottom: height * 0.075}}>
           {fields.kicker}
         </div>
       ) : fields.kicker ? (
@@ -280,12 +293,13 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
           laid onto. This is the loudest synthetic surface in the system, because a flat white
           box wrapped around generated paper art puts both materials side by side in one
           object. Non-paper themes keep the white print card. */}
+      <div style={sideCaption ? {display: 'flex', alignItems: 'center', justifyContent: 'center', gap: width * 0.05, width: '100%'} : {display: 'contents'}}>
       {img ? (
       // Outer wrapper exists ONLY so the tape can hang outside the mount. The mount itself
       // sets overflow:hidden whenever the figure pans (tour / Ken Burns), and tape is
       // positioned at negative offsets, so tape placed inside would be clipped away on
       // exactly the figures that most need it — nearly all of them.
-      <div style={{position: 'relative', maxWidth: '76%', transform: `scale(${scale})`, opacity: imgOpacity}}>
+      <div style={{position: 'relative', maxWidth: sideCaption ? '62%' : '76%', transform: `scale(${scale})`, opacity: imgOpacity}}>
       {/* MOUNT BORDER vs TAPE (operator 2026-11-01: "make sure it's not covering text").
           A corner tape (width height*0.16, Tape at tl/br) crosses the mount's corner on a
           diagonal and reaches ~height*0.066 in along it (x + y <= 0.066H from the corner),
@@ -359,13 +373,16 @@ export const Figure: React.FC<{fields: any; durationInFrames: number}> = ({field
           A centred column shifts up by half of any marginBottom, so this reserves 2x the
           band it needs to clear. */}
       {fields.caption ? (
-        <div style={{fontFamily: BRAND.font, color: ink.body, opacity: 0.75 * imgOpacity,
-                     fontSize: ts('caption', height * 0.028), lineHeight: phone ? 1.2 : 1.35, textAlign: 'center',
-                     maxWidth: '62%', marginTop: height * 0.055,
-                     marginBottom: (fields.source || fields.source_url) ? height * 0.11 : 0}}>
+        <div style={{fontFamily: BRAND.font, color: ink.body, opacity: (sideCaption ? 0.9 : 0.75) * imgOpacity,
+                     fontWeight: sideCaption ? 700 : undefined,
+                     fontSize: sideCaption && String(fields.caption).length > 140 ? ts('sub', 0) : ts('caption', height * 0.028),
+                     lineHeight: phone ? 1.2 : 1.35, textAlign: sideCaption ? 'left' : 'center',
+                     maxWidth: sideCaption ? '30%' : '62%', marginTop: sideCaption ? 0 : height * 0.055,
+                     marginBottom: !sideCaption && (fields.source || fields.source_url) ? height * 0.11 : 0}}>
           {fields.caption}
         </div>
       ) : null}
+      </div>
     </AbsoluteFill>
   );
 };

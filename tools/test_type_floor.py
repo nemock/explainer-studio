@@ -34,13 +34,7 @@ ROOT = Path(__file__).resolve().parents[1]
 # sizes, and the daily and every weekly show stayed on 23-28 px type for four more days with
 # every gate green (operator caught it on a phone, 2026-11-05). A world can no longer be left
 # out by nobody deciding: adding a theme, or leaving one here, is now a visible choice.
-UNSCALED = {
-    "plg-guide": "published series; operator has not decided",
-    "pmg-guide": "mid-series; operator has not decided",
-    "brg-deep-dive": "operator has not decided",
-    "brg-paper": "operator has not decided",
-    "wte-guide": "operator has not decided",
-}
+UNSCALED = {}
 
 # Bare sub-floor literals per file on 2026-11-01, after the phone type scale landed.
 BASELINE = {
@@ -48,14 +42,14 @@ BASELINE = {
     "Audio.tsx": 0,
     "BRGPaperSting.tsx": 1,
     "Background.tsx": 0,
-    "CTA.tsx": 2,
+    "CTA.tsx": 0,
     "Captions.tsx": 0,
     "Chem.tsx": 0,
     "ChibiPresenter.tsx": 0,
     "Circumvent.tsx": 0,
     "CvgTitle.tsx": 0,
     "DataViz2.tsx": 0,
-    "Extras.tsx": 3,
+    "Extras.tsx": 0,
     "Hero3D.tsx": 1,
     "KeepCard.tsx": 1,
     "KineticHook.tsx": 2,
@@ -72,10 +66,10 @@ BASELINE = {
     "PaperWorld.tsx": 0,
     "Schematic.tsx": 2,
     "SourceLine.tsx": 0,
-    "StatCounter.tsx": 3,
-    "StatGrid.tsx": 2,
+    "StatCounter.tsx": 0,
+    "StatGrid.tsx": 0,
     "TalkingScene.tsx": 1,
-    "TextScenes.tsx": 7,
+    "TextScenes.tsx": 1,
     "colorize.tsx": 0,
 }
 

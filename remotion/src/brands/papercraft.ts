@@ -89,6 +89,7 @@ export const PAPER_FWF: PaperWorldTokens = {
 // BRG marketing/promo world — the teal site accent (pairs with the `brg-paper` theme,
 // which the Plan to Market cohort promo renders with).
 export const PAPER_BRG: PaperWorldTokens = {
+  phoneType: true, lit: true,  // operator 2026-11-05: every paper show
   ground: '#1B2B4B',
   groundDeep: '#12203A',
   sheet: '#24365C',
@@ -109,6 +110,7 @@ export const PAPER_BRG: PaperWorldTokens = {
 // promo's teal world is untouched (operator directive: add a palette, never repaint a
 // palette that is already in use).
 export const PAPER_BRG_DEEP: PaperWorldTokens = {
+  phoneType: true, lit: true,  // operator 2026-11-05: every paper show
   ground: '#1B2B4B',
   groundDeep: '#12203A',
   sheet: '#24365C',
@@ -128,6 +130,7 @@ export const PAPER_BRG_DEEP: PaperWorldTokens = {
 // also carries the BRG palette into the cold-open hook sheet (the older worlds keep
 // FWF's warm cream + purple ink there, because they are already rendering with it).
 export const PAPER_WTE: PaperWorldTokens = {
+  phoneType: true, lit: true,  // operator 2026-11-05: every paper show
   ground: '#1B2B4B',
   groundDeep: '#12203A',
   sheet: '#24365C',
@@ -276,6 +279,7 @@ export const PAPER_NEMOCK: PaperWorldTokens = {
 // at all; the original near-black surround reads as grey dirt on cream, which is what kept
 // brg-deep-dive off this map back on 2026-08-01.
 export const PAPER_PLG: PaperWorldTokens = {
+  phoneType: true, lit: true,  // operator 2026-11-05: every paper show
   ground: '#f5f0eb',
   groundDeep: '#e6ddd0',
   sheet: '#efe7dc',

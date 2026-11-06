@@ -3,6 +3,8 @@ import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from
 import {BRAND} from '../brand';
 import {useInk} from '../ink';
 import {useTypeScale} from '../type';
+import {useWorld} from './PaperWorld';
+import {PaperSheet, litBoxShadow} from './PaperNote';
 
 // motion-playbook §2F — the reusable FWF brand sting (intro/outro). Wordmark scales +
 // glows in with an accent sweep. fields: {title, subtitle?}
@@ -47,11 +49,17 @@ export const StepFlow: React.FC<{fields: any; durationInFrames: number}> = ({fie
   const per = durationInFrames / Math.max(1, steps.length + 1);
   const appearAt = (i: number) => (itemTimes && itemTimes[i] != null ? (itemTimes[i] as number) : i * per);
   const ink = useInk();
+  const {on, ts} = useTypeScale();
+  const lit = Boolean(useWorld().lit) && ink.paper;
+  // a word never overflows its card: the title steps down to fit the longest word, not under 36 px
+  const colW = (width * 0.88 - height * 0.07 * (steps.length - 1)) / Math.max(1, steps.length) - height * 0.05;
+  const longest = Math.max(1, ...steps.map((s: any) => Math.max(0, ...String(s.title || '').split(/\s+/).map((w) => w.length))));
+  const titlePx = on ? Math.max(height * 0.034, Math.min(ts('body', 0), colW / (longest * 0.58))) : height * 0.036;
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 6%'}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: `0 6% ${on ? height * 0.14 : 0}px`}}>
       <div style={{width: '100%'}}>
         {fields.kicker ? (
-          <div style={{fontFamily: BRAND.font, color: BRAND.green, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 5, textTransform: 'uppercase', textAlign: 'center', opacity: spring({frame, fps, config: {damping: 18}}), marginBottom: height * 0.04}}>
+          <div style={{fontFamily: BRAND.font, color: on ? ink.accent : BRAND.green, fontWeight: 800, fontSize: ts('eyebrow', height * 0.024), letterSpacing: on ? 3 : 5, textTransform: 'uppercase', textAlign: 'center', opacity: spring({frame, fps, config: {damping: 18}}), marginBottom: height * 0.04}}>
             {fields.kicker}
           </div>
         ) : null}
@@ -64,11 +72,14 @@ export const StepFlow: React.FC<{fields: any; durationInFrames: number}> = ({fie
             return (
               <React.Fragment key={i}>
                 {i > 0 ? (
-                  <div style={{color: BRAND.green, fontSize: height * 0.05, fontWeight: 900, opacity: arrow, transform: `translateX(${interpolate(arrow, [0, 1], [-10, 0])}px)`}}>→</div>
+                  <div style={{color: on ? ink.accent : BRAND.green, fontSize: height * 0.05, fontWeight: 900, opacity: arrow, transform: `translateX(${interpolate(arrow, [0, 1], [-10, 0])}px)`}}>→</div>
                 ) : null}
-                <div style={{flex: '1 1 0', minWidth: 0, padding: height * 0.025, borderRadius: 18, background: ink.cardBg, border: '2px solid rgba(61,220,132,.4)', textAlign: 'center', opacity: e, transform: `translateY(${interpolate(e, [0, 1], [26, 0])}px) scale(${interpolate(e, [0, 1], [0.9, 1])})`}}>
-                  <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.036, color: ink.body, lineHeight: 1.1}}>{s.title}</div>
-                  {s.text ? <div style={{fontFamily: BRAND.font, fontWeight: 600, fontSize: height * 0.022, color: ink.body, opacity: 0.75, marginTop: height * 0.012}}>{s.text}</div> : null}
+                <div style={{flex: '1 1 0', minWidth: 0, position: 'relative', padding: height * 0.025, borderRadius: lit ? 5 : 18,
+                             ...(lit ? {boxShadow: litBoxShadow(height)} : {background: ink.cardBg, border: '2px solid rgba(61,220,132,.4)'}),
+                             textAlign: 'center', opacity: e, transform: `translateY(${interpolate(e, [0, 1], [26, 0])}px) scale(${interpolate(e, [0, 1], [0.9, 1])})`}}>
+                  {lit ? <PaperSheet id={`flow:${i}:${s.title ?? ''}`} radius={5} tint="#fffcf5" /> : null}
+                  <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 900, fontSize: titlePx, color: ink.body, lineHeight: 1.1}}>{s.title}</div>
+                  {s.text ? <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 600, fontSize: ts('sub', height * 0.022), color: ink.body, opacity: 0.75, marginTop: height * 0.012}}>{s.text}</div> : null}
                 </div>
               </React.Fragment>
             );

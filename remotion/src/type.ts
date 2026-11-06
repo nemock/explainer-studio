@@ -50,7 +50,12 @@ export const useTypeScale = () => {
   const on = Boolean(world.phoneType);
   const ts = (role: TypeRole, legacyPx: number) => (on ? Math.round(PHONE_TYPE[role].size * U) : legacyPx);
   const floor = (role: TypeRole) => Math.round(PHONE_TYPE[role].min * U);
-  return {on, ts, floor, U};
+  // a headline's size by its length: long lines step down rather than run under the captions
+  const headline = (len: number, legacyPx: number) => {
+    if (!on) return legacyPx;
+    return Math.round(U * (len <= 70 ? 0.08 : len <= 130 ? 0.062 : len <= 220 ? 0.054 : 0.047));
+  };
+  return {on, ts, floor, U, headline};
 };
 
 // ---------------------------------------------------------------------------------------

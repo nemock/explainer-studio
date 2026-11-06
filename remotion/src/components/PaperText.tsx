@@ -60,17 +60,19 @@ export const PaperStatement: React.FC<{fields: any; durationInFrames?: number}> 
   const {on: phone, ts} = useTypeScale();
   const headFamily = useHeadingFamily();
   const lit = Boolean(W.lit);   // lit cards cast their own shadow; the blurred ellipse goes
+  const hLen = (fields.headline || '').length;
+  const {headline: headlinePx} = useTypeScale();
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <PaperTable seed={fields.headline || 'statement'} tightenAt={hit} />
       <PaperProps items={fields.props} />
-      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve, ...push}}>
-        <div style={{position: 'relative', maxWidth: width * (portrait ? 0.88 : phone ? 0.74 : 0.66), transform: `scale(${hit != null ? flick(frame, hit) : 1})`}}>
+      <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve || (phone ? height * 0.14 : 0), ...push}}>
+        <div style={{position: 'relative', maxWidth: width * (portrait ? 0.88 : phone ? (hLen > 130 ? 0.84 : 0.76) : 0.66), transform: `scale(${hit != null ? flick(frame, hit) : 1})`}}>
           <div style={{position: 'absolute', left: '50%', bottom: -height * 0.016, width: '88%', height: height * 0.034,
                        transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(9px)', opacity: lit ? 0 : p.shadowOpacity}} />
           <PaperCard id={`punch:${fields.headline ?? ''}`} style={{...p.object, padding: `${height * 0.034}px ${width * 0.032}px`, borderRadius: 20}}>
             <Kicker text={fields.kicker} height={height} />
-            <div style={{fontFamily: headFamily, fontWeight: 900, fontSize: ts('heading', height * 0.06), lineHeight: phone ? 1.08 : 1.1,
+            <div style={{fontFamily: headFamily, fontWeight: 900, fontSize: headlinePx(hLen, height * 0.06), lineHeight: phone ? 1.08 : 1.1,
                          color: W.ink, textAlign: 'center', textWrap: phone ? 'balance' as any : undefined}}>{colorize(fields.headline || '', fields.accent, W.accent)}</div>
             {fields.attrib ? (
               <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: ts('sub', height * 0.026), color: W.accent,

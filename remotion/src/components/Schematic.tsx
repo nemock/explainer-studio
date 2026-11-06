@@ -131,13 +131,17 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
   };
 
   // LAYOUT. Unscaled worlds: exactly the authored geometry (centre n.x*W, n.y*H, width n.w).
-  // Phone type (visual upgrade 2026-11-01): the bigger type needs bigger notes, and the
-  // diagram should use the space rather than sit as postage stamps in a blank frame
-  // (operator, #79). So each note widens up to 1.3x its authored width, capped short of its
-  // row neighbour; then the whole group is fitted (uniform scale, at most 1.2x, centred)
-  // into the band between the heading and the captions. Relative placement is kept, so the
-  // author's composition survives; only its scale and centring change. Two passes, because
-  // a scaled width changes the wrapped height.
+  // Phone type: spread the diagram into the band between the heading and the captions, x and y
+  // independently (a row should use the width, a stack the height), keeping the author's
+  // relative placement. Then SEARCH, largest type first, for the first arrangement where no two
+  // notes touch and no word overflows its note, narrowing a note or letting a forced square go
+  // before giving up type. (The first version shrank notes in place to clear collisions, which
+  // made the text wrap taller and collide more: plg-guide module 12's four-row stack came out
+  // crushed under its own heading on the 2026-11-05 proof.)
+  const kText: string = fields.kicker || '';
+  const kUpper = kText === kText.toUpperCase();
+  const headPx = kText.length > (kUpper ? 22 : 30) ? floor('heading') : ts('heading', 0);
+  const headLines = Math.max(1, Math.ceil((kText.length * headPx * (kUpper ? 0.66 : 0.52)) / (W * 0.88)));
   type Box = {x: number; y: number; w: number; h: number; cx: number; cy: number; fit: any; lLab: number; lSub: number};
   const {boxes, fLabel, fSub, mapPt} = React.useMemo(() => {
     const out = new Map<string, Box>();
@@ -149,88 +153,62 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
       });
       return {boxes: out, fLabel: fLabel0, fSub: fSub0, mapPt: (x: number, y: number) => [x, y]};
     }
-    const width0 = (n: any) => {
+    const top = H * 0.06 + (kText ? headLines * headPx * 1.08 + H * 0.03 : 0);
+    const R = {x0: W * 0.04, x1: W * 0.96, y0: top, y1: H * 0.73};
+    const gap = U * 0.02;
+    const wBase = (n: any) => {
       const a = (n.w ?? 0.2) * W;
-      const mates = nodes.filter((m) => m !== n && Math.abs(m.y - n.y) < 0.12);
-      const dx = mates.length ? Math.min(...mates.map((m) => Math.abs(m.x - n.x))) * W : Infinity;
-      const cap = Math.min(0.36 * W, dx * 0.9);
-      // a square note grows in BOTH directions, so widening it eats the vertical room the
-      // rows need (#79 s04); squares take the uniform group growth only
-      return n.shape === 'square' ? a : Math.max(a, Math.min(cap, a * 1.3));
+      return n.shape === 'square' ? a : Math.max(a, Math.min(0.36 * W, a * 1.3));
     };
-    const top = H * 0.06 + (fields.kicker ? ts('heading', 0) * 1.2 + H * 0.035 : 0);
-    const R = {x0: W * 0.05, x1: W * 0.95, y0: top, y1: H * 0.73};
-    // A layout at growth k: sizes from k-scaled widths, centres spread by k about C (the
-    // authored group's centre). Coordinates relative to C until the final placement.
-    const build = (k: number, fl: number, fs: number, C: {x: number; y: number}) =>
-      nodes.map((n) => ({n, ...sizeBox(n, width0(n) * k, fl, fs),
-                         rx: (n.x * W - C.x) * k, ry: (n.y * H - C.y) * k}));
-    const bbox = (L: ReturnType<typeof build>) => {
-      const B = {x0: Math.min(...L.map((l) => l.rx - l.w / 2)), x1: Math.max(...L.map((l) => l.rx + l.w / 2)),
-                 y0: Math.min(...L.map((l) => l.ry - l.h / 2)), y1: Math.max(...L.map((l) => l.ry + l.h / 2))};
-      return {...B, cx: (B.x0 + B.x1) / 2, cy: (B.y0 + B.y1) / 2,
-              fit: Math.min((R.x1 - R.x0) / Math.max(1, B.x1 - B.x0), (R.y1 - R.y0) / Math.max(1, B.y1 - B.y0))};
+    // one axis: spread by up to 1.35x, tighten until the extents fit, centre in the band
+    const axis = (vals: number[], half: number[], lo: number, hi: number) => {
+      const min = Math.min(...vals);
+      const ext = (k: number) => {
+        const a = vals.map((v, i) => (v - min) * k - half[i]);
+        const b = vals.map((v, i) => (v - min) * k + half[i]);
+        return [Math.min(...a), Math.max(...b)];
+      };
+      let k = 1.35;
+      for (let i = 0; i < 30 && ext(k)[1] - ext(k)[0] > hi - lo; i++) k *= 0.94;
+      const [a, b] = ext(k);
+      const off = (lo + hi) / 2 - (a + b) / 2;
+      return {map: (v: number) => (v - min) * k + off, over: Math.max(0, b - a - (hi - lo))};
     };
-    // pass 1: the authored layout at natural size -> how much it may grow (<= 1.2x)
-    const B1 = bbox(build(1, fLabel0, fSub0, {x: 0, y: 0}));
-    const C = {x: B1.cx, y: B1.cy};
-    const k = Math.min(B1.fit, 1.2);
-    // pass 2: re-size at that growth with the fonts scaled along (never under the floor)
-    const fl = Math.min(fLabel0 * 1.15, Math.max(floor('label'), fLabel0 * k));
-    const fs = Math.min(fSub0 * 1.15, Math.max(floor('sub'), fSub0 * k));
-    const L = build(k, fl, fs, C);
-    const B = bbox(L);
-    const s2 = Math.min(1, B.fit);          // wrapping may have grown it past the band
-    const rcx = (R.x0 + R.x1) / 2, rcy = (R.y0 + R.y1) / 2;
-    const place = (rx: number, ry: number) => [rcx + (rx - B.cx) * s2, rcy + (ry - B.cy) * s2];
-    // Growth is not uniform (notes widen 1.3x and the bigger type wraps taller), so notes the
-    // author set apart can now touch: s04 on #79 put its "rule" note across the row above it.
-    // Only the notes in a collision give way, so one tight pair does not shrink the whole
-    // diagram (s17): a forced square stops being square first (it grows in both directions),
-    // then each colliding note shrinks about its own centre until the pair clears by a gap.
-    // Pairs that already overlapped as authored (f < 0.5) are deliberate stacks; left alone.
-    const gap = U * 0.025;
-    const placed = L.map((l) => {
-      const [cx, cy] = place(l.rx, l.ry);
-      return {l, cx, cy, w: l.w * s2, h: l.h * s2, noSquare: false};
-    });
-    const fOf = (a: typeof placed[0], b: typeof placed[0]) => Math.max(
-      (Math.abs(a.cx - b.cx) - gap) / ((a.w + b.w) / 2),
-      (Math.abs(a.cy - b.cy) - gap) / ((a.h + b.h) / 2));
-    const pairs = () => placed.flatMap((a, i) => placed.slice(i + 1).map((b) => [a, b] as const));
-    // squares give way TOGETHER: they are usually peers, and one short note in a row of
-    // squares reads as a different kind of thing (s04's middle switch did)
-    const squareHit = pairs().some(([a, b]) => {
-      const f = fOf(a, b);
-      return f < 1 && f >= 0.5 && (a.l.n.shape === 'square' || b.l.n.shape === 'square');
-    });
-    if (squareHit) {
-      placed.filter((p) => p.l.n.shape === 'square').forEach((p) => {
-        p.noSquare = true;
-        p.h = sizeBox(p.l.n, p.w, fl * s2, fs * s2, true).h;
-      });
+    const hasSquare = nodes.some((n) => n.shape === 'square');
+    const longest = (txt: any) => Math.max(0, ...String(txt ?? '').split(/\s+/).map((w) => w.length));
+    let best: any = null;
+    const attempt = (fl: number, fs: number, ws: number, noSq: boolean) => {
+      const L = nodes.map((n) => ({n, ...sizeBox(n, wBase(n) * ws, fl, fs, noSq)}));
+      const fx = axis(L.map((l) => l.n.x * W), L.map((l) => l.w / 2), R.x0, R.x1);
+      const fy = axis(L.map((l) => l.n.y * H), L.map((l) => l.h / 2), R.y0, R.y1);
+      let overlap = 0;
+      const P = L.map((l) => ({...l, cx: fx.map(l.n.x * W), cy: fy.map(l.n.y * H)}));
+      P.forEach((a, i) => P.slice(i + 1).forEach((b) => {
+        const ox = (a.w + b.w) / 2 + gap - Math.abs(a.cx - b.cx);
+        const oy = (a.h + b.h) / 2 + gap - Math.abs(a.cy - b.cy);
+        if (ox > 0 && oy > 0) overlap += Math.min(ox, oy);
+      }));
+      const inner = (l: any) => l.w - U * 0.044;
+      const wordsFit = P.every((l) => longest(l.n.label) * fl * 0.6 <= inner(l)
+                                      && longest(l.n.sub) * fs * 0.52 <= inner(l));
+      const score = (fx.over + fy.over) * 1e4 + (wordsFit ? 0 : 1e5) + overlap;
+      if (!best || score < best.score) best = {score, P, fl, fs, fx, fy};
+      return score === 0;
+    };
+    search:
+    for (const f of [1, 0.93, 0.86, 0.8, 0.74, 0.68]) {
+      const fl = Math.max(floor('label'), fLabel0 * f), fs = Math.max(floor('sub'), fSub0 * f);
+      for (const ws of [1, 0.88, 0.76]) {
+        for (const noSq of hasSquare ? [false, true] : [false]) {
+          if (attempt(fl, fs, ws, noSq)) break search;
+        }
+      }
     }
-    const fNode = new Map(placed.map((p) => [p, 1]));
-    pairs().forEach(([a, b]) => {
-      const f = fOf(a, b);
-      if (f >= 1 || f < 0.5) return;
-      fNode.set(a, Math.min(fNode.get(a)!, f));
-      fNode.set(b, Math.min(fNode.get(b)!, f));
-    });
-    // one type size for the whole diagram, set by its most-shrunk note (never under the floor)
-    const fMin = Math.min(...Array.from(fNode.values()));
-    const flF = Math.max(floor('label'), fl * s2 * fMin), fsF = Math.max(floor('sub'), fs * s2 * fMin);
-    placed.forEach((p) => {
-      // re-fit the height to the text at its FINAL size: type stops at its floor while the
-      // box keeps shrinking, so a scaled height can be shorter than its own words
-      const w = p.w * fNode.get(p)!;
-      const r = sizeBox(p.l.n, w, flF, fsF, p.noSquare);
-      out.set(p.l.n.id, {x: p.cx - w / 2, y: p.cy - r.h / 2, w, h: r.h, cx: p.cx, cy: p.cy,
-                         fit: r.fit, lLab: r.lLab, lSub: r.lSub});
-    });
+    best.P.forEach((l: any) => out.set(l.n.id, {x: l.cx - l.w / 2, y: l.cy - l.h / 2, w: l.w, h: l.h, cx: l.cx, cy: l.cy,
+                                                fit: l.fit, lLab: l.lLab, lSub: l.lSub}));
     // any authored frame point (camera centres) through the same transform
-    const mapPt = (x: number, y: number) => place((x - C.x) * k, (y - C.y) * k);
-    return {boxes: out, fLabel: flF, fSub: fsF, mapPt};
+    const mapPt = (x: number, y: number) => [best.fx.map(x), best.fy.map(y)];
+    return {boxes: out, fLabel: best.fl, fSub: best.fs, mapPt};
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodes, W, H, phone, fLabel0, fSub0, fields.kicker, ink.paper, fields.sketch]);
   const nodeBox = (n: any) => boxes.get(n.id)!;
@@ -329,7 +307,7 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
         // 2026-11-01) instead of small green caps alone at the top of an empty frame
         <div style={{position: 'absolute', top: '6%', left: '6%', right: '6%', textAlign: 'center',
                      fontFamily: headFamily, color: ink.body, fontWeight: 900,
-                     fontSize: ts('heading', 0), lineHeight: 1.08, letterSpacing: -0.5,
+                     fontSize: headPx, lineHeight: 1.08, letterSpacing: -0.5,
                      textWrap: 'balance' as any,
                      opacity: spring({frame, fps, config: {damping: 18}})}}>
           {fields.kicker}

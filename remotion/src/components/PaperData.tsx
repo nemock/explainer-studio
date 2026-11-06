@@ -19,6 +19,10 @@ import {figColorize} from './Media';
 // units, pulled up a little in portrait where the frame is much taller than it is wide.
 // Phone type (2026-11-01): a kicker with no title under it IS the slide's headline, so it is
 // set as one; above a title it stays a small green eyebrow, at a size a phone can read.
+const darkHex = (hex: string) => {
+  const n = parseInt((hex || '#fff').replace('#', '').slice(0, 6), 16);
+  return 0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255) < 90;
+};
 const Kicker: React.FC<{text?: string; height: number; hasTitle?: boolean}> = ({text, height, hasTitle}) => {
   const W = useWorld();
   const {portrait} = usePaperLayout();
@@ -33,10 +37,12 @@ const Kicker: React.FC<{text?: string; height: number; hasTitle?: boolean}> = ({
     ) : (
       // A lone kicker sits on the PAGE, not on a card. W.ink is card ink, which on a dark-page
       // world (papercraft-matrix) was dark green on the dark page (2026-11-02 proof, s09); the
-      // page's own light ink there is hookInk. Every other world keeps W.ink.
+      // page's own light ink there is hookInk. A dark TABLE world (wte-guide, brg: navy ground,
+      // navy card ink) takes its paper colour for the same reason. Light worlds keep W.ink.
       <div style={{position: 'absolute', top: frameH * 0.06, left: '6%', right: '6%', textAlign: 'center',
                    fontFamily: headFamily, fontWeight: 900, fontSize: ts('heading', 0), lineHeight: 1.08,
-                   letterSpacing: -0.5, textWrap: 'balance' as any, color: W.page ? W.hookInk : W.ink}}>{text}</div>
+                   letterSpacing: -0.5, textWrap: 'balance' as any,
+                   color: W.page ? W.hookInk : W.surface !== 'page' && darkHex(W.ground) ? W.paper : W.ink}}>{text}</div>
     );
   }
   return text ? (
@@ -160,6 +166,8 @@ export const PaperCompare: React.FC<{fields: any; durationInFrames?: number}> = 
   const {on: phone, ts} = useTypeScale();
   const headFamily = useHeadingFamily();
   const lit = Boolean(W.lit);
+  // a title here sits on the table, not on a card: on a dark table (wte-guide) ink.body vanished
+  const onDark = phone && W.surface !== 'page' && !W.page && darkHex(W.ground);
   const tray = (d: any, at: number) => {
     const bad = d?.kind === 'bad';
     const st = popupStyle(frame, fps, at);
@@ -218,11 +226,11 @@ export const PaperCompare: React.FC<{fields: any; durationInFrames?: number}> = 
           // landscape title matches Figure's to the pixel; portrait tracks M like every other
           // paper size. The measure is Figure's too: its scene pads 6% a side, and the title
           // pads another 4% of what is left.
-          <div style={{textAlign: 'center', maxWidth: width * 0.88 * 0.92, fontFamily: phone ? headFamily : BRAND.font, color: ink.body,
+          <div style={{textAlign: 'center', maxWidth: width * 0.88 * 0.92, fontFamily: phone ? headFamily : BRAND.font, color: onDark ? W.paper : ink.body,
                        fontWeight: 900, fontSize: ts('heading', height * 0.042), lineHeight: phone ? 1.08 : 1.16, opacity: titleIn,
                        letterSpacing: phone ? -0.5 : undefined,
                        marginBottom: height * (phone ? 0.06 : 0.075), textShadow: ink.paper ? PAPER_SHADOW : '0 3px 18px rgba(0,0,0,.6)'}}>
-            {figColorize(fields.title, fields.accent, [], ink.accent)}
+            {figColorize(fields.title, fields.accent, [], onDark ? W.accentSoft : ink.accent)}
           </div>
         ) : null}
         <div style={{display: 'flex', flexDirection: portrait ? 'column' : 'row',
@@ -257,7 +265,7 @@ export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({f
   const per = durationInFrames / (n + 1);
   const at = (i: number) => (itemTimes[i] != null ? (itemTimes[i] as number) : Math.round((i + 0.5) * per));
 
-  const areaW = width * 0.86, cardW = portrait ? width * 0.72 : Math.min(width * 0.24, areaW / n - width * 0.02);
+  const areaW = width * 0.86, cardW = portrait ? width * 0.72 : Math.min(width * (W.phoneType ? 0.29 : 0.24), areaW / n - width * 0.02);
   const cx = (i: number) => (portrait ? width * 0.5 : width * 0.07 + (areaW / n) * (i + 0.5));
   // vertical lane for the portrait stack: below the kicker, above the caption reserve
   const areaTop = frameH * 0.17, areaH = frameH - areaTop - reserve;
@@ -328,7 +336,7 @@ export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({f
                   // module 1's five cards lost half a line to it. Behind the cards the strip
                   // still shows in every gap, so nothing about the look changes except that
                   // the type is legible.
-                  : {position: 'absolute', left: cx(i - 1), top: frameH * 0.545, width: cx(i) - cx(i - 1),
+                  : {position: 'absolute', left: cx(i - 1), top: frameH * (W.phoneType ? 0.42 : 0.545), width: cx(i) - cx(i - 1),
                      height: height * 0.014, borderRadius: 6, zIndex: 0,
                      transform: `scaleX(${stripT})`, transformOrigin: 'left center',
                      boxShadow: lit ? litBoxShadow(height, 0.3) : `0 ${height * 0.006}px ${height * 0.014}px ${W.shadow}`}}>
@@ -336,7 +344,7 @@ export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({f
                 </div>
               ) : null}
               <div style={{position: 'absolute', left: cx(i) - cardW / 2, zIndex: 1,
-                           top: portrait ? cy(i) - height * 0.06 : frameH * 0.42, width: cardW}}>
+                           top: portrait ? cy(i) - height * 0.06 : frameH * (W.phoneType ? 0.29 : 0.42), width: cardW}}>
                 <div style={{position: 'absolute', left: '50%', bottom: -height * 0.014, width: '82%', height: height * 0.028,
                              transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(7px)',
                              opacity: frame >= at(i) && !lit ? 1 : 0}} />
@@ -345,7 +353,7 @@ export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({f
                              padding: `${height * 0.022}px ${width * 0.012}px`, textAlign: 'center'}}>
                   <PaperSheet id={`flowcard:${i}:${s}`} radius={lit ? 5 : 16} tint={W.paper} />
                   <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 900, fontSize: ts('label', height * 0.05), color: W.accent, lineHeight: 1}}>{i + 1}</div>
-                  <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('body', height * 0.028), color: W.ink,
+                  <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 800, fontSize: ts(steps.some((t: any) => String(t).length > 45) ? 'sub' : 'body', height * 0.028), color: W.ink,
                                lineHeight: 1.18, marginTop: height * 0.01}}>{s}</div>
                 </div>
               </div>

@@ -66,7 +66,7 @@ export const PaperHook: React.FC<{fields: any}> = ({fields}) => {
     ? interpolate(frame, [0, 150, 900], [1.05, 1.12, 1.2], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})
     : interpolate(frame, [0, 150], [1.05, 1.12], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const headIn = spring({frame: frame - 6, fps, config: {damping: 16, stiffness: 120}});
-  const {on: phone, ts} = useTypeScale();
+  const {on: phone, ts, headline: headlinePx} = useTypeScale();
   const headFamily = useHeadingFamily();
   const lit = Boolean(world.lit) && !world.page;
   const kickIn = interpolate(frame, [0, 14], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
@@ -107,7 +107,7 @@ export const PaperHook: React.FC<{fields: any}> = ({fields}) => {
           {ink.typeOnPaper || world.page
             ? <PaperSheet id={`hook:${fields.headline ?? ''}`} family="card" radius={lit ? 6 : 24} tint={world.page ? world.paper : '#fffdf6'} />
             : <div style={{position: 'absolute', inset: 0, borderRadius: 24, background: '#fbf6e8', border: '3px solid rgba(44,30,78,.10)'}} />}
-          <div style={{position: 'relative', fontFamily: headFamily, fontWeight: 900, fontSize: ts('heading', height * 0.072), lineHeight: 1.06, color: world.page ? world.ink : INK, textAlign: 'center',
+          <div style={{position: 'relative', fontFamily: headFamily, fontWeight: 900, fontSize: headlinePx((fields.headline || '').length, height * 0.072), lineHeight: 1.06, color: world.page ? world.ink : INK, textAlign: 'center',
                        mixBlendMode: lit ? 'multiply' : undefined}}>
             {colorize(fields.headline || '', fields.accent, world.page ? world.accent : ink.accent)}
           </div>

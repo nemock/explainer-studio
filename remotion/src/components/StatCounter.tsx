@@ -3,6 +3,7 @@ import {AbsoluteFill, interpolate, interpolateColors, useCurrentFrame, useVideoC
 import {BRAND} from '../brand';
 import {useInk, PAPER_SHADOW} from '../ink';
 import {PaperSheet} from './PaperNote';
+import {useTypeScale} from '../type';
 
 // motion-playbook §2B — a number that counts to its figure and a bar that fills/drains,
 // landing on the narration cue. fields: {kicker, from, to, prefix, suffix, label, labelNeg, cue:[a,b]}
@@ -20,6 +21,7 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
   const frame = useCurrentFrame();
   const {height, fps} = useVideoConfig();
   const ink = useInk();
+  const {ts} = useTypeScale();
   const from = fields.from ?? 0;
   const to = fields.to ?? 0;
   const prefix = fields.prefix ?? '';
@@ -61,7 +63,7 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
             fontFamily: BRAND.font,
             color: BRAND.green,
             fontWeight: 800,
-            fontSize: height * 0.024,
+            fontSize: ts('eyebrow', height * 0.024),
             letterSpacing: 5,
             textTransform: 'uppercase',
             marginBottom: height * 0.02,
@@ -110,7 +112,7 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
           style={{
             fontFamily: BRAND.font,
             fontWeight: 800,
-            fontSize: height * 0.022,
+            fontSize: ts('sub', height * 0.022),
             letterSpacing: 2,
             textTransform: 'uppercase',
             color: negative ? (ink.danger ?? BRAND.red) : ink.body,
@@ -122,7 +124,7 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
         </div>
       ) : null}
       {fields.subkicker ? (
-        <div style={{fontFamily: BRAND.font, color: ink.body, opacity: 0.75, fontWeight: 700, fontSize: height * 0.024, marginTop: height * 0.024, textAlign: 'center'}}>
+        <div style={{fontFamily: BRAND.font, color: ink.body, opacity: 0.75, fontWeight: 700, fontSize: ts('sub', height * 0.024), marginTop: height * 0.024, textAlign: 'center'}}>
           {fields.subkicker}
         </div>
       ) : null}

@@ -2,6 +2,7 @@ import React from 'react';
 import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
 import {useInk, PAPER_SHADOW} from '../ink';
+import {useTypeScale} from '../type';
 
 // motion-playbook §2B — a grid of hero numbers, each springing in on a stagger.
 // fields: {kicker, stats:[{value, label, kind?}], source?}. kind: good->green, bad->red, else body ink.
@@ -14,6 +15,7 @@ export const StatGrid: React.FC<{fields: any; durationInFrames: number}> = ({fie
   const {fps, height} = useVideoConfig();
   const ink = useInk();
   const stats: any[] = fields.stats || [];
+  const {ts} = useTypeScale();
   const cols = stats.length === 4 ? 2 : Math.min(Math.max(stats.length, 1), 3);
   // continuous life so the grid doesn't sit frozen after the numbers land (paper freezedetect)
   const live = interpolate(frame, [0, durationInFrames], [1, 1.028]);
@@ -21,7 +23,7 @@ export const StatGrid: React.FC<{fields: any; durationInFrames: number}> = ({fie
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 7%', transform: `scale(${live}) translateY(${drift}px)`}}>
       {fields.kicker ? (
-        <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: height * 0.024,
+        <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: ts('eyebrow', height * 0.024),
           letterSpacing: 5, textTransform: 'uppercase', textAlign: 'center', marginBottom: height * 0.055}}>
           {fields.kicker}
         </div>
@@ -36,7 +38,7 @@ export const StatGrid: React.FC<{fields: any; durationInFrames: number}> = ({fie
                 color: tone(s.kind, ink.body, (ink.danger ?? BRAND.red)), textShadow: ink.paper ? PAPER_SHADOW : '0 12px 60px rgba(0,0,0,.55)', fontVariantNumeric: 'tabular-nums'}}>
                 {s.value}
               </div>
-              <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.026, letterSpacing: 1,
+              <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('sub', height * 0.026), letterSpacing: 1,
                 color: ink.body, opacity: 0.82, marginTop: height * 0.014}}>
                 {s.label}
               </div>
