@@ -348,8 +348,8 @@ with tempfile.TemporaryDirectory() as tmp:
     #     circle/box/underline/strike may name its node with `target` instead of frame
     #     coordinates; it rides the schematic's own fields (Schematic.tsx draws it around the
     #     node's laid-out box), never the frame overlay. A bad id or a target off a schematic
-    #     is refused. On the phone-type theme an old coordinate mark sitting on a node is
-    #     snapped to it (the type scale moves nodes: #79 s04/s13/s29); elsewhere it is not.
+    #     is refused. On every theme an old coordinate mark sitting on a node is snapped to
+    #     it (the type scale moves nodes: #79 s04/s13/s29); one on empty canvas stays put.
     def schem(sid, *anns):
         return {"id": sid, "type": "schematic", "kicker": "k",
                 "nodes": [{"id": "a", "label": "A", "x": 0.3, "y": 0.4},
@@ -371,7 +371,7 @@ with tempfile.TemporaryDirectory() as tmp:
                  {"kind": "strike", "from": [0.2, 0.4], "to": [0.4, 0.4]},   # across node a
                  {"kind": "circle", "at": [0.5, 0.8], "w": 0.1}]             # empty canvas
     for theme, want_on, want_off in (("nemock-deep-dive", ["b", "a", "a"], 1),
-                                     ("cut-bond", ["b"], 3)):
+                                     ("midnight", ["b", "a", "a"], 1)):
         try:
             scenes = E.build_spec(make_project(Path(tmp) / f"tgt_{theme}", [schem("t03", *snap_anns)],
                                                theme=theme))["scenes"]

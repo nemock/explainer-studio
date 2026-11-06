@@ -87,7 +87,7 @@ stills (2026-10-23): both printed `ink.body`, which is light here, onto light pa
 **Any component that prints on paper inside the art reads the same token.**
 
 **Phone type and lit paper since episode 2 (Dave, 2026-11-02).** `PAPER_MATRIX` sets
-`phoneType` and `lit`, and the theme is in `PHONE_TYPE_THEMES` (`visual-system.md`). A lone
+`phoneType` and `lit` (`visual-system.md`). A lone
 kicker becomes the slide's headline ON THE PAGE, so `PaperData` prints it in `hookInk` here;
 author lone kickers as short sentence-case headlines. Episode 1 rendered before the switch.
 

@@ -4,6 +4,7 @@ import {ThreeCanvas} from '@remotion/three';
 import {BRAND} from '../brand';
 import {colorizeText} from './colorize';
 import {useInk} from '../ink';
+import {useTypeScale} from '../type';
 
 // motion-playbook §2G — 3D hero (cold opens / seam / payoff). A slowly rotating brand
 // wireframe solid behind a 2D kinetic headline. Rotation is frame-driven (deterministic).
@@ -35,6 +36,7 @@ export const Hero3D: React.FC<{fields: any}> = ({fields}) => {
   const ink = useInk();
   const frame = useCurrentFrame();
   const {fps, width, height} = useVideoConfig();
+  const {ts} = useTypeScale();
   const headIn = spring({frame: frame - 10, fps, config: {damping: 16, stiffness: 110}});
   const fade = interpolate(frame, [0, 14], [0, 1], {extrapolateRight: 'clamp'});
   return (
@@ -46,7 +48,7 @@ export const Hero3D: React.FC<{fields: any}> = ({fields}) => {
       </AbsoluteFill>
       <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 8%'}}>
         {fields.kicker ? (
-          <div style={{fontFamily: BRAND.font, color: BRAND.green, fontWeight: 800, fontSize: height * 0.024, letterSpacing: 6, textTransform: 'uppercase', opacity: fade, marginBottom: height * 0.014}}>
+          <div style={{fontFamily: BRAND.font, color: BRAND.green, fontWeight: 800, fontSize: ts('eyebrow', height * 0.024), letterSpacing: 6, textTransform: 'uppercase', opacity: fade, marginBottom: height * 0.014}}>
             {fields.kicker}
           </div>
         ) : null}

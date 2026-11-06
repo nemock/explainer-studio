@@ -81,6 +81,17 @@ def run(proj):
     if len(durs) > 3 and cv < 0.15:
         warnings.append(f"uniform cut rhythm (cv={cv:.2f}) — vary shot lengths for energy")
 
+    # The phone test on every render (operator 2026-11-05: a continuous improvement state). It
+    # advises and never blocks: a sheet that cannot be built must not cost the episode.
+    if video.exists() and slides:
+        try:
+            from . import phonesheet
+            line = phonesheet.summary(phonesheet.run_for_render(video, slides, off, proj.work))
+            if line:
+                warnings.append(line)
+        except Exception as e:
+            warnings.append(f"phone check did not run: {e}")
+
     report = {"shots": len(slides), "shot_seconds": durs, "longest_shot_s": longest,
               "pacing_cv": round(cv, 3), "dead_air_during_speech": dead_air, "warnings": warnings}
     proj.write_json(proj.work / "qa.json", report)

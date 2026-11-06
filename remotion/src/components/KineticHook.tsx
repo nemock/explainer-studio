@@ -3,6 +3,7 @@ import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from
 import {BRAND} from '../brand';
 import {colorizeText} from './colorize';
 import {useInk} from '../ink';
+import {useTypeScale} from '../type';
 
 // motion-playbook §2A — the cold-open / outro punch: kicker + a big headline that
 // springs in, accent words colored. fields: {kicker, headline, accent[], accentRed[], sub}
@@ -14,6 +15,7 @@ export const KineticHook: React.FC<{fields: any}> = ({fields}) => {
   const ink = useInk();
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
+  const {ts} = useTypeScale();
   const k = spring({frame, fps, config: {damping: 200}});
   const big = spring({frame: frame - 6, fps, config: {damping: 14, stiffness: 120}});
   const sub = spring({frame: frame - 22, fps, config: {damping: 16}});
@@ -26,7 +28,7 @@ export const KineticHook: React.FC<{fields: any}> = ({fields}) => {
             fontFamily: BRAND.font,
             color: BRAND.green,
             fontWeight: 800,
-            fontSize: height * 0.024,
+            fontSize: ts('eyebrow', height * 0.024),
             letterSpacing: 5,
             textTransform: 'uppercase',
             textAlign: 'center',
@@ -56,7 +58,7 @@ export const KineticHook: React.FC<{fields: any}> = ({fields}) => {
           style={{
             fontFamily: BRAND.font,
             fontWeight: 800,
-            fontSize: height * 0.034,
+            fontSize: ts('body', height * 0.034),
             textAlign: 'center',
             marginTop: height * 0.02,
             opacity: sub,

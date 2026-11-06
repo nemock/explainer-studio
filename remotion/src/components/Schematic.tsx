@@ -131,7 +131,7 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
   };
 
   // LAYOUT. Unscaled worlds: exactly the authored geometry (centre n.x*W, n.y*H, width n.w).
-  // Phone type: spread the diagram into the band between the heading and the captions, x and y
+  // Phone type, either aspect: spread the diagram into the band between the heading and the captions, x and y
   // independently (a row should use the width, a stack the height), keeping the author's
   // relative placement. Then SEARCH, largest type first, for the first arrangement where no two
   // notes touch and no word overflows its note, narrowing a note or letting a forced square go
@@ -145,7 +145,7 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
   type Box = {x: number; y: number; w: number; h: number; cx: number; cy: number; fit: any; lLab: number; lSub: number};
   const {boxes, fLabel, fSub, mapPt} = React.useMemo(() => {
     const out = new Map<string, Box>();
-    if (!phone || H > W) {
+    if (!phone) {
       nodes.forEach((n) => {
         const s = sizeBox(n, (n.w ?? 0.2) * W, fLabel0, fSub0);
         out.set(n.id, {x: n.x * W - s.w / 2, y: n.y * H - s.h / 2, w: s.w, h: s.h,
@@ -154,7 +154,8 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
       return {boxes: out, fLabel: fLabel0, fSub: fSub0, mapPt: (x: number, y: number) => [x, y]};
     }
     const top = H * 0.06 + (kText ? headLines * headPx * 1.08 + H * 0.03 : 0);
-    const R = {x0: W * 0.04, x1: W * 0.96, y0: top, y1: H * 0.73};
+    // 9:16 keeps its bottom third for captions (Video.tsx's content inset)
+    const R = {x0: W * 0.04, x1: W * 0.96, y0: top, y1: H * (H > W ? 0.64 : 0.73)};
     const gap = U * 0.02;
     const wBase = (n: any) => {
       const a = (n.w ?? 0.2) * W;
@@ -195,9 +196,13 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
       if (!best || score < best.score) best = {score, P, fl, fs, fx, fy};
       return score === 0;
     };
+    // The last tiers go UNDER the floor, and only when nothing at the floor fits: notes printed
+    // over each other are worse than notes a little small. A diagram that lands here has too
+    // much on it (ISO module 12's five stacked notes with sub-lines): split it when authoring.
+    const tiers = [...[1, 0.93, 0.86, 0.8, 0.74, 0.68].map((f) => [Math.max(floor('label'), fLabel0 * f), Math.max(floor('sub'), fSub0 * f)]),
+                   ...[0.92, 0.84, 0.76, 0.68].map((f) => [floor('label') * f, floor('sub') * f])];
     search:
-    for (const f of [1, 0.93, 0.86, 0.8, 0.74, 0.68]) {
-      const fl = Math.max(floor('label'), fLabel0 * f), fs = Math.max(floor('sub'), fSub0 * f);
+    for (const [fl, fs] of tiers) {
       for (const ws of [1, 0.88, 0.76]) {
         for (const noSq of hasSquare ? [false, true] : [false]) {
           if (attempt(fl, fs, ws, noSq)) break search;
@@ -315,7 +320,7 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
       ) : fields.kicker ? (
         <div style={{position: 'absolute', top: '6%', left: 0, right: 0, textAlign: 'center',
                      fontFamily: BRAND.font, color: ink.accent, fontWeight: 800,
-                     fontSize: U * 0.030, letterSpacing: 4, textTransform: 'uppercase',
+                     fontSize: ts('eyebrow', U * 0.030), letterSpacing: 4, textTransform: 'uppercase',
                      opacity: spring({frame, fps, config: {damping: 18}})}}>
           {fields.kicker}
         </div>
@@ -379,7 +384,7 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
                   <text x={(x1 + x2) / 2} y={(y1 + y2) / 2 - U * 0.012} textAnchor="middle"
                         opacity={t > 0.85 ? 1 : 0}
                         style={{fontFamily: BRAND.font, fontStyle: 'italic', fontWeight: 700,
-                                fontSize: U * 0.021, fill: color}}>
+                                fontSize: ts('sub', U * 0.021), fill: color}}>
                     {e.label}
                   </text>
                 ) : null}
@@ -456,7 +461,8 @@ export const Schematic: React.FC<{fields: any; durationInFrames: number}> = ({fi
               position: 'absolute', left: b.x, top: b.y, width: b.w, height: b.h,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               borderRadius: 16, padding: `0 ${U * 0.014}px`, textAlign: 'center',
-              background: fields.sketch ? 'rgba(9,13,28,.72)' : ink.cardBg,
+              // opaque on the dark worlds: through a translucent card the edge lines ran across the type
+              background: fields.sketch ? 'rgba(9,13,28,.72)' : ink.paper ? ink.cardBg : `linear-gradient(${ink.cardBg}, ${ink.cardBg}), #111a33`,
               border: fields.sketch ? 'none' : `2px solid ${color}66`,
               boxShadow: ink.paper && !fields.sketch ? PAPER_SHADOW : `0 18px 60px rgba(0,0,0,.45)`,
               opacity: e,

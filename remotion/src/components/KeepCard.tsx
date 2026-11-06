@@ -1,6 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
+import {useTypeScale} from '../type';
 
 // A paper KEEP-CARD (2026-07-14). The generated paper card (icon in the upper two-thirds,
 // blank lower third) slides up and settles like a card placed on a table; a crisp label +
@@ -10,6 +11,7 @@ export const KeepCard: React.FC<{fields: any; durationInFrames?: number}> = ({fi
   const frame = useCurrentFrame();
   const {fps, height, width} = useVideoConfig();
   const portrait = height > width;
+  const {ts} = useTypeScale();
   const CREAM = '#f1e8d4';
   const INK = '#2c1e4e';
   const PURPLE = '#6a4bb0';
@@ -46,7 +48,7 @@ export const KeepCard: React.FC<{fields: any; durationInFrames?: number}> = ({fi
           </div>
           {sub && !portrait ? (
             <div style={{
-              fontFamily: BRAND.font, fontWeight: 600, fontSize: cardH * 0.036, color: PURPLE,
+              fontFamily: BRAND.font, fontWeight: 600, fontSize: ts('sub', cardH * 0.036), color: PURPLE,
               marginTop: cardH * 0.022, padding: '0 12.5%', lineHeight: 1.2, opacity: subIn,
             }}>
               {sub}

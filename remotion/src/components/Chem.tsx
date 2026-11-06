@@ -150,7 +150,7 @@ export const PaperAtom: React.FC<{fields: any; durationInFrames?: number}> = ({f
       {label !== 'none' && (fields.number || fields.name) ? (
         <div style={{textAlign: 'center', marginBottom: width * 0.075}}>
           {fields.number ? (
-            <div style={{fontFamily: CB.font, fontWeight: 800, fontSize: width * 0.03, letterSpacing: 4,
+            <div style={{fontFamily: CB.font, fontWeight: 800, fontSize: width * 0.044, letterSpacing: 4,
               color: CB.inkSoft, textTransform: 'uppercase'}}>
               {`Element ${fields.number}`}
             </div>
@@ -214,7 +214,7 @@ export const PaperMolecule: React.FC<{fields: any}> = ({fields}) => {
             {fields.name}
           </div>
           {fields.sub ? (
-            <div style={{fontFamily: CB.font, fontWeight: 700, fontSize: width * 0.038, color: CB.inkSoft, marginTop: width * 0.015,
+            <div style={{fontFamily: CB.font, fontWeight: 700, fontSize: width * 0.047, color: CB.inkSoft, marginTop: width * 0.015,
               opacity: interpolate(frame, [10, 22], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})}}>
               {fields.sub}
             </div>
@@ -298,7 +298,7 @@ export const ElementStat: React.FC<{fields: any}> = ({fields}) => {
         </div>
       ) : null}
       {fields.sub ? (
-        <div style={{fontFamily: CB.font, fontWeight: 600, fontSize: width * 0.032, color: CB.inkSoft,
+        <div style={{fontFamily: CB.font, fontWeight: 600, fontSize: width * 0.044, color: CB.inkSoft,
           textAlign: 'center', maxWidth: '78%', marginTop: width * 0.015,
           opacity: interpolate(frame, [16, 28], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})}}>
           {fields.sub}
@@ -343,7 +343,7 @@ export const PaperWord: React.FC<{fields: any}> = ({fields}) => {
         {fields.word}
       </div>
       {fields.sub ? (
-        <div style={{fontFamily: CB.font, fontWeight: 700, fontSize: width * 0.042, color: CB.ink,
+        <div style={{fontFamily: CB.font, fontWeight: 700, fontSize: width * 0.047, color: CB.ink,
           textAlign: 'center', maxWidth: '80%', marginTop: width * 0.035, lineHeight: 1.2, transform: idle,
           opacity: interpolate(frame, [10, 22], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})}}>
           {fields.sub}
@@ -394,7 +394,7 @@ export const PaperFire: React.FC<{fields: any}> = ({fields}) => {
             {fields.word}
           </div>
           {fields.sub ? (
-            <div style={{fontFamily: CB.font, fontWeight: 700, fontSize: width * 0.04, color: CB.ink,
+            <div style={{fontFamily: CB.font, fontWeight: 700, fontSize: width * 0.047, color: CB.ink,
               marginTop: width * 0.02, maxWidth: '80%', marginLeft: 'auto', marginRight: 'auto',
               opacity: interpolate(frame, [10, 22], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})}}>
               {fields.sub}
@@ -474,7 +474,7 @@ export const PaperProp: React.FC<{fields: any}> = ({fields}) => {
             {fields.word}
           </div>
           {fields.sub ? (
-            <div style={{fontFamily: CB.font, fontWeight: 700, fontSize: width * 0.04, color: CB.ink,
+            <div style={{fontFamily: CB.font, fontWeight: 700, fontSize: width * 0.047, color: CB.ink,
               marginTop: width * 0.02, maxWidth: '80%', marginLeft: 'auto', marginRight: 'auto',
               opacity: interpolate(frame, [10, 22], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})}}>
               {fields.sub}
@@ -536,7 +536,7 @@ export const PaperThumb: React.FC<{fields: any}> = ({fields}) => {
                 lineHeight: 1, position: 'relative'}}>{fields.symbol}</div>
               {fields.number != null ? (
                 <div style={{position: 'absolute', top: 6 * s, left: 10 * s, fontFamily: CB.font,
-                  fontWeight: 800, fontSize: 17 * s, color: 'rgba(42,38,34,.75)'}}>{fields.number}</div>
+                  fontWeight: 800, fontSize: 22 * s, color: 'rgba(42,38,34,.75)'}}>{fields.number}</div>
               ) : null}
             </div>
           ) : null}
@@ -558,7 +558,7 @@ export const PaperThumb: React.FC<{fields: any}> = ({fields}) => {
           </div>
           {fields.sub ? (
             <div style={{fontFamily: CB.font, fontWeight: 800, color: CB.ink,
-              fontSize: width * 0.034, lineHeight: 1.18, maxWidth: '96%'}}>
+              fontSize: width * 0.044, lineHeight: 1.18, maxWidth: '96%'}}>
               {fields.sub}
             </div>
           ) : null}
@@ -616,7 +616,7 @@ export const PaperFootage: React.FC<{fields: any}> = ({fields}) => {
             {fields.word}
           </div>
           {fields.sub ? (
-            <div style={{fontFamily: CB.font, fontWeight: 700, fontSize: width * 0.04, color: CB.ink,
+            <div style={{fontFamily: CB.font, fontWeight: 700, fontSize: width * 0.047, color: CB.ink,
               marginTop: width * 0.018, maxWidth: '80%', marginLeft: 'auto', marginRight: 'auto',
               opacity: interpolate(frame, [10, 22], [0, 1], kbC)}}>
               {fields.sub}
@@ -782,7 +782,7 @@ export const DiscoveryCard: React.FC<{fields: any}> = ({fields}) => {
           </div>
         ) : null}
         {fields.note ? (
-          <div style={{fontFamily: CB.font, fontWeight: 600, fontSize: width * 0.036, color: CB.inkSoft,
+          <div style={{fontFamily: CB.font, fontWeight: 600, fontSize: width * 0.044, color: CB.inkSoft,
             marginTop: width * 0.02, lineHeight: 1.25,
             opacity: interpolate(frame, [16, 28], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})}}>
             {fields.note}

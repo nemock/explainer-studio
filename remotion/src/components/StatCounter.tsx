@@ -19,7 +19,7 @@ const fmt = (n: number, prefix = '', suffix = '', decimals = 0) => {
 
 export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames}) => {
   const frame = useCurrentFrame();
-  const {height, fps} = useVideoConfig();
+  const {height, width, fps} = useVideoConfig();
   const ink = useInk();
   const {ts} = useTypeScale();
   const from = fields.from ?? 0;
@@ -46,7 +46,8 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
   const numColor = interpolateColors(value, [Math.min(lo, -1), 0, Math.max(hi, 1)], [(ink.danger ?? BRAND.red), ink.paper ? ink.body : '#cdd6ff', BRAND.green]);
   const negative = value < 0;
 
-  const TRACK = height * 0.62;
+  // never wider than the frame: 0.62 of a 9:16 height is 1190 px on a 1080 frame
+  const TRACK = Math.min(height * 0.62, width * 0.8);
   const denom = Math.max(Math.abs(lo), Math.abs(hi)) || 1;
   const fillW = (Math.abs(value) / denom) * (TRACK / 2);
 
@@ -76,7 +77,7 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
         style={{
           fontFamily: BRAND.font,
           fontWeight: 900,
-          fontSize: height * 0.17,
+          fontSize: Math.min(height * 0.17, width * 0.2),
           lineHeight: 1,
           color: numColor,
           textShadow: ink.paper ? PAPER_SHADOW : '0 12px 60px rgba(0,0,0,.55)',
@@ -118,6 +119,8 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
             color: negative ? (ink.danger ?? BRAND.red) : ink.body,
             opacity: 0.85,
             marginTop: height * 0.02,
+            maxWidth: width * 0.86,
+            textAlign: 'center',
           }}
         >
           {negative ? fields.labelNeg || fields.label : fields.label}

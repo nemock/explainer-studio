@@ -187,16 +187,19 @@ export const Quote: React.FC<{fields: any; durationInFrames?: number}> = ({field
 // precedence over the whole-word `kind` color when accent/accentRed are actually set.
 export const PunchWord: React.FC<{fields: any; durationInFrames?: number}> = ({fields, durationInFrames = 300}) => {
   const frame = useCurrentFrame();
-  const {fps, height} = useVideoConfig();
+  const {fps, height, width} = useVideoConfig();
   const p = spring({frame, fps, config: {damping: 9, stiffness: 140}});
   const ink = useInk();
   const color = fields.kind === 'good' ? ink.accent : fields.kind === 'bad' ? (ink.danger ?? BRAND.red) : ink.body;
   const text = fields.word || fields.headline;
   const hasAccent = (fields.accent && fields.accent.length) || (fields.accentRed && fields.accentRed.length);
+  // one word cannot wrap, so it must fit the frame on its own: 0.2 of a 9:16 height is 384 px
+  const longestWord = Math.max(1, ...String(text ?? '').split(/\s+/).map((w) => w.length));
+  const punchPx = Math.min(height * 0.2, (width * 0.8) / (longestWord * 0.68));
   return (
     <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: '0 6%'}}>
       <Kicker text={fields.kicker} o={interpolate(p, [0, 1], [0, 1])} height={height} />
-      <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.2, lineHeight: 1.02, color, textTransform: 'uppercase', transform: `scale(${p})`, textShadow: ink.paper ? PAPER_SHADOW : '0 16px 70px rgba(0,0,0,.6)', textAlign: 'center', maxWidth: '92%', whiteSpace: 'pre-line', textWrap: 'balance' as any}}>
+      <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: punchPx, lineHeight: 1.02, color, textTransform: 'uppercase', transform: `scale(${p})`, textShadow: ink.paper ? PAPER_SHADOW : '0 16px 70px rgba(0,0,0,.6)', textAlign: 'center', maxWidth: '92%', whiteSpace: 'pre-line', textWrap: 'balance' as any}}>
         {hasAccent ? colorize(text, fields.accent, fields.accentRed, ink.accent, (ink.danger ?? BRAND.red)) : text}
       </div>
     </AbsoluteFill>
@@ -216,7 +219,7 @@ export const Reframe: React.FC<{fields: any; durationInFrames?: number}> = ({fie
       <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: ts('label', height * 0.06), color: ink.body, opacity: interpolate(flip, [0, 1], [1, 0.35]), textDecoration: 'line-through', textDecorationColor: (ink.danger ?? BRAND.red), textAlign: 'center'}}>
         {fields.before}
       </div>
-      <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 900, fontSize: height * 0.04, margin: `${height * 0.02}px 0`, opacity: a}}>↓</div>
+      <div style={{fontFamily: BRAND.font, color: ink.accent, fontWeight: 900, fontSize: ts('body', height * 0.04), margin: `${height * 0.02}px 0`, opacity: a}}>↓</div>
       <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: ts('display', height * 0.078), lineHeight: on ? 1.06 : undefined, color: ink.body, textAlign: 'center', opacity: flip, transform: `scale(${interpolate(flip, [0, 1], [0.85, 1])})`, textShadow: ink.paper ? PAPER_SHADOW : '0 10px 50px rgba(0,0,0,.6)'}}>
         {fields.after}
       </div>
@@ -236,12 +239,16 @@ export const BuildList: React.FC<{fields: any; durationInFrames: number}> = ({fi
   const {on, ts} = useTypeScale();
   // phone type: the largest item size at which the list still fits above the captions, never
   // under the label floor (same idea as CvgList). 800 weight ~0.53em; column is 80% of frame.
+  // Sized off the SHORT side, so 9:16 gets the scale's px rather than 119 px off its tall height.
+  // Portrait's caption zone is already reserved by Video.tsx, so no second reserve here.
   const {width} = useVideoConfig();
+  const U = Math.min(width, height);
+  const portrait = height > width;
   const blockH = (k: number) => items.reduce((a, it) =>
-    a + Math.max(1, Math.ceil((String(it).length * height * k * 0.53) / (width * 0.76))) * height * k * 1.1 + height * 0.022, 0);
-  const itemPx = on ? height * ([0.062, 0.056, 0.05].find((k) => blockH(k) <= height * 0.52) ?? 0.048) : height * 0.044;
+    a + Math.max(1, Math.ceil((String(it).length * U * k * 0.53) / (width * 0.76))) * U * k * 1.1 + U * 0.022, 0);
+  const itemPx = on ? U * ([0.062, 0.056, 0.05].find((k) => blockH(k) <= height * (portrait ? 0.45 : 0.52)) ?? 0.048) : height * 0.044;
   return (
-    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: `0 10% ${on ? height * 0.14 : 0}px`}}>
+    <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', padding: `0 10% ${on && !portrait ? height * 0.14 : 0}px`}}>
       <div style={{maxWidth: '100%'}}>
         <Kicker text={fields.kicker} o={spring({frame, fps, config: {damping: 18}})} height={height} />
         {fields.title ? (
@@ -254,7 +261,7 @@ export const BuildList: React.FC<{fields: any; durationInFrames: number}> = ({fi
           const appear = itemTimes && itemTimes[i] != null ? (itemTimes[i] as number) : i * per;
           const e = spring({frame: frame - appear, fps, config: {damping: 18}});
           return (
-            <div key={i} style={{display: 'flex', alignItems: 'baseline', gap: height * 0.02, opacity: e, transform: `translateX(${interpolate(e, [0, 1], [-30, 0])}px)`, marginBottom: height * 0.022}}>
+            <div key={i} style={{display: 'flex', alignItems: 'baseline', gap: U * 0.02, opacity: e, transform: `translateX(${interpolate(e, [0, 1], [-30, 0])}px)`, marginBottom: U * 0.022}}>
               <span style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: on ? itemPx : height * 0.05, color: ink.accent}}>{i + 1}</span>
               <span style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: itemPx, color: ink.body, lineHeight: 1.1}}>{it}</span>
             </div>

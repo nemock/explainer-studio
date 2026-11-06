@@ -80,10 +80,10 @@ export const PaperHook: React.FC<{fields: any}> = ({fields}) => {
     : {position: 'relative', transform: `translateY(${interpolate(headIn, [0, 1], [-height * 0.03, 0])}px) scale(${interpolate(headIn, [0, 1], [0.92, 1])})`};
 
   return (
-    <AbsoluteFill style={{background: CREAM, overflow: 'hidden', ...(hasImg ? {} : {alignItems: 'center', justifyContent: 'center'})}}>
+    <AbsoluteFill style={{background: world.page && !fields.image ? 'transparent' : CREAM, overflow: 'hidden', ...(hasImg ? {} : {alignItems: 'center', justifyContent: 'center'})}}>
       {fields.image ? (
         <Img src={staticFile(fields.image)} style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${kb})`}} />
-      ) : (
+      ) : world.page ? null /* a hook with no art (every Short) shows the world's own page, not a cream sheet */ : (
         <AbsoluteFill style={{background: 'radial-gradient(120% 120% at 50% 40%, #fbf4e0 0%, #efe5cb 100%)'}} />
       )}
 

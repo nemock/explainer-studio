@@ -47,7 +47,7 @@ const Kicker: React.FC<{text?: string; height: number; hasTitle?: boolean}> = ({
   }
   return text ? (
     <div style={{position: 'absolute', top: frameH * (portrait ? 0.08 : 0.12), left: 0, right: 0, textAlign: 'center',
-                 fontFamily: BRAND.font, fontWeight: 800, fontSize: height * 0.026, letterSpacing: 5,
+                 fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('eyebrow', height * 0.026), letterSpacing: 5,
                  textTransform: 'uppercase', color: W.kicker ?? W.accentSoft}}>{text}</div>
   ) : null;
 };
@@ -268,7 +268,8 @@ export const PaperSteps: React.FC<{fields: any; durationInFrames: number}> = ({f
   const areaW = width * 0.86, cardW = portrait ? width * 0.72 : Math.min(width * (W.phoneType ? 0.29 : 0.24), areaW / n - width * 0.02);
   const cx = (i: number) => (portrait ? width * 0.5 : width * 0.07 + (areaW / n) * (i + 0.5));
   // vertical lane for the portrait stack: below the kicker, above the caption reserve
-  const areaTop = frameH * 0.17, areaH = frameH - areaTop - reserve;
+  // (5% clear of the reserve: a long last card reached the two-line caption pill, 2026-11-05 proof)
+  const areaTop = frameH * 0.17, areaH = frameH - areaTop - reserve - frameH * 0.05;
   const cy = (i: number) => areaTop + (areaH / n) * (i + 0.5);
 
   // The lateral step is DECORATION, not necessity: cardW is solved so the whole row

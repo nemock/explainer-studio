@@ -12,11 +12,14 @@ const tone = (k: string | undefined, neutral: string, danger: string) =>
 
 export const StatGrid: React.FC<{fields: any; durationInFrames: number}> = ({fields, durationInFrames = 300}) => {
   const frame = useCurrentFrame();
-  const {fps, height} = useVideoConfig();
+  const {fps, height, width} = useVideoConfig();
   const ink = useInk();
   const stats: any[] = fields.stats || [];
   const {ts} = useTypeScale();
-  const cols = stats.length === 4 ? 2 : Math.min(Math.max(stats.length, 1), 3);
+  // 9:16 has no room for numbers side by side (the third ran off the frame, 2026-11-05 proof):
+  // one column, sized off the width.
+  const portrait = height > width;
+  const cols = portrait ? 1 : stats.length === 4 ? 2 : Math.min(Math.max(stats.length, 1), 3);
   // continuous life so the grid doesn't sit frozen after the numbers land (paper freezedetect)
   const live = interpolate(frame, [0, durationInFrames], [1, 1.028]);
   const drift = interpolate(frame, [0, durationInFrames], [0, -height * 0.01]);
@@ -29,12 +32,12 @@ export const StatGrid: React.FC<{fields: any; durationInFrames: number}> = ({fie
         </div>
       ) : null}
       <div style={{display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`,
-        gap: `${height * 0.05}px ${height * 0.1}px`, width: '100%', maxWidth: '90%'}}>
+        gap: portrait ? `${height * 0.03}px 0` : `${height * 0.05}px ${height * 0.1}px`, width: '100%', maxWidth: '90%'}}>
         {stats.map((s, i) => {
           const e = spring({frame: frame - 8 - i * 7, fps, config: {damping: 18}});
           return (
             <div key={i} style={{textAlign: 'center', opacity: e, transform: `translateY(${(1 - e) * 26}px)`}}>
-              <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: height * 0.12, lineHeight: 1,
+              <div style={{fontFamily: BRAND.font, fontWeight: 900, fontSize: portrait ? width * 0.13 : height * 0.12, lineHeight: 1,
                 color: tone(s.kind, ink.body, (ink.danger ?? BRAND.red)), textShadow: ink.paper ? PAPER_SHADOW : '0 12px 60px rgba(0,0,0,.55)', fontVariantNumeric: 'tabular-nums'}}>
                 {s.value}
               </div>

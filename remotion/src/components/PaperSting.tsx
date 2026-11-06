@@ -1,6 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
+import {useTypeScale} from '../type';
 
 // Paper-launch brand sting (2026-07-14). INTRO: cream paper; the paper D card settles in,
 // the cream paper rocket flies in from OFF-SCREEN above trailing a fan of mixed-color paper
@@ -11,6 +12,7 @@ import {BRAND} from '../brand';
 export const PaperSting: React.FC<{fields?: any; durationInFrames?: number}> = ({fields, durationInFrames}) => {
   const frame = useCurrentFrame();
   const {fps, height, durationInFrames: dur} = useVideoConfig();
+  const {ts} = useTypeScale();
   void (durationInFrames ?? dur);
 
   const outro = !!(fields && fields.outro);
@@ -117,7 +119,7 @@ export const PaperSting: React.FC<{fields?: any; durationInFrames?: number}> = (
       {subtitle ? (
         <div style={{
           position: 'absolute', bottom: height * 0.11, opacity: sub,
-          fontFamily: BRAND.font, fontWeight: 700, fontSize: height * 0.03, letterSpacing: 3,
+          fontFamily: BRAND.font, fontWeight: 700, fontSize: ts('eyebrow', height * 0.03), letterSpacing: 3,
           color: '#6a4bb0', textAlign: 'center', textTransform: 'lowercase',
         }}>
           {subtitle}

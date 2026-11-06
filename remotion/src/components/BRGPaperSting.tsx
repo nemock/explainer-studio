@@ -1,6 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {BRAND} from '../brand';
+import {useTypeScale} from '../type';
 
 // BRG paper brand sting (2026-07-26) — the Base Reality Group counterpart to PaperSting.
 //
@@ -19,6 +20,7 @@ import {BRAND} from '../brand';
 export const BRGPaperSting: React.FC<{fields?: any; durationInFrames?: number}> = ({fields, durationInFrames}) => {
   const frame = useCurrentFrame();
   const {fps, height, durationInFrames: dur} = useVideoConfig();
+  const {ts} = useTypeScale();
   void (durationInFrames ?? dur);
 
   const outro = !!(fields && fields.outro);
@@ -74,7 +76,7 @@ export const BRGPaperSting: React.FC<{fields?: any; durationInFrames?: number}> 
       {subtitle ? (
         <div style={{
           position: 'absolute', bottom: height * 0.12, opacity: sub,
-          fontFamily: BRAND.font, fontWeight: 700, fontSize: height * 0.028, letterSpacing: 3,
+          fontFamily: BRAND.font, fontWeight: 700, fontSize: ts('eyebrow', height * 0.028), letterSpacing: 3,
           color: ACCENT, textAlign: 'center', textTransform: 'lowercase',
         }}>
           {subtitle}

@@ -459,7 +459,7 @@ export const Footage: React.FC<{fields: any; durationInFrames: number}> = ({fiel
   return (
     <AbsoluteFill>
       {fields.headline ? (
-        <div style={{position: 'absolute', top: '7%', left: 0, right: 0, textAlign: 'center', fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: height * 0.026, letterSpacing: 4, textTransform: 'uppercase', opacity: intro, padding: '0 8%'}}>
+        <div style={{position: 'absolute', top: '7%', left: 0, right: 0, textAlign: 'center', fontFamily: BRAND.font, color: ink.accent, fontWeight: 800, fontSize: ts('eyebrow', height * 0.026), letterSpacing: 4, textTransform: 'uppercase', opacity: intro, padding: '0 8%'}}>
           {fields.accent2 && fields.accent2.length ? figColorize(fields.headline, fields.accent, fields.accent2, ink.accent, (ink.danger ?? (ink.paper ? '#c2352b' : BRAND.red))) : fields.headline}
         </div>
       ) : null}

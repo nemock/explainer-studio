@@ -70,8 +70,14 @@ export type PaperWorldTokens = {
   page?: {base: string; light: string; surround: string; rain?: string};
 };
 
-// FWF / davesaunders.net (the nemock-deep-dive channel)
+// FWF / davesaunders.net (the nemock-deep-dive channel). Also the world of every theme with no
+// entry in WORLD_BY_THEME (paperWorldFor's fallback): `midnight`, `cut-bond`, a theme added
+// tomorrow. So phoneType and lit are on HERE, and the scale is the default rather than something
+// each show has to opt into (operator 2026-11-05: "update everything moving forward"). Opt-in is
+// how the daily spent four days on 23-28 px type after the upgrade shipped.
 export const PAPER_FWF: PaperWorldTokens = {
+  phoneType: true,
+  lit: true,
   ground: '#2A1142',
   groundDeep: '#1D0B30',
   sheet: '#36185B',
@@ -342,12 +348,13 @@ export const PAPER_MATRIX: PaperWorldTokens = {
   page: {base: '#06120c', light: '120,255,180', surround: '1,4,2',
          rain: 'papercraft-matrix/elements/tape_rain.webp'},
   // Opted into the 2026-11-01 visual upgrade on 2026-11-02 (Dave, from episode 2 of the
-  // series on). Keep PHONE_TYPE_THEMES in remotion_engine.py in step.
+  // series on).
   phoneType: true,
   lit: true,
 };
 
-// Theme -> world. Every paper channel owns its ground; anything unmapped keeps FWF.
+// Theme -> world. Every paper channel owns its ground; anything unmapped keeps FWF (and with it
+// the phone type scale: an unmapped theme can no longer mean old sizes).
 const WORLD_BY_THEME: Record<string, PaperWorldTokens> = {
   'papercraft-matrix': PAPER_MATRIX,
   'nemock-deep-dive': PAPER_NEMOCK,

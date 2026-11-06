@@ -13,30 +13,37 @@ frame, and its post-its still read as rendered boxes.
 
 ## 0. Which worlds this applies to
 
-Two world tokens in `remotion/src/brands/papercraft.ts`, both opt-in per theme:
+**Every theme, by default** (operator 2026-11-05: "update everything moving forward"). Two world
+tokens in `remotion/src/brands/papercraft.ts`:
 
 | token | what it turns on |
 |---|---|
 | `phoneType` | the type scale below, the slide heading, content sized to the space, 44 px captions |
 | `lit` | lit paper: real fibre, a light falloff across each sheet, two shadows from one light |
 
-**On: every theme in `WORLD_BY_THEME`** (operator 2026-11-05, after the daily showed the cost of
-leaving shows out): the deep dives, `papercraft-matrix`, `plg-guide`, `pmg-guide`, `brg-deep-dive`,
-`brg-paper`, `wte-guide`, and the daily/weekly/Circumvent family (§4a). `tools/test_type_floor.py`
-fails on any theme neither on the scale nor named in its `UNSCALED` list (empty today), because
-"opt-in" alone left the daily on 23-28 px type for four days after the upgrade shipped, with every
-gate green. **Not covered:** the navy `midnight` theme (the ISO 14971 Masterclass) and `cut-bond`
-are not paper worlds in that map, so they keep the old sizes.
+Both are set on `PAPER_FWF`, the world `paperWorldFor` falls back to, so a theme with no map entry
+(`midnight`, `cut-bond`, one added tomorrow) is on the scale without anyone deciding it.
+`tools/test_type_floor.py` fails on any theme in `themes.py` that does not resolve to `phoneType`,
+and on any bare size under the floor in any component. Opt-in by theme is how the daily stayed on
+23-28 px for four days after the upgrade shipped, with every gate green.
 
-**Each theme has its own render path; check it, do not assume.** The Paper* family, the `Cvg*`
-family (§4a) and the classic components (`TextScenes`, `StepFlow`, `CTA`, `brg-deep-dive`) are three
-separate sets of components, and a token only changes the ones that read it.
+**Continuous improvement: forward only.** An engine improvement reaches each show at its next
+render, with no per-show step. **Published videos stay as they are:** never re-render one just to
+pick up a visual change. One consequence is expected and fine: a series can change look between
+episodes (PM Guide changes at module 6), and a re-render forced by a fix to a published video
+picks up the current look. Every render leaves `work/phone_sheet.png` and puts its flagged slides
+in the QA warnings (§5), so what to improve next comes from what actually shipped.
+
+**Each theme has its own render path; a change has to reach all of them.** Four separate component
+sets: Paper* (deep dives, guides), `Cvg*` (the daily, the weeklies, Circumvent; §4a), the classic
+components (`TextScenes`, `StepFlow`, `CTA`; `brg-deep-dive`, `midnight`) and `Chem.tsx` (Cut & Bond's
+element Shorts, which size off frame WIDTH). When a visual rule changes, look at a real frame from
+each, and say plainly which did not get it.
 
 `papercraft-matrix` is a dark-page world: a lone kicker sits on the page, so `PaperData`'s
-heading takes the page's light ink there (`world.page ? hookInk : ink`), found on the proof. A world joins by setting both tokens AND adding its
-theme to `PHONE_TYPE_THEMES` in `src/explainer2/remotion_engine.py` (captions and annotation
-snapping read that tuple). Prove it on stills of that show first (§6). Never flip a global
-default (theme-keyed branding isolation).
+heading takes the page's light ink there (`world.page ? hookInk : ink`), found on the proof.
+Prove any change on stills of the shows it touches first (§6). Branding stays theme-keyed
+(colour, sting, CTA, wordmark); legibility is not branding, so it is not.
 
 ## 1. The phone test (the rule everything else serves)
 
@@ -64,17 +71,16 @@ Sizes are **roles**, fractions of the frame's SHORT side (so 16:9 and 9:16 share
 | `annotation` | hand-drawn mark labels | 0.040 → 43 | 0.038 |
 | `caption` | a figure's caption line | 0.044 → 48 | 0.040 |
 
-Burned-in captions: 44 px on phone-type themes (engine `captionFontSize`).
+Burned-in captions: 44 px in 16:9, 61 px in 9:16 (engine `captionFontSize`).
 
 **In a component:** `const {ts, floor} = useTypeScale();` then
-`fontSize: ts('label', height * 0.03)`. The second argument is the component's OLD literal,
-which unscaled worlds still render, so adopting the scale never moves another show. Never add
-a bare `height * 0.0NN` under 0.044: `tools/test_type_floor.py` fails the build (a ratchet:
-each file may only keep its 2026-11-01 count of legacy literals, and the count only goes down).
+`fontSize: ts('label', height * 0.03)`. The second argument is the component's old literal, kept
+as the record of what the role used to be. Never add a bare `height * 0.0NN` or `width * 0.0NN`
+under 0.044: `tools/test_type_floor.py` fails on any.
 
 ### 2a. Kicker → heading
 
-On a phone-type world the deck's `kicker` changes job:
+The deck's `kicker` has two jobs:
 - **alone** (no `title`/`headline` on the slide): it IS the headline. Set in ink, `heading`
   size, sentence case as authored, balanced wrap. (#79: "Three-SAT", "Two bets".)
 - **above a title**: it stays an uppercase green eyebrow, at `eyebrow` size.
@@ -120,6 +126,12 @@ worlds:
   no two notes touch and no word overflows its note, narrowing notes or giving up forced squares
   (all of them together, since they are usually peers) before giving up type. Never shrink a note
   in place to clear a collision: the text wraps taller and collides more (PLG module 12's stack).
+  Only when nothing at the floor fits do the last tiers go under it, because notes printed over each
+  other are worse than notes a little small. **Author around it:** at most four stacked notes
+  with sub-lines; five (ISO module 12) belongs on two slides. Both aspects run this search.
+- **9:16:** size off the SHORT side, never `height * k`, which is nearly twice as big there. Items
+  that sit side by side in 16:9 stack (`StatGrid`, `StepFlow`); a track or a lone word never runs
+  wider than the frame (`StatCounter`, `PunchWord`).
 - **Figure**, 16:9: the art takes what the heading (at its floor, 69 px) leaves of the band above
   the captions, 0.24–0.46 of frame height. An authored `caption` sits BESIDE the art, in the empty
   side of the frame; under the art it printed beneath the burned-in caption pill, and PLG carries one
@@ -152,7 +164,7 @@ world, in landscape:
 
 Portrait keeps its own tiers, tuned against 4:5, with kickers and sub-lines on the scale.
 
-## 5. Visual QA on a phone-type world
+## 5. Visual QA
 
 Run in this order; all through the render queue where they render (CLAUDE.md rule 9).
 
@@ -162,14 +174,18 @@ Run in this order; all through the render queue where they render (CLAUDE.md rul
    inside the camera, so it lands wherever layout puts the note; a strike crosses each wrapped
    line of the label. Frame coordinates cannot survive the type scale: on #79 the s13 and s29
    strikes landed on the wrong words until anchored. An old `at`/`from`-`to` mark sitting on a
-   node is snapped to it on phone-type themes, with a spec warning asking for `target`. A bad
+   node is snapped to it, with a spec warning asking for `target`. A bad
    id, or `target` off a schematic, is refused (`BLOCKED-MARKS.md`).
 3. **`python3 tools/mark_stills.py <dir>`** — figure `marks` on real rendered frames (unchanged).
-4. **`python3 tools/phone_sheet.py <dir>`** — after the render. One frame per slide at 390 px
-   wide, tiled to `work/phone_sheet.png`; Read its preview, at 100%. If you cannot read a slide
-   there, a viewer cannot. Its **fill check** is advisory: `SPARSE` (< 8% of the band is
-   edge-dense, or the content box < 25%) or `CROWDED` (≥ 24% edge-dense). Calibrated on #79:
-   shipped "Two bets" 4.9% → re-rendered 12.1%; the crowded s17 re-render 24.4%.
+4. **The phone sheet: every render makes one** (`qa` stage, `src/explainer2/phonesheet.py`,
+   since 2026-11-05). One frame per slide at the size it has on a phone, tiled to
+   `work/phone_sheet.png`; flagged slides appear in the QA warnings. It never blocks. A session
+   Reads its preview at 100% (`tools/frame_preview.py`): if you cannot read a slide there, a viewer
+   cannot. `python3 tools/phone_sheet.py <dir>` re-runs it on demand. The **fill check** is advisory:
+   `SPARSE` (< 8% of the band is edge-dense, or the content box < 25%) or `CROWDED` (≥ 24%
+   edge-dense; not on figures, whose detailed art reads as dense). Calibrated on #79 only: shipped "Two bets" 4.9% → re-rendered 12.1%; the crowded
+   s17 re-render 24.4%. Portrait and dark themes are not calibrated: read their flags as prompts
+   to look.
 5. **`python3 tools/test_type_floor.py`** — after any component change.
 
 ## 6. Proving a change
@@ -185,6 +201,4 @@ anything that builds.
 
 - **New object families** (Magnific; quote credits first, operator approves): ruled index
   cards, kraft tags, folders, pins and clips, and a relight pass on the existing notes/cards.
-- `midnight` (ISO 14971) and `cut-bond` are outside the paper worlds and keep the old sizes (§0).
 - A strike across a short second label line runs the note's width (line widths are estimated).
-- Portrait (Shorts) keeps the authored schematic geometry; only sizes change there.

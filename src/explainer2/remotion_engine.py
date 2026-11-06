@@ -963,11 +963,9 @@ ANNOTATION_COLORS = ("green", "red", "white", "amber")
 # draws it around that node's rendered box, inside the camera, so it lands wherever layout
 # puts the node. Frame coordinates cannot survive the phone type scale, which resizes and
 # refits every node: s04's circle on #79 was authored at [0.5, 0.62] around a note that
-# moves. On PHONE_TYPE_THEMES an old `at` circle that sits on a node is snapped to it.
-# Keep this tuple in step with `phoneType` in remotion/src/brands/papercraft.ts.
+# moves. An old `at` circle that sits on a node is snapped to it. Every theme is on the scale
+# since 2026-11-05 (operator: everything, moving forward), so nothing here keys on theme.
 TARGET_KINDS = ("circle", "box", "underline", "strike")
-PHONE_TYPE_THEMES = ("nemock-deep-dive", "papercraft-matrix", "plg-guide", "pmg-guide",
-                     "brg-deep-dive", "brg-paper", "wte-guide") + _CVG_STYLE_THEMES
 MARKS_BLOCKED_NAME = "BLOCKED-MARKS.md"
 
 # What each layer's renderer does with what it is given, keyed by the deck field. `default`
@@ -1386,8 +1384,7 @@ def build_spec(sp):
                     warnings.append(f"{sid}: annotation cue unmatched (\"{a['cue']}\") — proportional fallback")
                 a2["cueFrame"] = f if f is not None else int(round(dur * (ai + 1) / (n + 1)))
                 if (slide.get("type") == "schematic" and not a2.get("target")
-                        and a2.get("kind") in TARGET_KINDS
-                        and sp.data.get("theme") in PHONE_TYPE_THEMES):
+                        and a2.get("kind") in TARGET_KINDS):
                     snapped = _snap_to_node(a2, slide.get("nodes") or [])
                     if snapped:
                         a2["target"] = snapped
@@ -1534,11 +1531,9 @@ def build_spec(sp):
         "durationInFrames": int(round(total * fps)),
         "audio": "narration.wav", "words": words, "scenes": scenes,
         "captionBottomPx": int(round(height * cap_frac)),
-        # 0.026 of a 1080 frame is 28 px: about 6 pt on a phone held upright. The phone
-        # type scale themes take 44 px (operator 2026-11-01, visual upgrade).
-        "captionFontSize": int(round(height * (0.032 if height >= 1600 else
-                                               0.041 if sp.data.get("theme") in PHONE_TYPE_THEMES
-                                               else 0.026))),
+        # 44 px in a 1080 frame (operator 2026-11-01). The old 28 px was about 6 pt on a phone
+        # held upright. Every theme since 2026-11-05.
+        "captionFontSize": int(round(height * (0.032 if height >= 1600 else 0.041))),
         **({"headingFont": sp.data["heading_font"]} if sp.data.get("heading_font") else {}),
         "audioFrom": audio_from,
         # Visual world: '' (navy studio) or 'paper' (Cut & Bond off-white). Set in project.json.
