@@ -244,6 +244,23 @@ Than One.") This is a TITLE/metadata rule; the spoken script can still use a
 metaphor where it reads naturally — but soften it there too if the operator wants
 to never say it on the mic.
 
+**YouTube's own title guidance** (operator-supplied 2026-11-07,
+support.google.com/youtube/answer/12340300). Three points the rules above didn't
+already cover:
+
+- **Front-load.** Viewers may see only part of a title, so the words that carry the
+  promise go first; anything secondary goes last. When ranking, read each candidate
+  cut at about 60 characters and ask whether the cut still sells the video.
+- **Pick searchable or intriguing on purpose.** A searchable title names what to
+  expect, for people already looking for the topic; an intriguing one sparks
+  curiosity in people who weren't. Say in the blueprint which one each candidate is
+  and why that fits where this video's viewers will find it.
+- **ALL CAPS and emoji sparingly in titles,** only to stress one element (our red
+  caps bands are a thumbnail convention, not a title one).
+
+Its measure of whether packaging worked: click-through rate on Home and Suggested
+in the first 24 hours, on videos with above-average impressions.
+
 ## 8. Assemble blueprint.md + blueprint.json
 
 `blueprint.md` sections (in order): 1 Competitive picture (the §2 table +
