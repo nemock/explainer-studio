@@ -790,8 +790,10 @@ project's min/max. Fix every item before the booth opens.
 - [ ] Changed a component? `python3 tools/test_type_floor.py` passes (no new type under the
       phone floor; visual-system.md §2). After the render, `python3 tools/phone_sheet.py <dir>`.
 - [ ] Still-check the key frames before the full render, through the render queue
-      (SKILL hard rule 7): mark-carrying scenes with `python3 tools/mark_stills.py <dir>`
-      (queues itself). Any other frame, once a render has staged
+      (SKILL hard rule 7): every slide with `python3 tools/preview_stills.py <dir>` (queues
+      itself; works before the booth on stand-in timing; Read its full-resolution crops for
+      every marked slide, deck-playbook §6), mark-carrying scenes in isolation with
+      `python3 tools/mark_stills.py <dir>` (queues itself). Any other frame, once a render has staged
       `<dir>/work/remotion/props.json`:
       `bin/explainer2 submit --label still --cwd /Volumes/Casima/claudeCode/explainer2/remotion -- npx remotion still src/index.ts Video <dir>/work/still_<N>.png --props=<dir>/work/remotion/props.json --public-dir=<dir>/work/remotion/public --frame=<N>`
       — then Read the downscaled preview (`python3 tools/frame_preview.py <still.png>`),

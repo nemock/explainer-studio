@@ -176,7 +176,13 @@ Run in this order; all through the render queue where they render (CLAUDE.md rul
    strikes landed on the wrong words until anchored. An old `at`/`from`-`to` mark sitting on a
    node is snapped to it, with a spec warning asking for `target`. A bad
    id, or `target` off a schematic, is refused (`BLOCKED-MARKS.md`).
-3. **`python3 tools/mark_stills.py <dir>`** — figure `marks` on real rendered frames (unchanged).
+3. **`python3 tools/preview_stills.py <dir>`** — every slide as the engine draws it, before the
+   booth (stand-in timing) and before any re-render (real timing), with the phone test on the
+   same stills and full-resolution crops of every slide that carries marks, annotations or
+   `pageText` (2026-11-10). Read the crops for marks; the sheets are for layout. Writes
+   `work/preview/preview_check.json`, which `tools/rerender.py` asks for.
+   **`python3 tools/mark_stills.py <dir>`** stays the figure-`marks` check in isolation, with no
+   captions over the subject (unchanged).
 4. **The phone sheet: every render makes one** (`qa` stage, `src/explainer2/phonesheet.py`,
    since 2026-11-05). One frame per slide at the size it has on a phone, tiled to
    `work/phone_sheet.png`; flagged slides appear in the QA warnings. It never blocks. A session

@@ -43,6 +43,19 @@ const FigMark: React.FC<{m: any; i: number; vh?: number}> = ({m, i, vh = 562}) =
       const [x1, y1] = px(m.from); const [x2, y2] = px(m.to);
       d = gen.line(x1, y1, x2, y2, opts); len = Math.hypot(x2 - x1, y2 - y1) * 2.3;
       if (m.kind === 'arrow') tp = {x: x2, y: y2, angle: Math.atan2(y2 - y1, x2 - x1)};
+    } else if (m.kind === 'box' && m.style === 'highlight') {
+      // HIGHLIGHT (2026-11-10, MedDevice Cyber Guide episode 3). A box around a phrase of
+      // single-spaced document type cannot clear the lines around it: the gaps there are
+      // 3-6 px on screen and the stroke is ~7, before rough.js bows a long edge by up to
+      // ~8 px more. Three re-renders of boxes either cut the letters or grazed the next
+      // line. A translucent marker band over the phrase's OWN line, measured to its ink
+      // (at/w/h from the line band, not from a padded guess), is what a reader does to a
+      // document. Filled, not stroked; low roughness so its edges stay on that line.
+      const [cx, cy] = px(m.at); const w = (m.w ?? 0.28) * VW, h = (m.h ?? 0.05) * VH;
+      d = gen.rectangle(cx - w / 2, cy - h / 2, w, h,
+                        {...opts, roughness: 0.6, bowing: 0.4, stroke: 'none',
+                         fill: color, fillStyle: 'solid'});
+      len = w;
     } else if (m.kind === 'box') {
       const [cx, cy] = px(m.at); const w = (m.w ?? 0.28) * VW, h = (m.h ?? 0.3) * VH;
       d = gen.rectangle(cx - w / 2, cy - h / 2, w, h, opts); len = 2 * (w + h) * 2.3;
@@ -61,6 +74,24 @@ const FigMark: React.FC<{m: any; i: number; vh?: number}> = ({m, i, vh = 562}) =
   if (frame < (m.cueFrame ?? 0)) return null;
   const tipO = interpolate(t, [0.8, 1], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const hl = Math.max(18, 562 * 0.05);
+  if (m.kind === 'box' && m.style === 'highlight') {
+    // swept left to right like a marker; multiply keeps the type dark under the band
+    const [cx] = [(m.at?.[0] ?? 0.5) * VW]; const w = (m.w ?? 0.28) * VW;
+    const clipId = `fighl-${i}-${markSeed(String(m.at))}`;
+    return (
+      <>
+        <defs><clipPath id={clipId}>
+          <rect x={cx - w / 2 - 4} y={0} width={(w + 8) * t} height={VH} />
+        </clipPath></defs>
+        <g clipPath={`url(#${clipId})`} opacity={m.opacity ?? 0.45}
+           style={{mixBlendMode: 'multiply'}}>
+          {paths.map((p, j) => (
+            <path key={j} d={p.d} fill={p.fill || color} stroke="none" />
+          ))}
+        </g>
+      </>
+    );
+  }
   return (
     <>
       {paths.map((p, j) => (

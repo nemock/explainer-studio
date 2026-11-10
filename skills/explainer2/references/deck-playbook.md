@@ -220,6 +220,17 @@ dropped on the slide"). Do it as framed `figure` slides, not raw dumps:
   quote. The motion-graphic cards stay dominant; the document lands the proof.
 - **Copyright:** short fair-use excerpts with on-slide attribution only (same
   posture as the script). Never reproduce the whole document.
+- **Mark a phrase of document type with a highlight, never a box or ring (2026-11-10).**
+  `{"kind": "box", "style": "highlight", "at": …, "w": …, "h": …, "cue": …}` draws a
+  translucent marker band (multiply, so the type stays black) swept left to right.
+  Measure `at`/`w`/`h` from the phrase's own line: the band runs from the line's top ink
+  row to its bottom one, and from the phrase's first letter to its last plus ~5 px,
+  with words found at the word gaps (MedDevice Cyber Guide module 3,
+  `work/measure_highlights.py`, is the pattern). A box cannot work on single-spaced
+  type: the gap between lines is 3 to 6 px on screen and the stroke is ~7 before
+  rough.js bows a long edge by up to ~8 px more. Episode 3 rendered boxes three ways,
+  and each version either cut the letters or covered the neighboring lines and words.
+  Portrait twins get their own measured `marks_9x16` highlight.
 - **A figure a Short will use gets a portrait twin (2026-09-25).** A Short copies
   its slides from this deck, and a wide document crop (#69's are padded to 2.8:1)
   becomes a thin strip in the 9:16 frame: #69's 'ten-lives' and 'the-checkbox'
@@ -431,6 +442,18 @@ checks it, and the Remotion render drops a missing image without a word.
       hard rule 7; Read its `tools/frame_preview.py` preview, SKILL hard rule 9). If the
       census's annotation-coverage floor is short, add an image-space mark to another
       figure — never satisfy it by putting an underline back on a text card.
+- [ ] **Before the booth, look at every slide as the engine draws it:
+      `python3 tools/preview_stills.py <project_dir>`** (queues itself; 2026-11-10). One still
+      per slide near its scene's end, a contact sheet, the phone test, and for every slide
+      with `marks`, `annotations` or `pageText` a detail crop of exactly what they draw
+      (diffed against the same frame without them, enlarged when small). **Read every
+      crop, not the sheet, for marks:** name what each mark sits on and check no edge
+      touches a letter or the line above. At sheet size a box grazing a line of single-spaced
+      text looks like a box around it (MedDevice Cyber Guide episode 3: every document box
+      cut its text, though the pre-booth sheets showed them). Before the booth it runs on
+      stand-in timing, so positions and layout are exact and cue timing is not. After any
+      deck fix on a recorded project, run it again with `--slides <changed>`:
+      `tools/rerender.py` refuses a marked deck that has not been seen on stills.
 - [ ] Long segments (>20s) carry a mid-scene motion beat — an annotation, a cued
       stage, or a figure move — so no shot sits static through speech (QA's
       longest-shot warning is the tell).
