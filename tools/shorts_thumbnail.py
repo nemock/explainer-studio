@@ -271,6 +271,12 @@ def main():
               f"series has its own thumbnail card, add it to STYLES (thumbnail-playbook §10).")
         style = DEEP_DIVE
     face = face_box(base)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import face_light  # thumbnail-playbook §2d lighting rule (operator, 2026-11-13)
+    luma = face_light.face_luma(base)
+    if luma is not None and luma < face_light.FLOOR:
+        print(f"WARNING: Dave's face on the base is too dark (luma {luma:.0f}, floor {face_light.FLOOR}): "
+              f"regenerate the base with his face lit (thumbnail-playbook §2d)")
     shift, top_rgb, face = place_base(base, face)
     if shift:
         print(f"base slid down {shift}px to make room above the head")
@@ -285,7 +291,7 @@ def main():
         return 0
 
     measures = render(pages, out_dir)
-    qa = {"face": face, "safe": SAFE, "cuts": {}}
+    qa = {"face": face, "face_luma": None if luma is None else round(luma), "safe": SAFE, "cuts": {}}
     failed = False
     for slug, m in measures.items():
         problems = check(m, face)

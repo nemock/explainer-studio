@@ -173,6 +173,16 @@ Two ways to fix the likeness, and **the wardrobe decides which**:
 "makes me look a little bit old, a little stuffy." Reference selfies:
 `dave_cream_shirt_1_clean.png`, `dave_cream_shirt_2_clean.png`, or the `dave_*_hoodie_*` set.
 
+**Lighting rule (operator, 2026-11-13): Dave's face is always well lit.** "These thumbnails are starting to get a
+little bit too dark. I look like I'm standing in the shadows." The cause was the prompt: "moody low light, the left
+third dark" darkens him along with the room. Ask for darkness only where the headline goes, and light on him:
+*"his face evenly lit by a soft key light from the front, bright and clear; the background and the empty left third
+dark."* Never write "moody", "low light", "dim", "in the shadows" or "dark scene" about the shot as a whole. A dark
+or noir theme is still allowed for the room and props; it never extends to his face. **Measure before the headline
+goes on:** `/Users/davesaunders/myenv/bin/python3.12 tools/face_light.py <base.png>` exits 1 under the floor (face
+mean luma 100 of 255; well-lit bases measure 110-140). Regenerate a base that fails rather than brightening it in
+CSS. Calibration, 2026-11-13: #82 thumb A 83, #63 86, #75 88, #40 93, #41 96, #80 97; #81 123, #83 138.
+
 Fallback only if the Magnific MCP is genuinely absent (tools not resolvable via ToolSearch):
 the §2c operator-generated route still works. Full flow + guardrails:
 [docs/magnific-imagegen-plan.md](../../../docs/magnific-imagegen-plan.md).
@@ -360,6 +370,7 @@ prints (SKILL hard rule 9 — full-res Reads bloat the session transcript). An
 - [ ] Cutout edge clean (no light fringe, no tan/background halo); thin props not
       thinned by erosion.
 - [ ] Subject separates from the bg — if not, applied §5 (and noted it in PLAYBOOK).
+- [ ] Dave's face is well lit: `tools/face_light.py` on the base exits 0 (face luma ≥ 100; §2d lighting rule).
 - [ ] Two thumbnails rendered: a (live) and b (promo reuse).
 - [ ] One vertical thumbnail per cut Short, `shorts_thumbnail.py` exit 0, `sheet.jpg`
       looked at (§10).
@@ -414,7 +425,8 @@ Run it at Package, after thumb A is final, and only once the Shorts are cut:
    55% of the frame with his head near the middle, and the upper 40% is plain wall with
    nothing in it. No text, no logos, no interface. Fetch it with `tools/imagegen.py fetch …
    --project <dir> --tool images_generate --model gpt-2` to
-   `package/thumbnails/shorts/base_9x16.png`. Look at a preview: if the face drifted from
+   `package/thumbnails/shorts/base_9x16.png`. Run `tools/face_light.py` on it (the §2d lighting rule holds here too;
+   the tall prompt asks for his face lit, darkness only in the empty upper wall). Look at a preview: if the face drifted from
    the main thumbnail, regenerate. Never ship a likeness that isn't him.
 2. **The headlines**, written inside the Package `humaner` invocation, into each cut of
    `shorts/plan.json`:
