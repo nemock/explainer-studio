@@ -266,6 +266,8 @@ never the full image.
 - **`title` and `dek` become the Substack post's title and subtitle**, and the
   `## ` subheads become real Substack headings, at close-out (`bin/explainer2
   substack`, SKILL §8d). Don't repeat the title as a `# H1` in the body.
+  **Keep the `dek` to 250 characters or fewer:** Substack rejected a 321-character
+  subtitle with a bare 400 (2026-11-12), and the dry run now flags a longer one.
   **`substack_tags`:** 3 to 6 tags already on the publication (`bin/explainer2
   substack <dir>` dry-run lists them), following how the operator tags by hand:
   AI pieces carry `AI and Technology`, `AI`, `Artificial Intelligence`, plus
