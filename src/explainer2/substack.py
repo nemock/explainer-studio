@@ -343,7 +343,7 @@ def build_payload(proj, youtube_url=None, tags=None):
     tags = [str(t).strip() for t in tags if str(t).strip()]
     if not tags:
         problems.append("no tags: add `substack_tags: [\"...\"]` to article.md front matter "
-                        "(1 to 3, picked from the publication's tags) or pass --tag")
+                        "(3 to 6, picked from the publication's tags; article-playbook §3) or pass --tag")
 
     content = blocks(body, warnings)
     embed = None
