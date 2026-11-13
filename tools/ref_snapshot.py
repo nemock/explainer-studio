@@ -167,7 +167,12 @@ def main():
         row.update({"method": "import", "status": None, "final_url": a.url, "title": None})
     else:
         status, final, ctype, body = _head(a.url)
-        if status in (404, 410) or status is None:
+        # Python's own certificate check can fail on a live site (a missing local CA
+        # bundle); that says nothing about the page, so let Chromium decide.
+        cert_only = status is None and "CERTIFICATE_VERIFY_FAILED" in ctype
+        if cert_only:
+            ctype = ""
+        if status in (404, 410) or (status is None and not cert_only):
             print(json.dumps({"dead": True, "url": a.url, "status": status,
                               "detail": ctype if status is None else None}, indent=2))
             return 4

@@ -130,7 +130,11 @@ def _article_issues(text):
         out.append("package/article.md front matter is not `humanized: true` — the mandatory "
                    "humanizer pass is the step's gate (article-playbook §5)")
     if not re.search(r"^length_variant:", fm, flags=re.M):
-        n = len(re.findall(r"\b[\w'$%]+\b", body))
+        # The band is the essay's length: the closing Sources list and link addresses are
+        # citations, not prose (a 30-source list read as ~1,000 extra words on #72).
+        prose = re.split(r"^## Sources\s*$", body, flags=re.M)[0]
+        prose = re.sub(r"\]\([^)]*\)", "]", prose)
+        n = len(re.findall(r"\b[\w'$%]+\b", prose))
         if not 3000 <= n <= 4500:
             advise.append(f"package/article.md is {n} words, outside the research-essay band of "
                        f"3000-4500 (article-playbook §3, since 2026-11-12). Deliberate variant? add "
