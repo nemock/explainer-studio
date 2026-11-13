@@ -304,6 +304,9 @@ skill's LINT.md pass. This is non-negotiable and is the step's gate.
   (e.g. it wants to soften a verbatim quote, or cut an attribution), keep the
   fact correct and note the conflict for the operator — facts and verbatim
   quotes win over stylistic smoothing.
+- Curly quotes and apostrophes are fine in the article: it goes to Substack, whose editor
+  curls them anyway (operator 2026-11-13; LINT.md §11 carries the carve-out). Never
+  straighten them.
 
 ## 5b. Fresh-eyes gate (after LINT, before presenting)
 
