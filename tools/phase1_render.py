@@ -58,8 +58,10 @@ BLOCKED.md written and no sentinel, so Phase 2 never publishes.
 
 Studio profile (2026-09-13, docs/booth-finish-local-plan.md Phase B). `--profile studio`
 runs the explainer2 deep-dive / masterclass / promo chain instead of the booth-show
-verbs: one `explainer2 media` (narrate, align, remotion render, manifest, qa under the
-render lock), then `explainer2 shorts` when shorts/plan.json exists. No stills, handoff,
+verbs: `explainer2 adlib --unchecked` for takes the booth had not checked at Finish, which
+can stop the run with a re-record verdict (2026-11-03), then one `explainer2 media`
+(narrate, align, remotion render, manifest, qa under the render lock), then
+`explainer2 shorts` when shorts/plan.json exists. No stills, handoff,
 validate, or frame_qc: those belong to the studio session's Package step, which needs
 copy a human writes. A shorts refusal or failure does NOT fail the run — the long-form
 render is the expensive, irreplaceable part — it is recorded in the sentinel and in
@@ -393,7 +395,9 @@ def write_resume_md(proj, wall_s, shorts_note):
         f"- cards recorded: {len(done.get('recorded', []))} of {done.get('segments', '?')}"
         + (f"; missing: {done.get('missing')}" if done.get("missing") else ""),
         (f"- adlib re-record flags: {adlib.get('rerecord') or 'none'}"
-         + (f"; unchecked: {adlib.get('unchecked')}" if adlib.get("unchecked") else "")
+         + (f"; STILL UNCHECKED, whisper could not read them before the render: "
+            f"{adlib.get('unchecked')} (`bin/explainer2 adlib <dir> --unchecked`)"
+            if adlib.get("unchecked") else "")
          + (f"; worst drift {adlib.get('worst_drift'):.2f}" if isinstance(adlib.get("worst_drift"), (int, float)) else "")
          if adlib_fresh else
          "- adlib report: NONE for this session, so the drift check did not run. "
@@ -427,8 +431,33 @@ def write_resume_md(proj, wall_s, shorts_note):
     (proj / "work" / "RESUME.md").write_text("\n".join(lines))
 
 
+def check_takes(proj, exp):
+    """Transcribe the takes still `unchecked` at Finish. Returns the cards flagged `rerecord`.
+
+    A card can reach Finish unchecked (its take landed seconds before the button), and the
+    watcher neither holds nor texts for that: nothing is known yet, and a text needs evidence
+    (routine_changes/2026-11-03-rerecord-alert-needs-verification.md). So the check happens
+    here, inside this queue job, before anything renders. If whisper itself fails the render
+    goes ahead with those cards still `unchecked` and RESUME.md says so: a broken checker
+    must not stop every render, and this profile never publishes without a session."""
+    rc = run_verb([exp, "adlib", proj, "--unchecked"])
+    if rc != 0:
+        print(f"[phase1] adlib --unchecked exited {rc} — rendering anyway; any unchecked "
+              f"cards are named in RESUME.md", flush=True)
+    return _read_json(Path(proj) / "work" / "adlib_report.json").get("rerecord") or []
+
+
 def run_studio(proj, exp, t0):
     """The studio chain. Returns the exit code; writes the sentinel on success."""
+    flagged = check_takes(proj, exp)
+    if flagged:
+        # A verdict, not a failure, so no failure record and no crash-loop streak: exit
+        # clean with no sentinel. The next watcher cycle reads the same report, holds the
+        # render and texts the operator. That decision stays in one place.
+        cards = ", ".join(str(int(i) + 1) for i in flagged)
+        print(f"[phase1] HOLD: the take check flagged card(s) {cards} for re-record; not "
+              f"rendering", flush=True)
+        return 0
     rc = run_verb([exp, "media", proj])
     if rc != 0:
         streak = record_failure(proj, "media", rc, since=t0)

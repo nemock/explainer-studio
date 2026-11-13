@@ -163,7 +163,7 @@ Implemented as two cheap, deterministic layers (no WebGL):
 | keep-card / figure | KeepCard, Figure (flat framed image) | same cards, but *popup* entrance onto the table world, true shadow, one camera step closer on the label cue |
 | define | DefineTerm on flat field | term on a big cream tag (*place*), definition unfolds beneath (*unfold*) |
 | midroll punch | PunchWord | punch card + **spotlight snap** + flick; table darkens |
-| CTA | CTA (book cover float) | the papercraft book (cover-matched hero recipe) stands on the set; headline card places beside it |
+| CTA | CTA (book cover float) | headline card on the set; the cover-matched papercraft book appears only with `cta_book: true` (off by default since 2026-11-06) |
 | sting | PaperSting (kept) | kept as-is — already on-language (paper D + rocket) |
 
 Captions: unchanged mechanically (cream pill, ink text) — they read as a

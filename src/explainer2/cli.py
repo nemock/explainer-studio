@@ -628,7 +628,7 @@ def cmd_validate(args):
     on it. The verdict is still written to work/validate.json for the publish run to
     read; phase1_render.py treats 3 as "verdict recorded" rather than as a render
     failure, because re-rendering cannot change it."""
-    out = validate.run(Project.load(args.project_dir))
+    out = validate.run(Project.load(args.project_dir), pre_upload=args.pre_upload)
     print(json.dumps(out, indent=2))
     return 0 if out.get("ok") else VALIDATE_NOT_OK
 
@@ -656,7 +656,10 @@ def cmd_adlib(args):
     if jobqueue.should_route():           # mlx-whisper over every take: a model load
         return _route(args, "adlib")
     from .media import adlib
-    print(json.dumps(adlib.run(proj, apply=args.apply), indent=2))
+    if args.unchecked:
+        print(json.dumps(adlib.run_unchecked(proj), indent=2))
+    else:
+        print(json.dumps(adlib.run(proj, apply=args.apply), indent=2))
 
 
 def cmd_shorts(args):
@@ -758,6 +761,50 @@ def cmd_publish(args):
                       reupload=args.reupload)
     print(json.dumps(out, indent=2))
     return 1 if out.get("aborted") else 0
+
+
+def cmd_substack(args):
+    from . import substack
+    out = substack.run(args.project_dir, fire=args.fire, youtube_url=args.youtube_url,
+                       tags=args.tag or None, redraft=args.redraft,
+                       allow_new_tags=args.allow_new_tags)
+    print(json.dumps(out, indent=2, ensure_ascii=False))
+    return 1 if out.get("aborted") else 0
+
+
+def cmd_content(args):
+    from . import contentdb
+    if args.action == "substack":
+        out = contentdb.match_substack(write=args.write)
+        if args.write:
+            out["sync"] = contentdb.sync()
+        print(json.dumps(out, indent=2, ensure_ascii=False))
+        return 0
+    if args.action == "sync":
+        print(json.dumps(contentdb.sync(), indent=2))
+        return 0
+    if not contentdb.DB.exists():
+        contentdb.sync()
+    if args.action == "search":
+        if not args.query:
+            print("content search needs a query, e.g. content search tokenization")
+            return 1
+        for r in contentdb.search(" ".join(args.query), limit=args.limit):
+            print(f"#{r['number']:<3} {r['title']}\n     {r['youtube_url'] or '(not on YouTube)'}"
+                  f"  substack: {r['substack_status']}\n     {r['hit']}")
+        return 0
+    if args.action == "show":
+        if not args.query or not args.query[0].isdigit():
+            print("content show needs a video number, e.g. content show 81")
+            return 1
+        out = contentdb.show(int(args.query[0]))
+        print(json.dumps(out, indent=2, ensure_ascii=False) if out else "no such video")
+        return 0 if out else 1
+    for r in contentdb.status():
+        print(f"#{r['number']:<3} {'video' if r['produced'] else '     '} "
+              f"{'YT' if r['youtube'] else '  '} substack:{r['substack_status']:<9} "
+              f"{'LI' if r['linkedin'] else '  '} {(r['title'] or '')[:70]}")
+    return 0
 
 
 def cmd_talktime(args):
@@ -984,10 +1031,14 @@ def main(argv=None):
 
     ad = sub.add_parser("adlib", help="FALLBACK drift check: the booth now ASR-checks takes live and writes "
                                       "work/adlib_report.json at Finish; run this only when that report is "
-                                      "missing or has 'unchecked' segments. --apply rewrites drifted segment "
-                                      "text to raw ASR (normally avoid)")
+                                      "missing or has 'unchecked' segments (--unchecked transcribes only "
+                                      "those and keeps the rest of the report). --apply rewrites drifted "
+                                      "segment text to raw ASR (normally avoid)")
     ad.add_argument("project_dir")
-    ad.add_argument("--apply", action="store_true")
+    ad_mode = ad.add_mutually_exclusive_group()
+    ad_mode.add_argument("--apply", action="store_true")
+    ad_mode.add_argument("--unchecked", action="store_true",
+                         help="check only the takes the report has no verdict for")
     _wait_flags(ad)
     ad.set_defaults(func=cmd_adlib)
 
@@ -1056,8 +1107,38 @@ def main(argv=None):
                      help="explicit thumbnail path for --set-thumbnail (else meta.json thumbnails.a)")
     pub.set_defaults(func=cmd_publish)
 
+    ss = sub.add_parser("substack", help="close-out: post package/article.md to Substack as a "
+                        "DRAFT (title + dek subtitle, YouTube embed before the first subheading, "
+                        "tags). Dry-run default; --fire creates the draft. Never publishes.")
+    ss.add_argument("project_dir")
+    ss.add_argument("--fire", action="store_true", help="create the draft (default: dry-run plan)")
+    ss.add_argument("--youtube-url", default=None, dest="youtube_url",
+                    help="video to embed (default: package/meta.json youtube_url)")
+    ss.add_argument("--tag", action="append", default=[],
+                    help="a Substack tag; repeat for more (default: article.md "
+                         "front matter substack_tags)")
+    ss.add_argument("--allow-new-tags", action="store_true", dest="allow_new_tags",
+                    help="let a tag that is not on the publication yet be created")
+    ss.add_argument("--redraft", action="store_true",
+                    help="make a new draft even though meta.json already records one")
+    ss.set_defaults(func=cmd_substack)
+
+    ct = sub.add_parser("content", help="the content database (channel/content.db), an index of "
+                        "every video project rebuilt from the project dirs: `sync`, `search "
+                        "<words>`, `show <n>`, `status`, `substack [--write]` (match Substack "
+                        "posts to videos and record them in meta.json)")
+    ct.add_argument("action", choices=["sync", "search", "show", "status", "substack"])
+    ct.add_argument("query", nargs="*", help="search words, or the video number for show")
+    ct.add_argument("--limit", type=int, default=10, help="search: max results (default 10)")
+    ct.add_argument("--write", action="store_true",
+                    help="substack: record matches in meta.json and re-sync (default: report only)")
+    ct.set_defaults(func=cmd_content)
+
     va = sub.add_parser("validate", help="check the manifest is a complete handoff contract")
     va.add_argument("project_dir")
+    va.add_argument("--pre-upload", action="store_true", dest="pre_upload",
+                    help="the check before `publish --fire`: skip package/article.md, which is "
+                         "written after the upload (article-playbook §7)")
     va.set_defaults(func=cmd_validate)
 
     ho = sub.add_parser("handoff", help="emit per-platform blotato-ready post specs from the manifest")

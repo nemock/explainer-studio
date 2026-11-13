@@ -56,7 +56,7 @@ falls back to the classic component, so decks never break mid-migration.
 | trend / ranked (with points) | PaperStairs (+ the pawn climber) |
 | ring / progress | PaperCounter |
 | keepcard | PaperPopCard |
-| cta / payoff | PaperCTA (real book cover on the table) |
+| cta / payoff | PaperCTA (real book cover on the table only with `cta_book: true`, off by default since 2026-11-06) |
 | any slide + `"transition": "tear"` | TearReveal act-boundary (spec §4) |
 
 **Still classic on papercraft (later waves, by demand):** schematic (keeps the

@@ -373,14 +373,36 @@ def run(proj, open_browser=True):
         drift_state[st] = {"status": "queued"}
         drift_q.put(sid)
 
+    def restore_drift():
+        """Results from earlier booth sessions, for the takes that have not changed since.
+        Runs before the server opens, so a Finish can never beat it. The verdict comes from
+        the stored transcript against the card's text NOW; a re-recorded card has a new
+        wav, matches nothing here, and backfill queues it."""
+        from .media.adlib import _drift, load_transcripts, saved_transcript
+        saved = load_transcripts(work_dir)
+        for s in cur["segs"]:
+            asr = saved_transcript(saved, wav(s["id"]))
+            if asr is not None:
+                drift_state[cur["stem"][s["id"]]] = {"status": "done", "asr_text": asr,
+                                                     "drift": _drift(s["text"], asr)}
+
+    if drift_enabled:
+        restore_drift()
+
     def drift_worker():
-        from .media.adlib import MODEL, _drift   # shared thresholds + normalizer
+        from .media.adlib import MODEL, _drift, save_transcript, take_sig   # shared thresholds + normalizer
         while True:
             sid = drift_q.get()
             if sid is None:
                 return
             st = cur["stem"].get(sid)
-            if st is None or not recorded(sid):
+            if st is None:
+                continue
+            if not recorded(sid):
+                # a /save is mid-flight (the old take is archived, the new wav not out yet).
+                # Clear the state or its drift_enqueue would stand down behind a "queued"
+                # that nothing is working on.
+                drift_state.pop(st, None)
                 continue
             if _render_active():
                 # never run whisper against an active encode (16 GB budget) — requeue
@@ -391,15 +413,21 @@ def run(proj, open_browser=True):
             drift_state[st] = {"status": "running"}
             try:
                 f = wav(sid)
-                mtime = f.stat().st_mtime
+                sig = take_sig(f)
                 # transcribe in a child process (see _transcribe_isolated): a hung
                 # mlx_whisper must never hold this server's GIL and freeze the booth.
                 asr = _transcribe_isolated(str(f), MODEL, DRIFT_TIMEOUT_S)
                 c = card(sid)
                 d = _drift(c["text"] if c else "", asr)
                 # a re-take may have landed mid-transcription — only publish if still current
-                if f.exists() and f.stat().st_mtime == mtime:
+                if take_sig(f) == sig:
                     drift_state[st] = {"status": "done", "drift": d, "asr_text": asr}
+                    save_transcript(work_dir, f, sig, asr)   # survives a relaunch
+                else:
+                    # that re-take's drift_enqueue saw "running" and stood down, so its
+                    # check is ours to queue or it would read "running" until Finish.
+                    drift_state[st] = {"status": "queued"}
+                    drift_q.put(sid)
             except subprocess.TimeoutExpired:
                 drift_state[st] = {"status": "error",
                                    "error": f"drift transcription exceeded {DRIFT_TIMEOUT_S}s — skipped (booth unaffected)"}
@@ -587,8 +615,10 @@ def run(proj, open_browser=True):
         (work_dir / "booth_session.json").write_text(json.dumps(rep, indent=2))
         # Adlib-stage retirement (2026-07-03): emit the same artifact media/adlib.run
         # produces, straight from the in-session drift results — no second whisper
-        # pass needed after recording. Cards whose drift check didn't complete are
-        # "unchecked"; `explainer2 adlib` remains as the FALLBACK for those only.
+        # pass needed after recording. Results survive a relaunch (restore_drift), so a
+        # quick Finish keeps every untouched card's verdict. Cards whose drift check didn't
+        # complete are "unchecked"; the studio render checks those first, through the queue
+        # (phase1_render, `explainer2 adlib --unchecked`).
         if drift_enabled:
             from .media.adlib import MODEL, classify
             rows, worst = [], 0.0

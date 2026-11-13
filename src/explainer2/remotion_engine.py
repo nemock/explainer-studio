@@ -1969,8 +1969,11 @@ def _render_one(sp, log=print, frames=None, out=None):
     _stage_images(sp, spec, public)
     _stage_doodles(spec, public, log)
     _stage_chibi(spec, public, log)
-    # CTA scenes show the brand book cover unless the project opts out with
-    # "cta_book": false in project.json (e.g. masterclass modules use no book cover).
+    # CTA scenes carry NO book cover unless the project opts IN with "cta_book": true in
+    # project.json (default flipped 2026-11-06, operator directive). The close now points at
+    # davesaunders.net and "my latest book" without naming one, so that the next book launch
+    # causes no confusion; a cover stamped on every end card names one permanently. A video
+    # that really is about one book (a promo) can still ask for it.
     # Some THEMES forbid it outright, because the no-book rule is a series-standing
     # branding decision and not a per-project preference. Keep this tuple in step with
     # the `_NO_STING` tuple below — a theme that wants no wordmark bumper almost always
@@ -1986,7 +1989,7 @@ def _render_one(sp, log=print, frames=None, out=None):
     #   pmg-guide  2026-10-19 — like-and-subscribe only (series outline §8.5).
     #   papercraft-matrix  2026-10-23 — like-and-subscribe only (series outline §7.6).
     _NO_BOOK_CTA = ("wte-guide", "plg-guide", "pmg-guide", "papercraft-matrix")
-    _cta_book = (sp.data.get("cta_book", True)
+    _cta_book = (sp.data.get("cta_book", False)
                  and sp.data.get("theme") not in _NO_BOOK_CTA)
     if _cta_book and any(s["component"] in ("CTA", "PaperBookCTA") for s in spec["scenes"]):
         bc_dir = REMOTION_DIR.parent / "book_cover"

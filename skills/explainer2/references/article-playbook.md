@@ -1,12 +1,14 @@
-# Article Playbook — the written companion essay
+# Article Playbook — the research essay
 
-Follow as a procedure. The article is `package/article.md`: a long-form,
-read-not-heard companion to the finished video. It carries the SAME content and
-arc as the script, but it is a real essay — written for a reader who is
-scanning and skimming, not a listener following a voice over coffee. It is a
-**generation-plane** artifact (you write it; no Python, no media pipeline). It
-exists for SEO, newsletter/blog repurposing, and the operator's site — a
-durable written twin of the video.
+Follow as a procedure. The article is `package/article.md`: an **in-depth research
+essay that answers the video's question further than the video could** (operator
+directive 2026-11-12, replacing the "faithful companion" of the same facts). It asks the
+same question the video asks and goes deeper: more evidence, the primary sources behind
+the video's claims, the strongest counter-argument, the history, the numbers the video had
+to round or skip. It does not open new topics. It is published on Substack with the video
+embedded after the opening paragraphs, so a reader gets the essay's lede, then the video,
+then the depth. It is a **generation-plane** artifact (you research and write it; no
+Python, no media pipeline), written AFTER the video is uploaded (§7).
 
 This is NOT a transcript and NOT a re-paste of `script.json`. A transcript of a
 spoken script reads as broken prose: breath-paragraphs, booth self-interruptions,
@@ -44,9 +46,11 @@ layers on top of that.
 > for what print can do and speech cannot: a real opening scene, a sentence that rewards
 > a second look, an aside in parentheses, a line of white space used for timing.
 > **Embellish the WRITING — the color, the texture, the depth of explanation.** Do not
-> embellish the EVIDENCE: the fabrication guardrail below is untouched by this, and
-> "more color" never means a new number, source, anecdote, or quote. If a paragraph
-> wants a fact the script didn't earn, that is a research prompt, not a flourish.
+> embellish the EVIDENCE: the fabrication guardrail below is untouched by this.
+> *(2026-11-12: new evidence is now welcome, but only RESEARCHED evidence. A new number,
+> source or quote enters through §1b — found, verified, written to the research wiki with
+> its provenance — never as a flourish. A new personal anecdote still needs the verified
+> story bank or the talk-time library.)*
 >
 > The failure this exists to prevent is the article that is legibly the script with the
 > spoken bits filed off and `##` headings inserted every 200 words. If a reader who
@@ -79,13 +83,20 @@ layers on top of that.
 > paragraphs at a median of 91 words with exactly one short one, and it reads as an
 > essay instead of a slide deck.
 
-- **Same content, same facts, same arc — different medium.** The article covers
-  exactly what the video covers, in the same order of argument. It does NOT add
-  a claim, number, story, or quote the video didn't earn. Every fact still
-  traces to the intel pull, the research wiki, the talk-time library, or a named
-  published source (HBR, OpenAI benchmark, the reported $500M coverage). **No new
-  facts.** If the essay wants a detail the script didn't have, that is a research
-  prompt, not an airable line — verify or cut, same rule as the script.
+- **Same question, deeper answer (operator directive 2026-11-12).** The essay
+  answers the question the video answers, and it may reorder the argument when the
+  page reads better that way. It goes further on that one question: what the
+  primary sources actually say, the strongest case against the video's conclusion
+  and how the evidence handles it, how we got here, the detail and the numbers the
+  video had to compress. It does NOT range into adjacent topics the research turns
+  up; those are notes for a future video (`content search` first, then the
+  blueprint queue). **This reverses the earlier "no new facts" rule, and the
+  guardrail moves rather than disappears:** every fact, new or carried over, traces
+  to the research wiki, the intel pull, the talk-time library, or a named,
+  linked, published source, and every NEW fact is verified and written to the
+  wiki before it is written into the essay (§1b). A claim you could not verify is
+  cut, or written in the conditional as unverified (the same rule the script
+  follows).
 - **It reads as written English, not spoken English.** See §2 for the
   transformation rules. The single most common failure is leaving the spoken
   scaffolding in.
@@ -101,18 +112,75 @@ layers on top of that.
 
 ## 1. Inputs (gather before writing a word)
 
-1. The approved `script.json` — the spine. Same beats, same arc, same facts,
-   same order. The article implements the script's argument; it does not
-   re-decide it.
+1. The approved `script.json` — the spine: the question, the conclusion, the
+   beats. The essay deepens the script's argument; it does not re-decide the
+   conclusion (if the research turns the conclusion, stop and tell the operator:
+   that is a correction to the video, not an essay choice).
+1a. The project's research: `research/sources.md` and the topic's wiki nodes
+   (`explainer-content/research/<topic>/`), plus the blueprint's
+   `to_verify_before_script` and `evidence` fields. Read what is already
+   verified before searching for more, and check `bin/explainer2 content search
+   <topic>` for earlier videos and essays on the same ground.
 2. `intel/blueprint.md` — the angle, the GAP statement, the title candidates,
    the SEO/keyword notes (§8 of the blueprint). The article should serve the
    same gap and lean on the same keywords for discoverability.
 3. `package/meta.json` (if Package is done) — the description, the chapter list,
-   and the CTA links (book, newsletter, site). Reuse the real URLs; keep the
-   CTA offers identical to the video's.
+   and the CTA link (the site). Reuse the real URL; keep the
+   CTA identical to the video's.
 4. `script.json.talk_time_sources` — for any line the script marked VERBATIM
    (e.g. Argenti's "garbage output look plausible"), keep it verbatim in the
    essay too, and attribute by name.
+5. `package/meta.json` `youtube_url` — the video is live by now (§7), so the
+   closing line links the real video, never a `<URL>` placeholder.
+
+## 1b. The research pass (before drafting; this is what makes it an essay)
+
+The video had a runtime; the essay has room. Use it on the video's own question.
+Work through these in order, and stop when the next one would not change what a
+careful reader concludes:
+
+1. **Go to the primary source behind every load-bearing claim** the video made
+   from a secondary one (the paper, the filing, the dataset, the transcript, the
+   court record). Quote it where its exact words matter. The video often had to
+   cite the coverage; the essay can cite the thing itself.
+2. **The strongest counter-argument.** Find the best-informed person or study that
+   disagrees with the video's conclusion and give it a fair hearing in the essay.
+   Say what the evidence does to it.
+3. **What the video compressed.** Numbers it rounded, caveats it dropped for time,
+   the method behind a study, the timeline behind an event. Restore them where they
+   change how much weight a reader should put on the claim.
+4. **History and context** that explains how the situation came to be, where it
+   helps the reader judge the present claim (not as a tour).
+5. **The blueprint's open items**: anything in `to_verify_before_script` the
+   video left hedged may now be verifiable. Verify it, or keep the hedge.
+
+**Every new fact goes to disk the moment it is verified** (`research-wiki.md`: one
+node per claim, with the source, the URL, the exact quote and its status) before a
+sentence of the essay rests on it. Read web pages with
+`python3 /Volumes/Casima/claudeCode/make_money/scripts/webfetch.py <url>` (workspace
+rule 10). Keep a running list of the sources you actually use; it becomes the
+closing Sources list (§3). Budget: research serves the essay, so aim for roughly 5
+to 12 new verified sources, not an exhaustive survey.
+
+**Snapshot every web source you cite, at the moment you cite it** (operator
+2026-11-12). webfetch is for reading and may serve a cached copy; the citation
+record is a fresh capture:
+
+```bash
+~/myenv/bin/python3.12 tools/ref_snapshot.py <project_dir> <url> --claim <wiki-claim-id>
+```
+
+It checks the URL resolves, then saves a full-length screenshot of the live page
+(a PDF source is saved as the PDF) to `sources/snapshots/` and records it in
+`sources/snapshots.json`. Exit 4 means the link is dead: find the live or archived
+version, don't cite a dead URL. Exit 3 means a login wall or bot check: open it in
+Claude in Chrome, capture it full size, and record that file with `--import <file>`.
+`validate` fails an essay that links a source with no snapshot (projects from
+2026-11-12 on; the operator's own sites and the video are exempt). **The snapshots
+and `snapshots.json` are committed with the project** in explainer-content (operator
+2026-11-12, accepting roughly 10-25 MB per essay); only their `previews/` copies are
+gitignored. To look at a snapshot, Read only its `tools/frame_preview.py` preview,
+never the full image.
 
 ## 2. Script → essay: the transformation rules (this is the work)
 
@@ -124,8 +192,9 @@ layers on top of that.
 2. **Restore written number style.** The script spells numbers out for TTS and
    captions ("five hundred million", "fifty-two cents", "eighty percent"). The
    article must NOT. Use digits and symbols the way prose does: $500 million,
-   52¢, 80%, $80 → 52¢, 10%. Keep every figure faithful to the script; never
-   round or invent.
+   52¢, 80%, $80 → 52¢, 10%. Keep every figure faithful to its source; never
+   round or invent. Where the script rounded and the source is exact, the essay
+   may use the exact figure.
 3. **Connect the prose.** Script segments are one-breath paragraphs. An essay
    needs real paragraphs with transitions and topic sentences. Merge segments
    that are one thought; split a segment that's secretly two. Structure by the
@@ -147,17 +216,27 @@ layers on top of that.
    "stay with me"). A reader is held by a strong lede, skimmable subheads, white
    space, and short opening sentences — not by curiosity-reset lines aimed at a
    watch-time graph.
-6. **CTA as prose.** Close with the same offers as the video (book, *The Build*
-   newsletter, the site), written as a short generous outro with real links from
+6. **CTA as prose.** Close on the same destination as the video (the site, "more, including
+   my latest book"; never a specific title), written as a short generous outro with real links from
    `meta.json` — not "subscribe and hit the bell".
 
 ## 3. Length & shape
 
-- **Faithful companion: ~1,800–2,500 words.** The written twin of the video,
-  same scope. (If the operator asks for an expanded or condensed variant, note
-  it — default is faithful companion.)
-- Headline · dek · lede (the hook, rewritten for a reader) · the acts as
-  subheaded sections · the boxed artifact(s) · CTA outro.
+- **Research essay: 3,000–4,500 words** (operator directive 2026-11-12; was
+  1,800–2,500 for the faithful companion). The length is earned by the §1b
+  research, never by padding the video's material: if the research doesn't fill
+  it, the essay is shorter, and `length_variant: condensed` in the front matter
+  says so. `validate` advises outside the band.
+- Headline · dek · **lede of two to five paragraphs that stands on its own** (the
+  YouTube embed is placed right before the first `##` subheading, so the lede is
+  what a reader gets before the video) · the argument as subheaded sections · the
+  boxed artifact(s) · CTA outro · **`## Sources`**.
+- **Citations: inline links plus a closing Sources list** (operator 2026-11-12).
+  Link each claim where it is made, on the words that name the source ("a
+  [2023 Stanford study](url) found…"), never a bare "here". End the piece, after
+  the CTA, with a `## Sources` section: a bulleted list, one line per source
+  actually used, as `[Title](url), Publisher or author, date`. List only what the
+  essay cites. No footnote markers: Substack has no native footnotes.
   - **NO end recap (reversed 2026-07-31, Dave's instruction).** The article
     previously ended with a "short version" recap, kept deliberately on
     2026-06-21 on the reasoning that an article has no dwell algorithm and the
@@ -181,8 +260,21 @@ layers on top of that.
   word_count: <n>
   humanized: true            # set true only after the §5 pass
   date: <YYYY-MM-DD>
+  substack_tags: ["AI and Technology", "AI", "Artificial Intelligence", "business"]
   ---
   ```
+- **`title` and `dek` become the Substack post's title and subtitle**, and the
+  `## ` subheads become real Substack headings, at close-out (`bin/explainer2
+  substack`, SKILL §8d). Don't repeat the title as a `# H1` in the body.
+  **`substack_tags`:** 3 to 6 tags already on the publication (`bin/explainer2
+  substack <dir>` dry-run lists them), following how the operator tags by hand:
+  AI pieces carry `AI and Technology`, `AI`, `Artificial Intelligence`, plus
+  `business` or the field (`medtech`, `coding`, `Legal`); founder pieces carry
+  `Startups`, `entrepreneur`, `business` plus a topic tag (`Sales`, `Getting
+  Customers`, `Management`, `Product Strategy`, `Startup Life`); medtech pieces
+  carry `medtech` and `business` plus `FDA`, `Sales` or `Product Leadership`.
+  Don't invent a tag: Substack creates one on first use, so a new name needs
+  the operator's OK and `--allow-new-tags`.
 
 ## 4. Voice rules (inherit the script's, adapted for print)
 
@@ -235,19 +327,43 @@ playbook already bans. A fix made to satisfy one rule can break another.
 
 ## 6. Self-QA checklist (run before presenting)
 
-- [ ] Same arc and facts as the script; **zero new claims/numbers/quotes**
+- [ ] Answers the video's question, deeper; no new topics; the conclusion still
+      matches the video (or the operator has been told it doesn't)
+- [ ] §1b research done: primary sources behind the load-bearing claims, the
+      strongest counter-argument given a fair hearing
+- [ ] **Every new fact is a research-wiki node with provenance**; nothing unverified
+      is stated as fact
+- [ ] Every claim from a source is linked inline; `## Sources` lists exactly the
+      sources cited
+- [ ] Every cited web source has a `tools/ref_snapshot.py` snapshot in
+      `sources/snapshots/` (validate enforces it)
 - [ ] Reads as written English — no booth filler, no breath-paragraphs, no
       spoken-only re-hooks left in
-- [ ] Numbers in written style (digits/symbols), every figure faithful to script
+- [ ] Numbers in written style (digits/symbols), every figure faithful to its source
 - [ ] Article-specific headline + dek; subheads at the act boundaries
 - [ ] The Reliance Policy + Monday checklist rendered as a clean list/box
 - [ ] Verbatim quotes still verbatim and attributed by name
-- [ ] CTA outro uses the real links from `meta.json`; same offers as the video
-- [ ] Word count in the ~1,800–2,500 band (faithful companion)
+- [ ] CTA outro uses the real links from `meta.json`; same offers as the video;
+      the live video URL, no `<URL>` placeholder
+- [ ] Word count in the 3,000–4,500 band, or `length_variant` declared
 - [ ] **`humaner` skill's LINT.md pass run on the full draft and its edits
       applied**; `humanized: true` set
-- [ ] Front-matter block present and filled
+- [ ] Front-matter block present and filled, `substack_tags` included
 
-Output: `package/article.md`. Present the operator the headline, the word count,
-and a note that the LINT.md pass ran. No separate render gate — the article is
-text, reviewed in place.
+Output: `package/article.md`. Then §7: it goes straight to Substack as a draft.
+
+## 7. When it runs: after the upload, straight to a Substack draft
+
+Operator directive 2026-11-12. The article is the LAST part of Package, after the
+video is on YouTube:
+
+> package (meta + thumbnails + linkedin) → `validate --pre-upload` →
+> `publish --fire --privacy unlisted` (the video now has its URL) → §1b research →
+> write the essay → LINT + fresh-eyes gate → `validate` (full) →
+> `bin/explainer2 substack <dir>` dry-run → `--fire`
+
+The Substack draft IS the article's review gate: there is no separate article gate.
+Give the operator the draft URL, the word count, the number of new verified sources,
+and a note that the LINT pass and the fresh-eyes gate ran. The operator reads it in
+Substack and publishes it there; this pipeline never publishes. Then `bin/explainer2
+content substack --write` once it is live (SKILL §8d).

@@ -13,12 +13,22 @@ against the script text:
 Report → work/adlib_report.json. --apply backs up script.json to
 script.orig.json before touching it. Forced alignment downstream works with
 either text, so this stage is advisory — it never blocks the pipeline.
+
+Transcripts → work/drift_transcripts.json, one per take, keyed by stem and the wav's
+identity. The booth starts empty on a relaunch and writes the whole report at Finish, so
+without this a re-record of one card followed by a quick Finish reported every card
+`unchecked`, erased the first pass and left nothing holding the render (#81, 2026-11-03).
+A transcript is stored rather than a verdict: the verdict is recomputed from the card's
+current text, so an edit between sessions cannot leave a stale one behind.
 """
 import difflib
 import json
+import os
 import re
+from pathlib import Path
 
 MODEL = "mlx-community/whisper-medium.en-mlx"
+TRANSCRIPTS = "drift_transcripts.json"
 MINOR = 0.02
 MAJOR = 0.15
 # A re-record is confirmed by words missing from the take, never by drift alone. Operator,
@@ -121,6 +131,123 @@ def classify(drift, script_text, asr_text):
     return "adlib"
 
 
+def take_sig(wav):
+    """What makes a recording THIS take: nanosecond mtime and size, or None if it is gone."""
+    try:
+        st = Path(wav).stat()
+    except OSError:
+        return None
+    return [st.st_mtime_ns, st.st_size]
+
+
+def load_transcripts(work):
+    try:
+        data = json.loads((Path(work) / TRANSCRIPTS).read_text())
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def saved_transcript(transcripts, wav):
+    """The stored transcript if it describes the take on disk now, else None."""
+    entry = transcripts.get(Path(wav).stem)
+    sig = take_sig(wav)
+    if not (isinstance(entry, dict) and sig and entry.get("sig") == sig):
+        return None
+    return entry.get("asr_text")
+
+
+def save_transcript(work, wav, sig, asr):
+    """Keep one take's transcript. Bookkeeping: a failure here costs a re-transcribe later,
+    so it must never break a recording session."""
+    path = Path(work) / TRANSCRIPTS
+    try:
+        data = load_transcripts(work)
+        data[Path(wav).stem] = {"sig": sig, "asr_text": asr}
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+        os.replace(tmp, path)
+    except OSError:
+        pass
+
+
+def run_unchecked(proj, model=MODEL):
+    """Check only the takes the report has no verdict for, and fill them in.
+
+    The render pipeline's first step (phase1_render --profile studio), for cards still
+    `unchecked` at Finish: a take finished seconds before the button, or a whisper that
+    deferred behind a render. Rows that already hold a verdict for the take on disk are left
+    exactly as they are, so nothing checked is transcribed again and a clean report is not
+    rewritten. A take whisper cannot read stays `unchecked`; only words missing from a real
+    transcript can flag a card, because a flag holds the render and texts the operator."""
+    from .. import renderlock
+    from ..recorder import DRIFT_TIMEOUT_S, _load_segments, _transcribe_isolated
+    from . import scriptguard
+
+    path = proj.work / "adlib_report.json"
+    try:
+        report = json.loads(path.read_text())
+        written = path.stat().st_mtime_ns
+    except (OSError, ValueError):
+        report, written = {}, 0
+    old = {r.get("id"): r for r in report.get("segments", [])}
+    vdir = proj.voiceover_dir
+    segs, stem = _load_segments(proj)
+    saved = load_transcripts(proj.work)
+
+    def row_for(seg, wav, asr):
+        d = _drift(seg["text"], asr)
+        row = {"id": seg["id"], "status": classify(d, seg["text"], asr), "drift": d,
+               "asr_text": asr}
+        # scriptguard reads a row's script_text as what the take was recorded against, for
+        # takes with no text stamp. This runs after Finish and would only be repeating the
+        # script back to it, so an unstamped take does not get to vouch for itself here.
+        if scriptguard.read_meta(vdir, wav.stem):
+            row["script_text"] = seg["text"]
+        return row
+
+    rows, todo = [], []
+    for seg in segs:
+        sid = seg["id"]
+        wav = vdir / f"{stem[sid]}.wav"
+        prev = old.get(sid) or {}
+        sig = take_sig(wav)
+        if not sig:
+            rows.append({"id": sid, "status": "not_recorded"})
+        elif prev.get("status") not in (None, "unchecked", "not_recorded") and sig[0] <= written:
+            rows.append(prev)
+        elif saved_transcript(saved, wav) is not None:
+            rows.append(row_for(seg, wav, saved_transcript(saved, wav)))
+        else:
+            todo.append((len(rows), seg, wav))
+            rows.append({"id": sid, "status": "unchecked"})
+
+    lock = renderlock.acquire(proj) if todo else None
+    try:
+        for i, seg, wav in todo:
+            sig = take_sig(wav)
+            try:
+                asr = _transcribe_isolated(str(wav), model, DRIFT_TIMEOUT_S)
+            except Exception as e:                       # noqa: BLE001 - includes a timeout
+                print(f"adlib: card {seg['id'] + 1} stays unchecked: {str(e)[:200]}", flush=True)
+                continue
+            save_transcript(proj.work, wav, sig, asr)
+            rows[i] = row_for(seg, wav, asr)
+    finally:
+        renderlock.release(lock)
+
+    unchecked = [r["id"] for r in rows if r["status"] == "unchecked"]
+    flagged = [r["id"] for r in rows if r["status"] == "rerecord"]
+    filled = {**report, "model": report.get("model", model), "segments": rows,
+              "worst_drift": max((r.get("drift", 0.0) for r in rows), default=0.0),
+              "rerecord": flagged, "unchecked": unchecked,
+              "applied": report.get("applied", [])}
+    if filled != report:
+        proj.write_json(path, filled)
+    return {"transcribed": len(todo) - sum(1 for i, _, _ in todo if rows[i]["status"] == "unchecked"),
+            "unchecked": unchecked, "rerecord": flagged, "report": "work/adlib_report.json"}
+
+
 def run(proj, apply=False, model=MODEL):
     import mlx_whisper
     from .common import effective_segments
@@ -140,7 +267,9 @@ def run(proj, apply=False, model=MODEL):
             if not wav.exists():
                 rows.append({"id": seg["id"], "status": "not_recorded"})
                 continue
+            sig = take_sig(wav)
             asr = mlx_whisper.transcribe(str(wav), path_or_hf_repo=model)["text"].strip()
+            save_transcript(proj.work, wav, sig, asr)
             d = _drift(seg["text"], asr)
             worst = max(worst, d)
             status = classify(d, seg["text"], asr)

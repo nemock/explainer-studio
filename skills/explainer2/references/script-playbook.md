@@ -227,8 +227,8 @@ to date missed length on the first draft; the rule exists because it bites).
      the ones most likely to show up as a gap.
    - **Honesty rule — never claim "nothing to sell" (operator directive
      2026-06-22, still binding wherever the paywall line is used at all).** The
-     operator DOES have things to sell: the book, the site, and *The Build*
-     newsletter, named once in the CTA. "I've got nothing to sell you / no
+     operator DOES have things to sell, and the CTA points at the site that
+     lists them. "I've got nothing to sell you / no
      course, no affiliate link" is literally false and is exposed the moment the
      viewer reaches the CTA. If the not-paywalled idea is used, the framing is
      **the answer isn't gated**, never *nothing-to-sell*.
@@ -293,7 +293,7 @@ to date missed length on the first draft; the rule exists because it bites).
        also matters whenever the video reaches past the operator's own expertise.
        See memory [[comment-prompt-warmer-not-combative]].
    - **Final CTA = ONE ask, then stop.** Close on a single `cta`/`payoff` slide
-     naming the operator's book/site/newsletter and a single "subscribe". That's
+     carrying the one line below: subscribe, and the site. That's
      the end of the video. **CUT the old "final sentence = an action imperative"
      homework line.** Stacking asks (subscribe AND comment AND "now go do X this
      week") triggers decision fatigue and converts none of them; worse, a "go do
@@ -309,14 +309,19 @@ to date missed length on the first draft; the rule exists because it bites).
        tacking on "but you don't really need it" right
        there talks the viewer out of the exact thing you just asked them to buy.
        Dave: "that's the wrong time to suggest it's not important that they get it."
-       So the CTA = name the book + site + newsletter, then the single subscribe
-       line, and stop. Keep the genuine humility, just not at the moment of the ask.
+       So the CTA = the line below, and stop. Keep the genuine humility, just not at the moment of the ask.
      - **Make the CTA crisp, direct, and confident (operator directive 2026-07-14).**
        Beyond just removing the false-modesty line: the ask itself must be clean and
        plainly stated — never wishy-washy, hedged, or padded. Don't pontificate over
-       it. Say it warmly and directly, name the offers, and stop. Model cadence:
-       *"Go grab a copy of my book, Founders Who Finish, at davesaunders.net. While
-       you're there, sign up for my newsletter, The Build."* You may add ONE genuinely
+       it. Say it warmly and directly, and stop. **The line (operator directive 2026-11-06):**
+       *"Like and subscribe here, and also check out more, including my latest book, at Dave Saunders dot net."*
+       **Never name a specific book or list the offers in the close, in the script, on
+       the card or in the description.** The site carries the offers, so the next book
+       launch creates no confusion. End card: `kicker` "davesaunders.net", `headline`
+       "Like and subscribe", `subkicker` "More, including my latest book". Description line:
+       "More, including my latest book: https://davesaunders.net", replacing the old book and newsletter
+       lines. The cover is off by default (`cta_book` in `project.json`; a promo about one
+       book may opt in). You may add ONE genuinely
        current teaser only when it's true (e.g. new books landing this year) — kept
        truthful, never invented. Confident and generous is the register, not apologetic.
    - **Medium note — UPDATED 2026-07-31: the no-recap rule is now UNIVERSAL.**
@@ -408,8 +413,8 @@ to date missed length on the first draft; the rule exists because it bites).
   validated with a video.") HARD RULE: every piece of backstory color must be
   verifiable from intel, the wiki, or talk-time. If the operator (or you)
   reaches for a plausible-sounding detail, that is a RESEARCH PROMPT, not an
-  airable fact — verify or cut. The CTA stack stays (book, site, mailing
-  list, subscribe), but it rides on generosity of narrative; the goal is
+  airable fact — verify or cut. The CTA stays (subscribe and the
+  site), but it rides on generosity of narrative; the goal is
   videos that endure for years, not funnels that convert this week.
 - **Write the text clean; let the booth add the inflection** (operator
   directive, 2026-07-31). Do NOT write in verbal tics to make the script sound

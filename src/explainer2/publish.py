@@ -568,6 +568,8 @@ def run(project_dir=None, fire=False, privacy="unlisted", when=None,
     # last, so a failure in either lost the only record that the video was live, and the
     # next --fire uploaded it again.
     result["meta_backfilled"] = _backfill_meta(proj, result["youtube_url"])
+    from . import contentdb
+    result["content_index"] = contentdb.refresh_quietly()
 
     ta = plan["api_will_set"]["thumbnail_A"]
     if ta and Path(ta).exists():

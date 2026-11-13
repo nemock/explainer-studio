@@ -17,7 +17,7 @@ promos. Spoken-humanizer remains mandatory and unchanged.
 Scaffold `--content-type promo` when the video's success metric is an ACTION
 (register, buy, join, pre-order), not watch time or subscribers. One video,
 one offer, one action — a promo pushing two things converts to neither; make
-two promos. A deep dive that happens to end on the book CTA is NOT a promo;
+two promos. A deep dive that happens to end on the site CTA is NOT a promo;
 don't reclassify teaching content to sell harder.
 
 ```

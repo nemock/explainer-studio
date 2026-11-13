@@ -1171,7 +1171,13 @@ def run_studio(cfg, show, dry, spawned):
         flagged = adlib.get("rerecord") or []
         if flagged:
             cards = ", ".join(str(int(i) + 1) for i in flagged)     # booth card numbers
-            fp = f"rerecord:{cards}"
+            # The transcripts are in the fingerprint so a NEW take of the same card that
+            # also lost its words alerts again. Keyed on card numbers alone, that hold was
+            # silent: no notification, no log line, no text. An untouched take reads the same
+            # and stays quiet, however many times the booth is relaunched.
+            heard = json.dumps([r.get("asr_text") for r in adlib.get("segments", [])
+                                if r.get("id") in flagged])
+            fp = f"rerecord:{cards}:{hashlib.sha256(heard.encode()).hexdigest()[:12]}"
             if notify_once(proj, "studio_rerecord_notified", fp, "Recording watcher",
                            f"{proj.name}: booth flagged card(s) {cards} for re-record — "
                            f"render on hold until they are re-recorded or accepted."):
@@ -1183,6 +1189,14 @@ def run_studio(cfg, show, dry, spawned):
                                f"re-record. The render is on hold until you re-record "
                                f"them or accept the takes.")
             continue
+        # `unchecked` is neither a hold nor a text: nothing is known about those takes yet.
+        # Phase 1 transcribes them before it renders (phase1_render.check_takes), and a card
+        # that turns out to be missing its words lands in the branch above on the next cycle.
+        if adlib.get("unchecked"):
+            log_skip(cfg, proj, f"unchecked:{adlib['unchecked']}",
+                     f"STUDIO-UNCHECKED {show['id']}: {proj.name} has "
+                     f"{len(adlib['unchecked'])} card(s) unchecked at Finish; phase 1 "
+                     f"checks them before it renders")
         if spawned:
             log(cfg, f"{show['id']}: {proj.name} DONE but work was already started "
                      f"this cycle — next cycle picks it up")

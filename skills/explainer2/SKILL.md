@@ -8,8 +8,9 @@ description: >
   user says "/explainer-studio <topic>", "make a video about", "run the studio
   pipeline", or asks for a Blueprint on a topic. Local/free only; the single
   allowed subscription is the operator's stock.adobe.com membership,
-  human-in-the-loop. Nothing auto-posts: `publish` (YouTube) and `promote`
-  (Blotato re-shares) run only when the operator asks. See hard rule 3.
+  human-in-the-loop. Nothing auto-posts: `publish` (YouTube), `substack` (article
+  draft, never published) and `promote` (Blotato re-shares) run only when the operator
+  asks. See hard rule 3.
 ---
 
 # /explainer-studio — Explainer Studio pipeline
@@ -32,8 +33,8 @@ method lives in four reference files you MUST read at the step that needs them:
   successor to the deck-playbook); read BEFORE authoring a motion spec. Engine is a
   phased build (shorts first); until it ships, the deck-playbook governs.
 - `references/thumbnail-playbook.md` — read BEFORE building thumbnails (Package).
-- `references/article-playbook.md` — read BEFORE writing the written companion
-  essay (`package/article.md`, after Package).
+- `references/article-playbook.md` — read BEFORE the research essay
+  (`package/article.md`), which is written after the upload (§8b).
 - `references/masterclass-playbook.md` — read BEFORE scaffolding a multi-part
   series (Operator's Guide / Masterclass) or any episode of one.
 - `references/promo-playbook.md` — read BEFORE any `promo` content type (the
@@ -50,8 +51,8 @@ conflict for the operator. Do not skip steps because they seem obvious.
 2. **Operator gates are real.** STOP and wait for approval at: Blueprint,
    Script, and Package. Never auto-proceed past a gate.
 3. **The GENERATION pipeline never posts to social platforms.** Producing a video ends at
-   the project dir + manifest.json. **Two declared exceptions, both operator-invoked and
-   both long-standing — this rule does NOT block them** (clarified 2026-08-04, because the
+   the project dir + manifest.json. **Three declared exceptions, all operator-invoked;
+   this rule does NOT block them** (clarified 2026-08-04, because the
    old flat "never post anywhere" wording contradicted a month of normal practice):
    - **`explainer2 publish`** uploads the finished video to YouTube (OAuth, channel
      `nemock`). **Every upload lands UNLISTED** for the operator's review: `--fire` defaults to
@@ -61,8 +62,12 @@ conflict for the operator. Do not skip steps because they seem obvious.
      about. The AI-use disclosure (Studio: Details > Show more > "AI use", labeled
      "Altered content" until Sept 2026) and the pinned comment remain manual browser steps.
    - **`explainer2 promote`** re-shares already-published Shorts via Blotato (PRD N1).
+   - **`explainer2 substack`** (operator request 2026-11-11) posts `package/article.md` to
+     Substack as a **DRAFT** once the video is up: title, subtitle, YouTube embed before the
+     first subheading, tags. It never publishes; the operator reads it through and publishes
+     it in Substack. Part of the close-out checklist (§8d), so it runs for every deep dive.
 
-   The rule that still binds: nothing auto-posts, and neither command runs without the
+   The rule that still binds: nothing auto-posts, and none of these commands runs without the
    operator asking for it.
 4. **Talk-time rules:** quote `quotes.md` verbatim; adapt positions/anecdotes;
    NEVER fabricate a take, story, or statistic not in the library or the wiki.
@@ -233,6 +238,13 @@ our own scoreboard (refresh if >7 days stale: `bin/explainer2 learn refresh`
 then `learn report`; unattended yt-dlp, no auth) — and let it tiebreak title
 ranking per playbook §7. Write `intel/blueprint.md` and
 `intel/blueprint.json` using the playbook's templates.
+**Check our own back catalogue first, from the content database, not by grepping
+`projects/`** (operator request 2026-11-11): `bin/explainer2 content search <words>`
+(FTS5: words, `"phrases"`, `OR`, `NOT`) returns earlier videos on the topic, best match
+first, with their YouTube and Substack status; `bin/explainer2 content show <n>` gives one
+video's topic, angle, premise and keywords. Use it to avoid repeating an angle and to
+find the earlier video worth referencing. Run `content sync` first if anything changed
+outside the verbs that refresh it.
 **GATE: present the Blueprint summary to the operator. Wait for approval.**
 
 ### 3b. PLAYBOOK.md (required, same gate)
@@ -365,9 +377,13 @@ body line).
     `make_money/recording_watcher/shows.json`, entry `explainer-studio`) polls every
     five minutes for a Finish sentinel under `explainer-content/projects` and the
     masterclass series dirs. On DONE it checks `voice_source` is operator, holds if
-    the booth flagged any card `rerecord` (notifies once), runs the scriptguard, then
-    submits `phase1_render.py --profile studio` to the render queue (hard rule 7):
-    `media` (narrate, align, render, manifest, qa) and `shorts`. When it finishes it
+    any card is flagged `rerecord` (notifies once, texts the operator), runs the
+    scriptguard, then submits `phase1_render.py --profile studio` to the render queue
+    (hard rule 7). The job first transcribes any takes still `unchecked` at Finish
+    (`adlib --unchecked`); `unchecked` itself never holds a render and never texts. If
+    that check finds a take missing its words, the job stops with no render and the next
+    watcher cycle holds and texts. Otherwise it runs `media` (narrate, align, render,
+    manifest, qa) and `shorts`. When it finishes it
     writes **`work/RESUME.md`**, notifies, and deep-links this session again. **On
     resume, read `work/RESUME.md` FIRST.** If it exists, or `work/render_complete.json`
     is newer than `work/record_done.json`, the render is done: do NOT run `media` or
@@ -390,8 +406,8 @@ body line).
     carries a digest of the script's spoken content; any later edit is caught by
     the guard and the render refuses to start.
   Then read `work/adlib_report.json` — the booth drift-checks every take live
-  and writes the report at Finish (§7b; run `bin/explainer2 adlib` only as the
-  fallback for `unchecked` segments). `rerecord` means the take is missing the
+  and writes the report at Finish, and results survive a relaunch, so a card you did
+  not re-record keeps its verdict (§7b). `rerecord` means the take is missing the
   card's words (`adlib.rerecord_confirmed`), not that drift is high (2026-11-03); tell
   the operator which and relaunch the booth (`launch_booth.py`). A possible slip
   inside a complete take ("David" for "Donald") goes to him as a question with the
@@ -555,13 +571,29 @@ said (or missing words that were).
 retired as a mandatory step).** Every take gets a whisper drift badge in the
 booth, and clicking Finish writes `work/adlib_report.json` from those results —
 same schema as the old stage, plus an `"unchecked"` list for any cards whose
-in-booth check didn't complete (drift disabled, deferred behind a render, or a
-worker error). So before packaging: **read `work/adlib_report.json`**; only if
-it's missing or has `unchecked` entries, run the fallback:
+in-booth check didn't complete (Finish landed first, deferred behind a render, or
+a worker error). Transcripts persist per take in `work/drift_transcripts.json`
+(keyed by stem, the wav's mtime and its size), so a relaunched booth restores every
+unchanged take's verdict from its stored transcript, recomputed against the card's
+current text, and re-checks only a re-recorded card (2026-11-03).
+
+The studio render fills the gaps itself: phase 1 starts with `adlib --unchecked`
+inside its queue job, before anything renders. A card still `unchecked` after that
+means whisper could not read it, and `work/RESUME.md` names it. So before packaging:
+**read `work/adlib_report.json`**; only if it's missing or still has `unchecked`
+entries, run the fallback:
 ```
-bin/explainer2 adlib <project_dir>    # FALLBACK only — re-transcribes everything (queued, hard rule 7)
+bin/explainer2 adlib <project_dir> --unchecked   # only the takes with no verdict; keeps the other rows (queued, hard rule 7)
+bin/explainer2 adlib <project_dir>               # LAST RESORT — re-transcribes everything, rewrites the whole report, drops the Shorts cards' rows (queued)
 ```
-Either way, review per segment (`drift`, `script_text`, `asr_text`) and
+A flag stays until the take changes, because Finish recomputes it from the stored
+transcript: relaunching the booth and clicking Finish no longer clears it. To accept a
+flagged take, the operator has to say so; then edit the report by hand, setting that
+row's `status` to `adlib` and removing its id from `rerecord`. A later Finish flags it
+again.
+
+Either way, review per segment (`drift`, `script_text`, `asr_text`; a row filled in
+after Finish carries `script_text` only if the take has a text stamp) and
 separate **recognizer noise** from **real drift**:
 - **Noise — IGNORE.** Spelled-out numbers transcribed as digits ("seventy-five
   billion" → "$75 billion"), "A.I."/"I.P.O." losing their dots, contractions,
@@ -635,8 +667,13 @@ description ending in the full video's link, `"video": "video/explainer_9x16.mp4
 attaches `package/thumbnails/thumb_a.png` to the upload itself (see `_thumb_for_upload`) —
 nobody does it by hand. It can only attach a file that exists at upload time, so:
 
-> render → shorts → **package (meta + thumbnails, Shorts thumbnails included + article + linkedin)** → `validate` →
-> `publish --fire --privacy unlisted`
+> render → shorts → **package (meta + thumbnails, Shorts thumbnails included + linkedin)** →
+> `validate --pre-upload` → `publish --fire --privacy unlisted` → **article (research essay,
+> §8b) → `validate` → `substack --fire`**
+>
+> The article moved AFTER the upload on 2026-11-12 (operator): it is now an in-depth
+> research essay that links the live video, and the Substack draft is its review gate.
+> `validate --pre-upload` skips `article.md`; the full `validate` runs once it exists.
 
 Publishing first strands the video with no thumbnail and the dry-run reports
 `thumbnail_A: null`. That happened on #54 (2026-08-04). If a package deliverable looks
@@ -669,12 +706,18 @@ Fields, the width rule and the fallbacks: deck-playbook §4b. Then frame-check e
 at 800 px previews (hard rule 9) and read `shorts: ... WARNING` lines in the output: a
 dropped landscape mark or move is reported there.
 
-### 8b. Article (generation plane — written companion)
-Read `references/article-playbook.md` IN FULL, then write the read-not-heard
-companion essay to `package/article.md`: the SAME content and arc as the script,
-transformed into real written prose (de-spoken, numbers in written style,
-subheads, the Reliance Policy as a boxed list). **No new facts** beyond what the
-video earned. **HumanER first (added 2026-07-26; this article type is exactly
+### 8b. Article (generation plane — the research essay, AFTER the upload)
+Runs once `publish --fire` has given the video its URL (operator directive 2026-11-12).
+Read `references/article-playbook.md` IN FULL, then research and write
+`package/article.md`: an **in-depth research essay, 3,000–4,500 words, that answers the
+video's question further than the video could** (primary sources, the strongest
+counter-argument, what the video compressed), not new topics. New facts are welcome
+only through the playbook's §1b research pass: verified, written to the research wiki
+with provenance, linked inline, listed under `## Sources`, and **every cited web page
+snapshotted with `tools/ref_snapshot.py`** (validate enforces it). Then `validate` and
+`bin/explainer2 substack <dir>` → `--fire` (§8d step 2b); the Substack draft is the
+article's review gate. (This replaces the "same facts as the video, 1,800–2,500 words"
+companion.) **HumanER first (added 2026-07-26; this article type is exactly
 what got flagged 100% AI on 2026-07-25):** before drafting, read
 `~/.claude/skills/humaner/SKILL.md` + `CONSTRAINTS.md` (section 1.10 written register)
 + the Substack dial in `FORMATS.md`, and draft in voice from the start — watch
@@ -684,7 +727,7 @@ numbers, verified stories only, no manufactured intimacy). **Then run the
 `humaner` skill's LINT.md pass as the mandatory lint — the actual pass, not a
 from-memory self-check — and apply its edits except where they conflict with
 the voice profile; CONSTRAINTS.md wins conflicts.** Set `humanized: true` in the
-front matter once done. No render gate — the article is text, reviewed in place.
+front matter once done. No render gate — the operator reviews it as the Substack draft.
 
 ### 8c. Social share copy (generation plane — `package/linkedin.md`)
 Every produced video gets a `package/linkedin.md`: ready-to-paste intros the
@@ -727,9 +770,12 @@ the Shorts are cut, `package/thumbnails/shorts/<slug>.jpg` for each (projects da
 2026-10-02 or later; earlier ones get an advisory). The set is
 per-content-type (promo drops the article; standalone short needs meta only —
 `contenttypes.py` is the registry and validate reads it).
-**Run `bin/explainer2 validate <project_dir>` at the end of Package and again
-before any upload/promo.** It checks the manifest handoff AND the four package
-files, and fails with the specific missing path. (It is engine-correct: the
+**Run `bin/explainer2 validate <project_dir> --pre-upload` at the end of Package,
+before `publish --fire`** (the article doesn't exist yet; the flag skips it), **and the
+full `validate` once the article is written, before `substack --fire` and before any
+promo.** It checks the manifest handoff AND the package files (and, from 2026-11-12, a
+reference snapshot for every source the article links), and fails with the specific
+missing path. (It is engine-correct: the
 remotion default produces no `deck/index.html`, and validate no longer requires
 one.) Treat a non-`ok` validate as a blocker — do not present the package gate
 or start an upload until it returns `{"ok": true}`.
@@ -766,6 +812,28 @@ Public / schedule-Public without an explicit go.
   any of these is what causes drift and painful reconstruction later:**
   1. `package/meta.json` → set `youtube_url` to the real `youtu.be/...` link.
   2. `package/linkedin.md` → replace the `<URL>` placeholder with the live link.
+  2b. **Research essay, then the Substack draft (operator requests 2026-11-11 and
+     2026-11-12), deep dives and masterclass episodes.** This is the last part of Package,
+     not an afterthought: write the article now (§8b), run the full `validate`, then
+     `bin/explainer2 substack <project_dir>` (dry-run: shows the title, subtitle, tags and
+     where the embed lands, and lists the publication's tags), then the same with `--fire`.
+     It reads the video from meta.json `youtube_url` and the tags from the article's
+     `substack_tags` front matter (article-playbook §3), puts the YouTube embed right before
+     the first subheading, reads the draft back to verify, and records `substack_draft_id` +
+     `substack_draft_url` in meta.json. Give the operator the draft URL; **the operator
+     publishes it, never this pipeline** (no code path calls Substack's publish). A second
+     `--fire` refuses while meta.json records a draft (`--redraft` overrides). It talks to
+     Substack through the `substack` MCP server's config in `~/.claude.json`, so a
+     Substack sign-in problem shows up there.
+  2c. **Content database** (`channel/content.db`, operator request 2026-11-11): `publish
+     --fire` and `substack --fire` refresh it themselves. Once the operator has published
+     the Substack draft, run `bin/explainer2 content substack --write`: it matches the
+     publication's posts to videos (by the YouTube id they embed, then by exact title) and
+     records `substack_url` + `substack_published_at` in meta.json, then re-syncs.
+     `bin/explainer2 content status` lists every video with where it is posted. The
+     database is an index rebuilt from the project dirs; meta.json stays the record, so a
+     fact the index should know (a LinkedIn post: `linkedin_url`, `linkedin_posted`) goes
+     into meta.json, then `content sync`.
   3. **`channel/CATALOG.md` — the master local record. MOVE the row out of the
      queue into Published / Made and fill ALL four columns:** the **final
      published title** (it usually differs from the blueprint working title — use

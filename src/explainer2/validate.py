@@ -7,11 +7,11 @@ import re
 from . import contenttypes
 
 _PKG_DESC = {"meta.json": "upload metadata: title/description/chapters/tags",
-             "article.md": "written companion (article-playbook)",
+             "article.md": "research essay, written after the upload (article-playbook)",
              "linkedin.md": "social-share copy (SKILL §8c)"}
 
 
-def _package_issues(proj):
+def _package_issues(proj, skip=()):
     """The Package-step deliverables (SKILL §8). These are authored by the generation
     plane, NOT by any media stage, so nothing else enforces they exist — which is how
     package/linkedin.md slipped through on #16 (2026-07-04). The required set is
@@ -23,6 +23,8 @@ def _package_issues(proj):
     files, thumbnails = contenttypes.package_requirements(proj.content_type)
     out = []
     for name in files:
+        if name in skip:
+            continue
         if not (pkg / name).exists():
             out.append(f"package/{name} missing — {_PKG_DESC.get(name, name)}")
     if thumbnails:
@@ -117,7 +119,7 @@ def _meta_issues(meta, manifest):
 
 def _article_issues(text):
     """article-playbook §3/§5. Returns (issues, advisories): front matter and the humanizer
-    gate are structural and block; the word band is written "~1,800-2,500" in the playbook,
+    gate are structural and block; the word band is written "3,000-4,500" in the playbook,
     so it advises rather than blocks. A deliberate variant declares `length_variant:`."""
     out, advise = [], []
     if not text.startswith("---"):
@@ -129,14 +131,42 @@ def _article_issues(text):
                    "humanizer pass is the step's gate (article-playbook §5)")
     if not re.search(r"^length_variant:", fm, flags=re.M):
         n = len(re.findall(r"\b[\w'$%]+\b", body))
-        if not 1800 <= n <= 2500:
-            advise.append(f"package/article.md is {n} words, outside the faithful-companion band of "
-                       f"1800-2500 (article-playbook §3). Deliberate variant? add "
+        if not 3000 <= n <= 4500:
+            advise.append(f"package/article.md is {n} words, outside the research-essay band of "
+                       f"3000-4500 (article-playbook §3, since 2026-11-12). Deliberate variant? add "
                        f"`length_variant: <condensed|expanded>` to the front matter")
     return out, advise
 
 
-def _package_content_issues(proj, manifest):  # -> (issues, advisories)
+SNAPSHOTS_FROM = "2026-11-12"   # projects dated earlier are not checked for snapshots
+OWN_HOSTS = ("davesaunders.net", "youtu.be", "youtube.com", "substack.com",
+             "baserealitygroup.com", "nemock.com")
+
+
+def _snapshot_issues(proj, text):
+    """article-playbook §1b (operator 2026-11-12): every web source the essay links has a
+    full-page snapshot saved by tools/ref_snapshot.py, recorded in sources/snapshots.json.
+    Links to the operator's own sites and the video are not sources."""
+    if proj.dir.name[:10] < SNAPSHOTS_FROM:
+        return []
+    urls = set(re.findall(r"\]\((https?://[^)\s]+)\)", text))
+    urls = {u for u in urls if not any(h in u.split("/")[2] for h in OWN_HOSTS)}
+    ledger = proj.dir / "sources" / "snapshots.json"
+    have = set()
+    if ledger.exists():
+        try:
+            have = {r["url"] for r in json.loads(ledger.read_text())}
+        except (json.JSONDecodeError, KeyError, TypeError):
+            pass
+    missing = sorted(urls - have)
+    if not missing:
+        return []
+    return [f"package/article.md links {len(missing)} source(s) with no reference snapshot: "
+            f"{missing[:5]}{' …' if len(missing) > 5 else ''} — run tools/ref_snapshot.py "
+            f"<dir> <url> for each (article-playbook §1b)"]
+
+
+def _package_content_issues(proj, manifest, skip=()):  # -> (issues, advisories)
     """Existence is not compliance. _package_issues only asks whether the four files are
     THERE; these read what is in them. Added 2026-08-03 after #50 shipped a linkedin.md
     with one option and no link, and a meta.json whose invented chapters ran past the end
@@ -146,9 +176,11 @@ def _package_content_issues(proj, manifest):  # -> (issues, advisories)
     out, advise = [], []
     if "linkedin.md" in files and (pkg / "linkedin.md").exists():
         out += _linkedin_issues((pkg / "linkedin.md").read_text())
-    if "article.md" in files and (pkg / "article.md").exists():
-        a_iss, a_adv = _article_issues((pkg / "article.md").read_text())
+    if "article.md" in files and "article.md" not in skip and (pkg / "article.md").exists():
+        a_text = (pkg / "article.md").read_text()
+        a_iss, a_adv = _article_issues(a_text)
         out += a_iss; advise += a_adv
+        out += _snapshot_issues(proj, a_text)
     if "meta.json" in files and (pkg / "meta.json").exists():
         try:
             out += _meta_issues(json.loads((pkg / "meta.json").read_text()), manifest)
@@ -157,7 +189,12 @@ def _package_content_issues(proj, manifest):  # -> (issues, advisories)
     return out, advise
 
 
-def run(proj):
+def run(proj, pre_upload=False):
+    """pre_upload=True is the check before `publish --fire`: the research essay is written
+    AFTER the upload, against the live URL (article-playbook §7, operator 2026-11-12), so
+    article.md is neither required nor read yet. Run it again without the flag once the
+    article is done."""
+    skip = ("article.md",) if pre_upload else ()
     issues = []
     mp = proj.dir / "manifest.json"
     if not mp.exists():
@@ -199,8 +236,8 @@ def run(proj):
         issues.append(f"duration {dur}s is not under max_length {proj.max_length}s — "
                       f"cut a segment and re-render")
 
-    issues += _package_issues(proj)
-    content_issues, advisories = _package_content_issues(proj, m)
+    issues += _package_issues(proj, skip)
+    content_issues, advisories = _package_content_issues(proj, m, skip)
     issues += content_issues
     st_issues, st_advise = _shorts_thumbnail_issues(proj)
     issues += st_issues
