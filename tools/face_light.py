@@ -23,16 +23,17 @@ _cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalfac
 
 
 def face_luma(path):
-    """Mean luma inside the largest detected face, or None when no face is found."""
+    """Mean luma inside the most confident detected face, or None when no face is found."""
     img = cv2.imread(str(path))
     if img is None:
         raise SystemExit(f"face_light: cannot read {path}")
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     side = gray.shape[1] // 12
-    faces = _cascade.detectMultiScale(gray, 1.1, 6, minSize=(side, side))
+    faces, _, weights = _cascade.detectMultiScale3(gray, 1.1, 6, minSize=(side, side), outputRejectLevels=True)
     if len(faces) == 0:
         return None
-    x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
+    # the most confident detection, not the largest: a big false hit on a dark background reads as a dark face
+    x, y, w, h = faces[int(np.argmax(np.ravel(weights)))]
     return float(np.mean(gray[y:y + h, x:x + w]))
 
 

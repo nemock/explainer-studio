@@ -183,6 +183,19 @@ goes on:** `/Users/davesaunders/myenv/bin/python3.12 tools/face_light.py <base.p
 mean luma 100 of 255; well-lit bases measure 110-140). Regenerate a base that fails rather than brightening it in
 CSS. Calibration, 2026-11-13: #82 thumb A 83, #63 86, #75 88, #40 93, #41 96, #80 97; #81 123, #83 138.
 
+**Why, and how far it goes (operator, same day):** moody is fine; a poorly lit Dave is not. "Stylistically, I think
+it's interesting, but just from a click-through percentage standpoint... YouTube users are less likely to click on a
+dark and brooding thumbnail unless they're specifically looking for that kind of genre (which I don't really
+represent). Again, I think we can do Moody as long as I'm not poorly lit." **Fixing a dark base (learned 2026-11-13,
+14 bases):** regenerate with the dark base as the `image` reference plus a lighting line in the prompt ("his face
+evenly lit by a soft key light from the front, bright and clear; the room can stay moody"); that cleared the floor in
+11 of 13 tries. `images_relight` with one front key light lifted three bases but darkened the rest of the frame and
+left five still failing: use it only if a regeneration drifts the likeness. Where a wide scene keeps the face small
+and two regenerations stay under the floor, a feathered face-only exposure lift on the image itself is acceptable
+(`explainer-content/channel/shorts_cover_backfill/relight/dodge.py`, used once, #18); never brighten the whole
+thumbnail. A video with a live Test & Compare thumbnail (the pre-2026-07-26 A/B era, e.g. #40) refuses both
+`publish --set-thumbnail` (403) and a Studio upload until the test is ended, which is the operator's call.
+
 Fallback only if the Magnific MCP is genuinely absent (tools not resolvable via ToolSearch):
 the §2c operator-generated route still works. Full flow + guardrails:
 [docs/magnific-imagegen-plan.md](../../../docs/magnific-imagegen-plan.md).
