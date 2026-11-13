@@ -41,6 +41,12 @@ PUBLICATION_FALLBACK = "https://nemock.substack.com"
 CLAUDE_CONFIG = Path.home() / ".claude.json"
 PAYLOAD_NAME = "substack_draft.json"
 NO_HEADING_FALLBACK_PARAGRAPHS = 3
+# Longest `dek` (sent as the Substack subtitle) the dry run lets through. EMPIRICAL, not a
+# published figure: on 2026-11-12 a 321-character subtitle made `create_draft_post` fail with
+# a bare "400 Bad Request", and the same draft went through with a 202-character one. Substack
+# documents no subtitle limit and substack-mcp enforces none, so this is a conservative cap
+# between the two observations. Raise it only on evidence of a longer subtitle succeeding.
+SUBTITLE_MAX_CHARS = 250
 
 
 # ----------------------------------------------------------------------------- article
@@ -324,6 +330,10 @@ def build_payload(proj, youtube_url=None, tags=None):
         problems.append("article.md front matter has no `title`")
     if not subtitle:
         warnings.append("article.md front matter has no `dek`; the draft will have no subtitle")
+    elif len(subtitle) > SUBTITLE_MAX_CHARS:
+        problems.append(f"article.md `dek` is {len(subtitle)} characters; Substack rejects a "
+                        f"subtitle that long with a bare 400. Cut it to {SUBTITLE_MAX_CHARS} or "
+                        "fewer (article-playbook §3)")
     if not fm.get("humanized"):
         problems.append("article.md is not marked `humanized: true`; run the humaner pass first "
                         "(SKILL §8b)")
