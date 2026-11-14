@@ -43,10 +43,25 @@ Usage:
   unstick_stale_script.py <project_dir> --accept 3,7         # keep those takes
   unstick_stale_script.py <project_dir> --accept all
   unstick_stale_script.py <project_dir> --accept short_ten-lives_hook   # a Short card by stem
+  unstick_stale_script.py <project_dir> --verify             # re-stamp what the transcript proves
+
+`--verify` (2026-11-13) is `--accept` decided by the take's own transcript instead of by a
+person. The booth lets the operator edit a card's text, and an edit made after the take was
+recorded leaves the take stamped with the old wording even when he SAID the new wording. On
+#84 card 18 he changed "Saturday" to "Wednesday", said "Wednesday", and the watcher texted
+him to re-record a card that was already right. A stale card is re-stamped only when the
+transcript stored for that exact take (work/drift_transcripts.json, keyed by the wav's mtime
+and size) carries every word the edit added, none of the words it removed beyond what the
+current text still has, and reads closer to the current text than to the stamped one. Anything
+else stays stale and the watcher alerts as before. Operator directive: verify before alerting.
 """
 import argparse
+import difflib
+import json
+import re
 import subprocess
 import sys
+from collections import Counter
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -104,6 +119,60 @@ def accept(proj, rep, ids):
                           seg_id=sid, slide=row.get("slide"), source="operator-accepted")
         done.append(sid)
         print(f"  {_label(row)}: accepted — audio kept, text record re-stamped")
+    return done
+
+
+def _words(text):
+    return re.findall(r"[a-z0-9']+", (text or "").lower().replace("’", "'"))
+
+
+def _take_transcript(proj, stem):
+    """The transcript the booth stored for the CURRENT take of this card, or None."""
+    wav = Path(proj.voiceover_dir) / f"{stem}.wav"
+    try:
+        st = wav.stat()
+        store = json.loads((Path(proj.work) / "drift_transcripts.json").read_text())
+    except (OSError, ValueError):
+        return None
+    rec = store.get(stem) or {}
+    sig = rec.get("sig") or []
+    if len(sig) == 2 and int(sig[0]) == st.st_mtime_ns and int(sig[1]) == st.st_size:
+        return rec.get("asr_text")
+    return None
+
+
+def transcript_says_current(recorded, current, heard):
+    """True when the take's transcript shows the CURRENT wording was spoken."""
+    rec, cur, asr = _words(recorded), _words(current), _words(heard)
+    if not asr:
+        return False
+    added = Counter(cur) - Counter(rec)
+    removed = Counter(rec) - Counter(cur)
+    have = Counter(asr)
+    if any(have[w] < Counter(cur)[w] for w in added):
+        return False
+    if any(have[w] > Counter(cur)[w] for w in removed):
+        return False
+    closer_now = difflib.SequenceMatcher(None, asr, cur).ratio()
+    closer_then = difflib.SequenceMatcher(None, asr, rec).ratio()
+    return closer_now >= closer_then
+
+
+def verify(proj, rep):
+    """Re-stamp the stale cards whose own transcript proves the current text was said."""
+    done = []
+    for row in rep["segments"]:
+        if row["status"] != "stale":
+            continue
+        heard = _take_transcript(proj, row["stem"])
+        if heard and transcript_says_current(row.get("recorded_text", ""), row["current_text"], heard):
+            scriptguard.stamp(proj.voiceover_dir, row["stem"], row["current_text"],
+                              seg_id=row["id"], slide=row.get("slide"), source="transcript-verified")
+            done.append(row["id"])
+            print(f"  {_label(row)}: verified from its transcript — re-stamped")
+        else:
+            why = "no transcript for this take" if not heard else "transcript does not show the new wording"
+            print(f"  {_label(row)}: NOT verified ({why}) — still needs the operator")
     return done
 
 
@@ -215,6 +284,9 @@ def main():
     ap.add_argument("--accept", default=None,
                     help="comma list of card ids, Short stems, or 'all' whose AUDIO is "
                          "still correct — re-stamps their text record instead of re-recording")
+    ap.add_argument("--verify", action="store_true",
+                    help="re-stamp only the stale cards whose own take transcript shows the "
+                         "current wording was spoken (the watcher runs this before alerting)")
     ap.add_argument("--relaunch-booth", action="store_true", dest="relaunch",
                     help="with --fix: reopen the booth when done")
     args = ap.parse_args()
@@ -222,6 +294,10 @@ def main():
     proj = Project.load(args.project_dir)
     rep = scriptguard.check(proj)
     report(proj, rep)
+
+    if args.verify:
+        verify(proj, rep)
+        rep = scriptguard.check(proj)
 
     if args.accept:
         accept(proj, rep, [s.strip() for s in args.accept.split(",") if s.strip()])
@@ -231,7 +307,7 @@ def main():
         fix(proj, rep, relaunch=args.relaunch)
         rep = scriptguard.check(proj)
 
-    if not (args.fix or args.accept):
+    if not (args.fix or args.accept or args.verify):
         if not rep["ok"]:
             print("--fix to move the stale takes aside, or --accept <ids> to keep them")
         return 0 if rep["ok"] else 1

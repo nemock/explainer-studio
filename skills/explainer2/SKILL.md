@@ -378,7 +378,10 @@ body line).
     five minutes for a Finish sentinel under `explainer-content/projects` and the
     masterclass series dirs. On DONE it checks `voice_source` is operator, holds if
     any card is flagged `rerecord` (notifies once, texts the operator), runs the
-    scriptguard, then submits `phase1_render.py --profile studio` to the render queue
+    scriptguard (a stale card whose own take transcript shows the current wording, as
+    after a booth edit made once the take existed, is re-stamped by
+    `unstick_stale_script.py --verify` and renders; only an unconfirmed one texts,
+    operator directive 2026-11-13: verify before alerting), then submits `phase1_render.py --profile studio` to the render queue
     (hard rule 7). The job first transcribes any takes still `unchecked` at Finish
     (`adlib --unchecked`); `unchecked` itself never holds a render and never texts. If
     that check finds a take missing its words, the job stops with no render and the next

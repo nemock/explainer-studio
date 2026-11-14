@@ -925,6 +925,21 @@ def script_guard_ok(cfg, proj):
     return False, out.replace("\n", " ")[:400]
 
 
+def verify_stale_by_transcript(cfg, proj):
+    """`unstick_stale_script.py --verify`: re-stamp stale cards whose own take transcript
+    shows the current wording was spoken. Returns its per-card lines for the log; a failure
+    to run returns a note and leaves the cards stale, so the alert still goes out."""
+    tool = Path(cfg["launch_booth"]).parent / "unstick_stale_script.py"
+    try:
+        r = subprocess.run([cfg["python"], str(tool), str(proj), "--verify"],
+                           capture_output=True, text=True, timeout=180,
+                           env=render_env(cfg), cwd=cfg["claude_cwd"])
+    except Exception as e:
+        return f"(verify failed to run: {e})"
+    lines = [ln.strip() for ln in (r.stdout or "").splitlines() if "verified" in ln.lower()]
+    return " | ".join(lines)[:400]
+
+
 def launch_render(cfg, show, proj):
     """Phase 1: run the long deterministic render as a DETACHED OS process (no Bash
     time cap), writing work/render_complete.json on success. Returns the pid, or None
@@ -1211,6 +1226,17 @@ def run_studio(cfg, show, dry, spawned):
                 alert_if_recording_fault(cfg, show, proj, rfp)
             continue
         ok, why = script_guard_ok(cfg, proj)
+        if not ok and not dry:
+            # Verify BEFORE alerting (operator directive 2026-11-13). The booth lets the
+            # operator edit a card, and a take recorded before the edit keeps the old stamp
+            # even when he said the new words: #84 card 18 texted him to re-record a card
+            # that was already right. A stale card whose own transcript shows the current
+            # wording is re-stamped here; only what the transcript cannot confirm alerts.
+            vlog = verify_stale_by_transcript(cfg, proj)
+            ok, why = script_guard_ok(cfg, proj)
+            if ok:
+                log(cfg, f"STALE-VERIFIED {show['id']}: {proj.name} — stale card(s) "
+                         f"re-stamped from their own transcripts; rendering. {vlog}")
         if not ok:
             log(cfg, f"BLOCKED {show['id']}: {proj.name} — script.json changed after "
                      f"recording; NOT rendering. {why} (see {proj / 'BLOCKED.md'})")
