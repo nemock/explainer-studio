@@ -201,10 +201,11 @@ def curl(text, prev=""):
         if c == '"':
             c = "“" if (before == "" or before in _OPEN_AFTER) else "”"
         elif c == "'":
-            nxt = text[k + 1] if k + 1 < len(text) else ""
+            nxt2 = text[k + 1:k + 3]
             if before == "" or before in _OPEN_AFTER:
-                # '90s and 'em are apostrophes even at a word's start
-                c = "’" if nxt.isdigit() else "‘"
+                # '90s and '08 are apostrophes even at a word's start; a single digit opens a
+                # quote ("'8 rhymes with great'", from #72's Senate hearing quote).
+                c = "’" if (len(nxt2) == 2 and nxt2.isdigit()) else "‘"
             else:
                 c = "’"
         out.append(c)
