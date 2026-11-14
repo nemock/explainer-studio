@@ -308,7 +308,11 @@ skill's LINT.md pass. This is non-negotiable and is the step's gate.
   quotes win over stylistic smoothing.
 - Curly quotes and apostrophes are fine in the article: it goes to Substack, whose editor
   curls them anyway (operator 2026-11-13; LINT.md §11 carries the carve-out). Never
-  straighten them.
+  straighten them. **The Substack draft is always curly** (operator 2026-11-14, after #84's
+  draft arrived with straight marks throughout): `bin/explainer2 substack` curls quotes and
+  apostrophes in the title, subtitle and body as it builds the draft, so `article.md` may be
+  typed either way and the draft still matches what Substack's editor produces. Inline code
+  and bare URLs stay literal. Check the dry run's `substack_draft.json` if in doubt.
 
 ## 5b. Fresh-eyes gate (after LINT, before presenting)
 

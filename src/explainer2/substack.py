@@ -14,6 +14,8 @@ What it builds, from `package/article.md`:
                 gets the opening paragraphs first and then the video. That is where the
                 operator has always put it by hand (#79's post is the reference). An article
                 with no subheading gets the embed after its third paragraph.
+  * quotes   <- straight quotes and apostrophes in the title, subtitle and body are curled
+                (operator 2026-11-14), matching what Substack's editor does as you type.
   * tags     <- front matter `substack_tags` (a list), or `--tag` on the command line.
                 Tags must already exist on the publication unless `--allow-new-tags`:
                 Substack creates a tag on first use, so a typo would become a junk tag.
@@ -176,6 +178,61 @@ def inline(s, marks=()):
         buf.append(c); i += 1
     flush()
     return out
+
+
+# ------------------------------------------------------------------ curly quotes
+#
+# Operator, 2026-11-14: a draft posted through this tool arrived with straight quotes and
+# apostrophes throughout, where Substack's own editor curls them as you type. So the draft
+# is curled here, on its way out, rather than relying on how a session typed article.md
+# (which may be either). Code and bare URLs are left alone; a link's href is an attribute,
+# not text, so it is never touched.
+
+_OPEN_AFTER = set(" \t\n([{<—–-/“‘")
+
+
+def curl(text, prev=""):
+    """Straight -> curly quotes and apostrophes. `prev` is the character before `text`
+    (from the previous text node in the same block), so a quote that opens in one node and
+    closes in the next still pairs. Returns (curled, last_char)."""
+    out = []
+    for k, c in enumerate(text):
+        before = out[-1] if out else prev
+        if c == '"':
+            c = "“" if (before == "" or before in _OPEN_AFTER) else "”"
+        elif c == "'":
+            nxt = text[k + 1] if k + 1 < len(text) else ""
+            if before == "" or before in _OPEN_AFTER:
+                # '90s and 'em are apostrophes even at a word's start
+                c = "’" if nxt.isdigit() else "‘"
+            else:
+                c = "’"
+        out.append(c)
+    s = "".join(out)
+    return s, (s[-1] if s else prev)
+
+
+def _is_literal(node):
+    marks = node.get("marks") or []
+    if any(m.get("type") == "code" for m in marks):
+        return True
+    return any(m.get("type") == "link" and (m.get("attrs") or {}).get("href") == node.get("text")
+               for m in marks)
+
+
+def curl_tree(nodes):
+    """Curl every text node in a ProseMirror node list, in place, block by block."""
+    prev = ""
+    for node in nodes:
+        if node.get("type") == "text":
+            if _is_literal(node):
+                prev = (node.get("text") or prev)[-1:]
+            else:
+                node["text"], prev = curl(node.get("text", ""), prev)
+        elif node.get("type") != "code_block":
+            curl_tree(node.get("content") or [])
+            prev = ""
+    return nodes
 
 
 def _para(text):
@@ -355,7 +412,8 @@ def build_payload(proj, youtube_url=None, tags=None):
         problems.append("no tags: add `substack_tags: [\"...\"]` to article.md front matter "
                         "(3 to 6, picked from the publication's tags; article-playbook §3) or pass --tag")
 
-    content = blocks(body, warnings)
+    title, subtitle = curl(title)[0], curl(subtitle)[0]
+    content = curl_tree(blocks(body, warnings))
     embed = None
     if vid:
         idx, where = insert_video(content, vid)
