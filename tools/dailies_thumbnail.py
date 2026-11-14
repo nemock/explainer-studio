@@ -21,6 +21,11 @@ Writes package/thumbnails/thumb.html, and with --render also thumb.png (2560x144
 youtube_upload.py compresses under YouTube's 2 MB cap) plus thumb.json recording what was
 used. --render opens a browser, so it runs through the render queue (`explainer2
 submit`), never directly from a session.
+
+--vertical (2026-11-14) writes the Instagram Reel cover instead: cover_9x16.html/.png at
+1080x1920, the same art, headline and badge laid out for the 3:4 profile-grid crop. The
+dispatcher hands it to Instagram as coverImageUrl. See make_money/routine_changes/
+2026-11-14-video-covers-and-blur-band.md.
 """
 import argparse
 import html
@@ -136,15 +141,67 @@ def build_html(text, show_name, mark, art, theme):
 </body></html>"""
 
 
-def render(page, png):
-    """Screenshot the page at 2x (2560x1440) once the headline has been fitted.
+def build_vertical_html(text, show_name, mark, art, theme):
+    """The 1080x1920 Instagram Reel cover (2026-11-14). Same art, headline and badge as the
+    YouTube thumbnail, re-laid for a phone. Instagram's profile grid shows a 3:4 crop of the
+    cover (y 240-1680), so everything that must read sits inside that band: the badge at
+    y~290, the headline below it, the art filling the lower half. The art's subject sits in
+    its right half (STYLE.md), hence object-position 72%."""
+    bg, fg, accent = theme["bg"], theme["fg"], theme["accent"]
+    return f"""<!doctype html>
+<html><head><meta charset="utf-8"><style>
+  @font-face {{ font-family: "Fraunces"; font-weight: 100 900;
+    src: url("{(FONTS / 'fraunces-wght-normal.woff2').as_uri()}") format("woff2"); }}
+  @font-face {{ font-family: "Inter"; font-weight: 100 900;
+    src: url("{(FONTS / 'inter-wght-normal.woff2').as_uri()}") format("woff2"); }}
+  html, body {{ margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: {bg}; }}
+  .art {{ position: absolute; left: 0; top: 0; width: 1080px; height: 1920px;
+    object-fit: cover; object-position: 72% 50%; }}
+  .scrim {{ position: absolute; inset: 0;
+    background: linear-gradient(180deg, {bg}f2 0%, {bg}e6 38%, {bg}66 58%, {bg}00 72%); }}
+  .badge {{ position: absolute; left: 80px; top: 280px; display: flex; align-items: center; gap: 20px; }}
+  .badge img {{ width: 96px; height: 96px; object-fit: contain;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,.35)); }}
+  .badge span {{ font: 800 28px/1 "Inter", sans-serif; letter-spacing: 4px;
+    text-transform: uppercase; color: {fg}; opacity: .92; }}
+  .copy {{ position: absolute; left: 80px; top: 420px; width: 920px; height: 560px;
+    display: flex; flex-direction: column; justify-content: flex-start; }}
+  h1 {{ margin: 0; font: 760 170px/1.0 "Fraunces", serif; letter-spacing: -2px; color: {fg};
+    text-shadow: 0 4px 22px rgba(0,0,0,.35); overflow-wrap: break-word; }}
+  .bar {{ margin-top: 34px; width: 150px; height: 14px; border-radius: 7px; background: {accent}; }}
+</style></head>
+<body>
+  <img class="art" src="{art.as_uri()}">
+  <div class="scrim"></div>
+  <div class="badge"><img src="{mark.as_uri()}"><span>{html.escape(show_name)}</span></div>
+  <div class="copy"><h1 id="h">{html.escape(text)}</h1><div class="bar"></div></div>
+  <script>
+    // Same fit rule as the 16:9 thumbnail: largest size that stays within 3 lines.
+    const h = document.getElementById('h');
+    const maxH = 560 - 48;
+    document.fonts.ready.then(() => {{
+      for (let s = 170; s >= 80; s -= 4) {{
+        h.style.fontSize = s + 'px';
+        const lines = Math.round(h.getBoundingClientRect().height / s);
+        if (h.scrollWidth <= 920 && h.scrollHeight <= maxH && lines <= 3) break;
+      }}
+      document.body.dataset.fitted = '1';
+    }});
+  </script>
+</body></html>"""
+
+
+def render(page, png, size=(1280, 720), scale=2):
+    """Screenshot the page (default 1280x720 at 2x = 2560x1440) once the headline has been
+    fitted. The vertical cover passes size=(1080, 1920), scale=1.
 
     Not html2png.render: that waits a fixed 250 ms, and the headline is sized by script
     after the webfont loads, so a screenshot taken on a timer can catch it mid-fit."""
     from playwright.sync_api import sync_playwright
     with sync_playwright() as p:
         browser = p.chromium.launch()
-        tab = browser.new_page(viewport={"width": 1280, "height": 720}, device_scale_factor=2)
+        tab = browser.new_page(viewport={"width": size[0], "height": size[1]},
+                               device_scale_factor=scale)
         tab.goto(page.as_uri())
         tab.wait_for_selector("body[data-fitted='1']", state="attached", timeout=15000)
         tab.screenshot(path=str(png))
@@ -158,6 +215,12 @@ def main():
     ap.add_argument("--text", help="headline override (else meta.json thumbnail_text)")
     ap.add_argument("--render", action="store_true",
                     help="also write thumb.png (opens a browser: run via explainer2 submit)")
+    ap.add_argument("--vertical", action="store_true",
+                    help="write the 1080x1920 Instagram Reel cover (cover_9x16.html/.png) "
+                         "instead of the 16:9 YouTube thumbnail")
+    ap.add_argument("--fallback-title", action="store_true",
+                    help="when meta.json has no thumbnail_text, use project.json's title "
+                         "(backfilling covers for episodes made before thumbnail_text existed)")
     args = ap.parse_args()
 
     proj = Path(args.project).resolve()
@@ -171,21 +234,32 @@ def main():
     mark = next(PUBLIC.glob(f"papercraft-{code}/mark_{code}.png"), None)
     if mark is None:
         raise SystemExit(f"missing show mark remotion/public/papercraft-{code}/mark_{code}.png")
-    text = headline(proj, args.text)
+    override = args.text
+    if not override and args.fallback_title:
+        try:
+            headline(proj, None)
+        except SystemExit:
+            override = load(proj / "project.json").get("title") or None
+    text = headline(proj, override)
     art, art_kind = art_for(proj, slides)
 
     out = proj / "package" / "thumbnails"
     out.mkdir(parents=True, exist_ok=True)
-    page = out / "thumb.html"
-    page.write_text(build_html(text, SHOWS[code], mark, art, THEMES[theme_key]), encoding="utf-8")
+    stem = "cover_9x16" if args.vertical else "thumb"
+    builder = build_vertical_html if args.vertical else build_html
+    page = out / f"{stem}.html"
+    page.write_text(builder(text, SHOWS[code], mark, art, THEMES[theme_key]), encoding="utf-8")
     record = {"show": code, "theme": theme_key, "text": text,
               "art": str(art), "art_kind": art_kind, "html": str(page)}
 
     if args.render:
-        png = out / "thumb.png"
-        render(page, png)
+        png = out / f"{stem}.png"
+        if args.vertical:
+            render(page, png, size=(1080, 1920), scale=1)
+        else:
+            render(page, png)
         record["png"] = str(png)
-        (out / "thumb.json").write_text(json.dumps(record, indent=2), encoding="utf-8")
+        (out / f"{stem}.json").write_text(json.dumps(record, indent=2), encoding="utf-8")
     if art_kind != "episode":
         print("WARNING: no package/thumbnails/thumb_art.png; used the library set "
               f"{art.name}, which is generic. Generate episode art for a better thumbnail.")

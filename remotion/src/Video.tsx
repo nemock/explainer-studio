@@ -1,5 +1,5 @@
 import React from 'react';
-import {AbsoluteFill, Audio, interpolate, Sequence, staticFile, useCurrentFrame} from 'remotion';
+import {AbsoluteFill, Audio, Freeze, interpolate, Sequence, staticFile, useCurrentFrame} from 'remotion';
 import type {VideoProps} from './schema';
 import {Background} from './components/Background';
 import {PaperBackground} from './components/PaperBackground';
@@ -176,8 +176,31 @@ const BRG_CREAM_THEMES = ['brg-deep-dive', 'wte-guide', 'plg-guide', 'pmg-guide'
 // Circumvent's sheet is a warmer kraft cream than either neighbour (PALETTE.md).
 const CIRCUMVENT_CREAM = '#f2ede0';
 
+// POSTER FRAME (2026-11-14). Instagram, Threads and Facebook use a video's FIRST frame as
+// its cover unless told otherwise, and every scene here fades in from opacity 0 — so frame 0
+// was always bare paper and the Instagram grid filled with blank tan tiles (operator report,
+// make_money/routine_changes/2026-11-14-video-covers-and-blur-band.md). Frame 0 now shows the
+// first CONTENT scene frozen at its settled moment: the episode's hook card, fully drawn.
+// One frame (33 ms) is below what a viewer registers on playback; audio and every scene's
+// timing are untouched. Title panels and brand stings are skipped — a cover that reads
+// "Daily Founder Tip" every day gives nobody a reason to tap.
+// `posterFrame` in the props overrides the pick; -1 turns the poster off.
+const POSTER_FRAMES = 1;
+const NOT_A_POSTER = new Set(['CvgTitle', 'BrandSting', 'PaperSting', 'BRGPaperSting']);
+export const pickPosterFrame = (scenes: VideoProps['scenes'], fps: number): number | null => {
+  const s = scenes.find((sc) => !NOT_A_POSTER.has(sc.component));
+  if (!s) return null;
+  const settle = Math.round(fps * 1.5);
+  return s.from + Math.max(0, Math.min(settle, s.durationInFrames - 8));
+};
+
 export const Video: React.FC<VideoProps> = (props) => {
   const {audio, words, scenes, captionBottomPx, captionFontSize, audioFrom, width, height, theme, captionAccent, showCaptions, presenter, headingFont} = props;
+  const frame = useCurrentFrame();
+  const posterOverride = (props as any).posterFrame as number | undefined;
+  const posterAt = posterOverride === undefined ? pickPosterFrame(scenes, props.fps || 30)
+    : posterOverride < 0 ? null : posterOverride;
+  const onPoster = posterAt !== null && frame < POSTER_FRAMES;
   // Paper worlds: 'nemock-deep-dive' (Dave's deep dives) and 'cut-bond' (Cut & Bond).
   // Everything else ('midnight', the ISO 14971 series) keeps the navy brand.
   const paper = isPaperTheme(theme);
@@ -200,17 +223,8 @@ export const Video: React.FC<VideoProps> = (props) => {
   const charH = presenter?.charHeightFrac || 0.18;
   // Distance from the frame BOTTOM to the top of the caption block, allowing two lines.
   const captionTopPx = captionBottomPx + captionFontSize * 2.9;
-  return (
-    <InkProvider theme={theme}>
-    <WorldProvider theme={theme}>
-    <HeadingFontProvider font={headingFont}>
-    {/* base page: BRG's cream is a shade cooler than the FWF sheet; every other theme
-        keeps its exact prior value so no existing render moves. */}
-    {/* papercraft-matrix (2026-10-23) has a dark page; PaperBackground paints it from the
-        world's `page` token, and this base matches it so no cream shows at the edges. */}
-    <AbsoluteFill style={{backgroundColor: paper ? (theme === 'circumvent' ? CIRCUMVENT_CREAM : theme === 'papercraft-matrix' ? '#06120c' : BRG_CREAM_THEMES.includes(theme || '') ? '#f5f0eb' : '#f4ecd6') : '#090d1c'}}>
-      {paper ? <PaperBackground /> : <Background />}
-      {scenes.map((scene, i) => {
+  // The scene stack, as a function so the poster frame can render it inside <Freeze>.
+  const scenesLayer = () => scenes.map((scene, i) => {
         const Comp = REGISTRY[scene.component] || TalkingScene;
         const inset = FULL_BLEED.has(scene.component) ? 0 : contentBottom;
         return (
@@ -237,9 +251,21 @@ export const Video: React.FC<VideoProps> = (props) => {
             </SceneWrap>
           </Sequence>
         );
-      })}
+      });
+  return (
+    <InkProvider theme={theme}>
+    <WorldProvider theme={theme}>
+    <HeadingFontProvider font={headingFont}>
+    {/* base page: BRG's cream is a shade cooler than the FWF sheet; every other theme
+        keeps its exact prior value so no existing render moves. */}
+    {/* papercraft-matrix (2026-10-23) has a dark page; PaperBackground paints it from the
+        world's `page` token, and this base matches it so no cream shows at the edges. */}
+    <AbsoluteFill style={{backgroundColor: paper ? (theme === 'circumvent' ? CIRCUMVENT_CREAM : theme === 'papercraft-matrix' ? '#06120c' : BRG_CREAM_THEMES.includes(theme || '') ? '#f5f0eb' : '#f4ecd6') : '#090d1c'}}>
+      {paper ? <PaperBackground /> : <Background />}
+      {onPoster ? <Freeze frame={posterAt as number}>{scenesLayer()}</Freeze> : scenesLayer()}
       {audio && !paper ? <ReactiveStrip audio={audio} audioFrom={audioFrom || 0} /> : null}
-      {showCaptions !== false ? <Captions words={words} bottomPx={captionBottomPx} fontSize={captionFontSize} theme={theme} accentColor={captionAccent} /> : null}
+      {/* No captions on the poster frame: mid-sentence words make a poor cover. */}
+      {showCaptions !== false && !onPoster ? <Captions words={words} bottomPx={captionBottomPx} fontSize={captionFontSize} theme={theme} accentColor={captionAccent} /> : null}
       {/* On-screen source citations (operator 2026-08-12). Mounted here, NOT per
           component, so every slide type is covered and the caption clearance is
           reasoned about in one place. See components/SourceLine.tsx. */}

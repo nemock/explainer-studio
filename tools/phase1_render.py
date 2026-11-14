@@ -501,6 +501,18 @@ def run_studio(proj, exp, t0):
     return 0
 
 
+VERTICAL_FEED_SHOWS = {"fwf"}     # shows whose queue spec includes Instagram/TikTok/Threads
+
+
+def _show_code(proj):
+    """Show code from the CTA slide's mark in deck.json (mark_fwf.png -> fwf), or None."""
+    try:
+        m = re.search(r"mark_([a-z]+)\.png", (Path(proj) / "deck.json").read_text())
+        return m.group(1) if m else None
+    except OSError:
+        return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("project_dir")
@@ -597,6 +609,24 @@ def main():
         if rc != 0:
             print(f"[phase1] thumbnail: not rendered (exit {rc}) — the upload will use "
                   "YouTube's own frame; see the line above for why", flush=True)
+        # Instagram Reel cover (2026-11-14): the same art and headline at 1080x1920. Best
+        # effort like the thumbnail; without it the Reel falls back to the video's poster
+        # frame, which the dispatcher's blank-cover guard still checks.
+        rc = run_verb([sys.executable, str(thumb_tool), proj, "--render", "--vertical"])
+        if rc != 0:
+            print(f"[phase1] reel cover: not rendered (exit {rc}) — Instagram will use "
+                  "the poster frame", flush=True)
+
+    # Blur-band 9:16 cut for the portrait-first feeds (2026-11-14). Only for shows that
+    # post to Instagram/TikTok/Threads (today: the daily founder tip) and only when the
+    # project renders no native 9:16. Best effort: without it build_publish_payloads.py
+    # ships the 16:9 master to those feeds, exactly as before.
+    band_tool = Path(__file__).resolve().parent / "vertical_band.py"
+    if band_tool.is_file() and "9:16" not in rendered and _show_code(proj) in VERTICAL_FEED_SHOWS:
+        rc = run_verb([sys.executable, str(band_tool), proj])
+        if rc != 0:
+            print(f"[phase1] blur-band cut: not rendered (exit {rc}) — vertical feeds get "
+                  "the 16:9 master", flush=True)
 
     clear_failure(proj)          # got all the way through; any prior streak is stale
     sentinel = Path(proj) / "work" / "render_complete.json"

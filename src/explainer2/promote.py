@@ -480,6 +480,14 @@ def enqueue_plan(projects_dir, plan, dry_run=True):
                 # The Shorts slot itself: after the upload the dispatcher queues this for
                 # post_queue/shorts_card.py, which sets it in Studio (2026-10-28).
                 extra["shorts_card_local"] = thumb
+        if platform == "instagram" and not link_only:
+            # The Reel cover (2026-11-14): the same vertical card YouTube gets. The
+            # dispatcher uploads it and passes it as coverImageUrl; without it Instagram
+            # takes frame 0, which on every Short cut before that date is bare paper.
+            # make_money/routine_changes/2026-11-14-video-covers-and-blur-band.md
+            card = shorts_thumbnail(plan["short_mp4"])
+            if card:
+                extra["cover_local"] = card
         if extra:
             post["target"] = extra
         # YouTube needs no route override: the queue's default for this account is

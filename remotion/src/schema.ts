@@ -47,6 +47,10 @@ export const videoSchema = z.object({
   captionAccent: z.string().default(''),
   // Burned-in captions on/off (project.json `captions: false`; longform sleep videos).
   showCaptions: z.boolean().default(true),
+  // Poster frame (2026-11-14, Video.tsx): the timeline frame shown frozen on frame 0 so
+  // platforms that take the first frame as the cover get the hook card, not bare paper.
+  // Absent = the engine picks the first content scene's settled frame; -1 = off.
+  posterFrame: z.number().optional(),
   // Chibi presenter layer (operator directive 2026-08-07). charHeightFrac is the
   // CHARACTER's height as a fraction of frame height (brand spec: 0.18-0.22), not the
   // pose canvas — the canvas carries transparent padding and a common foot baseline.
