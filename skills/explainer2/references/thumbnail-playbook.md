@@ -183,6 +183,17 @@ goes on:** `/Users/davesaunders/myenv/bin/python3.12 tools/face_light.py <base.p
 mean luma 100 of 255; well-lit bases measure 110-140). Regenerate a base that fails rather than brightening it in
 CSS. Calibration, 2026-11-13: #82 thumb A 83, #63 86, #75 88, #40 93, #41 96, #80 97; #81 123, #83 138.
 
+**Which face is his (2026-11-13).** `face_light.py` and `shorts_thumbnail.py` share one picker,
+`face_light.dave_face`, which RECOGNIZES Dave: OpenCV's YuNet finds faces, SFace compares each to his
+real photos (`dave_selfies/dave_*_clean.png` and the casual headshots), and the best match above 0.363
+is him. Before this, "most confident" picked a shopper behind him on #84's crowd scene (reported him
+too dark at 128), and "largest" tied him with a false hit, so the Shorts text check guarded the wrong
+box; a size rule can't fix both, because a foil is sometimes bigger than he is (#45, #47, #81). The two
+models are in `library/models/face/` (gitignored), from github.com/opencv/opencv_zoo:
+`face_detection_yunet_2023mar.onnx` and `face_recognition_sface_2021dec.onnx`. If they're missing, or
+nobody in a base matches, each tool falls back to its old rule. Verified across all 161 bases on disk:
+12 picks changed, every one onto Dave; the rest unchanged.
+
 **Why, and how far it goes (operator, same day):** moody is fine; a poorly lit Dave is not. "Stylistically, I think
 it's interesting, but just from a click-through percentage standpoint... YouTube users are less likely to click on a
 dark and brooding thumbnail unless they're specifically looking for that kind of genre (which I don't really

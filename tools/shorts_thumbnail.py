@@ -78,8 +78,13 @@ STYLES = {
 
 
 def face_box(base):
-    """Largest frontal face in the base, in page px (the base is laid out object-fit: cover)."""
+    """Dave's face in the base, in page px (the base is laid out object-fit: cover).
+
+    Recognized against his photos by face_light.dave_face (2026-11-13); when recognition is
+    unavailable or finds no match, the largest frontal face, as before. Plain "largest" guarded a
+    false hit instead of Dave on #84's crowd scene, and two sub-lines landed on his hair."""
     import cv2
+    import face_light
     img = cv2.imread(str(base))
     if img is None:
         raise SystemExit(f"cannot read {base}")
@@ -87,12 +92,10 @@ def face_box(base):
     scale = max(W / iw, H / ih)
     ox, oy = (iw * scale - W) / 2, (ih * scale - H) / 2
     small = cv2.resize(img, (int(iw * scale), int(ih * scale)))
-    gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
-    cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
-    faces = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=6, minSize=(120, 120))
-    if len(faces) == 0:
+    box = face_light.dave_face(small, 120, fallback="largest")
+    if box is None:
         raise SystemExit("no face found in the base: the face check cannot run, so nothing renders")
-    x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
+    x, y, w, h = box
     # the detector's box stops at the brows; extend up to cover the hair
     return {"left": int(x - ox), "top": int(y - oy - 0.35 * h),
             "right": int(x - ox + w), "bottom": int(y - oy + h)}
