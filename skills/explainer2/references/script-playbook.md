@@ -500,7 +500,11 @@ to date missed length on the first draft; the rule exists because it bites).
       own pronunciation where you can find it. **End the SAY line with a newline before any other
       note text** (`"SAY: Kross = KRAWSS\nSource: …"`): `recorder._split_say` reads everything up
       to the first line break as pronunciations, so a note written on one line gets its source
-      and delivery notes drawn inline in amber after the last name (#77 card 6, 2026-10-21). The booth draws each phonetic INLINE, in amber,
+      and delivery notes drawn inline in amber after the last name (#77 card 6, 2026-10-21).
+      **The only separator is ` · `** (space, middle dot, space): a `;` between names makes one
+      entry, and the booth draws every phonetic after the first name (FWF daily 2026-11-14
+      card 2, and four earlier episodes). Spell each name exactly as the card's `text` does,
+      or its phonetic is drawn nowhere. `explainer2 deckcheck` fails on both (2026-11-14). The booth draws each phonetic INLINE, in amber,
       right after its name in the card text (`recorder._split_say` + `sayHtml`, 2026-10-05: a
       pronunciation in the note under the card made Dave look away mid-line and the read
       stuttered). Never put phonetics in `text` itself, which becomes the captions. Because the scriptguard hashes only

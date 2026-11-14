@@ -19,6 +19,7 @@ work/deckcheck.json. It takes about a second.
 What it reports:
   PROBLEMS (exit 1; do not open the booth)
     - a script segment that names a slide the deck does not have
+    - a card's SAY line with two `=` in one entry, or a SAY name its text does not contain
     - a slide that would render with nothing on it          (slidecheck.check_spec)
     - a malformed figure mark or annotation                 (the render's mark contract)
     - an authored field a paper component never receives    (the render's field contract)
@@ -144,6 +145,35 @@ def pace(proj):
     return (FALLBACK_WPS_WALL if proj.max_length else FALLBACK_WPS), over, 0
 
 
+SAY_FORMAT = "SAY: Name = pho-NET-ic · Name2 = pho-NET-ic, then a newline before any other note"
+
+
+def say_problems(script):
+    """A card's SAY line, read exactly as the booth reads it (recorder._split_say), must give
+    one name per phonetic, and every name must be in the card's text.
+
+    FWF daily 2026-11-14, card 2: `SAY: Umesh Padval = oo-MAYSH PAD-vahl; Seligman = SEL-ig-mun`.
+    The booth splits only on " · ", so this was one entry and both phonetics were drawn after
+    "Padval". Not the first time (see script-playbook §6, SAY item). A name the text does not
+    contain is drawn nowhere: the booth matches it whole-word and case-sensitively."""
+    from .recorder import _split_say
+    out = []
+    for seg in script:
+        pairs, _ = _split_say(seg.get("note"))
+        where = f"segment {seg.get('id')} (booth card {int(seg.get('id', 0)) + 1})"
+        text = seg.get("text", "")
+        for name, ph in pairs:
+            if "=" in ph:
+                out.append(f"{where}: SAY entry `{name} = {ph}` holds more than one `=`, so the "
+                           f"booth would draw every phonetic after `{name}`. Separate entries "
+                           f"with ` · ` (space, middle dot, space). Expected: {SAY_FORMAT}")
+            elif not re.search(rf"(?<![A-Za-z]){re.escape(name)}(?![A-Za-z])", text):
+                out.append(f"{where}: SAY name `{name}` does not appear in this card's text, so "
+                           f"its phonetic is drawn nowhere. Use the exact spelling and case the "
+                           f"text uses. Expected: {SAY_FORMAT}")
+    return out
+
+
 def run(proj):
     problems, warnings = [], []
     try:
@@ -163,6 +193,7 @@ def run(proj):
             problems.append(f"segment {seg.get('id')} (booth card {int(seg.get('id', 0)) + 1}) "
                             f"names slide `{sid}`, which deck.json does not have: it would "
                             f"render as an empty card")
+    problems += say_problems(script)
     for s in deck:
         # A closing card is appended to the narration by the brand's CTA, not by a
         # script segment, so it is expected to be unused here.

@@ -135,6 +135,31 @@ def main():
         assert pr["render_adds_s"] == 8.4 and abs(pr["projected_s"] - 178.4) < 0.2, pr
         assert not out["ok"], "178 s against a 180 s wall has no clearance"
 
+        # 9. SAY lines (FWF daily 2026-11-14, card 2): a `;` between names left both
+        #    phonetics in one entry, drawn after "Padval". Two `=` in one entry fails; so
+        #    does a SAY name the card's text does not contain (drawn nowhere). The correct
+        #    ` · ` form, with a caveat and a note on the next line, passes.
+        said = "Umesh Padval asked first, and Seligman said yes."
+        sp = make(root, "say", [{"id": "s1", "type": "hook", "headline": "H"}],
+                  [("s1", said), ("s1", said), ("s1", said)])
+        sj = json.loads(sp.script_json.read_text())
+        sj["segments"][0]["note"] = "SAY: Umesh Padval = oo-MAYSH PAD-vahl; Seligman = SEL-ig-mun"
+        sj["segments"][1]["note"] = "SAY: Padvall = PAD-vahl · Seligman = SEL-ig-mun"
+        sj["segments"][2]["note"] = ("SAY: Umesh Padval = oo-MAYSH PAD-vahl (best rendering)"
+                                     " · Seligman = SEL-ig-mun\nSource: the interview")
+        sp.script_json.write_text(json.dumps(sj))
+        out = deckcheck.run(sp)
+        say = [x for x in out["problems"] if "SAY" in x]
+        assert len(say) == 2, say
+        assert "segment 0 (booth card 1)" in say[0] and "more than one `=`" in say[0], say
+        assert "` · `" in say[0] and "Expected: SAY:" in say[0], say
+        assert "segment 1 (booth card 2)" in say[1] and "`Padvall`" in say[1], say
+        assert not any("segment 2" in x for x in say), say
+        # The booth's own parser is unchanged: `;` is still not a separator.
+        from explainer2.recorder import _split_say
+        assert _split_say(sj["segments"][0]["note"])[0] == [
+            ["Umesh Padval", "oo-MAYSH PAD-vahl; Seligman = SEL-ig-mun"]]
+
     print("OK — test_deckcheck")
 
 
