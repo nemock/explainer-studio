@@ -91,7 +91,7 @@ export const Pictograph: React.FC<{fields: any; durationInFrames: number}> = ({f
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
   const total = fields.total || 100, filled = fields.filled || 0;
-  const shown = Math.round(interpolate(frame, [0, durationInFrames * 0.7], [0, filled], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}));
+  const shown = Math.round(interpolate(frame, [0, durationInFrames * 0.7], [0, filled] as number[], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'}));
   const cols = Math.ceil(Math.sqrt(total * 1.6));
   const ink = useInk();
   const {on, ts} = useTypeScale();
@@ -118,7 +118,7 @@ export const Ring: React.FC<{fields: any; durationInFrames: number}> = ({fields,
   const frame = useCurrentFrame();
   const {fps, height} = useVideoConfig();
   const target = fields.value || 0;
-  const v = interpolate(frame, [0, durationInFrames * 0.7], [0, target], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+  const v = interpolate(frame, [0, durationInFrames * 0.7], [0, target] as number[], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const R = height * 0.16, C = 2 * Math.PI * R;
   const ink = useInk();
   const {on, ts} = useTypeScale();

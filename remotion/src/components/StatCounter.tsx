@@ -36,7 +36,9 @@ export const StatCounter: React.FC<{fields: any; durationInFrames: number}> = ({
   const window: [number, number] = land != null
     ? [Math.max(0, land - Math.round(1.1 * fps)), Math.max(1, land)]
     : [cue[0] * durationInFrames, cue[1] * durationInFrames];
-  const value = interpolate(frame, window, [from, to], {
+  // `from`/`to` come from JSON (any), which steers TypeScript to interpolate's array overload;
+  // the cast picks the number one. Type-only: the runtime call is unchanged.
+  const value = interpolate(frame, window, [from, to] as number[], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });

@@ -312,7 +312,7 @@ export const PaperReframe: React.FC<{fields: any; durationInFrames?: number}> = 
         <div style={{position: 'relative'}}>
         <div style={{position: 'absolute', left: '50%', bottom: -height * 0.014, width: '90%',
                      height: height * 0.032, transform: 'translateX(-50%)', background: W.shadow,
-                     borderRadius: '50%', filter: 'blur(12px)', opacity: lit ? 0 : after.shadowOpacity ?? 0.55}} />
+                     borderRadius: '50%', filter: 'blur(12px)', opacity: lit ? 0 : 0.55}} />  {/* usePopup has no shadowOpacity: this was always 0.55 */}
         <PaperCard id={`rf-after:${fields.after ?? ''}`}
                    style={{...after.object, padding: `${height * 0.028}px ${width * 0.034}px`}}>
           <div style={{fontFamily: headFamily, fontWeight: 900,
