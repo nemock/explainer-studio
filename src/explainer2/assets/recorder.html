@@ -33,6 +33,10 @@
   .card.recorded { border-color:var(--good); }
   .card.active { border-color:var(--bad); box-shadow:0 0 0 2px var(--bad); }
   .card.sel { box-shadow:-5px 0 0 0 var(--accent); }   /* the card Tab will focus */
+  .card.needs { border-color:var(--red); border-width:2px; }   /* needs re-record (2026-11-25) */
+  .approve { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700;
+    color:#c9d1f0; cursor:pointer; margin-left:6px; }
+  .approve input { width:16px; height:16px; cursor:pointer; }
   .meta { font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent);
     font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:8px;
     flex-wrap:wrap; }
@@ -372,6 +376,25 @@ function driftChip(s) {
   return `<span class="chip bad click" data-diff="${s.id}">! drift ${pct}% · diff</span>`;
 }
 
+/* Re-record marker + operator approval (2026-11-25). The server lists why a card needs
+   the mic again (s.needs); "Approve take" is the operator's ruling that this exact take
+   says the card, which outranks any transcript. A new take starts unapproved. */
+function needChip(s) {
+  if (!s.recorded) return '';
+  if (s.approved) return `<span class="chip good" title="You approved this take; transcripts no longer flag it">✓ approved by you</span>`;
+  const n = s.needs || [];
+  if (!n.length) return '';
+  return `<span class="chip bad" title="${escHtml(n.join(' · '))}">↻ needs re-record: ${escHtml(n[0])}</span>`;
+}
+function approveBox(s) {
+  if (!s.recorded) return '';
+  const flagged = (s.needs || []).length || s.approved ||
+    (s.drift && s.drift.status === 'done' && (s.drift.drift || 0) >= 0.02);
+  if (!flagged) return '';
+  return `<label class="approve" title="Tick after listening if this take says the card correctly"><input type="checkbox" data-approve="${s.id}" ${s.approved ? 'checked' : ''}> Approve take</label>`;
+}
+const needsMic = s => s.recorded && !s.approved && (s.needs || []).length > 0;
+
 /* Card text with each SAY pronunciation drawn inline right after its name (display only:
    the script text, the captions and the take guard never see it). Operator, 2026-10-05:
    a pronunciation in the note under the card made him look away mid-line. */
@@ -395,7 +418,8 @@ function render() {
   list.innerHTML = '';
   segs.forEach((s, i) => {
     const card = document.createElement('div');
-    card.className = 'card' + (s.recorded ? ' recorded' : '') + (activeId === s.id ? ' active' : '')
+    card.className = 'card' + (s.recorded ? ' recorded' : '') + (needsMic(s) ? ' needs' : '')
+      + (activeId === s.id ? ' active' : '')
       + (focusEntered && i === fIdx ? ' sel' : '');
     card.id = 'seg' + s.id;
     const beat = s.beat ? ` · ${s.beat}` : '';
@@ -406,7 +430,7 @@ function render() {
     card.innerHTML =
       `<div class="meta"><span>Card ${s.id + 1} · ${s.slide}${beat}</span>
         ${s.edited ? '<span class="chip">edited</span>' : ''}
-        ${qcChip(s)} ${driftChip(s)}
+        ${qcChip(s)} ${driftChip(s)} ${needChip(s)} ${approveBox(s)}
         <span class="right"><span class="status ${s.recorded ? 'ok' : 'none'}">${s.recorded ? '✓ recorded' + takes : '~' + readTime(s.text) + 's'}</span></span></div>
        ${s.device ? `<div class="device">⚡ ${s.device}</div>` : ''}
        <div class="script">${sayHtml(s)}</div>
@@ -419,7 +443,7 @@ function render() {
        </div>`;
     // click the card body (not its buttons/player) to make it the Focus Mode target
     card.addEventListener('click', e => {
-      if (e.target.closest('button, audio, a, textarea')) return;
+      if (e.target.closest('button, audio, a, textarea, label, input')) return;
       fIdx = i; focusEntered = true;
       render();
     });
@@ -438,6 +462,13 @@ function wireCommon(root) {
     b.addEventListener('click', () => openTakes(parseInt(b.dataset.takes))));
   root.querySelectorAll('[data-diff]').forEach(b =>
     b.addEventListener('click', () => openDiff(parseInt(b.dataset.diff))));
+  root.querySelectorAll('[data-approve]').forEach(b =>
+    b.addEventListener('change', async () => {
+      const r = await fetch('/approve', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seg: parseInt(b.dataset.approve), on: b.checked }) }).catch(() => null);
+      if (!r || !r.ok) flashStatus('Could not save the approval');
+      await loadSegs();
+    }));
 }
 
 function progress() {
@@ -456,7 +487,9 @@ function setView(v) {
   $('viewBtn').textContent = v === 'focus' ? '☰ List' : '⛶ Focus';
   if (v === 'focus') {
     if (!focusEntered) {
-      const firstOpen = segs.findIndex(s => !s.recorded);
+      // a re-record session opens on the first card that needs the mic (2026-11-25)
+      let firstOpen = segs.findIndex(s => !s.recorded);
+      if (firstOpen < 0) firstOpen = segs.findIndex(needsMic);
       fIdx = firstOpen >= 0 ? firstOpen : 0;
       focusEntered = true;
     }
@@ -473,7 +506,7 @@ function focusRender() {
   $('fSlide').textContent = s.slide + (s.beat ? ` · ${s.beat}` : '');
   $('fEdited').style.display = s.edited ? '' : 'none';
   $('fQc').innerHTML = qcChip(s);
-  $('fDrift').innerHTML = driftChip(s);
+  $('fDrift').innerHTML = `${driftChip(s)} ${needChip(s)} ${approveBox(s)}`;
   wireCommon($('fTop'));
   const st = $('fStatus');
   if (savingId === s.id) { st.textContent = 'Saving…'; st.className = ''; }
@@ -785,7 +818,7 @@ function audioPlaying() {
 let driftDirty = false;   // fetched fresh state during playback; render when it ends
 const segsKey = list => JSON.stringify(list.map(s =>
   [s.id, s.recorded, s.takes, s.edited, s.text, s.qc && s.qc.warn,
-   s.drift && s.drift.status, s.drift && s.drift.drift]));
+   s.drift && s.drift.status, s.drift && s.drift.drift, s.approved, (s.needs || []).join('|')]));
 setInterval(async () => {
   if (document.hidden || activeId !== null || savingId !== null) return;
   if (driftDirty && !audioPlaying()) {

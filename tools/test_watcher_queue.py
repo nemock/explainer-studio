@@ -181,7 +181,15 @@ def main():
         assert calls.count("/usr/bin/osascript") == 3, "a failed text falls back to the desktop"
 
         # 8. Only a recording-stage block texts the operator; so does a stale script and
-        #    a publish block that says it needs him.
+        #    a publish block that says it needs him. Each of those also opens the booth
+        #    (operator directive 2026-11-25), except on a studio show.
+        booth_calls = []
+        real_booth = rw.booth
+
+        def fake_booth(cfg_, verb, p):
+            booth_calls.append((tuple(verb), Path(p).name))
+            return "booth", "booth READY (detached, caffeinated) pid=1 -> http://127.0.0.1:8790/"
+        rw.booth = fake_booth
         (work / "render_failure.json").write_text(json.dumps(
             {"fp": "a", "verb": "media", "rc": 1, "stage": "align", "detail": "CTC",
              "streak": 2, "ts": time.time()}))
@@ -203,6 +211,26 @@ def main():
         rw.alert_if_publish_needs_operator(acfg, show, proj, "p1")
         lines = sent.read_text().splitlines()
         assert len(lines) == 5 and "cut and re-record card 6" in lines[4], lines
+        # align fault, stale script, needs_operator publish block: three launches, and
+        # each of those texts says where the booth is. The render-stage block and the
+        # publish block that does not name him opened nothing.
+        assert booth_calls == [((), proj.name)] * 3, booth_calls
+        # ...and the booth is told which card: booth card 6 is segment 5.
+        req = json.loads((work / "rerecord_request.json").read_text())
+        assert req["cards"] == {"5": "over 180 s"}, req
+        assert all("booth is open on your Mac (http://127.0.0.1:8790/)" in l
+                   for l in lines[2:5]), lines
+        # The same fingerprint again neither texts nor relaunches.
+        rw.alert_if_publish_needs_operator(acfg, show, proj, "p1")
+        assert len(booth_calls) == 3 and len(sent.read_text().splitlines()) == 5
+        # A studio show's session owns its booth: text only.
+        rw.alert_stale_script(acfg, studio, proj, "segment 9 text changed")
+        assert len(booth_calls) == 3 and len(sent.read_text().splitlines()) == 6
+        # A booth that does not come up is said in the text, not hidden.
+        rw.booth = lambda cfg_, verb, p: ("booth", "booth exited early (code 1); see log")
+        rw.alert_if_publish_needs_operator(acfg, show, proj, "p2")
+        assert "did not open by itself" in sent.read_text().splitlines()[-1]
+        rw.booth = real_booth
 
         # 9. A publish run that has outlived its budget is killed; a render job, a fresh
         #    publish run, and a lock with no phase are all left alone.

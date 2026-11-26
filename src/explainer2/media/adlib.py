@@ -9,6 +9,9 @@ against the script text:
   rerecord     only when the transcript shows the script's words are not in the take
                (rerecord_confirmed). Drift alone never asks the operator to go back to
                the mic: "rerecord" holds the render and texts his phone.
+  approved     the operator ticked "Approve take" in the booth for this exact take
+               (work/take_approvals.json): his ear outranks the transcript, so it is
+               never a re-record and never --apply'd (2026-11-25).
 
 Report → work/adlib_report.json. --apply backs up script.json to
 script.orig.json before touching it. Forced alignment downstream works with
@@ -25,6 +28,7 @@ import difflib
 import json
 import os
 import re
+import time
 from pathlib import Path
 
 MODEL = "mlx-community/whisper-medium.en-mlx"
@@ -140,6 +144,48 @@ def take_sig(wav):
     return [st.st_mtime_ns, st.st_size]
 
 
+APPROVALS = "take_approvals.json"
+
+
+def load_approvals(work):
+    """{stem: {"sig": [...], "at": ts}} — takes the operator approved in the booth.
+
+    Operator, 2026-11-25: "There have been a couple times where the voice dictation didn't
+    quite understand me, but it turned out I did record it correctly." An approval is his
+    ruling that THIS take says the card, whatever a transcript heard. It is keyed to the
+    take's identity, so a new take (or a promoted older one) is unapproved until he says
+    otherwise."""
+    try:
+        data = json.loads((Path(work) / APPROVALS).read_text())
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def is_approved(work, wav, approvals=None):
+    entry = (load_approvals(work) if approvals is None else approvals).get(Path(wav).stem)
+    sig = take_sig(wav)
+    return bool(isinstance(entry, dict) and sig and entry.get("sig") == sig)
+
+
+def set_approval(work, wav, on):
+    """Approve (on=True) or withdraw approval of the take on disk now. False if no take."""
+    sig = take_sig(wav)
+    if on and not sig:
+        return False
+    path = Path(work) / APPROVALS
+    data = load_approvals(work)
+    if on:
+        data[Path(wav).stem] = {"sig": sig, "at": time.time()}
+    else:
+        data.pop(Path(wav).stem, None)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(data, indent=2))
+    os.replace(tmp, path)
+    return True
+
+
 def load_transcripts(work):
     try:
         data = json.loads((Path(work) / TRANSCRIPTS).read_text())
@@ -197,8 +243,8 @@ def run_unchecked(proj, model=MODEL):
 
     def row_for(seg, wav, asr):
         d = _drift(seg["text"], asr)
-        row = {"id": seg["id"], "status": classify(d, seg["text"], asr), "drift": d,
-               "asr_text": asr}
+        status = "approved" if is_approved(proj.work, wav) else classify(d, seg["text"], asr)
+        row = {"id": seg["id"], "status": status, "drift": d, "asr_text": asr}
         # scriptguard reads a row's script_text as what the take was recorded against, for
         # takes with no text stamp. This runs after Finish and would only be repeating the
         # script back to it, so an unstamped take does not get to vouch for itself here.
@@ -272,7 +318,8 @@ def run(proj, apply=False, model=MODEL):
             save_transcript(proj.work, wav, sig, asr)
             d = _drift(seg["text"], asr)
             worst = max(worst, d)
-            status = classify(d, seg["text"], asr)
+            status = ("approved" if is_approved(proj.work, wav)
+                      else classify(d, seg["text"], asr))
             rows.append({"id": seg["id"], "status": status, "drift": d,
                          "script_text": seg["text"], "asr_text": asr})
             if apply and status == "adlib" and seg["id"] in by_id:

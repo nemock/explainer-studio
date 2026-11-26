@@ -378,8 +378,61 @@ def failure_stage(proj):
     return str(d.get("stage") or ""), str(d.get("detail") or "")
 
 
-def alert_operator(cfg, proj, marker, fp, text):
+def publish_block_cards(d):
+    """{seg_id: why} for the booth cards a publish block names. `rerecord_cards` (1-based
+    booth card numbers) is the contract since 2026-11-25; older blocks only named them in
+    operator_action prose ("re-record booth card 1", "cards 3 and 7")."""
+    nums = d.get("rerecord_cards")
+    if not isinstance(nums, list):
+        nums = []
+        for m in re.finditer(r"\bcards?\s+((?:\d+(?:\s*(?:,|and|&)\s*)?)+)",
+                             str(d.get("operator_action") or "")):
+            nums += re.findall(r"\d+", m.group(1))
+    why = str(d.get("reason") or "the publish check flagged this take")[:160]
+    out = {}
+    for n in nums:
+        try:
+            if int(n) >= 1:
+                out[int(n) - 1] = why
+        except (TypeError, ValueError):
+            pass
+    return out
+
+
+def open_booth_for_operator(cfg, proj, cards=None):
+    """Open the booth on this project so the text he gets is the last step, not the first.
+
+    Operator directive 2026-11-25: a text saying "re-record card 1" sent him hunting
+    for a chat session to ask for the booth. Every alert that asks him to re-record a
+    booth-show card now opens it first. Relaunching a finished project is safe:
+    launch_booth clears work/record_done.json, so --status reads PENDING and the
+    watcher waits; Finish writes a newer record_done.json, render_done() then says the
+    old render is stale, phase 1 re-renders, and the new render_complete.json lifts a
+    publish block. Returns the booth URL, or None if it did not come up.
+
+    `cards` ({seg_id: why}) is written to work/rerecord_request.json first, so the booth
+    marks each of those cards "needs re-record" until a newer take replaces it."""
+    if cards:
+        try:
+            (Path(proj) / "work" / "rerecord_request.json").write_text(json.dumps(
+                {"at": time.time(), "cards": {str(k): v for k, v in cards.items()}}, indent=2))
+        except OSError:
+            pass
+    state, out = booth(cfg, [], proj)
+    m = re.search(r"http://127\.0\.0\.1:\d+/", out or "")
+    if state == "booth" and m:
+        log(cfg, f"OPERATOR-BOOTH opened for {Path(proj).name} -> {m.group(0)}")
+        return m.group(0)
+    log(cfg, f"OPERATOR-BOOTH FAILED for {Path(proj).name}: {(out or state)[:200]}")
+    return None
+
+
+def alert_operator(cfg, proj, marker, fp, text, open_booth=False, cards=None):
     """Tell the OPERATOR, by text message, about something only he can fix.
+
+    open_booth=True opens the booth on the project once per fingerprint, on the first
+    try, and says so in the text. Callers pass it for booth shows only: a studio
+    session owns its own booth (run_studio), so studio alerts stay text-only.
 
     For one situation only (operator, 2026-10-01): the pipeline is held up because he
     has to act in person, which in practice means re-recording a card. A desktop
@@ -410,6 +463,11 @@ def alert_operator(cfg, proj, marker, fp, text):
                                      "at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}))
         except OSError:
             pass
+
+    if open_booth and tries == 0:            # a retry of an unsent text does not relaunch
+        url = open_booth_for_operator(cfg, proj, cards)
+        text = (f"{text} The booth is open on your Mac ({url})." if url else
+                f"{text} The booth did not open by itself; ask a session to open it.")
 
     if not cmd:
         log(cfg, f"OPERATOR-ALERT (no operator_alert_cmd configured): {text}")
@@ -444,8 +502,9 @@ def alert_if_recording_fault(cfg, show, proj, fp):
     alert_operator(cfg, proj, "operator_alert_render.json", fp,
                    f"{show['id']} {Path(proj).name}: the render keeps failing at {stage}"
                    f"{' (' + detail[:140] + ')' if detail else ''}. That stage reads your "
-                   f"recording, so a card most likely needs re-recording. Open the booth "
-                   f"for this episode and check the takes; nothing publishes until then.")
+                   f"recording, so a card most likely needs re-recording. Check the takes "
+                   f"for this episode in the booth; nothing publishes until then.",
+                   open_booth=show.get("mode") != "studio")
 
 
 def alert_stale_script(cfg, show, proj, why):
@@ -455,7 +514,7 @@ def alert_stale_script(cfg, show, proj, why):
     alert_operator(cfg, proj, "operator_alert_script.json", fp,
                    f"{show['id']} {Path(proj).name}: the script changed after you "
                    f"recorded it, so it will not render. Re-record the changed card(s) "
-                   f"in the booth. {(why or '')[:160]}")
+                   f"in the booth. {(why or '')[:160]}", open_booth=show.get("mode") != "studio")
 
 
 def alert_if_publish_needs_operator(cfg, show, proj, fp):
@@ -469,7 +528,8 @@ def alert_if_publish_needs_operator(cfg, show, proj, fp):
         return
     action = str(d.get("operator_action") or d.get("reason") or "see BLOCKED.md")[:260]
     alert_operator(cfg, proj, "operator_alert_publish.json", fp,
-                   f"{show['id']} {Path(proj).name}: publishing is held until you act. {action}")
+                   f"{show['id']} {Path(proj).name}: publishing is held until you act. {action}",
+                   open_booth=show.get("mode") != "studio", cards=publish_block_cards(d))
 
 
 def write_render_blocked_md(cfg, show, proj, fp, why):
@@ -876,9 +936,13 @@ def completion_prompt(show, proj):
         f"- ONLY DAVE, IN PERSON (a card must be re-recorded: a clipped, missing or "
         f"wrong take, or a script that runs over a hard length limit and needs a cut "
         f"he has to re-voice): also add "
-        f'"needs_operator": true and "operator_action": "<what he must do, with booth '
-        f'card numbers>" to publish_block.json. The watcher texts him. Use this for '
-        f"nothing else.\n"
+        f'"needs_operator": true, "operator_action": "<what he must do, with booth '
+        f'card numbers>" and "rerecord_cards": [<the 1-based booth card numbers>] to '
+        f"publish_block.json. The watcher texts him and opens the booth with those "
+        f"cards marked. Use this for nothing else. A take Dave approved in the booth "
+        f"(work/take_approvals.json, whose sig matches the take on disk) is his ruling "
+        f"that it says the card: never block it for what a transcript heard, and note "
+        f"the approval in the README.\n"
         f"- A DECK-ONLY DEFECT (a slide authored with the wrong field names, a slide "
         f"that would render empty, a layout slip) where script.json and the recording "
         f"are fine: fix deck.json, then run "

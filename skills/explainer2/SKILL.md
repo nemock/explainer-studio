@@ -580,6 +580,17 @@ a worker error). Transcripts persist per take in `work/drift_transcripts.json`
 unchanged take's verdict from its stored transcript, recomputed against the card's
 current text, and re-checks only a re-recorded card (2026-11-03).
 
+**Re-record markers and "Approve take" (2026-11-25).** A card that needs the mic again
+gets a red border and a `↻ needs re-record: <why>` chip. It is marked for one of three reasons:
+a watcher request (`work/rerecord_request.json`, written when the recording watcher reopens
+the booth for a publish block, cleared by any newer take), a take stamped against older
+card text, or a drift check that found the card's words missing. Focus Mode opens on the
+first marked card. Any flagged card offers an **Approve take** checkbox: the operator's
+ruling that this exact take says the card. It is stored in `work/take_approvals.json`
+(keyed to the take's mtime and size, so a new take starts unapproved), stamps the current
+text for the script guard, and makes the adlib check report the card `approved`, never
+`rerecord`. Tests: `tools/test_booth_rerecord_marks.py`.
+
 The studio render fills the gaps itself: phase 1 starts with `adlib --unchecked`
 inside its queue job, before anything renders. A card still `unchecked` after that
 means whisper could not read it, and `work/RESUME.md` names it. So before packaging:

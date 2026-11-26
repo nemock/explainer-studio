@@ -362,6 +362,52 @@ def run(proj, open_browser=True):
         qc_cache[st] = (mt, q)
         return q
 
+    # ---------------- re-record markers + operator approval (2026-11-25) ----------------
+    # Operator: when the booth is reopened for a re-record, mark each card that needs it,
+    # and let him approve a take a transcript misheard. Three sources mark a card, each
+    # only while the take on disk is the one it was about:
+    #   request  work/rerecord_request.json, written by the recording watcher when it
+    #            reopens the booth for a publish block; a take saved after it clears it
+    #   stale    the take's text stamp no longer matches the card (scriptguard)
+    #   missing  this booth's own drift check found the card's words missing (classify)
+    # An approved take (work/take_approvals.json) shows as approved instead of marked.
+    def _request():
+        try:
+            d = json.loads((work_dir / "rerecord_request.json").read_text())
+            return float(d.get("at", 0)), {int(k): str(v) for k, v in (d.get("cards") or {}).items()}
+        except (OSError, ValueError, TypeError, AttributeError):
+            return 0.0, {}
+
+    def needs(sid, req=None):
+        from .media.adlib import classify
+        if not recorded(sid):
+            return []
+        at, cards = req if req is not None else _request()
+        out = []
+        if sid in cards and wav(sid).stat().st_mtime <= at:
+            out.append(cards[sid] or "flagged after the last render")
+        c = card(sid) or {}
+        meta = scriptguard.read_meta(vdir, cur["stem"][sid])
+        if meta and meta.get("text_sha256") and meta["text_sha256"] != scriptguard.text_hash(c.get("text", "")):
+            out.append("recorded against older card text")
+        dr = drift_state.get(cur["stem"][sid]) or {}
+        if (dr.get("status") == "done"
+                and classify(dr.get("drift", 0.0), c.get("text", ""), dr.get("asr_text", "")) == "rerecord"):
+            out.append("words from the card are missing from the take")
+        return out
+
+    def approve(sid, on):
+        from .media.adlib import set_approval
+        if not recorded(sid) or not set_approval(work_dir, wav(sid), on):
+            return False
+        if on:
+            # His approval is a ruling that this take says the card as written now, so it
+            # carries the text stamp the render's script guard checks (scriptguard.py).
+            c = card(sid) or {}
+            scriptguard.stamp(vdir, cur["stem"][sid], c.get("text", ""), seg_id=sid,
+                              slide=c.get("slide"), source="booth-approved")
+        return True
+
     # ---------------- drift worker (Batch 4) ----------------
     def drift_enqueue(sid):
         if not drift_enabled or not recorded(sid):
@@ -575,6 +621,7 @@ def run(proj, open_browser=True):
         return True
 
     def wrap_report():
+        from .media.adlib import is_approved
         segs = refresh()
         cards = []
         total_audio = total_takes = 0
@@ -604,7 +651,9 @@ def run(proj, open_browser=True):
                           "takes": t, "edited": sid in edited,
                           "edits": [e for e in edit_log if e["id"] == sid],
                           "qc": q, "drift": (dr or {}).get("drift"),
-                          "drift_status": (dr or {}).get("status")})
+                          "drift_status": (dr or {}).get("status"),
+                          "needs": needs(sid),
+                          "approved": recorded(sid) and is_approved(work_dir, wav(sid))})
         rec_n = sum(1 for c in cards if c["recorded"])
         rep = {"cards": cards, "recorded": rec_n, "total_cards": len(cards),
                "total_takes": total_takes, "retakes": max(0, total_takes - rec_n),
@@ -620,7 +669,8 @@ def run(proj, open_browser=True):
         # complete are "unchecked"; the studio render checks those first, through the queue
         # (phase1_render, `explainer2 adlib --unchecked`).
         if drift_enabled:
-            from .media.adlib import MODEL, classify
+            from .media.adlib import MODEL, classify, is_approved, load_approvals
+            apv = load_approvals(work_dir)
             rows, worst = [], 0.0
             for s in segs:
                 sid = s["id"]; st = cur["stem"][sid]
@@ -630,7 +680,8 @@ def run(proj, open_browser=True):
                 if dr.get("status") != "done":
                     rows.append({"id": sid, "status": "unchecked"}); continue
                 d = dr.get("drift", 0.0); worst = max(worst, d)
-                status = classify(d, s["text"], dr.get("asr_text", ""))
+                status = ("approved" if is_approved(work_dir, wav(sid), apv)
+                          else classify(d, s["text"], dr.get("asr_text", "")))
                 rows.append({"id": sid, "status": status, "drift": d,
                              "script_text": s["text"], "asr_text": dr.get("asr_text", "")})
             (work_dir / "adlib_report.json").write_text(json.dumps(
@@ -663,13 +714,17 @@ def run(proj, open_browser=True):
                 self._send(200, html, "text/html; charset=utf-8")
             elif p.path == "/segments":
                 segs = refresh()   # HOT RELOAD: always reflect what's on disk right now
+                from .media.adlib import is_approved, load_approvals
+                req, apv = _request(), load_approvals(work_dir)
                 out = []
                 for s in segs:
                     st = cur["stem"][s["id"]]
                     out.append({**s, "recorded": recorded(s["id"]), "takes": takes(s["id"]),
                                 "edited": s["id"] in edited,
                                 "qc": qc_cache.get(st, (None, None))[1] if recorded(s["id"]) else None,
-                                "drift": drift_state.get(st)})
+                                "drift": drift_state.get(st),
+                                "needs": needs(s["id"], req),
+                                "approved": recorded(s["id"]) and is_approved(work_dir, wav(s["id"]), apv)})
                 self._send(200, json.dumps(out))
             elif p.path == "/session":
                 self._send(200, json.dumps({
@@ -747,6 +802,14 @@ def run(proj, open_browser=True):
                 try:
                     body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
                     ok = promote_take(int(body["seg"]), int(body["take"]))
+                except Exception:
+                    ok = False
+                self._send(200 if ok else 400, json.dumps({"ok": ok}))
+            elif p.path == "/approve":
+                try:
+                    body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
+                    sid = int(body["seg"])
+                    ok = sid in cur["stem"] and approve(sid, bool(body.get("on", True)))
                 except Exception:
                     ok = False
                 self._send(200 if ok else 400, json.dumps({"ok": ok}))
