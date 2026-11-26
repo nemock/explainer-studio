@@ -163,9 +163,18 @@ export const PaperCompare: React.FC<{fields: any; durationInFrames?: number}> = 
     return (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
   };
   const lightSheet = lum(W.sheet) > 0.55;
-  const {on: phone, ts} = useTypeScale();
+  const {on: phone, ts, fill} = useTypeScale();
   const headFamily = useHeadingFamily();
   const lit = Boolean(W.lit);
+  // Fill the band (operator 2026-11-14): trays take 0.44 of the width each on a phone and the
+  // value takes the largest size that wraps inside its tray; the shorter of the two values does
+  // not get bigger than the longer one, so a pair reads as a pair.
+  const trayW = width * (portrait ? 0.78 : phone ? 0.44 : 0.36);
+  const valBoxW = trayW - 2 * width * 0.018;
+  // 0.26H let a two-line value push the tray into the caption band (#85 s04 proof); 0.2H holds.
+  const valBoxH = height * (fields.title ? 0.2 : 0.27);
+  const valPx = Math.min(...[fields.left, fields.right].map((d: any) =>
+    fill(String(d?.value ?? ''), valBoxW, valBoxH, height * 0.042, {max: 0.1, min: 'label'})));
   // a title here sits on the table, not on a card: on a dark table (wte-guide) ink.body vanished
   const onDark = phone && W.surface !== 'page' && !W.page && darkHex(W.ground);
   const tray = (d: any, at: number) => {
@@ -174,7 +183,7 @@ export const PaperCompare: React.FC<{fields: any; durationInFrames?: number}> = 
     const band = bad ? (lightSheet ? W.ink : W.sheet) : W.accentSoft;
     return (
       <div style={{flex: portrait ? '0 0 auto' : 1, position: 'relative',
-                   width: portrait ? width * 0.78 : undefined, maxWidth: portrait ? undefined : width * (phone ? 0.41 : 0.36)}}>
+                   width: portrait ? trayW : undefined, maxWidth: portrait ? undefined : trayW}}>
         {lit ? null : (
         <div style={{position: 'absolute', left: '50%', bottom: -height * 0.018, width: '86%', height: height * 0.036,
                      transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%',
@@ -192,7 +201,7 @@ export const PaperCompare: React.FC<{fields: any; durationInFrames?: number}> = 
             <div style={{position: 'relative', margin: `${height * 0.022}px auto 0`, width: 'fit-content', maxWidth: '88%',
                          padding: `${height * 0.012}px ${height * 0.03}px`, textAlign: 'center',
                          transform: `rotate(${bad ? 1.2 : -1.2}deg)`, boxShadow: litBoxShadow(height, 0.35),
-                         fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('sub', height * 0.026), letterSpacing: 2,
+                         fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('body', height * 0.026), letterSpacing: 2,
                          textTransform: 'uppercase', color: bad ? W.paper : W.ink}}>
               <PaperSheet id={`band:${d?.title ?? ''}`} family="card_tag" radius={4} edge={7} tint={band} />
               <span style={{position: 'relative'}}>{d?.title}</span>
@@ -204,7 +213,7 @@ export const PaperCompare: React.FC<{fields: any; durationInFrames?: number}> = 
                        textTransform: 'uppercase', color: bad ? W.paper : W.ink}}>{d?.title}</div>
           )}
           <div style={{position: 'relative', padding: `${height * 0.03}px ${width * 0.018}px`, fontFamily: BRAND.font, fontWeight: 900,
-                       fontSize: ts('label', height * 0.042), lineHeight: 1.15, color: W.ink, textAlign: 'center',
+                       fontSize: valPx, lineHeight: 1.12, color: W.ink, textAlign: 'center',
                        mixBlendMode: lit ? 'multiply' : undefined}}>{d?.value}</div>
         </div>
       </div>
@@ -382,9 +391,17 @@ export const PaperList: React.FC<{fields: any; durationInFrames: number}> = ({fi
   const at = (i: number) => (itemTimes[i] != null ? (itemTimes[i] as number) : Math.round(i * per));
   const {on: phone, ts, floor} = useTypeScale();
   const lit = Boolean(W.lit);
-  // phone: long items step down to the floor rather than run off the page
-  const itemPx = phone ? (Math.max(...items.map((t) => String(t).length), 0) > 34 ? floor('label') : ts('label', 0))
-                       : height * 0.038;
+  // phone: fill the band (operator 2026-11-14). The rows share the height above the captions,
+  // and the longest item caps the size by width; long items still bottom out at the label floor
+  // rather than run off the page. Was: label size (67 px) for every list, however few its rows.
+  const maxLen = Math.max(...items.map((t) => String(t).length), 1);
+  const listW = width * 0.8;
+  const availH = height * (fields.title ? 0.5 : 0.6);
+  const itemPx = phone
+    ? Math.max(floor('label'), Math.round(Math.min(height * 0.1,
+        availH / (Math.max(1, items.length) * 1.75),
+        (listW * 0.86) / (maxLen * 0.56))))
+    : height * 0.038;
   const chip = phone ? itemPx * 1.3 : height * 0.062;
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
@@ -413,7 +430,7 @@ export const PaperList: React.FC<{fields: any; durationInFrames: number}> = ({fi
               </div>
               <PaperCard id={`step:${i}`} style={{padding: `${height * 0.012}px ${width * 0.018}px`, borderRadius: lit ? 6 : 12,
                                  boxShadow: lit ? litBoxShadow(height, 0.8) : `0 ${height * 0.01}px ${height * 0.02}px ${W.shadow}`,
-                                 maxWidth: phone ? width * 0.72 : undefined,
+                                 maxWidth: phone ? listW - chip - width * 0.014 : undefined,
                                  transform: `rotate(${i % 2 ? 0.5 : -0.5}deg)`}}>
                 <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: itemPx, color: W.ink, lineHeight: 1.12,
                              mixBlendMode: lit ? 'multiply' : undefined}}>{it}</div>
@@ -440,9 +457,16 @@ export const PaperBookCTA: React.FC<{fields: any; durationInFrames?: number}> = 
   const {portrait, M: height, reserve} = usePaperLayout();
   const book = usePlace(6);
   const card = usePlace(16);
-  const {ts} = useTypeScale();
+  const {ts, fill} = useTypeScale();
   const headFamily = useHeadingFamily();
   const lit = Boolean(W.lit);
+  // With no book cover (the default since 2026-11-06) the offer card has the frame to itself,
+  // so it fills the band (operator 2026-11-14): 0.8 of the width and the largest headline that
+  // fits. Beside a cover it keeps its old 0.44 width and heading size.
+  const solo = !fields.image;
+  const cardW = width * (portrait ? 0.86 : solo ? 0.8 : 0.44);
+  const ctaPx = solo ? fill(fields.headline || '', cardW - 2 * width * 0.028, height * 0.36, height * 0.058)
+                     : ts('heading', height * 0.058);
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <PaperTable seed={fields.headline || 'cta'} />
@@ -461,19 +485,19 @@ export const PaperBookCTA: React.FC<{fields: any; durationInFrames?: number}> = 
             </div>
           </div>
         ) : null}
-        <div style={{position: 'relative', maxWidth: width * (portrait ? 0.86 : 0.44)}}>
+        <div style={{position: 'relative', maxWidth: cardW}}>
           <div style={{position: 'absolute', left: '50%', bottom: -height * 0.016, width: '88%', height: height * 0.03,
                        transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(9px)', opacity: lit ? 0 : card.shadowOpacity}} />
           <PaperCard id={`ctacard:${fields.headline ?? ''}`} style={{...card.object, padding: `${height * 0.03}px ${width * 0.028}px`, borderRadius: 20}}>
             {fields.kicker ? (
-              <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('eyebrow', height * 0.022), letterSpacing: 4,
+              <div style={{fontFamily: BRAND.font, fontWeight: 800, fontSize: ts(solo ? 'body' : 'eyebrow', height * 0.022), letterSpacing: 4,
                            textTransform: 'uppercase', color: W.accent, marginBottom: height * 0.014}}>{fields.kicker}</div>
             ) : null}
-            <div style={{fontFamily: headFamily, fontWeight: 900, fontSize: ts('heading', height * 0.058), lineHeight: 1.08, color: W.ink}}>
+            <div style={{fontFamily: headFamily, fontWeight: 900, fontSize: ctaPx, lineHeight: 1.08, color: W.ink}}>
               {fields.headline}
             </div>
             {fields.subkicker ? (
-              <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: ts('sub', height * 0.028), color: W.accent,
+              <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: ts(solo ? 'body' : 'sub', height * 0.028), color: W.accent,
                            marginTop: height * 0.02, lineHeight: 1.3}}>{fields.subkicker}</div>
             ) : null}
           </PaperCard>

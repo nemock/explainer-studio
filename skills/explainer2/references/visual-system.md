@@ -52,8 +52,13 @@ Small type reads from about 9–10 pt on a phone, which is **about 48 px in a 10
 Anything a viewer must read is at least that. #79 shipped kickers at 32 px (6.5 pt), note
 sub-lines at 22 px (4.5 pt) and captions at 28 px.
 
-Not comically large either: the scale tops out where a slide still has air around its content,
-and the fill check (§5) flags a wall of type as readily as an empty frame.
+The floor is the minimum, not the target. **Our own text and elements fill the band above the
+captions** (operator 2026-11-14, #85: "when we render our own text and elements, we are
+underutilizing the visual space available on the screen"). A slide the engine draws itself (a
+statement, quote, hook without art, reframe, compare, list, statgrid, closing card) sizes its
+words to the space it has, through `fill()` (§2), up to about 0.15 of the short side (162 px). A
+screenshot or document crop is the exception: it is as small as its source makes it, and that is
+accepted. The fill check (§5) still flags a wall of type as readily as an empty frame.
 
 ## 2. The type scale (`remotion/src/type.ts`)
 
@@ -72,6 +77,14 @@ Sizes are **roles**, fractions of the frame's SHORT side (so 16:9 and 9:16 share
 | `caption` | a figure's caption line | 0.044 → 48 | 0.040 |
 
 Burned-in captions: 44 px in 16:9, 61 px in 9:16 (engine `captionFontSize`).
+
+**Fitting to the space (2026-11-14):** `const {fill} = useTypeScale();` then
+`fill(text, boxW, boxH, legacyPx, {max, min})` returns the LARGEST size, up to `max` of the short
+side (default 0.15), at which `text` word-wraps inside the box, never under `min`'s floor (default
+`heading`). The wrap is estimated (0.58 em per glyph, generous for 800-900 weights so it errs toward
+fitting). PaperStatement, PaperHook (no image), PaperCompare, PaperBookCTA (no cover) use it;
+PaperReframe and PaperList size by the same rule inline (width cap from the longest line, height
+shared between rows). The length tiers in `headline()` stay for a label over art.
 
 **In a component:** `const {ts, floor} = useTypeScale();` then
 `fontSize: ts('label', height * 0.03)`. The second argument is the component's old literal, kept
@@ -138,8 +151,12 @@ worlds:
   on most figures. **Tape never covers content** (operator 2026-11-01): the corner tape reaches
   ~0.066H in along the corner's diagonal, so the art's corner must sit further in than that: side
   border + top border > 0.066H. A lit mount uses 0.06H at the sides and 0.03H top and bottom.
-- **Statement and hook**: size by length (86 / 67 / 58 / 51 px at ≤70 / ≤130 / ≤220 / longer), so a
-  long quote steps down instead of running under the captions.
+- **Statement, quote and hook without art**: a card 0.88 (hook 0.9) of the frame wide, the headline
+  at the largest `fill()` size for that card (2026-11-14; until then length tiers of 86 / 67 / 58 /
+  51 px, which left a short line at 86 px in a half-width card). A hook over art keeps the tiers.
+- **Compare**: trays 0.44 of the width each; both values at the size that fits the longer one.
+  **List / statgrid**: rows share the band height, capped by the longest item's width, floor 52 px.
+  **Closing card without a cover**: 0.8 of the width, headline by `fill()`.
 - **A heading on a dark table** (`wte-guide`, BRG: navy ground, navy card ink) takes the paper colour.
 - **Compare/list/counter/statement**: wider measures (0.41–0.74 of frame width) so bigger type
   wraps instead of overflowing; a long list item steps down to the `label` floor, never under.

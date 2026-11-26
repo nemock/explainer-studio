@@ -66,7 +66,7 @@ export const PaperHook: React.FC<{fields: any}> = ({fields}) => {
     ? interpolate(frame, [0, 150, 900], [1.05, 1.12, 1.2], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'})
     : interpolate(frame, [0, 150], [1.05, 1.12], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
   const headIn = spring({frame: frame - 6, fps, config: {damping: 16, stiffness: 120}});
-  const {on: phone, ts, headline: headlinePx} = useTypeScale();
+  const {on: phone, ts, headline: headlinePx, fill} = useTypeScale();
   const headFamily = useHeadingFamily();
   const lit = Boolean(world.lit) && !world.page;
   const kickIn = interpolate(frame, [0, 14], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
@@ -75,6 +75,14 @@ export const PaperHook: React.FC<{fields: any}> = ({fields}) => {
   // (headline-only hooks, e.g. Shorts), pin-to-top leaves a dead middle — center the label in
   // the content box instead so it settles around the top-third line (operator direction 2026-07-16).
   const hasImg = !!fields.image;
+  // With no art behind it the label IS the slide, so it fills the band (operator 2026-11-14):
+  // a 0.9-wide card and the largest headline that wraps inside it. Over art the label stays
+  // the length-tiered size, so it does not cover the illustration it introduces.
+  const MW = Math.min(width, height);
+  const headPx = hasImg
+    ? headlinePx((fields.headline || '').length, height * 0.072)
+    : fill(fields.headline || '', width * 0.9 - 2 * width * 0.045,
+           MW * 0.58 - (fields.kicker ? MW * 0.08 : 0), height * 0.072);
   const labelPos: React.CSSProperties = hasImg
     ? {position: 'absolute', top: '7%', left: '50%', transform: `translateX(-50%) translateY(${interpolate(headIn, [0, 1], [-height * 0.03, 0])}px) scale(${interpolate(headIn, [0, 1], [0.92, 1])})`}
     : {position: 'relative', transform: `translateY(${interpolate(headIn, [0, 1], [-height * 0.03, 0])}px) scale(${interpolate(headIn, [0, 1], [0.92, 1])})`};
@@ -87,7 +95,7 @@ export const PaperHook: React.FC<{fields: any}> = ({fields}) => {
         <AbsoluteFill style={{background: 'radial-gradient(120% 120% at 50% 40%, #fbf4e0 0%, #efe5cb 100%)'}} />
       )}
 
-      <div style={{...labelPos, opacity: headIn, width: '84%'}}>
+      <div style={{...labelPos, opacity: headIn, width: hasImg ? '84%' : '90%'}}>
         {fields.kicker ? (
           <div style={{textAlign: 'center', color: ink.accent, fontFamily: BRAND.font, fontWeight: 800, fontSize: ts('eyebrow', height * 0.026), letterSpacing: phone ? 4 : 5, textTransform: 'uppercase', opacity: kickIn, marginBottom: height * 0.018}}>
             {fields.kicker}
@@ -107,7 +115,7 @@ export const PaperHook: React.FC<{fields: any}> = ({fields}) => {
           {ink.typeOnPaper || world.page
             ? <PaperSheet id={`hook:${fields.headline ?? ''}`} family="card" radius={lit ? 6 : 24} tint={world.page ? world.paper : '#fffdf6'} />
             : <div style={{position: 'absolute', inset: 0, borderRadius: 24, background: '#fbf6e8', border: '3px solid rgba(44,30,78,.10)'}} />}
-          <div style={{position: 'relative', fontFamily: headFamily, fontWeight: 900, fontSize: headlinePx((fields.headline || '').length, height * 0.072), lineHeight: 1.06, color: world.page ? world.ink : INK, textAlign: 'center',
+          <div style={{position: 'relative', fontFamily: headFamily, fontWeight: 900, fontSize: headPx, lineHeight: 1.06, color: world.page ? world.ink : INK, textAlign: 'center',
                        mixBlendMode: lit ? 'multiply' : undefined}}>
             {colorize(fields.headline || '', fields.accent, world.page ? world.accent : ink.accent)}
           </div>

@@ -61,26 +61,36 @@ export const PaperStatement: React.FC<{fields: any; durationInFrames?: number}> 
   const headFamily = useHeadingFamily();
   const lit = Boolean(W.lit);   // lit cards cast their own shadow; the blurred ellipse goes
   const hLen = (fields.headline || '').length;
-  const {headline: headlinePx} = useTypeScale();
+  const {fill} = useTypeScale();
+  // Fill the band (operator 2026-11-14): the card runs most of the frame's width and the
+  // headline takes the largest size that wraps inside it, instead of a length tier. The box
+  // leaves room for the card padding, a kicker and an attribution/subkicker line.
+  const cardW = width * (portrait ? 0.88 : phone ? 0.88 : 0.66);
+  const padX = width * 0.032;
+  // Height budget: the card must end above the caption band. 0.6H let a long quote's card
+  // reach the frame top and its attribution run under the captions (#85 s07/s19/s30 proof,
+  // 2026-11-14); 0.48H, with a two-line attribution allowed for, keeps it clear.
+  const extraH = (fields.kicker ? height * 0.07 : 0) + (fields.attrib || fields.subkicker ? height * 0.13 : 0);
+  const headPx = fill(fields.headline || '', cardW - 2 * padX, height * 0.48 - extraH, height * 0.06);
   return (
     <AbsoluteFill style={{overflow: 'hidden'}}>
       <PaperTable seed={fields.headline || 'statement'} tightenAt={hit} />
       <PaperProps items={fields.props} />
       <AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', paddingBottom: reserve || (phone ? height * 0.14 : 0), ...push}}>
-        <div style={{position: 'relative', maxWidth: width * (portrait ? 0.88 : phone ? (hLen > 130 ? 0.84 : 0.76) : 0.66), transform: `scale(${hit != null ? flick(frame, hit) : 1})`}}>
+        <div style={{position: 'relative', maxWidth: cardW, transform: `scale(${hit != null ? flick(frame, hit) : 1})`}}>
           <div style={{position: 'absolute', left: '50%', bottom: -height * 0.016, width: '88%', height: height * 0.034,
                        transform: 'translateX(-50%)', background: W.shadow, borderRadius: '50%', filter: 'blur(9px)', opacity: lit ? 0 : p.shadowOpacity}} />
-          <PaperCard id={`punch:${fields.headline ?? ''}`} style={{...p.object, padding: `${height * 0.034}px ${width * 0.032}px`, borderRadius: 20}}>
+          <PaperCard id={`punch:${fields.headline ?? ''}`} style={{...p.object, padding: `${height * 0.034}px ${padX}px`, borderRadius: 20}}>
             <Kicker text={fields.kicker} height={height} />
-            <div style={{fontFamily: headFamily, fontWeight: 900, fontSize: headlinePx(hLen, height * 0.06), lineHeight: phone ? 1.08 : 1.1,
+            <div style={{fontFamily: headFamily, fontWeight: 900, fontSize: headPx, lineHeight: phone ? 1.08 : 1.1,
                          color: W.ink, textAlign: 'center', textWrap: phone ? 'balance' as any : undefined}}>{colorize(fields.headline || '', fields.accent, W.accent)}</div>
             {fields.attrib ? (
-              <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: ts('sub', height * 0.026), color: W.accent,
-                           textAlign: 'center', marginTop: height * 0.018}}>— {fields.attrib}</div>
+              <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: ts('body', height * 0.026), color: W.accent,
+                           textAlign: 'center', marginTop: height * 0.022}}>— {fields.attrib}</div>
             ) : null}
             {fields.subkicker ? (
-              <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: ts('sub', height * 0.026), color: W.accent,
-                           textAlign: 'center', marginTop: height * 0.018, opacity: 0.9}}>{fields.subkicker}</div>
+              <div style={{fontFamily: BRAND.font, fontWeight: 700, fontSize: ts('body', height * 0.026), color: W.accent,
+                           textAlign: 'center', marginTop: height * 0.022, opacity: 0.9}}>{fields.subkicker}</div>
             ) : null}
           </PaperCard>
         </div>
@@ -280,8 +290,9 @@ export const PaperReframe: React.FC<{fields: any; durationInFrames?: number}> = 
               height-only size ran the longer line past the card edge, and the strike bar
               — which spans 100% of the line box — overran with it. */}
           <div style={{position: 'relative', fontFamily: BRAND.font, fontWeight: 900,
-                       fontSize: Math.min(phone ? ts('label', 0) * 1.1 : height * 0.055,
-                                          (width * (phone ? 0.76 : 0.62)) / Math.max(1, line.length * 0.52)),
+                       // phone: fill the band (2026-11-14) — up to 0.1 of the short side, capped by width
+                       fontSize: Math.min(phone ? height * 0.1 : height * 0.055,
+                                          (width * (phone ? 0.84 : 0.62)) / Math.max(1, line.length * 0.55)),
                        lineHeight: 1.1, color: W.ink, textAlign: 'center',
                        opacity: runs ? 1 : fade}}>
             {runs ? runs.map((r, i) => (r.struck ? (
@@ -305,8 +316,8 @@ export const PaperReframe: React.FC<{fields: any; durationInFrames?: number}> = 
         <PaperCard id={`rf-after:${fields.after ?? ''}`}
                    style={{...after.object, padding: `${height * 0.028}px ${width * 0.034}px`}}>
           <div style={{fontFamily: headFamily, fontWeight: 900,
-                       fontSize: Math.min(phone ? ts('display', 0) : height * 0.068,
-                                          (width * (phone ? 0.82 : 0.72)) / Math.max(1, (fields.after || '').length * 0.52)),
+                       fontSize: Math.min(phone ? height * 0.15 : height * 0.068,
+                                          (width * (phone ? 0.86 : 0.72)) / Math.max(1, (fields.after || '').length * 0.55)),
                        lineHeight: 1.08, color: W.ink, textAlign: 'center',
                        textShadow: `0 2px 0 rgba(255,255,255,.7)`}}>
             {fields.after}

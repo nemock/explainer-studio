@@ -55,7 +55,37 @@ export const useTypeScale = () => {
     if (!on) return legacyPx;
     return Math.round(U * (len <= 70 ? 0.08 : len <= 130 ? 0.062 : len <= 220 ? 0.054 : 0.047));
   };
-  return {on, ts, floor, U, headline};
+  // FILL THE SPACE (operator 2026-11-14, #85): "when we render our own text and elements, we
+  // are underutilizing the visual space available on the screen." The length tiers above size
+  // a headline for the shortest frame it might ever share, so a seven-word line sat at 86 px in
+  // a card half the frame wide. `fill` returns the LARGEST size, up to `max` of the short side,
+  // at which `text` word-wraps inside boxW x boxH, never under the role's phone floor. The wrap
+  // is estimated (glyph width `cw` em, generous for 800-900 weights so it errs toward fitting),
+  // which is what every other paper fit here does; no DOM measurement exists at render time.
+  // Off a phoneType world it returns `legacyPx` untouched, like `ts`.
+  const fill = (text: string, boxW: number, boxH: number, legacyPx: number,
+                opts: {max?: number; min?: TypeRole; lh?: number; cw?: number} = {}) => {
+    if (!on) return legacyPx;
+    const {max = 0.15, min = 'heading', lh = 1.08, cw = 0.58} = opts;
+    const words = String(text || '').split(/\s+/).filter(Boolean);
+    const lines = (px: number) => {
+      let n = 1, w = 0;
+      for (const word of words) {
+        const ww = word.length * cw * px, sp = 0.3 * px;
+        if (ww > boxW) return Infinity;            // one word wider than the box: too big
+        if (w === 0) w = ww;
+        else if (w + sp + ww <= boxW) w += sp + ww;
+        else { n += 1; w = ww; }
+      }
+      return n;
+    };
+    const lo = floor(min);
+    for (let px = max * U; px > lo; px *= 0.96) {
+      if (lines(px) * px * lh <= boxH) return Math.round(px);
+    }
+    return lo;
+  };
+  return {on, ts, floor, U, headline, fill};
 };
 
 // ---------------------------------------------------------------------------------------
