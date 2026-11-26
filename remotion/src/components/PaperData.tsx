@@ -457,7 +457,7 @@ export const PaperBookCTA: React.FC<{fields: any; durationInFrames?: number}> = 
   const {portrait, M: height, reserve} = usePaperLayout();
   const book = usePlace(6);
   const card = usePlace(16);
-  const {ts, fill} = useTypeScale();
+  const {on: phone, ts, fill} = useTypeScale();
   const headFamily = useHeadingFamily();
   const lit = Boolean(W.lit);
   // With no book cover (the default since 2026-11-06) the offer card has the frame to itself,
@@ -474,7 +474,11 @@ export const PaperBookCTA: React.FC<{fields: any; durationInFrames?: number}> = 
       <AbsoluteFill style={{flexDirection: portrait ? 'column' : 'row', alignItems: 'center', justifyContent: 'center',
                             ...push,
                             gap: portrait ? height * 0.04 : width * 0.05,
-                            padding: portrait ? `0 6% ${reserve}px` : '0 6%'}}>
+                            // A solo card centres in the band ABOVE the captions, the same reserve
+                            // PaperStatement keeps: centred on the whole frame, its bottom edge sat
+                            // on the caption pill (#85 s43 still, 2026-11-26).
+                            padding: portrait ? `0 6% ${reserve}px`
+                                     : solo && phone ? `0 6% ${height * 0.14}px` : '0 6%'}}>
         {fields.image ? (
           <div style={{position: 'relative', width: width * (portrait ? 0.42 : 0.24)}}>
             <div style={{position: 'absolute', left: '50%', bottom: -height * 0.022, width: '92%', height: height * 0.04,
