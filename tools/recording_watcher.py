@@ -1085,6 +1085,56 @@ def spawn_completion(cfg, show, proj, dry):
     return child.pid
 
 
+def _login_alert():
+    """tools/login_alert.py, loaded by path (tools/ is not a package). None if broken."""
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "login_alert", Path(__file__).resolve().parent / "login_alert.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+    except Exception:                                # noqa: BLE001 - never cost the cycle
+        return None
+
+
+LOGIN_SETTLE_S = 60   # a healthy run's log is still empty this soon; don't judge it yet
+
+
+def check_login(cfg):
+    """Every cycle: did the newest publish run die because Claude is logged out?
+
+    A logged-out `claude -p` exits in ~2 s and writes one line. Until 2026-11-27 the
+    watcher's only signal was a macOS banner after three crashloops; 2026-11-10 left
+    episodes waiting ~52 hours. Now login_alert opens a Chrome tab that stays until the
+    operator runs `claude auth login`, and turns green when a later run gets past auth.
+    The newest log decides: a failure raises (once per log), a log at least
+    LOGIN_SETTLE_S old without the signature clears."""
+    la = _login_alert()
+    if la is None:
+        return
+    try:
+        logs = sorted(Path(cfg["logs_dir"]).glob("*_completion.log"),
+                      key=lambda p: p.stat().st_mtime)
+    except OSError:
+        return
+    if not logs:
+        return
+    newest = logs[-1]
+    line = la.auth_failure(newest)
+    if line:
+        st = la._load()
+        if st.get("active") and st.get("log") == str(newest):
+            return                                   # already counted this one
+        show = newest.name.rsplit("_", 3)[0]
+        la.raise_alert(f"Publish ({show})", line, newest)
+        log(cfg, f"LOGIN-EXPIRED: {newest.name} failed on auth; alert tab raised "
+                 f"(fix: {la.LOGIN_CMD})")
+    elif time.time() - newest.stat().st_mtime >= LOGIN_SETTLE_S:
+        if la.clear("recording watcher"):
+            log(cfg, f"LOGIN-OK: {newest.name} got past auth; login alert cleared")
+
+
 def notify_once(proj, marker, fp, title, text):
     """One macOS notification per distinct (marker, fingerprint), not per cycle.
     Returns True when it fired. The marker lives in work/ so it travels with the
@@ -1552,6 +1602,11 @@ def main():
     except BlockingIOError:
         return  # another cycle still running (e.g. slow subprocess) — skip
     sweep_orphan_browsers(cfg, args.dry_run)   # before the hours gate, on purpose
+    if not args.dry_run:
+        try:
+            check_login(cfg)                   # before the hours gate too: a 5 a.m. failure
+        except Exception as e:                 # noqa: BLE001 - never cost the cycle
+            log(cfg, f"WATCHER-ERROR login check: {type(e).__name__}: {e}")
     # The hours window is per show now: a studio entry with ignore_hours renders at
     # night; everything else still sleeps outside the window.
     run(cfg, args.dry_run, in_hours=args.force_hours or within_hours(cfg))

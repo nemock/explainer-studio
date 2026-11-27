@@ -51,6 +51,57 @@ to date missed length on the first draft; the rule exists because it bites).
    FORBIDDEN: greetings, "welcome back", channel branding, "in this video I".
    The thesis lands in the first 10 seconds.
 
+   **THE 30-SECOND CONTRACT (added 2026-11-27, from our own audience-retention
+   curves). This outranks every opener shape below; a felt moment, a claim and an
+   artifact all have to meet it.** Across nine deep dives, 25–50% of viewers left
+   by ~0:30 and 37–79% by ~0:45. Runtime was not the cause: the FAA video (#85)
+   runs 18:50 and held best (32.5% average viewed). The click is already paid for
+   by the title; the opening's only job is to prove the title was true.
+
+   **By ~0:30 (≈ the first 75 spoken words, at §3's pace) the viewer has heard all
+   three:**
+   1. **The title's promise, in the title's own terms.** The proper noun or the
+      exact question from the title is spoken, not paraphrased into something
+      broader. Someone who clicked "Why are you still stuck?" hears that question
+      asked about *them*, not a different one.
+   2. **The stakes.** Why it matters, concretely: who lost what, what broke, what
+      it costs.
+   3. **The conflict the video resolves.** Two things that can't both be true,
+      or a claim and the reason to doubt it. This is the open loop that carries
+      them past the minute mark.
+
+   **From 0:30 to ~1:00 (≈ words 75–150): NO DETOURS.** Each beat must deliver a
+   new fact about the conflict. FORBIDDEN in the first minute:
+   - **Study or experiment setup.** Who ran it, where, how many subjects, how it
+     was split. Give the finding first; method comes later, when the viewer
+     needs it to judge the finding.
+   - **Meta-commentary about the video or the research:** "My first question
+     was…", "I went and read…", "Here's how I looked into this."
+   - **Disclosures that are not legally required at that point.** "I'm not
+     sponsored by…" goes in the description and pinned comment. A mandatory
+     honesty disclaimer rides the claim it qualifies (§4.3), and that claim does
+     not come before 1:00.
+   - **Background mechanics and definitions** the conflict doesn't need yet
+     (#60 spent its first 40 seconds on database keys and access rules).
+   - **Recapping the hook** in more detail before anything new has landed.
+
+   **What the data shows, from our own videos:**
+   - *#85 FAA (held):* the event and its stakes by 0:17; at 0:43, two cabinet
+     secretaries give contradictory causes in the same briefing. That
+     contradiction is the title.
+   - *#77 Tell a Friend (lost half between 0:22 and 0:37):* a good felt moment
+     in segment 0, then segments 1–4 (about a minute) set up a 2017 study of
+     four-year-olds. The title's question doesn't come back until ~2:30.
+   - *#82 Blackmail (52% → 7%):* a strong hook, and the promise delivered by
+     0:39. Then "My first question was…", a sourcing aside, "I'm not sponsored
+     by Anthropic", and a recap of the scenario, all before the story moves.
+
+   **The check, at the script gate:** count the words to the end of the segment
+   that crosses 75. Name the segment ids where (1), (2) and (3) land. Then read
+   words 75–150 against the FORBIDDEN list. If any of the three lands after word
+   75, rewrite the opening; don't trim the rest. After upload, the learn loop's
+   30 s / 60 s watch ratio is how we find out whether it worked.
+
    **Hook craft — compel WITHOUT clichés.** The opening must pull the viewer, but
    the lazy way to pull (the cliché openers) makes us sound like every AI-scripted
    video. Earn the pull with substance: specificity over generality, name the
@@ -455,6 +506,10 @@ to date missed length on the first draft; the rule exists because it bites).
 - [ ] Re-hook spacing ≤ 6 segments everywhere
 - [ ] Visual mode changes per the interrupt rule (mark `device` accordingly)
 - [ ] Seg 0 passes the cold-open FORBIDDEN list; ending passes rule 7
+- [ ] **The 30-second contract (§4.1, 2026-11-27).** By word ~75: the title's promise
+      in the title's own terms, the stakes, and the conflict. Name the segment id for
+      each at the gate. Words ~75–150 contain no study setup, no "my first question",
+      no non-required disclosure, no background mechanics, and no recap of the hook.
 - [ ] **Cold open: felt moment, or a justified exception (§4.1).** Seg 0 opens on a
       micro-behavior the viewer performed this week, and it passes all three tests
       (involuntary · recent and near-universal · it IS the video's subject). If the topic
