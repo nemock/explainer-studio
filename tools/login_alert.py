@@ -43,6 +43,48 @@ PAGE = STATE_DIR / "claude-login-alert.html"
 REOPEN_AFTER_S = 12 * 60 * 60
 LOGIN_CMD = "claude auth login"
 
+# The headless runs' OWN long-lived token (2026-11-27), minted with `claude setup-token`.
+# Same fix as ~/.outreach-watch.sh got on 2026-07-13: an unattended `claude -p` sharing the
+# interactive keychain login rotates its refresh token out from under the operator (and
+# vice versa), and that keychain login also has a hard time limit. With this file present,
+# every spawner exports it as CLAUDE_CODE_OAUTH_TOKEN; absent or empty, nothing changes.
+# Plaintext, 600 perms, single-user Mac (the July doc's security note applies).
+TOKEN_FILE = Path(os.environ.get("CLAUDE_HEADLESS_TOKEN_FILE")
+                  or Path.home() / ".claude-headless-token")
+MINT_CMD = "claude setup-token"
+# Prompts for the token instead of reading the clipboard: copying a `pbpaste > …` line
+# overwrites the token on the clipboard, which is how the first save stored the command.
+SAVE_CMD = ("read -rs \"T?Paste the token, then Return: \" && printf '%s' \"$T\" > "
+            "~/.claude-headless-token && chmod 600 ~/.claude-headless-token && unset T")
+
+
+def headless_token():
+    """The dedicated token, or None when the file is missing, empty, or not a token.
+    Never logged.
+
+    Shape-checked (2026-11-27): the first save wrote the clipboard's previous contents,
+    the save command itself, into the file. Exported as-is, every unattended run would
+    have failed "401 Invalid bearer token" — worse than having no token, which at least
+    falls back to the keychain login. Anything that isn't an `sk-ant-` token is ignored."""
+    try:
+        tok = "".join(TOKEN_FILE.read_text().split())
+    except OSError:
+        return None
+    if not (tok.startswith("sk-ant-") and len(tok) >= 40
+            and all(c.isalnum() or c in "-_" for c in tok)):
+        return None
+    return tok
+
+
+def headless_env(base=None):
+    """A copy of `base` (default os.environ) carrying CLAUDE_CODE_OAUTH_TOKEN when the
+    dedicated token exists. Pass as `env=` to every unattended `claude -p`."""
+    env = dict(os.environ if base is None else base)
+    tok = headless_token()
+    if tok:
+        env["CLAUDE_CODE_OAUTH_TOKEN"] = tok
+    return env
+
 # A logged-out `claude -p` prints one of these AT THE START OF A LINE and exits within
 # seconds, before any work. Seen across 1,194 failed publish logs (2026-08 to 11):
 #   Failed to authenticate: OAuth session expired and could not be refreshed   (1,002)
@@ -196,7 +238,8 @@ ol.steps li { counter-increment:s; display:flex; gap:18px; align-items:flex-star
 ol.steps li::before { content:counter(s); flex:none; width:44px; height:44px; border-radius:50%;
               background:var(--navy); color:#fff; display:grid; place-items:center;
               font-weight:700; font-size:21px; margin-top:-2px; }
-.cmd { display:flex; align-items:center; gap:14px; margin-top:12px; }
+.cmd { display:flex; align-items:center; gap:14px; margin-top:12px; flex-wrap:wrap; }
+.cmd code.big { overflow-wrap:anywhere; max-width:100%; }
 code.big { font:600 30px/1 "SF Mono", ui-monospace, Menlo, monospace; background:var(--navy);
            color:#fff; padding:18px 24px; border-radius:12px; letter-spacing:.01em; }
 button { font:600 18px/1 -apple-system, sans-serif; border:2px solid var(--navy);
@@ -228,15 +271,33 @@ def _write_page(st):
         state_cls, kicker, title = "down", "Unattended jobs are paused", "Claude is logged out"
         lede = ("Publishing and the other background jobs can't run until you sign in "
                 "again. Nothing is lost: they pick up where they stopped.")
-        body = f"""
+        def cmd(c, i):
+            return (f'<div class="cmd"><code class="big" id="c{i}">{e(c)}</code>'
+                    f'<button class="copy" data-for="c{i}" type="button">Copy</button></div>')
+        retry = ("That's all. The watchers retry on their own within about 30 minutes, "
+                 "and this page turns green when the next job gets through.")
+        if headless_token():
+            # The unattended jobs run on their own token (~/.claude-headless-token), so a
+            # failure means THAT token lapsed; logging in again would not fix them.
+            body = f"""
+  <h2>To fix it</h2>
+  <ol class="steps">
+    <li><div>Open <b>Terminal</b>.</div></li>
+    <li><div>The background jobs use their own token, and it has lapsed. Make a new one,
+      sign in when the browser opens, and copy the token it prints:
+      {cmd(MINT_CMD, 1)}</div></li>
+    <li><div>Save it where the jobs read it:
+      {cmd(SAVE_CMD, 2)}</div></li>
+    <li><div>{retry}</div></li>
+  </ol>"""
+        else:
+            body = f"""
   <h2>To fix it</h2>
   <ol class="steps">
     <li><div>Open <b>Terminal</b>.</div></li>
     <li><div>Run this, and sign in when the browser opens:
-      <div class="cmd"><code class="big" id="cmd">{e(LOGIN_CMD)}</code>
-      <button id="copy" type="button">Copy</button></div></div></li>
-    <li><div>That's all. The watchers retry on their own within about 30 minutes,
-      and this page turns green when the next job gets through.</div></li>
+      {cmd(LOGIN_CMD, 1)}</div></li>
+    <li><div>{retry}</div></li>
   </ol>"""
     else:
         state_cls, kicker, title = "ok", "Resolved", "Claude is signed in again"
@@ -266,14 +327,13 @@ def _write_page(st):
   this page refreshes itself every 30 seconds.</footer>
 </div></main>
 <script>
-const b = document.getElementById('copy');
-if (b) b.addEventListener('click', async () => {{
-  const t = document.getElementById('cmd').textContent;
-  try {{ await navigator.clipboard.writeText(t); }}
-  catch (_) {{ const r = document.createRange(); r.selectNodeContents(document.getElementById('cmd'));
+document.querySelectorAll('button.copy').forEach(b => b.addEventListener('click', async () => {{
+  const el = document.getElementById(b.dataset.for);
+  try {{ await navigator.clipboard.writeText(el.textContent); }}
+  catch (_) {{ const r = document.createRange(); r.selectNodeContents(el);
     const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('copy'); }}
   b.textContent = 'Copied'; setTimeout(() => b.textContent = 'Copy', 2000);
-}});
+}}));
 </script></body></html>
 """
     tmp = PAGE.with_suffix(".tmp")

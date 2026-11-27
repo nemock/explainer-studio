@@ -1070,8 +1070,13 @@ def spawn_completion(cfg, show, proj, dry):
         log(cfg, f"[DRY-RUN] would spawn PUBLISH for {show['id']}: {proj} "
                  f"(log -> {out_file})")
         return None
+    # The publish run authenticates with its own long-lived token when one is set up
+    # (~/.claude-headless-token, 2026-11-27), not the operator's interactive keychain
+    # login, whose expiry stopped publishing four times between August and November.
+    la = _login_alert()
     child = subprocess.Popen(
         cmd, cwd=cfg["claude_cwd"], start_new_session=True,
+        env=la.headless_env() if la else None,
         stdout=out_file.open("w"), stderr=subprocess.STDOUT)
     # Re-stamp the publish lock with the publish worker's pid so a later cycle
     # sees the live publisher (pid_alive) and backs off until the README lands.

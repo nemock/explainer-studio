@@ -20,6 +20,8 @@ ROOT = Path(__file__).resolve().parent.parent
 TMP = Path(tempfile.mkdtemp(prefix="login-alert-test-"))
 os.environ["LOGIN_ALERT_DIR"] = str(TMP / "state")
 os.environ["LOGIN_ALERT_NO_OPEN"] = "1"
+os.environ["CLAUDE_HEADLESS_TOKEN_FILE"] = str(TMP / "headless-token")
+os.environ.pop("CLAUDE_CODE_OAUTH_TOKEN", None)
 os.environ["EXPLAINER_QUEUE_DIR"] = str(TMP / "spool")
 os.environ["EXPLAINER_QUEUE_QUIET"] = "1"
 
@@ -125,6 +127,48 @@ os.utime(fresh, (old, old))
 rw.check_login(cfg)
 check(not la._load()["active"], "a run past the settle time clears the alert")
 check("LOGIN-OK" in (TMP / "watcher.log").read_text(), "the watcher logs the recovery")
+
+# The dedicated headless token (2026-11-27): absent = inherited env, present = exported.
+tokf = TMP / "headless-token"
+check(la.headless_token() is None and "CLAUDE_CODE_OAUTH_TOKEN" not in la.headless_env(),
+      "no token file: the env is left alone")
+tokf.write_text("")
+check(la.headless_token() is None, "an empty token file counts as no token")
+tokf.write_text("pbpaste > ~/.claude-headless-token && chmod 600 ~/.claude-headless-token\n")
+check(la.headless_token() is None and "CLAUDE_CODE_OAUTH_TOKEN" not in la.headless_env(),
+      "a file holding the save command (the 2026-11-27 mistake) is not exported")
+TOK = "sk-ant-oat01-" + "A1b2C3d4E5" * 5
+tokf.write_text("  " + TOK + "\n")
+check(la.headless_env().get("CLAUDE_CODE_OAUTH_TOKEN") == TOK,
+      "a token file is exported, whitespace stripped")
+
+la.raise_alert("Publish (x)", "Failed to authenticate")
+page = la.PAGE.read_text()
+check(la.MINT_CMD in page and "claude-headless-token" in page,
+      "with a dedicated token, the page says to make a new token, not to log in")
+la.clear("test")
+
+# The watcher's publish run gets that env.
+proj = TMP / "proj"
+(proj / "work").mkdir(parents=True)
+seen = []
+
+
+class FakeChild:
+    pid = 424242
+
+
+real_popen = rw.subprocess.Popen
+rw.subprocess.Popen = lambda cmd, **k: (seen.append(k.get("env") or {}), FakeChild())[1]
+try:
+    rw.spawn_completion(dict(cfg, claude_bin="/usr/bin/true", claude_cwd=str(TMP)),
+                        {"id": "t", "skill": "/x/SKILL.md", "completion_steps": "Step 8"},
+                        proj, dry=False)
+finally:
+    rw.subprocess.Popen = real_popen
+check(seen and seen[0].get("CLAUDE_CODE_OAUTH_TOKEN") == TOK,
+      "the watcher's publish run is spawned with the dedicated token")
+tokf.unlink()
 
 print()
 if FAILS:
