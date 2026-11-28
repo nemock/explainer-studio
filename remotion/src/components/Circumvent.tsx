@@ -728,13 +728,23 @@ export const CvgSteps: React.FC<{fields: any}> = ({fields}) => {
   // the column width and label size now leave room for the type. A word never overflows its
   // column: the label steps down to fit the longest word, not under 36 px at 1080.
   const wide = T.on && !portrait;
-  const head: string = wide ? (fields.headline || '') : '';
+  // Portrait got the same phone-type treatment on 2026-11-27 (dual-format Dailies: every show
+  // now renders a 9:16 Short). Until then a portrait step label was a fixed 3.6% of the short
+  // side, about 39 px on a 1080x1920 frame, with no tag: the phone check read it as SPARSE on
+  // the first Under the Hood test deck and Robot Roundup's 9:16 re-render showed the same.
+  const tall = T.on && portrait;
+  const tagged = wide || tall;
+  const head: string = tagged ? (fields.headline || '') : '';
   const colPct = (88 - 2.6 * (n - 1)) / n;
   const longest = Math.max(1, ...steps.map((s: any) =>
     Math.max(0, ...String(typeof s === 'string' ? s : (s.title || '')).split(/\s+/).map((w) => w.length))));
   const labelPx = wide
     ? Math.max(M * 0.034, Math.min(T.ts('body', 0), ((width * colPct) / 100 - M * 0.03) / (longest * 0.58)))
-    : M * 0.036;
+    : tall
+      // one stacked column 84% of the width: as large as the body scale allows, never so
+      // large that the longest word overflows the tag
+      ? Math.max(M * 0.05, Math.min(T.ts('body', 0) * 1.15, (width * 0.84 - M * 0.06) / (longest * 0.58)))
+      : M * 0.036;
   return (
     <AbsoluteFill>
       <Set src={fields.set} anchor={fields.anchor} />
@@ -763,7 +773,8 @@ export const CvgSteps: React.FC<{fields: any}> = ({fields}) => {
         </AbsoluteFill>
       ) : null}
       <AbsoluteFill style={portrait
-        ? {flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: height * 0.012,
+        ? {flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+           gap: height * (tall ? 0.018 : 0.012), paddingTop: tall && head ? height * 0.08 : 0,
            paddingBottom: height * 0.18}
         : {flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: width * 0.012,
            ...(wide ? {paddingTop: height * (head ? 0.26 : 0.16), paddingBottom: height * 0.26} : {})}}>
@@ -790,10 +801,10 @@ export const CvgSteps: React.FC<{fields: any}> = ({fields}) => {
                 <div style={{
                   position: 'relative', fontFamily: BRAND.font, fontWeight: 900, fontSize: labelPx, color: W.ink,
                   lineHeight: 1.12, marginTop: M * 0.016,
-                  ...(wide ? {padding: `${M * 0.016}px ${M * 0.015}px`, boxShadow: litBoxShadow(M, 0.6),
+                  ...(tagged ? {padding: `${M * 0.016}px ${M * 0.015}px`, boxShadow: litBoxShadow(M, 0.6),
                               transform: `rotate(${i % 2 ? 0.7 : -0.7}deg)`} : {}),
                 }}>
-                  {wide ? <PaperSheet id={`step:${i}:${label}`} family="card_tag" radius={4} edge={7} tint={W.paper} /> : null}
+                  {tagged ? <PaperSheet id={`step:${i}:${label}`} family="card_tag" radius={4} edge={7} tint={W.paper} /> : null}
                   <span style={{position: 'relative'}}>{label}</span>
                 </div>
               </div>
