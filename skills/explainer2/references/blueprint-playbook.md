@@ -228,7 +228,10 @@ manufactured tribalism (see humaner LINT §4b, and spoken-humanizer B1).
 which of OUR videos are breakouts vs laggards, and which deterministic title
 features (question / number / second person / negation / two-part) are
 currently ahead. Refresh it first when stale (>7 days): `bin/explainer2 learn
-refresh` then `learn report` — it's unattended yt-dlp, no auth. Treat the
+refresh`, then `learn retention`, then `learn report` (refresh is unattended
+yt-dlp; retention reads YouTube Analytics on the publish token). The report's
+0:30 / 1:00 columns and "The first minute" section show which openings hold
+viewers (script-playbook §4.1); read them before drafting the hook. Treat the
 feature aggregates as a **tiebreaker between otherwise-equal candidates,
 never a veto** — the sample is small and correlation isn't causation; the
 acute/problem-aware tests above still dominate. Cite the report in the

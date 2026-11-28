@@ -100,7 +100,9 @@ to date missed length on the first draft; the rule exists because it bites).
    that crosses 75. Name the segment ids where (1), (2) and (3) land. Then read
    words 75–150 against the FORBIDDEN list. If any of the three lands after word
    75, rewrite the opening; don't trim the rest. After upload, the learn loop's
-   30 s / 60 s watch ratio is how we find out whether it worked.
+   30 s / 60 s watch ratio is how we find out whether it worked: `bin/explainer2 learn
+   retention` then `learn report`, and read "The first minute" in
+   `channel/learn/REPORT.md` (before vs after this contract).
 
    **Hook craft — compel WITHOUT clichés.** The opening must pull the viewer, but
    the lazy way to pull (the cliché openers) makes us sound like every AI-scripted

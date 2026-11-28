@@ -244,8 +244,20 @@ def _flow_imports():
 
 
 def _service(key, interactive):
-    """Authenticated client for channel `key`. interactive=True runs the consent
+    """Authenticated Data API client for channel `key`. interactive=True runs the consent
     flow (used by --authorize); otherwise it only reuses/refreshes a cached token."""
+    _, _, _, build = _flow_imports()
+    return build("youtube", "v3", credentials=_credentials(key, interactive))
+
+
+def analytics_service(key):
+    """YouTube Analytics v2 client for channel `key`, on the same token as publish (its
+    `youtube` scope covers Analytics). Used by `learn retention` (2026-11-27)."""
+    _, _, _, build = _flow_imports()
+    return build("youtubeAnalytics", "v2", credentials=_credentials(key, False))
+
+
+def _credentials(key, interactive):
     InstalledAppFlow, Request, Credentials, build = _flow_imports()
     cs, tok = _client_secret(), _token_path(key)
     if not cs.exists():
@@ -275,7 +287,7 @@ def _service(key, interactive):
             raise SystemExit(f"channel '{key}' not authorized — run "
                              f"`explainer2 publish --authorize --channel {key}` first.")
         tok.write_text(creds.to_json())
-    return build("youtube", "v3", credentials=creds)
+    return creds
 
 
 def _thumb_for_upload(path):

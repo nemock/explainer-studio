@@ -826,6 +826,8 @@ def cmd_learn(args):
     from . import learn
     if args.action == "refresh":
         return learn.refresh(args.projects_dir)
+    if args.action == "retention":
+        return learn.retention(args.projects_dir)
     if args.action == "ingest":
         if not args.csv:
             print("ingest needs --csv <YouTube Studio content export>")
@@ -1172,7 +1174,9 @@ def main(argv=None):
 
     ln = sub.add_parser("learn", help="channel feedback loop: snapshot published-video performance "
                                       "(yt-dlp public stats / YouTube Studio CSV) and report what's working")
-    ln.add_argument("action", choices=["refresh", "ingest", "report"])
+    ln.add_argument("action", choices=["refresh", "ingest", "retention", "report"],
+                    help="retention = 0:30 / 1:00 audience retention from YouTube Analytics "
+                         "(uses the publish token; run after refresh)")
     ln.add_argument("--csv", default=None, help="YouTube Studio content export (for `ingest`)")
     ln.add_argument("--projects-dir", default=str(_REPO_ROOT / "projects"), dest="projects_dir",
                     help="projects root scanned for published meta.json files")
