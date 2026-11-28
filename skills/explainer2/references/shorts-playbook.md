@@ -98,6 +98,12 @@ The reliable trio:
 of fake hype.") Name the parent segment id(s) each cut lifts — non-contiguous is
 fine (cut the promise stack out, jump to the payoff).
 
+Before choosing, read the "Shorts re-shares by platform" section of
+`channel/learn/REPORT.md` (`bin/explainer2 learn shorts`, 2026-11-27): which of our
+Shorts travelled furthest once `promote` re-shared them, and on which network. On the
+first read, Facebook carried most of the reach, and Instagram and Threads reported no
+data at all (Blotato does not collect it there, so treat those as unknown, not as zero).
+
 ## 3. plan.json schema (authored at the Script stage)
 
 `shorts/plan.json` is an array of cuts — **the JSON root is a bare `[ ... ]`, not an object

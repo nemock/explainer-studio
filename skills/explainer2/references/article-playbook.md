@@ -375,4 +375,7 @@ The Substack draft IS the article's review gate: there is no separate article ga
 Give the operator the draft URL, the word count, the number of new verified sources,
 and a note that the LINT pass and the fresh-eyes gate ran. The operator reads it in
 Substack and publishes it there; this pipeline never publishes. Then `bin/explainer2
-content substack --write` once it is live (SKILL §8d).
+content substack --write` once it is live (SKILL §8d). That write is also what ties the
+post to its video in the learn loop: `bin/explainer2 learn articles` snapshots views,
+opens, signups and restacks for every post, and the REPORT.md "Articles" section shows
+them beside the video's views/day (2026-11-27).

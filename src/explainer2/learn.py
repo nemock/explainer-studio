@@ -20,6 +20,11 @@ Verbs (wired in cli.py):
   retention      the share of viewers still watching at 0:30 and 1:00, from the YouTube
                  Analytics audience-retention curve, on the channel token `publish`
                  already holds (2026-11-27; script-playbook §4.1's 30-second contract).
+  articles       Substack stats for every published post (views, opens, signups, restacks)
+                 into articles.json, tied to videos by meta.json's substack_post_id.
+  shorts         reach and engagement of every `promote` re-share, per platform, into
+                 shorts.json: Blotato's post analytics, YouTube's Data API for the direct
+                 Shorts uploads (2026-11-27).
   report         rewrite REPORT.md from the latest snapshots.
 
 One snapshot per (date, source) — re-running a verb the same day updates in
@@ -29,7 +34,7 @@ import csv
 import json
 import re
 import statistics
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from .intel.ytfetch import _ytdlp_json
@@ -268,6 +273,270 @@ def retention(projects_dir, fetch=None):
     return 0 if ok else 1
 
 
+# ---------------- articles (Substack post stats, 2026-11-27) ----------------
+#
+# The companion article is the second half of every close-out (article-playbook), and until
+# now nothing looked at how it did. The Substack MCP's get_post_stats ranks every post by
+# views, opens, signups and restacks; the post id ties it to a video through the
+# `substack_post_id` that `content substack --write` records in meta.json.
+
+ARTICLES = LEARN_DIR / "articles.json"
+ARTICLE_FIELDS = ("views", "opened", "open_rate", "signups", "subscribes", "unsubscribes",
+                  "likes", "comments", "restacks", "shares", "estimated_value")
+
+
+def _article_links(projects_dir):
+    """{substack post id: (project slug, youtube id)} from meta.json."""
+    out = {}
+    for mf in sorted(Path(projects_dir).glob("*/package/meta.json")):
+        try:
+            meta = json.loads(mf.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if meta.get("substack_post_id"):
+            out[int(meta["substack_post_id"])] = (mf.parents[1].name,
+                                                  _video_id(meta.get("youtube_url")))
+    return out
+
+
+STATS_PAGE = 20    # the tool advertises 100, but Substack answers 400 above 20 (2026-11-27)
+
+
+def _all_post_stats(sub):
+    import time
+    posts, offset = [], 0
+    while True:
+        if offset:
+            time.sleep(2)              # Substack answers 429 to a quick run of reads
+        page = sub.call("get_post_stats", order_by="post_date", limit=STATS_PAGE, offset=offset)
+        batch = page.get("posts") or []
+        posts.extend(batch)
+        offset += len(batch)
+        if not batch or offset >= (page.get("total") or 0):
+            return posts
+
+
+def articles(projects_dir, fetch=None):
+    """Snapshot every published Substack post's stats into articles.json.
+    `fetch() -> [post stats]` is injectable for tests."""
+    if fetch is None:
+        def fetch():
+            from .substack import SubstackMcp
+            with SubstackMcp() as sub:
+                return _all_post_stats(sub)
+    try:
+        posts = fetch()
+    except Exception as ex:                # noqa: BLE001 - say what failed, don't trace
+        print(f"articles: Substack stats unavailable ({type(ex).__name__}: {ex})")
+        return 1
+    links = _article_links(projects_dir)
+    store = json.loads(ARTICLES.read_text()) if ARTICLES.exists() else {}
+    today = date.today().isoformat()
+    n = 0
+    for p in posts:
+        if not p.get("is_published", True) or not p.get("post_id"):
+            continue
+        pid = int(p["post_id"])
+        e = store.setdefault(str(pid), {})
+        e["title"] = p.get("title", "")
+        e["posted"] = (p.get("post_date") or "")[:10]
+        slug, vid = links.get(pid, (None, None))
+        e["slug"], e["video_id"] = slug, vid
+        _upsert_snapshot(e, {"date": today, "source": "substack",
+                             **{k: p.get(k) for k in ARTICLE_FIELDS}})
+        n += 1
+    LEARN_DIR.mkdir(parents=True, exist_ok=True)
+    ARTICLES.write_text(json.dumps(store, indent=2))
+    tied = sum(1 for e in store.values() if e.get("slug"))
+    print(f"articles: {n} posts snapshotted ({tied} tied to a video) → {ARTICLES}")
+    return 0 if n else 1
+
+
+# ---------------- shorts (re-share stats per platform, 2026-11-27) ----------------
+#
+# `promote` re-shares a Short every day to up to seven networks through the post queue,
+# and nothing read back what happened. Blotato's REST API has GET /v2/posts/{id}/analytics
+# on the submission id the queue keeps; YouTube Shorts go direct, so their views come from
+# the Data API. Measured on the first run: Blotato returns X (impressions), Facebook
+# (views) and Bluesky (engagement only, no reach); Instagram, Threads, TikTok and LinkedIn
+# answer "not yet synced" even weeks later. Those are reported as no data, never as zero.
+
+SHORTS = LEARN_DIR / "shorts.json"
+POSTQ_DB = Path("/Volumes/Casima/claudeCode/make_money/post_queue/postq.db")
+BLOTATO_DIR = Path("/Volumes/Casima/claudeCode/make_money/post_queue")
+PROMOTE_ROUTINE = "explainer2-promote-daily"
+SHORTS_MIN_AGE_H = 26        # Blotato syncs about a day after the post goes live
+SHORTS_FINAL_D = 35          # Blotato stops re-fetching about a month in; so do we
+REACH_KEYS = ("impressionsCount", "viewsCount")     # X | Facebook, YouTube
+ENGAGE_KEYS = ("likesCount", "commentsCount", "savesCount", "twitterRetweetsCount",
+               "twitterQuotesCount", "blueskyRepostsCount", "blueskyQuotesCount")
+# Replies are left out of engagement on purpose: on X and Bluesky the first reply is our
+# own link to the full video (promote's additional_posts), so every post starts at 1.
+
+
+def _promote_rows(db_path=POSTQ_DB):
+    import sqlite3
+    c = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    c.row_factory = sqlite3.Row
+    try:
+        return [dict(r) for r in c.execute(
+            "SELECT uid, episode, platform, route, submission_id, post_url, source_asset, "
+            "COALESCE(scheduled_at, updated_at) AS posted_at FROM post "
+            "WHERE routine = ? AND status = 'published'", (PROMOTE_ROUTINE,))]
+    finally:
+        c.close()
+
+
+def _project_of(source_asset):
+    m = re.search(r"/projects/([^/]+)/shorts/", source_asset or "")
+    return m.group(1) if m else None
+
+
+def _reach(metrics):
+    for k in REACH_KEYS:
+        if metrics.get(k) not in (None, ""):
+            return int(metrics[k])
+    return None
+
+
+def _engagement(metrics):
+    vals = [int(metrics[k]) for k in ENGAGE_KEYS if metrics.get(k) not in (None, "")]
+    return sum(vals) if vals else None
+
+
+def _blotato_fetch(submission_id):
+    """-> metrics dict, or None when Blotato has not synced this post (404)."""
+    import sys
+    if str(BLOTATO_DIR) not in sys.path:
+        sys.path.insert(0, str(BLOTATO_DIR))
+    import blotato
+    try:
+        out = blotato._request("GET", f"/posts/{submission_id}/analytics", timeout=60)
+    except blotato.BlotatoError as ex:
+        if ex.status == 404:
+            return None
+        raise
+    return {"metrics": out.get("metrics") or {}, "fetched_at": out.get("lastFetchedAt")}
+
+
+def _youtube_views(video_ids):
+    from .publish import _service
+    yt = _service("nemock", False)
+    out = {}
+    ids = sorted(video_ids)
+    for i in range(0, len(ids), 50):
+        r = yt.videos().list(part="statistics", id=",".join(ids[i:i + 50])).execute()
+        for item in r.get("items") or []:
+            s = item.get("statistics") or {}
+            out[item["id"]] = {"metrics": {"viewsCount": s.get("viewCount"),
+                                           "likesCount": s.get("likeCount"),
+                                           "commentsCount": s.get("commentCount")},
+                               "fetched_at": datetime.utcnow().isoformat() + "Z"}
+    return out
+
+
+def shorts(projects_dir=None, rows=None, blotato_fetch=None, youtube_fetch=None, now=None):
+    """Snapshot reach and engagement for every published promote re-share into shorts.json.
+    The fetchers and rows are injectable for tests."""
+    import time
+    rows = _promote_rows() if rows is None else rows
+    blotato_fetch = blotato_fetch or _blotato_fetch
+    youtube_fetch = youtube_fetch or _youtube_views
+    now = now or datetime.utcnow()
+    store = json.loads(SHORTS.read_text()) if SHORTS.exists() else {}
+    today = now.date().isoformat()
+
+    def age_h(r):
+        try:
+            return (now - datetime.strptime(r["posted_at"][:19], "%Y-%m-%dT%H:%M:%S")
+                    ).total_seconds() / 3600
+        except (TypeError, ValueError):
+            return None
+
+    def entry(r):
+        e = store.setdefault(r["uid"], {})
+        e.update({"short": r["episode"], "project": _project_of(r["source_asset"]),
+                  "platform": r["platform"], "url": r["post_url"],
+                  "posted": (r["posted_at"] or "")[:10]})
+        return e
+
+    def settled(e, r):
+        # Final once we hold a snapshot taken more than SHORTS_FINAL_D days after posting.
+        last = _latest(e)
+        if not last:
+            return False
+        final = date.fromisoformat(r["posted_at"][:10]) + timedelta(days=SHORTS_FINAL_D)
+        return last.get("date", "") >= final.isoformat()
+
+    mature = [r for r in rows if (age_h(r) or 0) >= SHORTS_MIN_AGE_H]
+    counts = {"snapshotted": 0, "unsynced": 0, "settled": 0, "failed": 0}
+    unsynced_platforms = set()
+
+    # YouTube: one batched Data API read for every direct upload.
+    yt_rows = {}
+    for r in mature:
+        if r["route"] == "youtube_direct":
+            vid = _video_id(r["post_url"])
+            if vid:
+                yt_rows[vid] = r
+    if yt_rows:
+        try:
+            got = youtube_fetch(set(yt_rows))
+        except (Exception, SystemExit) as ex:       # noqa: BLE001
+            print(f"  ! YouTube stats unavailable ({type(ex).__name__}: {ex})")
+            got = {}
+            counts["failed"] += len(yt_rows)
+        for vid, data in got.items():
+            r = yt_rows[vid]
+            _upsert_snapshot(entry(r), {"date": today, "source": "youtube", **data})
+            counts["snapshotted"] += 1
+
+    # Blotato: newest first per platform, so a platform that never syncs costs one call.
+    blot = sorted((r for r in mature if r["route"] != "youtube_direct" and r["submission_id"]),
+                  key=lambda r: r["posted_at"], reverse=True)
+    synced_once = set()
+    for r in blot:
+        e = entry(r)
+        plat = r["platform"]
+        if plat in unsynced_platforms:
+            counts["unsynced"] += 1
+            continue
+        if settled(e, r):
+            counts["settled"] += 1
+            continue
+        try:
+            data = blotato_fetch(r["submission_id"])
+        except Exception as ex:                       # noqa: BLE001
+            print(f"  ! {r['uid']}: Blotato analytics failed ({ex})")
+            counts["failed"] += 1
+            if "429" in str(ex):
+                print("  ! Blotato rate limit; stopping here, the rest next run")
+                break
+            continue
+        if data is None:
+            counts["unsynced"] += 1
+            # A mature post that never synced on a platform that has never synced in this
+            # run: Blotato does not collect it. Skip the rest of that platform.
+            if plat not in synced_once and (age_h(r) or 0) >= 72:
+                unsynced_platforms.add(plat)
+            continue
+        synced_once.add(plat)
+        _upsert_snapshot(e, {"date": today, "source": "blotato", **data})
+        counts["snapshotted"] += 1
+        time.sleep(0.15)
+
+    meta = store.setdefault("_meta", {})
+    meta["no_analytics"] = sorted(unsynced_platforms)
+    meta["updated"] = today
+    LEARN_DIR.mkdir(parents=True, exist_ok=True)
+    SHORTS.write_text(json.dumps(store, indent=2))
+    print(f"shorts: {counts['snapshotted']} snapshotted, {counts['settled']} settled, "
+          f"{counts['unsynced']} not synced by Blotato, {counts['failed']} failed"
+          + (f"; no analytics from {', '.join(sorted(unsynced_platforms))}"
+             if unsynced_platforms else "") + f" → {SHORTS}")
+    return 0 if counts["snapshotted"] or counts["settled"] else 1
+
+
 # ---------------- ingest (YouTube Studio CSV) ----------------
 
 # canonical field -> substrings matched against lowercased CSV headers
@@ -399,6 +668,108 @@ def _first_minute_section(rows):
     return L
 
 
+def _articles_section(perf):
+    """Which companion articles were read, and which grew the list."""
+    if not ARTICLES.exists():
+        return []
+    store = json.loads(ARTICLES.read_text())
+    rows = []
+    for pid, e in store.items():
+        s = _latest(e, "substack")
+        if s:
+            rows.append({**s, "pid": pid, "title": e.get("title", ""), "posted": e.get("posted", ""),
+                         "slug": e.get("slug"), "video_id": e.get("video_id")})
+    if not rows:
+        return []
+    views = [r["views"] for r in rows if r.get("views") is not None]
+    rates = [r["open_rate"] for r in rows if r.get("open_rate") is not None]
+    signups = sum(r.get("signups") or 0 for r in rows)
+    L = ["## Articles (Substack)", "",
+         f"{len(rows)} published posts: median {_fmt(statistics.median(views) if views else None)} "
+         f"views, median open rate {_fmt(100 * statistics.median(rates) if rates else None)}%, "
+         f"{signups} signups in all (`learn articles`).", ""]
+    tied = sorted((r for r in rows if r["slug"]), key=lambda r: r["posted"], reverse=True)
+    if tied:
+        L += ["Companion articles, newest first, beside their video:", "",
+              "| article | posted | views | open % | signups | restacks | video views/day |",
+              "|---|---|---:|---:|---:|---:|---:|"]
+        today = date.today()
+        for r in tied[:15]:
+            v = perf.get(r["video_id"] or "", {})
+            pub = _latest(v, "ytdlp") or {}
+            age = _age_days(v.get("posted", ""), today) if v.get("posted") else None
+            vpd = (pub["views"] / age) if (pub.get("views") and age) else None
+            name = r["title"] if len(r["title"]) <= 55 else r["title"][:52] + "…"
+            L.append(f"| {name} | {r['posted']} | {_fmt(r.get('views'))} "
+                     f"| {_fmt(100 * r['open_rate'] if r.get('open_rate') is not None else None)} "
+                     f"| {r.get('signups') or 0} | {r.get('restacks') or 0} | {_fmt(vpd, 1)} |")
+        L.append("")
+    growers = sorted((r for r in rows if (r.get("signups") or 0) + (r.get("subscribes") or 0)),
+                     key=lambda r: -((r.get("signups") or 0) + (r.get("subscribes") or 0)))[:5]
+    if growers:
+        L.append("Grew the list (signups): " + "; ".join(
+            f"{r['title'][:50]} ({r.get('signups') or 0})" for r in growers))
+        L.append("")
+    lost = [r for r in rows if (r.get("unsubscribes") or 0) > 0]
+    if lost:
+        L.append("Cost subscribers: " + "; ".join(
+            f"{r['title'][:50]} ({r['unsubscribes']})" for r in
+            sorted(lost, key=lambda r: -r["unsubscribes"])[:5]))
+        L.append("")
+    return L
+
+
+def _shorts_section():
+    """Re-shared Shorts: reach and engagement per platform, and the Shorts that travelled."""
+    if not SHORTS.exists():
+        return []
+    store = json.loads(SHORTS.read_text())
+    meta = store.pop("_meta", {})
+    by_plat, by_short = {}, {}
+    for e in store.values():
+        p = by_plat.setdefault(e.get("platform", "?"), {"posts": 0, "reach": [], "eng": []})
+        p["posts"] += 1
+        s = _latest(e)
+        if not s:
+            continue
+        m = s.get("metrics") or {}
+        reach, eng = _reach(m), _engagement(m)
+        if reach is not None:
+            p["reach"].append(reach)
+        if eng is not None:
+            p["eng"].append(eng)
+        k = (e.get("project"), e.get("short"))
+        by_short.setdefault(k, 0)
+        by_short[k] += reach or 0
+    if not any(p["reach"] or p["eng"] for p in by_plat.values()):
+        return []
+    L = ["## Shorts re-shares by platform", "",
+         "Every `promote` re-share since 2026-08-09 (`learn shorts`). Reach is X impressions, "
+         "or views on Facebook and YouTube. Engagement is likes, comments, saves and reposts; "
+         "replies are left out because the first one is our own link to the full video.", "",
+         "| platform | posts | with data | median reach | total reach | median engagement |",
+         "|---|---:|---:|---:|---:|---:|"]
+    for plat, p in sorted(by_plat.items(), key=lambda kv: -sum(kv[1]["reach"])):
+        have = max(len(p["reach"]), len(p["eng"]))
+        L.append(f"| {plat} | {p['posts']} | {have} "
+                 f"| {_fmt(statistics.median(p['reach'])) if p['reach'] else '—'} "
+                 f"| {_fmt(sum(p['reach'])) if p['reach'] else '—'} "
+                 f"| {_fmt(statistics.median(p['eng']), 1) if p['eng'] else '—'} |")
+    L.append("")
+    nodata = sorted(set(meta.get("no_analytics") or [])
+                    | {pl for pl, p in by_plat.items() if not (p["reach"] or p["eng"])})
+    if nodata:
+        L.append(f"*No data from {', '.join(nodata)}: Blotato does not collect analytics "
+                 f"there. That is missing data, not zero views.*")
+        L.append("")
+    top = sorted(((k, v) for k, v in by_short.items() if v), key=lambda kv: -kv[1])[:5]
+    if top:
+        L.append("Shorts that travelled furthest (total reach, all platforms): " + "; ".join(
+            f"{short} from {(proj or '?')[:24]} ({_fmt(v)})" for (proj, short), v in top))
+        L.append("")
+    return L
+
+
 def report():
     perf = load_perf()
     if not perf:
@@ -498,6 +869,8 @@ def report():
         L.append("*(No YouTube Studio CSV ingested yet — impressions/CTR/avg-view-duration "
                  "columns will fill in after `learn ingest --csv <export>`.)*")
         L.append("")
+    L.extend(_articles_section(perf))
+    L.extend(_shorts_section())
 
     LEARN_DIR.mkdir(parents=True, exist_ok=True)
     REPORT.write_text("\n".join(L))
