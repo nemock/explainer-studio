@@ -126,7 +126,10 @@ def _load_segments(proj):
                          # optional v2 script fields — teleprompter context cues
                          "beat": s.get("beat"), "device": s.get("device"), "note": note,
                          # inline pronunciations, drawn beside the name on the card (display only)
-                         "say": say})
+                         "say": say,
+                         # text conformed to the take by `adlib --apply`: the render's script
+                         # guard exempts it, so the booth's stale marker must too (needs())
+                         "adlib_applied": bool(s.get("adlib_applied"))})
     # Append the per-Short hook/outro lines from shorts/plan.json so the operator records
     # them in the SAME booth session (short-form best practices: a native 3–8s hook + a
     # short outro, recorded separately — NEVER lifted from the long-form). These save to
@@ -388,7 +391,11 @@ def run(proj, open_browser=True):
             out.append(cards[sid] or "flagged after the last render")
         c = card(sid) or {}
         meta = scriptguard.read_meta(vdir, cur["stem"][sid])
-        if meta and meta.get("text_sha256") and meta["text_sha256"] != scriptguard.text_hash(c.get("text", "")):
+        # A card conformed to its take (`adlib_applied`) is exempt, exactly as in the render's
+        # script guard: its text was rewritten FROM the audio, so an older stamp is not a stale
+        # take. Without this the booth asked for re-records the render never blocks on (2026-11-27).
+        if (meta and meta.get("text_sha256") and not c.get("adlib_applied")
+                and meta["text_sha256"] != scriptguard.text_hash(c.get("text", ""))):
             out.append("recorded against older card text")
         dr = drift_state.get(cur["stem"][sid]) or {}
         if (dr.get("status") == "done"

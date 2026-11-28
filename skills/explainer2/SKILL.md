@@ -412,7 +412,10 @@ body line).
   and writes the report at Finish, and results survive a relaunch, so a card you did
   not re-record keeps its verdict (§7b). `rerecord` means the take is missing the
   card's words (`adlib.rerecord_confirmed`), not that drift is high (2026-11-03); tell
-  the operator which and relaunch the booth (`launch_booth.py`). A possible slip
+  the operator which and relaunch the booth with those cards marked:
+  `launch_booth.py --rerecord <card>[,<card>] --why "<what the take missed>" <project_dir>`
+  (booth card numbers, card = segment id + 1). A note on the card is not a marker: before
+  `--rerecord` (2026-11-27) the booth showed red only on cards whose text had changed. A possible slip
   inside a complete take ("David" for "Donald") goes to him as a question with the
   card and the transcript, never as an instruction to re-record. Fix any real
   drift BY HAND (edit the segment, re-run narrate+align) — **do NOT use
@@ -582,9 +585,10 @@ current text, and re-checks only a re-recorded card (2026-11-03).
 
 **Re-record markers and "Approve take" (2026-11-25).** A card that needs the mic again
 gets a red border and a `↻ needs re-record: <why>` chip. It is marked for one of three reasons:
-a watcher request (`work/rerecord_request.json`, written when the recording watcher reopens
-the booth for a publish block, cleared by any newer take), a take stamped against older
-card text, or a drift check that found the card's words missing. Focus Mode opens on the
+a request (`work/rerecord_request.json`, written when the recording watcher reopens
+the booth for a publish block or by `launch_booth.py --rerecord`, cleared by any newer take),
+a take stamped against older card text (never a card conformed to its take, `adlib_applied`,
+which the render's script guard exempts too; 2026-11-27), or a drift check that found the card's words missing. Focus Mode opens on the
 first marked card. Any flagged card offers an **Approve take** checkbox: the operator's
 ruling that this exact take says the card. It is stored in `work/take_approvals.json`
 (keyed to the take's mtime and size, so a new take starts unapproved), stamps the current

@@ -25,6 +25,10 @@ Usage:
   python3 tools/launch_booth.py <project_dir>            # start detached, wait for READY, pop the tab
   python3 tools/launch_booth.py --no-open <project_dir>  # same, but don't open a browser tab
   python3 tools/launch_booth.py --no-shorts <project_dir> # deepdive/masterclass with NO Shorts this run
+  python3 tools/launch_booth.py --rerecord 15,22 [--why "<reason>"] <project_dir>
+                                                        # reopen for re-takes: marks booth cards 15 and 22
+                                                        # "needs re-record" (card = segment id + 1), via
+                                                        # work/rerecord_request.json, until a newer take lands
                                                           # (without it, a missing shorts/plan.json REFUSES to launch)
   python3 tools/launch_booth.py --wait <project_dir>     # block until the green Finish button
                                                         # (plain terminal only; REFUSES inside
@@ -620,6 +624,44 @@ def wait(project, max_seconds=24 * 3600, grace=60):
     print(f"waiter timed out after {max_seconds}s with no Finish"); return 3
 
 
+def take_rerecord(argv):
+    """Pull `--rerecord N[,N...]` and `--why "..."` out of argv and, when cards are given,
+    write work/rerecord_request.json in the project (the last positional argument) so the
+    booth marks those cards "needs re-record" until a newer take replaces each one. Card
+    numbers are BOOTH card numbers (card = segment id + 1). Returns argv without the flags;
+    exits 2 on a malformed value.
+
+    2026-11-27: a session reopening the booth for re-takes had no way to mark the card. A
+    note on the card is not a marker, so the booth showed red only on cards whose text had
+    changed, and never on the card the session actually wanted re-taken."""
+    rerecord, why = [], "re-take requested"
+    for flag in ("--rerecord", "--why"):
+        if flag in argv:
+            i = argv.index(flag)
+            if i + 1 >= len(argv):
+                print(f"{flag} needs a value"); sys.exit(2)
+            val = argv[i + 1]
+            argv = argv[:i] + argv[i + 2:]
+            if flag == "--why":
+                why = val
+            else:
+                try:
+                    rerecord = sorted({int(x) for x in val.split(",") if x.strip()})
+                except ValueError:
+                    print(f"--rerecord takes booth card numbers like 15,22 (got {val!r})"); sys.exit(2)
+                if not rerecord or min(rerecord) < 1:
+                    print("--rerecord card numbers start at 1 (card = segment id + 1)"); sys.exit(2)
+    if rerecord:
+        if not (argv and not argv[-1].startswith("-") and Path(argv[-1]).is_dir()):
+            print("--rerecord needs a project dir to launch"); sys.exit(2)
+        req = Path(argv[-1]) / "work" / "rerecord_request.json"
+        req.parent.mkdir(parents=True, exist_ok=True)
+        req.write_text(json.dumps({"at": time.time(),
+                                   "cards": {str(n - 1): why for n in rerecord}}, indent=2) + "\n")
+        print(f"marked for re-record: booth card(s) {', '.join(map(str, rerecord))} -> {req}")
+    return argv
+
+
 if __name__ == "__main__":
     # --no-shorts is pulled out first so it composes with --no-open and with the bare
     # form, without disturbing the positional shapes below (argv is sys.argv[1:], so
@@ -628,6 +670,7 @@ if __name__ == "__main__":
     allow_no_shorts = "--no-shorts" in argv
     if allow_no_shorts:
         argv = [a for a in argv if a != "--no-shorts"]
+    argv = take_rerecord(argv)
 
     if len(argv) >= 1 and argv[0] == "--stop":
         stop(argv[1] if len(argv) >= 2 else None)

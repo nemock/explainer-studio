@@ -202,6 +202,45 @@ def main():
         assert not s[1]["approved"] and s[1]["needs"], s[1]
         b.finish()
 
+    # 2026-11-27: a card conformed to its take by `adlib --apply` (adlib_applied) is exempt from
+    # the stale marker, as it is in the render's script guard; and `launch_booth.py --rerecord`
+    # marks booth cards (card = segment id + 1) through the same request file the watcher uses.
+    lb = _load("launch_booth")
+    with tempfile.TemporaryDirectory() as td:
+        pdir = Path(td) / "2026-11-27_adlib-test"
+        vdir, work = pdir / "voiceover", pdir / "work"
+        vdir.mkdir(parents=True)
+        work.mkdir()
+        (pdir / "project.json").write_text(json.dumps({"title": "t", "voice_source": "operator"}))
+        (pdir / "deck.json").write_text("{}")
+        segs = [{"id": 0, "slide": "s0", "text": "Sign-in and billing, they get buy.", "adlib_applied": True},
+                {"id": 1, "slide": "s1", "text": "The phone app gets build too."},
+                {"id": 2, "slide": "s2", "text": "Dispatch gets no word at all."}]
+        (pdir / "script.json").write_text(json.dumps({"segments": segs}))
+        for g in segs:
+            (vdir / f"seg_{g['id']:03d}.wav").write_bytes(wav_bytes(1.0))
+            scriptguard.stamp(vdir, f"seg_{g['id']:03d}", g["text"], seg_id=g["id"])
+            TEXT[f"seg_{g['id']:03d}"] = g["text"]
+        # both cards 0 and 2 were recorded against an older wording; only card 0 was conformed
+        scriptguard.stamp(vdir, "seg_000", "Sign-in and billing get buy.", seg_id=0)
+        scriptguard.stamp(vdir, "seg_002", "Dispatch gets nothing.", seg_id=2)
+        assert scriptguard.check(Project.load(pdir))["stale"] == [2]   # the render agrees: only card 2
+
+        time.sleep(0.05)
+        rest = lb.take_rerecord(["--rerecord", "2", "--why", "both models heard billed", "--no-open", str(pdir)])
+        assert rest == ["--no-open", str(pdir)], rest
+        req = json.loads((work / "rerecord_request.json").read_text())
+        assert req["cards"] == {"1": "both models heard billed"}, req
+
+        b = Booth(Project.load(pdir))
+        b.wait_checked()
+        s = b.segs()
+        assert s[0]["needs"] == [], s[0]["needs"]                      # conformed: not stale
+        assert s[1]["needs"] == ["both models heard billed"], s[1]["needs"]   # booth card 2
+        assert s[2]["needs"] == ["recorded against older card text"], s[2]["needs"]
+        b.finish()
+    assert lb.take_rerecord(["--no-open", "x"]) == ["--no-open", "x"]   # no flag, nothing written
+
     print("OK — test_booth_rerecord_marks")
 
 
