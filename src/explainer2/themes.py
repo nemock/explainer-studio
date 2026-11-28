@@ -135,6 +135,11 @@ THEMES = {
     # Safety orange annotates; periwinkle for quiet secondary marks.
     "ttd-indigo": {"bg": "#2E33A0", "fg": "#EDF0FF", "accent": "#F2762E", "accent2": "#9BA8F5",
                    "motion": "fade"},
+    # uth-circuit = Under the Hood (2026-11-27, replaces Founder Tip Tuesday on Tuesdays).
+    # Circuit-board teal, parchment linework, copper accent, cyan for secondary marks.
+    # Teal-green so it never blurs with ftt-study's steel blue or ttd-indigo.
+    "uth-circuit": {"bg": "#0F3D3E", "fg": "#EDE6D6", "accent": "#C8743A", "accent2": "#4FB3BF",
+                    "motion": "fade", "fonts": {"display": "Fraunces", "body": "Inter"}},
     # fmf-alarm = Failure Modes Friday. Brick red (deep, not fire-engine, so long text stays
     # comfortable), caution yellow kept from mono, ash gray for secondary marks.
     "fmf-alarm": {"bg": "#9E1B1B", "fg": "#FBEFE8", "accent": "#F5C518", "accent2": "#C9CDD2",

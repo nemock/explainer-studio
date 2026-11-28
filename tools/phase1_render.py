@@ -568,12 +568,20 @@ def main():
     # means no render_complete.json, so Phase 2 never publishes the broken render.
     # It is deliberately narrow (see the tool's docstring) and measured zero false
     # positives across FWF 2026-08-29 and 2026-08-30.
+    # Dual-format shows (2026-11-27): only the PRIMARY aspect's framing QC can block the
+    # episode. A secondary cut (the 9:16 Short beside a 16:9 episode) records its verdict
+    # in work/frame_qc_<WxH>.json and the publish run skips just that upload, so a bad
+    # portrait render can never hold back the main video.
+    primary = pj.get("aspect", rendered[0]) if isinstance(locals().get("pj"), dict) else rendered[0]
+    advisory = []
     qc = Path(__file__).resolve().parent / "frame_qc.py"
     if qc.is_file():
         for a in rendered:
-            verbs.append([sys.executable, str(qc), proj, "--aspect", a,
-                          "--json", str(Path(proj) / "work" /
-                                        f"frame_qc_{a.replace(':', 'x')}.json")])
+            cmd = [sys.executable, str(qc), proj, "--aspect", a,
+                   "--json", str(Path(proj) / "work" / f"frame_qc_{a.replace(':', 'x')}.json")]
+            verbs.append(cmd)
+            if a != primary:
+                advisory.append(cmd)
     else:
         print(f"[phase1] frame_qc: {qc} missing — skipping framing QC", flush=True)
     t0 = time.time()
@@ -586,6 +594,11 @@ def main():
             # phase 1 again would re-render the same video to reach the same verdict.
             print("[phase1] validate: NOT ok — verdict recorded in work/validate.json; "
                   "the render is complete and the publish run decides", flush=True)
+            continue
+        if rc != 0 and cmd in advisory:
+            print(f"[phase1] frame_qc {cmd[cmd.index('--aspect') + 1]}: NOT ok (secondary "
+                  f"aspect) — verdict in {cmd[-1]}; the episode still publishes, its "
+                  f"Short upload is skipped", flush=True)
             continue
         if rc != 0:
             streak = record_failure(proj, verb_name(cmd), rc, since=t0)

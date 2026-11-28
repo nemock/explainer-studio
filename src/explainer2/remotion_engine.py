@@ -73,7 +73,7 @@ CHIBI_THEMES = ("nemock-deep-dive",)
 #                          built across many sessions is exactly where a default gets
 #                          flipped by someone who did not know it was deliberate.
 CHIBI_NEVER = ("circumvent", "fwf", "mmt-tangerine", "ftt-study",
-               "wsc-goldenrod", "ttd-indigo", "fmf-alarm", "plg-guide")
+               "wsc-goldenrod", "ttd-indigo", "fmf-alarm", "plg-guide", "uth-circuit")
 
 # Which way a pose GESTURES, in viewer terms — only poses with confirmed visual evidence
 # (the operator's #56 screenshot, the contact sheet, rendered stills). Everything absent
@@ -451,7 +451,7 @@ def _papercraft_component(slide, t, kicker, accent, headline):
 # Themes rendered by the Cvg scene family (set-driven, type on the world's paper scrim).
 # circumvent pioneered it (2026-07-30); the six personal-show worlds joined 2026-08-06.
 _CVG_STYLE_THEMES = ("circumvent", "fwf", "mmt-tangerine", "ftt-study",
-                     "wsc-goldenrod", "ttd-indigo", "fmf-alarm")
+                     "wsc-goldenrod", "ttd-indigo", "fmf-alarm", "uth-circuit")
 
 # SHOW TITLE PANEL (2026-09-03, operator request — decision doc
 # make_money/routine_changes/2026-09-03-show-title-panels.md). The six personal-show
@@ -478,6 +478,8 @@ _SHOW_TITLE = {
     "ttd-indigo": {"mark": "papercraft-ttd/mark_ttd.png", "kicker": "Base Reality Group",
                    "title": "The\nTeardown", "sub": "Thursdays with Dave Saunders",
                    "accent": "#F2762E"},
+    "uth-circuit": {"mark": "papercraft-uth/mark_uth.png", "kicker": "Dave Saunders Dailies",
+                    "title": "Under\nthe Hood", "sub": "Tuesdays with Dave Saunders"},
     "fmf-alarm": {"mark": "papercraft-fmf/mark_fmf.png", "kicker": "Base Reality Group",
                   "title": "Failure Modes\nFriday", "sub": "with Dave Saunders"},
 }

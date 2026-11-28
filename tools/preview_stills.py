@@ -29,7 +29,9 @@ Timing:
   - standin  before the booth: each card's words spread at 2.55 words a second (Dave's
              ~154 wpm). Layout, type and mark POSITIONS are exact; cue timing is not.
 
-Usage:  python3 tools/preview_stills.py <project_dir> [--slides s05,s24]
+Usage:  python3 tools/preview_stills.py <project_dir> [--slides s05,s24] [--aspect 9:16]
+        A dual-format show (aspects 16:9 + 9:16) runs it once per aspect; the second
+        aspect writes to work/preview_9x16/ (2026-11-27).
 Writes: <project_dir>/work/preview/  (sNN.png pipeline inputs, never Read them;
         sheet_N.jpg, detail_*.jpg, phone_sheet.png + its preview, preview_check.json)
 Read:   the sheet JPEGs, every detail JPEG, and the phone sheet's preview (SKILL hard
@@ -149,21 +151,41 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("project")
     ap.add_argument("--slides", help="comma-separated slide ids (default: every slide)")
+    ap.add_argument("--aspect", default=None,
+                    help="preview this aspect (e.g. 9:16) instead of the primary; a non-primary "
+                         "aspect writes to work/preview_<WxH>/ (2026-11-27: dual-format shows)")
     a = ap.parse_args()
     pdir = Path(a.project).resolve()
     proj = Project.load(pdir)
+    # Dual-format shows (2026-11-27): the render produces every aspect in `aspects`, but
+    # this check used to build the spec at the PRIMARY aspect only, so the second format
+    # was first seen in the finished video. Same switch the renderer uses (render():
+    # aspect + width + height on project data), in memory only, never saved.
+    primary = proj.data.get("aspect", "9:16")
+    aspect = a.aspect or primary
+    if aspect != primary:
+        from explainer2.project import ASPECTS as _DIMS
+        if aspect not in _DIMS:
+            sys.exit(f"preview_stills: unknown aspect {aspect}")
+        w, h = _DIMS[aspect]
+        proj.data.update({"aspect": aspect, "width": w, "height": h})
     # Every still launches headless Chrome, so this is a render: from a session it goes
     # to the render queue and this process only waits for it (CLAUDE.md rule 9).
     if jobqueue.should_route():
         argv = [sys.executable, str(Path(__file__).resolve()), str(pdir)]
         if a.slides:
             argv += ["--slides", a.slides]
+        if a.aspect:
+            argv += ["--aspect", a.aspect]
         sys.exit(jobqueue.submit_and_wait("preview_stills", argv, project=str(pdir),
                                           label=f"preview_stills:{pdir.name}"))
     childproc.install_handlers(log=print)
 
-    out = pdir / "work" / "preview"
-    real = (pdir / "work" / "segments.json").exists() and \
+    # The primary keeps work/preview/ (tools/rerender.py reads its preview_check.json);
+    # a second aspect gets its own folder so neither run overwrites the other's stills.
+    out = pdir / "work" / ("preview" if aspect == primary
+                           else f"preview_{aspect.replace(':', 'x')}")
+    real =(pdir / "work" / "segments.json").exists() and \
         (pdir / "work" / "alignment.json").exists()
     if real:
         sp, timing = proj, "real"
@@ -270,7 +292,8 @@ def main():
         details.append(str(f))
 
     sheets = []
-    TW, TH = 640, 360
+    w0, h0 = proj.data.get("width", 1920), proj.data.get("height", 1080)
+    TW, TH = (640, 360) if w0 >= h0 else (270, 480)     # tiles keep the frame's shape
     for n in range(0, len(done), 9):
         sheet = Image.new("RGB", (TW * 3, TH * 3), (30, 30, 34))
         d = ImageDraw.Draw(sheet)
@@ -297,6 +320,7 @@ def main():
 
     (out / CHECK_NAME).write_text(json.dumps({
         "deck_sha": sha, "timing": timing, "at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "aspect": aspect,
         "complete": not a.slides and not failed,
         "slides": done, "failed": failed, "details": details, "marks_unseen": unseen},
         indent=1))

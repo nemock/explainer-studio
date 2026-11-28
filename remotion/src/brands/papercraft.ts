@@ -224,6 +224,15 @@ export const PAPER_TTD: PaperWorldTokens = {
   hookSheet: '#EDF0FF', hookInk: '#1D2170',
 };
 
+// Under the Hood (`uth-circuit`, 2026-11-27): circuit-board teal, parchment, copper.
+export const PAPER_UTH: PaperWorldTokens = {
+  phoneType: true, lit: true,  // every show, type that uses the space
+  ground: '#0B2E2F', groundDeep: '#072122', sheet: '#0F3D3E', sheetAlt: '#C8743A',
+  paper: '#EDE6D6', paperShade: '#DCD2BC', ink: '#0F3D3E',
+  accent: '#B5622A', accentSoft: '#E6B48F', shadow: 'rgba(4,20,20,.45)',
+  hookSheet: '#EDE6D6', hookInk: '#0F3D3E',
+};
+
 // Failure Modes Friday (`fmf-alarm`) — brick red, caution yellow (deepened on paper).
 export const PAPER_FMF: PaperWorldTokens = {
   phoneType: true, lit: true,  // operator 2026-11-05: every show, type that uses the space
@@ -370,6 +379,7 @@ const WORLD_BY_THEME: Record<string, PaperWorldTokens> = {
   'wsc-goldenrod': PAPER_WSC,
   'ttd-indigo': PAPER_TTD,
   'fmf-alarm': PAPER_FMF,
+  'uth-circuit': PAPER_UTH,
 };
 export const paperWorldFor = (theme?: string): PaperWorldTokens =>
   (theme && WORLD_BY_THEME[theme]) || PAPER_FWF;

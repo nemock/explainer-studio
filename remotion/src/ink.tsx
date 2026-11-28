@@ -11,7 +11,7 @@ import {BRAND} from './brand';
 export const PAPER_THEMES = ['nemock-deep-dive', 'cut-bond', 'brg-paper', 'brg-deep-dive', 'wte-guide', 'circumvent',
   'plg-guide', 'pmg-guide', 'papercraft-matrix',
   // The six personal-show worlds (2026-08-06 brand system) — all render the Cvg family.
-  'fwf', 'mmt-tangerine', 'ftt-study', 'wsc-goldenrod', 'ttd-indigo', 'fmf-alarm'];
+  'fwf', 'mmt-tangerine', 'ftt-study', 'wsc-goldenrod', 'ttd-indigo', 'fmf-alarm', 'uth-circuit'];
 export const isPaperTheme = (t?: string): boolean => !!t && PAPER_THEMES.includes(t);
 
 export type Ink = {
@@ -223,6 +223,7 @@ const INK_BY_THEME: Record<string, Ink> = {
   'wsc-goldenrod': mkShowInk('#1F3D2E', '#A4551E', 'rgba(164,85,30,.32)'),
   'ttd-indigo': mkShowInk('#1D2170', '#E2661F', 'rgba(242,118,46,.32)'),
   'fmf-alarm': mkShowInk('#5A1010', '#A87E00', 'rgba(245,197,24,.34)'),
+  'uth-circuit': mkShowInk('#0F3D3E', '#B5622A', 'rgba(200,116,58,.32)'),
 };
 
 export const InkProvider: React.FC<{theme?: string; children: React.ReactNode}> = ({theme, children}) => (

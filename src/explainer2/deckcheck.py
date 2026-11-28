@@ -221,6 +221,34 @@ def run(proj):
         except Exception as e:                       # noqa: BLE001
             problems.append(f"the render spec could not be built from this deck "
                             f"({type(e).__name__}: {e}); the render would fail the same way")
+        # Every other aspect the project renders (2026-11-27, dual-format shows). The spec
+        # was built at the PRIMARY aspect only, so a portrait-only problem (a mark the
+        # portrait layout refuses, a prop dropped for want of a corner) first appeared in
+        # the finished 9:16 video. Same in-memory switch render() uses; never saved.
+        primary = proj.data.get("aspect", "9:16")
+        others = [x for x in (proj.data.get("aspects") or []) if x != primary]
+        if others:
+            from .project import ASPECTS as _DIMS
+            orig = {k: proj.data.get(k) for k in ("aspect", "width", "height")}
+            try:
+                for asp in others:
+                    if asp not in _DIMS:
+                        continue
+                    w_, h_ = _DIMS[asp]
+                    proj.data.update({"aspect": asp, "width": w_, "height": h_})
+                    try:
+                        s2 = E.build_spec(_DryProject(proj, td))
+                        for w in s2.get("_warnings") or []:
+                            if not spec or str(w) not in (spec.get("_warnings") or []):
+                                warnings.append(f"[{asp}] {w}")
+                    except (E.MalformedMarkError, E.DroppedFieldError) as e:
+                        problems += [f"[{asp}] {p}" for p in e.problems]
+                    except Exception as e:           # noqa: BLE001
+                        problems.append(f"[{asp}] the render spec could not be built at this "
+                                        f"aspect ({type(e).__name__}: {e}); that render "
+                                        f"would fail the same way")
+            finally:
+                proj.data.update({k: v for k, v in orig.items() if v is not None})
     if spec is not None:
         for w in spec.get("_warnings") or []:
             warnings.append(str(w))
